@@ -496,11 +496,11 @@ const submit = async () => {
     const tasksUnique = checkForUniqueTasks(submittedAssessments);
     if (tasksUnique && !_isEmpty(submittedAssessments)) {
       const orgs = {
-        districts: toRaw(state.districts).map((org) => org.id),
-        schools: toRaw(state.schools).map((org) => org.id),
-        classes: toRaw(state.classes).map((org) => org.id),
-        groups: toRaw(state.groups).map((org) => org.id),
-        families: toRaw(state.families).map((org) => org.id),
+        districts: toRaw(state.districts).map((org) => org.id) || [],
+        schools: toRaw(state.schools).map((org) => org.id) || [],
+        classes: toRaw(state.classes).map((org) => org.id) || [],
+        groups: toRaw(state.groups).map((org) => org.id) || [],
+        families: toRaw(state.families).map((org) => org.id) || [],
       };
 
       const orgsValid = checkForRequiredOrgs(orgs);
@@ -508,14 +508,14 @@ const submit = async () => {
         const dateClose = new Date(state.dateClosed);
         dateClose.setHours(23, 59, 59, 999);
         const args = {
-          name: toRaw(state).administrationName,
-          publicName: toRaw(state).administrationPublicName,
-          assessments: submittedAssessments,
-          dateOpen: toRaw(state).dateStarted,
+          name: toRaw(state).administrationName || '',
+          publicName: toRaw(state).administrationPublicName || '',
+          assessments: submittedAssessments || [],
+          dateOpen: toRaw(state).dateStarted || new Date(),
           dateClose,
-          sequential: toRaw(state).sequential,
+          sequential: toRaw(state).sequential || false,
           orgs: orgs,
-          isTestData: isTestData.value,
+          isTestData: isTestData.value || false,
           legal: {
             consent: toRaw(state).consent,
             assent: toRaw(state).assent,
