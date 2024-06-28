@@ -7,6 +7,12 @@ on:
 #   group: ci-preview-tests-${{ github.ref }}-1
 #   cancel-in-progress: true
 
+permissions:
+  contents: read
+  checks: write
+  deployments: write
+  pull-requests: write
+
 jobs:
   build-and-preview:
     name: Deploy Preview
