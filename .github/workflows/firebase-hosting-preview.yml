@@ -3,9 +3,9 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
-concurrency:
-  group: ci-preview-tests-${{ github.ref }}-1
-  cancel-in-progress: true
+# concurrency:
+#   group: ci-preview-tests-${{ github.ref }}-1
+#   cancel-in-progress: true
 
 jobs:
   build-and-preview:
@@ -17,16 +17,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-      - name: 'vite build'
+      - name: Build
         run: npm ci && npm run build
       - name: Deploy to Firebase Hosting Channel
         id: firebase-deploy
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_GSE_ROAR_ADMIN }}'
-          projectId: gse-roar-admin
-          target: staging
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV_ADMIN }}'
+          projectId: '${{ secrets.FIREBASE_PROJECT }}'
+          target: production
       - run: echo ${{ fromJson(steps.firebase-deploy.outputs.urls)[0] }}
     outputs:
       deployUrl: ${{ fromJson(steps.firebase-deploy.outputs.urls)[0] }}
