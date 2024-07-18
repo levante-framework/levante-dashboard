@@ -274,7 +274,7 @@ const {
 const { data: surveyResponsesData } = useQuery({
   queryKey: ['surveyResponses', uid],
   queryFn: () => fetchSubcollection(`users/${uid.value}`, 'surveyResponses'),
-  enabled: initialized.value && import.meta.env.MODE === 'LEVANTE',
+  enabled: initialized.value && isLevante,
   staleTime: 5 * 60 * 1000, // 5 minutes
   cacheTime: 10 * 60 * 1000,
   // refetchOnMount: false,
