@@ -218,25 +218,19 @@ const handleViewChange = () => {
 
 const orderBy = ref([
   {
-    direction: 'ASCENDING',
-    field: {
-      fieldPath: 'user.grade',
-    },
+    order: '1',
+    field: 'user.grade',
   },
   {
-    direction: 'ASCENDING',
-    field: {
-      fieldPath: 'user.lastName',
-    },
+    order: '1',
+    field: 'user.lastName',
   },
 ]);
 // If this is a district report, make the schools column first sorted.
 if (props.orgType === 'district') {
   orderBy.value.unshift({
-    direction: 'ASCENDING',
-    field: {
-      fieldPath: 'readOrgs.schools',
-    },
+    order: '1',
+    field: 'user.schoolName',
   });
 }
 

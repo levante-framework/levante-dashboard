@@ -6,8 +6,8 @@
         <span>{{ $t('homeParticipant.loadingAssignments') }}</span>
       </div>
       <div v-else>
-        <h2 v-if="adminInfo?.length == 1" class="p-float-label dropdown-container">
-          {{ adminInfo.at(0).publicName || adminInfo.at(0).name }}
+        <h2 v-if="assignmentInfo?.length == 1" class="p-float-label dropdown-container">
+          {{ assignmentInfo.at(0).publicName || assignmentInfo.at(0).name }}
         </h2>
         <div class="flex flex-row-reverse align-items-end gap-2 justify-content-between">
           <div
@@ -24,13 +24,13 @@
             }}</label>
           </div>
           <div
-            v-if="adminInfo?.length > 0"
+            v-if="assignmentInfo?.length > 0"
             class="flex flex-row justify-center align-items-center p-float-label dropdown-container gap-4 w-full"
           >
             <div class="assignment-select-container flex flex-row justify-content-between justify-content-start">
               <div class="flex flex-column align-content-start justify-content-start w-3">
                 <PvDropdown
-                  v-if="adminInfo.every((admin) => admin.publicName)"
+                  v-if="assignmentInfo.every((admin) => admin.publicName)"
                   v-model="selectedAdmin"
                   :options="sortedAdminInfo ?? []"
                   option-label="publicName"
@@ -99,7 +99,7 @@ import _forEach from 'lodash/forEach';
 import { useAuthStore } from '@/store/auth';
 import { useGameStore } from '@/store/game';
 import { storeToRefs } from 'pinia';
-import { useQuery } from '@tanstack/vue-query';
+import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { fetchDocById, fetchDocsById, } from '../helpers/query/utils';
 import { getUserAssignments } from '../helpers/query/assignments';
 import ConsentModal from '../components/ConsentModal.vue';
@@ -137,8 +137,18 @@ const init = () => {
   initialized.value = true;
 };
 
+const queryClient = useQueryClient();
+
 const authStore = useAuthStore();
-const { roarfirekit, uid, consentSpinner, userQueryKeyIndex, assignmentQueryKeyIndex } = storeToRefs(authStore);
+const {
+  roarfirekit,
+  roarUid,
+  uid,
+  consentSpinner,
+  showOptionalAssessments,
+  userQueryKeyIndex,
+  assignmentQueryKeyIndex,
+} = storeToRefs(authStore);
 
 unsubscribe = authStore.$subscribe(async (mutation, state) => {
   if (state.roarfirekit.restConfig) init();
@@ -156,8 +166,8 @@ const {
   isFetching: isFetchingUserData,
   data: userData,
 } = useQuery({
-  queryKey: ['userData', uid, userQueryKeyIndex],
-  queryFn: () => fetchDocById('users', uid.value),
+  queryKey: ['userData', roarUid, userQueryKeyIndex],
+  queryFn: () => fetchDocById('users', roarUid.value),
   keepPreviousData: true,
   enabled: initialized,
   staleTime: 5 * 60 * 1000, // 5 minutes
@@ -169,7 +179,7 @@ const {
   data: assignmentInfo,
 } = useQuery({
   queryKey: ['assignments', uid, assignmentQueryKeyIndex],
-  queryFn: () => getUserAssignments(uid.value),
+  queryFn: () => getUserAssignments(roarUid.value),
   keepPreviousData: true,
   enabled: initialized,
   staleTime: 5 * 60 * 1000, // 5 min
@@ -177,32 +187,8 @@ const {
   refetchOnWindowFocus: 'always',
 });
 
-const administrationIds = computed(() => (assignmentInfo.value ?? []).map((assignment) => assignment.id));
-const administrationQueryEnabled = computed(() => !isLoadingAssignments.value);
-
-const {
-  isLoading: isLoadingAdmins,
-  isFetching: isFetchingAdmins,
-  data: adminInfo,
-} = useQuery({
-  queryKey: ['administrations', uid, administrationIds],
-  queryFn: () =>
-    fetchDocsById(
-      administrationIds.value.map((administrationId) => {
-        return {
-          collection: 'administrations',
-          docId: administrationId,
-          select: ['name', 'publicName', 'sequential', 'assessments', 'legal'],
-        };
-      }),
-    ),
-  keepPreviousData: true,
-  enabled: administrationQueryEnabled,
-  staleTime: 5 * 60 * 1000,
-});
-
 const sortedAdminInfo = computed(() => {
-  return [...(adminInfo.value ?? [])].sort((a, b) => a.name.localeCompare(b.name));
+  return [...(assignmentInfo.value ?? [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 });
 
 async function checkConsent() {
@@ -217,15 +203,15 @@ async function checkConsent() {
     const currentDate = new Date();
     const age = currentDate.getFullYear() - dob.getFullYear();
 
-    if (!legal?.consent) {
-      // Always show consent form for this test student when running Cypress tests
-      if (userData.value?.id === 'XAq5qOuXnNPHClK0xZXXhfGsWX22') {
-        consentType.value = 'consent';
-        confirmText.value = 'This is a test student. Please do not accept this form.';
-        showConsent.value = true;
-      }
-      return;
+  if (!legal?.consent) {
+    // Always show consent form for this test student when running Cypress tests
+    if (userData.value?.id === 'O75V6IcVeiTwW8TRjXb76uydlwV2') {
+      consentType.value = 'consent';
+      confirmText.value = 'This is a test student. Please do not accept this form.';
+      showConsent.value = true;
     }
+    return;
+  }
 
     const isAdult = age >= 18;
     const isSeniorGrade = grade >= 12;
@@ -500,7 +486,7 @@ const isLoading = computed(() => {
 });
 
 const isFetching = computed(() => {
-  return isFetchingUserData.value || isFetchingAssignments.value || isFetchingAdmins.value || isFetchingTasks.value;
+  return isFetchingUserData.value || isFetchingAssignments.value || isFetchingTasks.value;
 });
 
 const noGamesAvailable = computed(() => {
@@ -508,7 +494,6 @@ const noGamesAvailable = computed(() => {
   return assessments.value.length === 0;
 });
 
-const showOptionalAssessments = ref(null);
 const toggleShowOptionalAssessments = async () => {
   await checkConsent();
   showOptionalAssessments.value = null;
@@ -582,7 +567,7 @@ const optionalAssessments = computed(() => {
 const isSequential = computed(() => {
   return (
     _get(
-      _find(adminInfo.value, (admin) => {
+      _find(assignmentInfo.value, (admin) => {
         return admin.id === selectedAdmin.value.id;
       }),
       'sequential',
@@ -611,18 +596,22 @@ const studentInfo = computed(() => {
 });
 
 watch(
-  [selectedAdmin, adminInfo],
-  ([updateSelectedAdmin]) => {
+  [selectedAdmin, assignmentInfo],
+  async ([updateSelectedAdmin]) => {
     if (updateSelectedAdmin) {
-      checkConsent();
+      await checkConsent();
     }
     const selectedAdminId = selectedAdmin.value?.id;
-    const allAdminIds = (adminInfo.value ?? []).map((admin) => admin.id);
+    const allAdminIds = (assignmentInfo.value ?? []).map((admin) => admin.id);
     // If there is no selected admin or if the selected admin is not in the list
     // of all administrations choose the first one after sorting alphabetically by publicName
     if (allAdminIds.length > 0 && (!selectedAdminId || !allAdminIds.includes(selectedAdminId))) {
       // Choose the first sorted administration
       selectedAdmin.value = sortedAdminInfo.value[0];
+    } else {
+      // N.B. Although this seems redundant, we ensure that the selected admin is a fresh instance of the admin.
+      //   This is relevant in the case that the game store does not flush properly.
+      selectedAdmin.value = sortedAdminInfo.value.find((admin) => admin.id === selectedAdminId);
     }
   },
   { immediate: true },

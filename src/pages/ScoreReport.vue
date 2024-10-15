@@ -25,7 +25,7 @@
               </div>
               <div class="flex flex-column align-items-end gap-1">
                 <div class="flex flex-row align-items-center gap-4" data-html2canvas-ignore="true">
-                  <div class="uppercase text-sm text-gray-600">VIEW</div>
+                  <div class="uppercase text-sm text-gray-600 flex flex-row">VIEW</div>
                   <PvSelectButton
                     v-model="reportView"
                     v-tooltip.top="'View different report'"
@@ -38,9 +38,15 @@
                   >
                   </PvSelectButton>
                 </div>
-                <div v-if="!isLoadingScores">
+                <div v-if="!isLoadingScores" class="flex flex-column gap-2 mr-5">
                   <PvButton
                     class="flex flex-row p-2 text-sm bg-primary text-white border-none border-round h-2rem text-sm hover:bg-red-900"
+                    :icon="!exportLoading ? 'pi pi-download mr-2' : 'pi pi-spin pi-spinner mr-2'"
+                    label="Export Combined Reports"
+                    @click="exportData({ includeProgress: true })"
+                  />
+                  <PvButton
+                    class="flex flex-row p-2 text-sm bg-primary text-white border-none border-round mb-2 h-2rem text-sm hover:bg-red-900"
                     :icon="!exportLoading ? 'pi pi-download mr-2' : 'pi pi-spin pi-spinner mr-2'"
                     :disabled="exportLoading"
                     label="Export To Pdf"
@@ -127,44 +133,11 @@
             :groupheaders="true"
             data-cy="roar-data-table"
             @reset-filters="resetFilters"
-            @export-all="exportAll"
-            @export-selected="exportSelected"
+            @export-all="exportData({ selectedRows: $event })"
+            @export-selected="exportData({ selectedRows: $event })"
           >
             <template #filterbar>
-              <div class="flex flex-row flex-wrap gap-2 align-items-center justify-content-center">
-                <div v-if="schoolsInfo" class="flex flex-row my-3">
-                  <span class="p-float-label">
-                    <PvMultiSelect
-                      id="ms-school-filter"
-                      v-model="filterSchools"
-                      style="width: 10rem; max-width: 15rem"
-                      :options="schoolsInfo"
-                      option-label="name"
-                      option-value="name"
-                      :show-toggle-all="false"
-                      selected-items-label="{0} schools selected"
-                      data-cy="filter-by-school"
-                    />
-                    <label for="ms-school-filter">Filter by School</label>
-                  </span>
-                </div>
-                <div class="flex flex-row gap-2 my-3">
-                  <span class="p-float-label">
-                    <PvMultiSelect
-                      id="ms-grade-filter"
-                      v-model="filterGrades"
-                      style="width: 10rem; max-width: 15rem"
-                      :options="gradeOptions"
-                      option-label="label"
-                      option-value="value"
-                      :show-toggle-all="false"
-                      selected-items-label="{0} grades selected"
-                      data-cy="filter-by-grade"
-                    />
-                    <label for="ms-school-filter">Filter by Grade</label>
-                  </span>
-                </div>
-              </div>
+              <FilterBar :schools="schoolsInfo" :grades="gradeOptions" :update-filters="updateFilters" />
             </template>
             <span>
               <label for="view-columns" class="view-label">View</label>
@@ -286,6 +259,7 @@
 
 <script setup>
 import { computed, ref, onMounted, watch } from 'vue';
+import FilterBar from '@/components/slots/FilterBar.vue';
 import { storeToRefs } from 'pinia';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -304,6 +278,7 @@ import { assignmentFetchAll } from '@/helpers/query/assignments';
 import { orgFetcher } from '@/helpers/query/orgs';
 import { pluralizeFirestoreCollection } from '@/helpers';
 import { getTitle } from '../helpers/query/administrations';
+import { useFilteredTableData } from '../composables/useFilteredTableData.js';
 import {
   taskDisplayNames,
   taskInfoById,
@@ -421,29 +396,22 @@ const handleExportToPdf = async () => {
 
 const orderBy = ref([
   {
-    direction: 'ASCENDING',
-    field: {
-      fieldPath: 'userData.grade',
-    },
+    field: 'user.grade',
+    order: '1',
   },
   {
-    direction: 'ASCENDING',
-    field: {
-      fieldPath: 'userData.name.last',
-    },
+    field: 'user.lastName',
+    order: '1',
   },
 ]);
 // If this is a district report, make the schools column first sorted.
 if (props.orgType === 'district') {
   orderBy.value.unshift({
-    direction: 'ASCENDING',
-    field: {
-      fieldPath: 'readOrgs.schools',
-    },
+    order: '1',
+    field: 'user.schoolName',
   });
 }
-const filterSchools = ref([]);
-const filterGrades = ref([]);
+
 const pageLimit = ref(10);
 
 // User Claims
@@ -603,6 +571,28 @@ const getScoresAndSupportFromAssessment = ({
   };
 };
 
+const computedProgressData = computed(() => {
+  if (!assignmentData.value) return [];
+  return assignmentData.value.map(({ assignment }) => {
+    const progress = assignment.assessments.reduce((acc, assessment) => {
+      const status = assessment.optional
+        ? 'optional'
+        : assessment.completedOn
+        ? 'completed'
+        : assessment.startedOn
+        ? 'started'
+        : 'assigned';
+
+      acc[assessment.taskId] = { value: status };
+      return acc;
+    }, {});
+    return {
+      userPid: assignment.userData?.assessmentPid, // Assuming user contains a `username` property
+      progress,
+    };
+  });
+});
+
 // This function takes in the return from assignmentFetchAll and returns 2 objects
 // 1. assignmentTableData: The data that should be passed into the ROARDataTable component
 // 2. runsByTaskId: run data for the TaskReport distribution chartsb
@@ -625,15 +615,19 @@ const computeAssignmentAndRunData = computed(() => {
         schoolName = schoolNameDictionary.value[schoolId];
       }
 
-      const firstNameOrUsername = user.name.first ?? user.username;
+      const firstName = user.name?.first;
+      const lastName = user.name?.last;
+      const username = user.username;
+
+      const firstNameOrUsername = firstName ?? username;
 
       const currRow = {
         user: {
-          username: user.username,
+          username: username,
           email: user.email,
           userId: user.userId,
-          firstName: user.name.first,
-          lastName: user.name.last,
+          firstName: firstName,
+          lastName: lastName,
           grade: grade,
           assessmentPid: user.assessmentPid,
           schoolName: schoolName,
@@ -649,7 +643,7 @@ const computeAssignmentAndRunData = computed(() => {
         // swr: { support_level: 'Needs Extra Support', percentile: 10, raw: 10, reliable: true, engagementFlags: {}},
       };
 
-      let numAssignmentsCompleted = 0;
+      let numAssessmentsCompleted = 0;
       const currRowScores = {};
       for (const assessment of assignment.assessments) {
         // General Logic to grab support level, scores, etc
@@ -668,7 +662,7 @@ const computeAssignmentAndRunData = computed(() => {
         }
         // Add filter tags for completed/incomplete
         if (assessment.completedOn != undefined) {
-          numAssignmentsCompleted += 1;
+          numAssessmentsCompleted += 1;
           scoreFilterTags += ' Completed ';
         } else if (assessment.startedOn != undefined) {
           scoreFilterTags += ' Started ';
@@ -814,13 +808,38 @@ const computeAssignmentAndRunData = computed(() => {
 
       // update scores for current row with computed object
       currRow.scores = currRowScores;
-      currRow.numAssignmentsCompleted = numAssignmentsCompleted;
+      currRow.numAssessmentsCompleted = numAssessmentsCompleted;
       // push currRow to assignmentTableDataAcc
       assignmentTableDataAcc.push(currRow);
     }
 
-    // sort by numAssignmentsCompleted
-    assignmentTableDataAcc.sort((a, b) => b.numAssignmentsCompleted - a.numAssignmentsCompleted);
+    // sort by numAssessmentsCompleted
+    assignmentTableDataAcc.sort((a, b) => {
+      const completionDiff = b.numAssessmentsCompleted - a.numAssessmentsCompleted;
+      if (completionDiff !== 0) {
+        return completionDiff;
+      }
+
+      const schoolDiff = (a.user?.schoolName ?? '').localeCompare(b.user?.schoolName ?? '');
+      if (schoolDiff !== 0) {
+        return schoolDiff;
+      }
+
+      const gradeDiff = Number(a.user.grade) - Number(b.user.grade);
+      if (isNaN(gradeDiff)) {
+        const gradeA = a.user?.grade?.toString() ?? '';
+        const gradeB = b.user?.grade?.toString() ?? '';
+        const stringGradeDiff = gradeA.localeCompare(gradeB);
+        if (stringGradeDiff !== 0) {
+          return stringGradeDiff;
+        }
+      } else if (gradeDiff !== 0) {
+        return gradeDiff;
+      }
+
+      const lastNameDiff = (a.user?.lastName ?? '').localeCompare(b.user?.lastName ?? '');
+      return lastNameDiff;
+    });
 
     const filteredRunsByTaskId = _pickBy(runsByTaskIdAcc, (scores, taskId) => {
       return Object.keys(taskInfoById).includes(taskId);
@@ -830,51 +849,19 @@ const computeAssignmentAndRunData = computed(() => {
   }
 });
 
-const filteredTableData = ref(computeAssignmentAndRunData.value.assignmentTableData);
+// Composable to filter table data using FilterBar.vue component which is passed in as a slot to RoarDataTable
+const filteredTableData = ref([]);
+const { updateFilters } = useFilteredTableData(filteredTableData);
 
-// Flag to track whether the watcher is already processing an update
-const isUpdating = ref(false);
+// Watch for changes in assignmentTableData and update filteredTableData
+// This will snapshot the assignmentTableData and filter it based on the current filters
+watch(
+  () => computeAssignmentAndRunData.value.assignmentTableData,
+  (newTableData) => {
+    filteredTableData.value = newTableData;
+  },
+);
 
-watch(computeAssignmentAndRunData, (newValue) => {
-  // Update filteredTableData when computedProgressData changes
-  filteredTableData.value = newValue.assignmentTableData;
-});
-
-watch([filterSchools, filterGrades], ([newSchools, newGrades]) => {
-  // If an update is already in progress, return early to prevent recursion
-  if (isUpdating.value) {
-    return;
-  }
-  if (newSchools.length > 0 || newGrades.length > 0) {
-    isUpdating.value = true;
-    //set scoresTableData to filtered data if filter is added
-    let filteredData = computeAssignmentAndRunData.value.assignmentTableData;
-
-    if (newSchools.length > 0) {
-      filteredData = filteredData.filter((item) => {
-        return newSchools.includes(item.user.schoolName);
-      });
-    }
-    if (newGrades.length > 0) {
-      filteredData = filteredData.filter((item) => {
-        return newGrades.includes(item.user.grade);
-      });
-    }
-    filteredTableData.value = filteredData;
-
-    isUpdating.value = false; // Reset the flag after the update
-  } else {
-    filteredTableData.value = computeAssignmentAndRunData.value.assignmentTableData;
-  }
-});
-
-const resetFilters = () => {
-  isUpdating.value = true;
-
-  filterSchools.value = [];
-  filterGrades.value = [];
-  isUpdating.value = false;
-};
 const viewMode = ref('color');
 
 const viewOptions = ref([
@@ -884,43 +871,74 @@ const viewOptions = ref([
   { label: 'Raw Score', value: 'raw' },
 ]);
 
-const exportSelected = (selectedRows) => {
-  const computedExportData = _map(selectedRows, ({ user, scores }) => {
+/**
+ * Creates and formats the data for exporting user, score, and optionally, progress information to a CSV file.
+ *
+ * This function generates a structured dataset based on user and score data, with optional inclusion of progress
+ * data. It ensures that the data is organized appropriately for export, including task-specific formatting an
+ * reliability checks. If progress data is included, it appends relevant progress information per task.
+ *
+ * This function also checks for the user's role (e.g., super admin) to determine additional fields (such as PID),
+ * handles task-specific score presentation based on configuration, and validates task reliability using engagement
+ * flags. If scores are found unreliable, the reliability reason is included. If the task is incomplete, it is marked as
+ * such.
+ *
+ * @param {Object[]} rows - The array of user data and associated scores.
+ * @param {Object} rows[].user - The user object containing user details such as username, email, first name, and last
+ * name.
+ * @param {Object} rows[].scores - The scores object containing task-related score data for the user. It supports
+ * different score types (percent correct, raw scores, standard scores, etc.) based on task configuration.
+ * @param {boolean} [includeProgress=false] - Flag indicating whether to include task progress data in the export. If
+ * true, progress data will be fetched and appended for each task per user.
+ *
+ * @returns {Array<Object>} - The formatted data array, where each object represents a user and their associated scores.
+ * This data is ready for CSV export and optionally includes progress information.
+ */
+
+const createExportData = ({ rows, includeProgress = false }) => {
+  const computedExportData = _map(rows, ({ user, scores }) => {
     let tableRow = {
-      Username: _get(user, 'username'),
-      First: _get(user, 'firstName'),
-      Last: _get(user, 'lastName'),
-      Grade: _get(user, 'grade'),
+      Username: user?.username,
+      Email: user?.email, // This will only be used when exporting all rows
+      First: user?.firstName,
+      Last: user?.lastName,
+      Grade: user?.grade,
     };
+
     if (authStore.isUserSuperAdmin) {
-      tableRow['PID'] = _get(user, 'assessmentPid');
+      tableRow['PID'] = user?.assessmentPid;
     }
+
     if (props.orgType === 'district') {
-      tableRow['School'] = _get(user, 'schoolName');
+      tableRow['School'] = user?.schoolName;
     }
+
     for (const taskId in scores) {
       const score = scores[taskId];
-      if (tasksToDisplayPercentCorrect.includes(taskId)) {
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Percent Correct`] = score.percentCorrect;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Num Attempted`] = score.numAttempted;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Num Correct`] = score.numCorrect;
-      } else if (tasksToDisplayCorrectIncorrectDifference.includes(taskId)) {
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Correct/Incorrect Difference`] =
-          score.correctIncorrectDifference;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Num Incorrect`] = score.numIncorrect;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Num Correct`] = score.numCorrect;
-      } else if (tasksToDisplayTotalCorrect.includes(taskId)) {
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Num Attempted`] = score.numAttempted;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Num Correct`] = score.numCorrect;
-      } else if (rawOnlyTasks.includes(taskId)) {
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Raw`] = score.rawScore;
-      } else {
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Percentile`] = score.percentileString;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Standard`] = score.standardScore;
+      const taskName = tasksDictionary.value[taskId]?.publicName ?? taskId;
 
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Raw`] = score.rawScore;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Support Level`] = score.supportLevel;
+      // Add task-specific score information
+      if (tasksToDisplayPercentCorrect.includes(taskId)) {
+        tableRow[`${taskName} - Percent Correct`] = score.percentCorrect;
+        tableRow[`${taskName} - Num Attempted`] = score.numAttempted;
+        tableRow[`${taskName} - Num Correct`] = score.numCorrect;
+      } else if (tasksToDisplayCorrectIncorrectDifference.includes(taskId)) {
+        tableRow[`${taskName} - Correct/Incorrect Difference`] = score.correctIncorrectDifference;
+        tableRow[`${taskName} - Num Incorrect`] = score.numIncorrect;
+        tableRow[`${taskName} - Num Correct`] = score.numCorrect;
+      } else if (tasksToDisplayTotalCorrect.includes(taskId)) {
+        tableRow[`${taskName} - Num Correct`] = score.numCorrect;
+        tableRow[`${taskName} - Num Attempted`] = score.numAttempted;
+      } else if (rawOnlyTasks.includes(taskId)) {
+        tableRow[`${taskName} - Raw`] = score.rawScore;
+      } else {
+        tableRow[`${taskName} - Percentile`] = score.percentileString;
+        tableRow[`${taskName} - Standard`] = score.standardScore;
+        tableRow[`${taskName} - Raw`] = score.rawScore;
+        tableRow[`${taskName} - Support Level`] = score.supportLevel;
       }
+
+      // Add reliability information
       if (score.reliable !== undefined && !score.reliable && score.engagementFlags !== undefined) {
         const engagementFlags = Object.keys(score.engagementFlags);
         if (engagementFlags.length > 0) {
@@ -928,106 +946,122 @@ const exportSelected = (selectedRows) => {
             const filteredFlags = Object.keys(score.engagementFlags).filter((flag) =>
               includedValidityFlags[taskId].includes(flag),
             );
-            if (filteredFlags.length === 0) {
-              tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Reliability`] = 'Unreliable';
-            } else {
-              const engagementFlagString = 'Unreliable: ' + filteredFlags.map((key) => _lowerCase(key)).join(', ');
-              tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Reliability`] = engagementFlagString;
-            }
+            tableRow[`${taskName} - Reliability`] =
+              filteredFlags.length === 0 ? 'Unreliable' : `Unreliable: ${filteredFlags.map(_lowerCase).join(', ')}`;
           } else {
-            const engagementFlagString = 'Unreliable: ' + engagementFlags.map((key) => _lowerCase(key)).join(', ');
-            tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Reliability`] = engagementFlagString;
+            tableRow[`${taskName} - Reliability`] = `Unreliable: ${engagementFlags.map(_lowerCase).join(', ')}`;
           }
         } else {
-          tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Reliability`] = 'Assessment Incomplete';
+          tableRow[`${taskName} - Reliability`] = 'Assessment Incomplete';
         }
       } else {
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Reliability`] = 'Reliable';
+        tableRow[`${taskName} - Reliability`] = 'Reliable';
+      }
+
+      // Add progress immediately after reliability if includeProgress is true
+      if (includeProgress) {
+        const progressRow = computedProgressData.value.find((progress) => progress.userPid === user?.assessmentPid);
+
+        if (progressRow) {
+          scoreReportColumns.value.forEach((column) => {
+            const { field, header: taskName } = column; // Use taskName from the column header
+
+            // Ensure field is defined and is a string before calling startsWith
+            if (typeof field === 'string' && field.startsWith('scores')) {
+              const scoreKey = field.split('.').slice(-2, -1)[0]; // Extract taskId (e.g., "swr", "sre", etc.)
+
+              // Check if taskId exists in progressRow.progress
+              if (progressRow.progress[scoreKey]) {
+                tableRow[`${taskName} - Progress`] = progressRow.progress[scoreKey].value;
+              } else {
+                tableRow[`${taskName} - Progress`] = 'not assigned';
+              }
+            }
+          });
+        } else {
+          // If no progressRow is found, mark all scores as "not assigned"
+          scoreReportColumns.value.forEach((column) => {
+            const { field, header: taskName } = column; // Use taskName from the column header
+
+            // Ensure field is defined and is a string before calling startsWith
+            if (field && typeof field === 'string' && field.startsWith('scores')) {
+              tableRow[`${taskName} - Progress`] = 'not assigned';
+            }
+          });
+        }
       }
     }
+
     return tableRow;
   });
-  exportCsv(
-    computedExportData,
-    `roar-scores-${_kebabCase(getTitle(administrationInfo.value, isSuperAdmin.value))}-${_kebabCase(
-      orgInfo.value.name,
-    )}-selected.csv`,
-  );
-  return;
+  return computedExportData;
 };
 
-const exportAll = async () => {
-  const computedExportData = _map(computeAssignmentAndRunData.value.assignmentTableData, ({ user, scores }) => {
-    let tableRow = {
-      Username: _get(user, 'username'),
-      Email: _get(user, 'email'),
-      First: _get(user, 'firstName'),
-      Last: _get(user, 'lastName'),
-      Grade: _get(user, 'grade'),
-    };
-    if (authStore.isUserSuperAdmin) {
-      tableRow['PID'] = _get(user, 'assessmentPid');
-    }
-    if (props.orgType === 'district') {
-      tableRow['School'] = _get(user, 'schoolName');
-    }
-    for (const taskId in scores) {
-      const score = scores[taskId];
-      if (tasksToDisplayPercentCorrect.includes(taskId)) {
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Percent Correct`] = score.percentCorrect;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Num Attempted`] = score.numAttempted;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Num Correct`] = score.numCorrect;
-      } else if (tasksToDisplayCorrectIncorrectDifference.includes(taskId)) {
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Correct/Incorrect Difference`] =
-          score.correctIncorrectDifference;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Num Incorrect`] = score.numIncorrect;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Num Correct`] = score.numCorrect;
-      } else if (tasksToDisplayTotalCorrect.includes(taskId)) {
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Num Correct`] = score.numCorrect;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Num Attempted`] = score.numAttempted;
-      } else if (rawOnlyTasks.includes(taskId)) {
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Raw`] = score.rawScore;
-      } else {
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Percentile`] = score.percentileString;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Standard`] = score.standardScore;
+/**
+ * Exports data to a CSV file with dynamic columns based on selected rows and tasks.
+ *
+ * @param {Object} options - Options for exporting data.
+ * @param {Array} options.selectedRows - The selected rows to export. If null, will export all rows.
+ * @param {boolean} options.includeProgress - Determines if progress columns should be included in the export.
+ */
+const exportData = async ({ selectedRows = null, includeProgress = false }) => {
+  const rows = selectedRows || computeAssignmentAndRunData.value.assignmentTableData;
+  let exportData = createExportData({ rows, includeProgress });
 
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Raw`] = score.rawScore;
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Support Level`] = score.supportLevel;
-      }
-
-      if (score.reliable !== undefined && !score.reliable && score.engagementFlags !== undefined) {
-        const engagementFlags = Object.keys(score.engagementFlags);
-        if (engagementFlags.length > 0) {
-          if (includedValidityFlags[taskId]) {
-            const filteredFlags = Object.keys(score.engagementFlags).filter((flag) =>
-              includedValidityFlags[taskId].includes(flag),
-            );
-            if (filteredFlags.length === 0) {
-              tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Reliability`] = 'Unreliable';
-            } else {
-              const engagementFlagString = 'Unreliable: ' + filteredFlags.map((key) => _lowerCase(key)).join(', ');
-              tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Reliability`] = engagementFlagString;
-            }
-          } else {
-            const engagementFlagString = 'Unreliable: ' + engagementFlags.map((key) => _lowerCase(key)).join(', ');
-            tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Reliability`] = engagementFlagString;
-          }
-        } else {
-          tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Reliability`] = 'Assessment Incomplete';
-        }
-      } else {
-        tableRow[`${tasksDictionary.value[taskId]?.publicName ?? taskId} - Reliability`] = 'Reliable';
-      }
-    }
-    return tableRow;
+  // Analyze all rows to determine which columns are present in the data
+  const allColumns = new Set();
+  exportData.forEach((row) => {
+    Object.keys(row).forEach((column) => {
+      allColumns.add(column);
+    });
   });
-  exportCsv(
-    computedExportData,
-    `roar-scores-${_kebabCase(getTitle(administrationInfo.value, isSuperAdmin.value))}-${_kebabCase(
-      orgInfo.value.name,
-    )}.csv`,
+
+  // Convert Set to Array for sorting
+  const allColumnsArray = Array.from(allColumns);
+
+  // Define the static columns
+  const staticColumns = ['Username', 'Email', 'First', 'Last', 'Grade', 'PID', 'School'];
+
+  // Automatically detect task names by splitting column names and excluding static columns
+  const taskBases = Array.from(
+    new Set(
+      allColumnsArray.filter((col) => !staticColumns.includes(col)).map((col) => col.split(' - ')[1]), // Extract the task name part
+    ),
   );
-  return;
+
+  // Group task columns and place 'Reliability' and 'Progress' last for each task
+  const finalColumns = [
+    ...staticColumns,
+    ...taskBases.reduce((acc, taskBase) => {
+      const taskCols = allColumnsArray.filter(
+        (col) => col.includes(` - ${taskBase} -`) && !col.endsWith('Reliability') && !col.endsWith('Progress'),
+      );
+      const reliabilityCol = allColumnsArray.filter(
+        (col) => col.includes(` - ${taskBase} -`) && col.endsWith('Reliability'),
+      );
+      const progressCol = allColumnsArray.filter((col) => col.includes(` - ${taskBase} -`) && col.endsWith('Progress'));
+      return [...acc, ...taskCols, ...reliabilityCol, ...progressCol];
+    }, []),
+  ];
+
+  // Reorder exportData according to finalColumns
+  exportData = exportData.map((row) => {
+    const reorderedRow = {};
+    finalColumns.forEach((col) => {
+      reorderedRow[col] = row[col] !== undefined ? row[col] : null;
+    });
+    return reorderedRow;
+  });
+
+  // Create the file name for export
+  const fileNameSuffix = includeProgress ? '-scores-progress' : '-scores';
+  const selectedSuffix = selectedRows ? '-selected' : '';
+  const fileName = `roar${fileNameSuffix}${selectedSuffix}-${_kebabCase(
+    getTitle(administrationInfo.value, isSuperAdmin.value),
+  )}-${_kebabCase(orgInfo.value.name)}.csv`;
+
+  // Export CSV
+  exportCsv(exportData, fileName);
 };
 
 function getScoreKeysByRow(row, grade) {
@@ -1143,11 +1177,20 @@ const scoreReportColumns = computed(() => {
       dataType: 'text',
       sort: true,
       filter: true,
+      headerStyle: authStore.isUserSuperAdmin
+        ? `background:var(--primary-color); color:white; padding-top:0; margin-top:0; padding-bottom:0; margin-bottom:0; border:0; margin-left:0 `
+        : `background:var(--primary-color); color:white; padding-top:0; margin-top:0; padding-bottom:0; margin-bottom:0; border:0; margin-left:0; border-right-width:2px; border-right-style:solid; border-right-color:#ffffff;`,
     });
   }
 
   if (authStore.isUserSuperAdmin) {
-    tableColumns.push({ field: 'user.assessmentPid', header: 'PID', dataType: 'text', sort: false });
+    tableColumns.push({
+      field: 'user.assessmentPid',
+      header: 'PID',
+      dataType: 'text',
+      sort: false,
+      headerStyle: `background:var(--primary-color); color:white; padding-top:0; margin-top:0; padding-bottom:0; margin-bottom:0; border:0; margin-left:0; border-right-width:2px; border-right-style:solid; border-right-color:#ffffff;`,
+    });
   }
 
   const sortedTasks = allTasks.value.toSorted((p1, p2) => {

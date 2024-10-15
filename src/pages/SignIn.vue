@@ -194,10 +194,12 @@ const authWithGoogle = () => {
       .signInWithGooglePopup()
       .then(async () => {
         if (authStore.uid) {
-          const userData = await fetchDocById('users', authStore.uid);
           const userClaims = await fetchDocById('userClaims', authStore.uid);
-          authStore.userData = userData;
           authStore.userClaims = userClaims;
+        }
+        if (authStore.roarUid) {
+          const userData = await fetchDocById('users', authStore.roarUid);
+          authStore.userData = userData;
         }
       })
       .catch((e) => {
@@ -220,9 +222,12 @@ const modalPassword = ref('');
 
 const authWithClever = () => {
   console.log('---> authWithClever');
-  authStore.signInWithCleverRedirect();
+  if (process.env.NODE_ENV === 'development' && !window.Cypress) {
+    authStore.signInWithCleverPopup();
+  } else {
+    authStore.signInWithCleverRedirect();
+  }
   spinner.value = true;
-  // }
 };
 
 const authWithClassLink = () => {
@@ -232,7 +237,6 @@ const authWithClassLink = () => {
     spinner.value = true;
   } else {
     authStore.signInWithClassLinkRedirect();
-    // authStore.signInWithCleverPopup();
     spinner.value = true;
   }
 };
@@ -253,7 +257,16 @@ const authWithEmail = async (state) => {
 
     await authStore
       .logInWithEmailAndPassword(creds)
-      .then(() => {
+      .then(async () => {
+        if (authStore.uid) {
+          const userClaims = await fetchDocById('userClaims', authStore.uid);
+          authStore.userClaims = userClaims;
+        }
+        if (authStore.roarUid) {
+          const userData = await fetchDocById('users', authStore.roarUid);
+          authStore.userData = userData;
+        }
+
         spinner.value = true;
       })
       .catch((e) => {

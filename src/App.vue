@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeMount, ref, defineAsyncComponent } from 'vue';
+import { computed, onBeforeMount, ref, defineAsyncComponent, onUpdated } from 'vue';
 import { useRoute } from 'vue-router';
 import { useRecaptchaProvider } from 'vue-recaptcha';
 import { Head } from '@unhead/vue/components';
@@ -82,16 +82,21 @@ const navbarBlacklist = ref([
   'MEP',
 ]);
 
+onUpdated(async () => {
+  await authStore.updateTasksDictionary();
+});
+
 onBeforeMount(async () => {
   await authStore.initFirekit();
   authStore.setUser();
   await authStore.initStateFromRedirect().then(async () => {
     if (authStore.uid) {
-      const userData = await fetchDocById('users', authStore.uid);
       const userClaims = await fetchDocById('userClaims', authStore.uid);
-      authStore.userData = userData;
       authStore.userClaims = userClaims;
-      authStore.updateTasksDictionary();
+    }
+    if (authStore.roarUid) {
+      const userData = await fetchDocById('users', authStore.roarUid);
+      authStore.userData = userData;
     }
   });
   isAuthStoreReady.value = true;
