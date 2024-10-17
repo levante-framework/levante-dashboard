@@ -102,7 +102,7 @@
             <span>Google</span>
           </PvButton>
         </div>
-        <div v-if="signInMethods.includes('clever')">
+        <div v-if="signInMethods.includes(AUTH_SSO_PROVIDERS.CLEVER)">
           <PvButton
             v-if="!isLevante"
             class="flex surface-0 p-1 mr-1 border-black-alpha-10 justify-content-center hover:border-primary hover:surface-ground"
@@ -113,7 +113,7 @@
             <span>Clever</span>
           </PvButton>
         </div>
-        <div v-if="signInMethods.includes('classlink')">
+        <div v-if="signInMethods.includes(AUTH_SSO_PROVIDERS.CLASSLINK)">
           <PvButton
             v-if="!isLevante"
             class="flex surface-0 p-1 mr-1 border-black-alpha-10 justify-content-center hover:border-primary hover:surface-ground"
@@ -159,25 +159,35 @@ import { isMobileBrowser } from '@/helpers';
 import { fetchDocById } from '../helpers/query/utils';
 import { isLevante } from '@/helpers';
 import RoarModal from '../components/modals/RoarModal.vue';
+import { AUTH_SSO_PROVIDERS } from '@/constants/auth';
+import { APP_ROUTES } from '@/constants/routes';
 
 const incorrect = ref(false);
 const authStore = useAuthStore();
 const router = useRouter();
 const adminSignIn = ref(false);
 
-const { spinner, authFromClever, authFromClassLink, routeToProfile, roarfirekit } = storeToRefs(authStore);
+const { spinner, ssoProvider, routeToProfile, roarfirekit } = storeToRefs(authStore);
 const warningModalOpen = ref(false);
 
 authStore.$subscribe(() => {
   if (authStore.uid) {
-    if (authFromClever.value) {
-      router.push({ name: 'CleverLanding' });
-    } else if (authFromClassLink.value) {
-      router.push({ name: 'ClassLinkLanding' });
+    if (authStore.userData && isLevante) {
+      if (
+        toRaw(authStore.userData?.userType?.toLowerCase()) === 'parent' ||
+        toRaw(authStore.userData?.userType?.toLowerCase()) === 'teacher'
+      ) {
+        router.push({ name: 'Survey' });
+        return;
+      }
+    }
+
+    if (ssoProvider.value) {
+      router.push({ path: APP_ROUTES.SSO });
     } else if (routeToProfile.value) {
-      router.push({ name: 'ProfileAccounts' });
+      router.push({ path: APP_ROUTES.ACCOUNT_PROFILE });
     } else {
-      router.push({ name: 'Home' });
+      router.push({ path: APP_ROUTES.HOME });
     }
   }
 });
@@ -297,9 +307,9 @@ const openWarningModal = async () => {
 const displaySignInMethods = computed(() => {
   return signInMethods.value.map((method) => {
     if (method === 'password') return 'Password';
-    if (method === 'google') return 'Google';
-    if (method === 'clever') return 'Clever';
-    if (method === 'classlink') return 'ClassLink';
+    if (method === AUTH_SSO_PROVIDERS.GOOGLE) return 'Google';
+    if (method === AUTH_SSO_PROVIDERS.CLEVER) return 'Clever';
+    if (method === AUTH_SSO_PROVIDERS.CLASSLINK) return 'ClassLink';
   });
 });
 
