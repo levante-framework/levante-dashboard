@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, toRaw, watch } from 'vue';
+import { computed, onMounted, ref, toRaw, watch, defineAsyncComponent } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/store/auth';
@@ -31,16 +31,17 @@ import _union from 'lodash/union';
 import { storeToRefs } from 'pinia';
 import { fetchDocById } from '@/helpers/query/utils';
 import { useI18n } from 'vue-i18n';
-import HomeParticipant from './HomeParticipant.vue';
-import HomeAdministrator from './HomeAdministrator.vue';
-import ConsentModal from '@/components/ConsentModal.vue';
+
 
 const isLevante = import.meta.env.MODE === 'LEVANTE';
 const authStore = useAuthStore();
 const { roarfirekit, roarUid, uid, userQueryKeyIndex, authFromClever, authFromClassLink } = storeToRefs(authStore);
-
 const router = useRouter();
 const i18n = useI18n();
+
+const HomeParticipant = defineAsyncComponent(() => import('@/pages/HomeParticipant.vue'));
+const HomeAdministrator = defineAsyncComponent(() => import('@/pages/HomeAdministrator.vue'));
+const ConsentModal = defineAsyncComponent(() => import('@/components/ConsentModal.vue'));
 
 if (authFromClever.value) {
   console.log('Detected Clever authentication, routing to CleverLanding page');
@@ -65,10 +66,6 @@ unsubscribe = authStore.$subscribe(async (mutation, state) => {
 });
 
 onMounted(async () => {
-  HomeParticipant = (await import('@/pages/HomeParticipant.vue')).default;
-  HomeAdministrator = (await import('@/pages/HomeAdministrator.vue')).default;
-  ConsentModal = (await import('@/components/ConsentModal.vue')).default;
-
   if (requireRefresh.value) {
     requireRefresh.value = false;
     router.go(0);

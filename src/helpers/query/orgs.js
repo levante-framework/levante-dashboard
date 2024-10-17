@@ -65,6 +65,7 @@ export const getOrgsRequestBody = ({
   };
 
   if (orgName && !(parentDistrict || parentSchool)) {
+    console.log('orgName in query: ', orgName);
     requestBody.structuredQuery.where.compositeFilter.filters.push({
       fieldFilter: {
         field: { fieldPath: 'name' },

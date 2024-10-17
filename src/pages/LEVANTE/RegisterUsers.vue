@@ -524,6 +524,7 @@
   
     // Array of objects. Ex: [{abbreviation: 'LVT', id: 'lut54353jkler'}]
     const orgs = await fetchOrgByName(orgType, orgName, parentDistrict, parentSchool);
+    console.log('orgs response: ', orgs);
   
     if (orgs.length === 0) {
       throw new Error(`No organizations found for ${orgType} '${orgName}'`);

@@ -115,7 +115,6 @@ import { Converter } from 'showdown';
 import { fetchAudioLinks, } from '@/helpers/survey';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
-import { useQueryClient } from '@tanstack/vue-query';
 import { initializeSurvey, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
 import { useSurveyStore } from '@/store/survey';
 
@@ -137,7 +136,6 @@ const init = () => {
   initialized.value = true;
 };
 
-const queryClient = useQueryClient();
 
 const authStore = useAuthStore();
 const {
@@ -150,6 +148,7 @@ const {
   assignmentQueryKeyIndex,
 } = storeToRefs(authStore);
 
+
 unsubscribe = authStore.$subscribe(async (mutation, state) => {
   if (state.roarfirekit.restConfig) init();
 });
@@ -160,6 +159,7 @@ onMounted(async () => {
 
 const gameStore = useGameStore();
 const { selectedAdmin } = storeToRefs(gameStore);
+console.log('selectedAdmin: ', selectedAdmin.value);
 
 const {
   isLoading: isLoadingUserData,
@@ -188,6 +188,7 @@ const {
 });
 
 const sortedAdminInfo = computed(() => {
+  console.log('assignmentInfo.value: ', assignmentInfo.value);
   return [...(assignmentInfo.value ?? [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 });
 
@@ -476,7 +477,7 @@ watch(surveyDependenciesLoaded, async (isLoaded) => {
 }, { immediate: true });
 
 const isLoading = computed(() => {
-  const commonLoading = isLoadingUserData.value || isLoadingAssignments.value || isLoadingAdmins.value || isLoadingTasks.value;
+  const commonLoading = isLoadingUserData.value || isLoadingAssignments.value || isLoadingTasks.value;
 
   if (isLevante) {
     return commonLoading || isLoadingSurvey.value;
@@ -502,7 +503,10 @@ const toggleShowOptionalAssessments = async () => {
 // Assessments to populate the game tabs.
 // Generated based on the current selected admin Id
 const assessments = computed(() => {
+  console.log('taskInfo.value: ', taskInfo.value);
+  console.log('selectedAdmin.value: ', selectedAdmin.value);
   if (!isFetching.value && selectedAdmin.value && (taskInfo.value ?? []).length > 0) {
+    console.log('selectedAdmin.value: ', selectedAdmin.value);
     const fetchedAssessments = _without(
       selectedAdmin.value.assessments.map((assessment) => {
         // Get the matching assessment from assignmentInfo
@@ -605,6 +609,8 @@ watch(
     const allAdminIds = (assignmentInfo.value ?? []).map((admin) => admin.id);
     // If there is no selected admin or if the selected admin is not in the list
     // of all administrations choose the first one after sorting alphabetically by publicName
+
+    console.log('sortedAdminInfo: ', sortedAdminInfo.value);
     if (allAdminIds.length > 0 && (!selectedAdminId || !allAdminIds.includes(selectedAdminId))) {
       // Choose the first sorted administration
       selectedAdmin.value = sortedAdminInfo.value[0];
