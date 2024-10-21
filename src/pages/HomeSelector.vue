@@ -5,51 +5,50 @@
       <p class="text-center">{{ $t('homeSelector.loading') }}</p>
     </div>
   </div>
-
   <div v-else>
-    <HomeParticipant v-if="isParticipant" />
-    <HomeAdministrator v-else-if="isAdminUser" />
+    <HomeParticipant v-if="!isAdmin" />
+    <HomeAdministrator v-else-if="isAdmin" />
   </div>
-
   <ConsentModal
-    v-if="!isLoading && showConsent && isAdminUser"
+    v-if="showConsent && isAdmin"
     :consent-text="confirmText"
     :consent-type="consentType"
-    :on-confirm="updateConsent"
+    @accepted="updateConsent"
+    @delayed="refreshDocs"
   />
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, toRaw, watch, defineAsyncComponent } from 'vue';
+import { useQuery } from '@tanstack/vue-query';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
-import { storeToRefs } from 'pinia';
-import _isEmpty from 'lodash/isEmpty';
 import { useAuthStore } from '@/store/auth';
 import { useGameStore } from '@/store/game';
-import useUserType from '@/composables/useUserType';
-import useUserDataQuery from '@/composables/queries/useUserDataQuery';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
-import { CONSENT_TYPES } from '@/constants/consentTypes';
-import { APP_ROUTES } from '@/constants/routes';
-import { isLevante } from '@/helpers';
+import _get from 'lodash/get';
+import _isArray from 'lodash/isArray';
+import _isEmpty from 'lodash/isEmpty';
+import _union from 'lodash/union';
+import { storeToRefs } from 'pinia';
+import { fetchDocById } from '@/helpers/query/utils';
+import { useI18n } from 'vue-i18n';
+
+
+const isLevante = import.meta.env.MODE === 'LEVANTE';
+const authStore = useAuthStore();
+const { roarfirekit, roarUid, uid, userQueryKeyIndex, authFromClever, authFromClassLink } = storeToRefs(authStore);
+const router = useRouter();
+const i18n = useI18n();
 
 const HomeParticipant = defineAsyncComponent(() => import('@/pages/HomeParticipant.vue'));
 const HomeAdministrator = defineAsyncComponent(() => import('@/pages/HomeAdministrator.vue'));
 const ConsentModal = defineAsyncComponent(() => import('@/components/ConsentModal.vue'));
 
-const authStore = useAuthStore();
-const { roarfirekit, ssoProvider } = storeToRefs(authStore);
-
-const router = useRouter();
-const i18n = useI18n();
-
-const { mutateAsync: updateConsentStatus } = useUpdateConsentMutation();
-
-if (ssoProvider.value) {
-  console.log('Detected SSO authentication, redirecting...');
-  router.replace({ path: APP_ROUTES.SSO });
+if (authFromClever.value) {
+  console.log('Detected Clever authentication, routing to CleverLanding page');
+  router.push({ name: 'CleverLanding' });
+} else if (authFromClassLink.value) {
+  console.log('Detected ClassLink authentication, routing to ClassLinkLanding page');
+  router.push({ name: 'ClassLinkLanding' });
 }
 
 const gameStore = useGameStore();
@@ -73,66 +72,85 @@ onMounted(async () => {
   }
   if (roarfirekit.value.restConfig) init();
   if (!isLoading.value) {
+    refreshDocs();
     if (isAdmin.value) {
       await checkConsent();
     }
   }
 });
 
-const { isLoading: isLoadingUserData, data: userData } = useUserDataQuery(null, {
+const { isLoading: isLoadingUserData, data: userData } = useQuery({
+  queryKey: ['userData', roarUid, userQueryKeyIndex],
+  queryFn: () => fetchDocById('users', roarUid.value),
+  keepPreviousData: true,
   enabled: initialized,
+  staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
-const { isLoading: isLoadingClaims, data: userClaims } = useUserClaimsQuery({
+const { isLoading: isLoadingClaims, data: userClaims } = useQuery({
+  queryKey: ['userClaims', uid, userQueryKeyIndex],
+  queryFn: () => fetchDocById('userClaims', uid.value),
+  keepPreviousData: true,
   enabled: initialized,
+  staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
-const { isAdmin, isSuperAdmin, isParticipant } = useUserType(userClaims);
+const isLoading = computed(() => isLoadingClaims.value || isLoadingUserData.value);
 
-const isAdminUser = computed(() => isAdmin.value || isSuperAdmin.value);
-const isLoading = computed(() => {
-  // @NOTE: In addition to the loading states, we also check if user data and user claims are loaded as due to the
-  // current application initialization flow, the userData and userClaims queries initially reset. Once this is improved
-  // these additional checks can be removed.
-  return isLoadingUserData.value || isLoadingClaims.value || !userData.value || !userClaims.value;
+const isAdmin = computed(() => {
+  if (userClaims.value?.claims?.super_admin) return true;
+  if (userClaims.value?.claims?.admin) return true;
+  if (_isEmpty(_union(...Object.values(userClaims.value?.claims?.minimalAdminOrgs ?? {})))) return false;
+  return true;
 });
 
-const showConsent = ref(false);
 const consentType = computed(() => {
-  if (isAdminUser.value) {
-    return CONSENT_TYPES.TOS;
+  if (isAdmin.value) {
+    return 'tos';
   } else {
-    return i18n.locale.value.includes('es') ? CONSENT_TYPES.ASSENT_ES : CONSENT_TYPES.ASSENT;
+    return i18n.locale.value.includes('es') ? 'assent-es' : 'assent';
   }
 });
-
+const showConsent = ref(false);
 const confirmText = ref('');
 const consentVersion = ref('');
 
 async function updateConsent() {
-  await updateConsentStatus({ consentType, consentVersion });
+  if (isAdmin.value) {
+    await authStore.updateConsentStatus(consentType.value, consentVersion.value);
+    userQueryKeyIndex.value += 1;
+  }
+}
+
+function refreshDocs() {
+  authStore.refreshQueryKeys();
 }
 
 async function checkConsent() {
-  if (isLevante || !isAdminUser.value) return;
-
-  const consentStatus = userData.value?.legal?.[consentType.value];
-  const consentDoc = await authStore.getLegalDoc(consentType.value);
-
-  consentVersion.value = consentDoc.version;
-
-  if (!consentStatus?.[consentDoc.version]) {
-    confirmText.value = consentDoc.text;
-    showConsent.value = true;
+  if (isLevante) {
+    // skip the consent for levante
     return;
   }
 
-  const legalDocs = consentStatus?.[consentDoc.version] || [];
-  const signedBeforeAugFirst = legalDocs.some((doc) => isSignedBeforeAugustFirst(doc.dateSigned));
+  // Check for consent
+  if (isAdmin.value) {
+    const consentStatus = _get(userData.value, `legal.${consentType.value}`);
+    const consentDoc = await authStore.getLegalDoc(consentType.value);
+    consentVersion.value = consentDoc.version;
+    if (!_get(toRaw(consentStatus), consentDoc.version)) {
+      confirmText.value = consentDoc.text;
+      showConsent.value = true;
+      return;
+    }
 
-  if (signedBeforeAugFirst) {
-    confirmText.value = consentDoc.text;
-    showConsent.value = true;
+    let legalDocs = _get(toRaw(consentStatus), consentDoc.version);
+    legalDocs = _isArray(legalDocs) ? legalDocs : [legalDocs];
+    const signedBeforeAugFirst = legalDocs.some((doc) => isSignedBeforeAugustFirst(doc.dateSigned));
+
+    if (signedBeforeAugFirst) {
+      confirmText.value = consentDoc.text;
+      showConsent.value = true;
+    }
   }
 }
 
@@ -142,10 +160,11 @@ function isSignedBeforeAugustFirst(signedDate) {
   return new Date(signedDate) < augustFirstThisYear;
 }
 
+// Only check consent if the user data is loaded
 watch(
-  [userData, isAdminUser],
-  async ([updatedUserData, updatedAdminUserState]) => {
-    if (!_isEmpty(updatedUserData) && updatedAdminUserState) {
+  [userData, userClaims],
+  async ([newUserData, newUserClaims]) => {
+    if (!_isEmpty(newUserData) && !_isEmpty(newUserClaims)) {
       await checkConsent();
     }
   },
@@ -158,5 +177,8 @@ onMounted(async () => {
     router.go(0);
   }
   if (roarfirekit.value.restConfig) init();
+  if (!isLoading.value) {
+    refreshDocs();
+  }
 });
 </script>
