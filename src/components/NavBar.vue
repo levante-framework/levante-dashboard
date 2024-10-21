@@ -89,8 +89,6 @@ const initialized = ref(false);
 const menu = ref();
 const screenWidth = ref(window.innerWidth);
 
-const isLevante = import.meta.env.MODE === 'LEVANTE';
-
 const { mutate: signOut } = useSignOutMutation();
 
 let unsubscribe;

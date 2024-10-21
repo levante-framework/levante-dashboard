@@ -33,21 +33,17 @@ import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
 import { CONSENT_TYPES } from '@/constants/consentTypes';
 import { APP_ROUTES } from '@/constants/routes';
+import { isLevante } from '@/helpers';
 
 const HomeParticipant = defineAsyncComponent(() => import('@/pages/HomeParticipant.vue'));
 const HomeAdministrator = defineAsyncComponent(() => import('@/pages/HomeAdministrator.vue'));
 const ConsentModal = defineAsyncComponent(() => import('@/components/ConsentModal.vue'));
 
-const isLevante = import.meta.env.MODE === 'LEVANTE';
 const authStore = useAuthStore();
 const { roarfirekit, ssoProvider } = storeToRefs(authStore);
 
 const router = useRouter();
 const i18n = useI18n();
-
-const HomeParticipant = defineAsyncComponent(() => import('@/pages/HomeParticipant.vue'));
-const HomeAdministrator = defineAsyncComponent(() => import('@/pages/HomeAdministrator.vue'));
-const ConsentModal = defineAsyncComponent(() => import('@/components/ConsentModal.vue'));
 
 const { mutateAsync: updateConsentStatus } = useUpdateConsentMutation();
 
@@ -77,7 +73,6 @@ onMounted(async () => {
   }
   if (roarfirekit.value.restConfig) init();
   if (!isLoading.value) {
-    refreshDocs();
     if (isAdmin.value) {
       await checkConsent();
     }
@@ -99,7 +94,7 @@ const isLoading = computed(() => {
   // @NOTE: In addition to the loading states, we also check if user data and user claims are loaded as due to the
   // current application initialization flow, the userData and userClaims queries initially reset. Once this is improved
   // these additional checks can be removed.
-  return !initialized || isLoadingUserData.value || isLoadingClaims.value || !userData.value || !userClaims.value;
+  return isLoadingUserData.value || isLoadingClaims.value || !userData.value || !userClaims.value;
 });
 
 const showConsent = ref(false);

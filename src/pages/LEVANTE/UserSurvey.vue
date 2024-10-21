@@ -38,15 +38,16 @@ async function playAudio(name) {
   source.start(0);
 }
 
-console.log('specificSurveyRelationData', surveyStore.specificSurveyRelationData)
-console.log('specificSurveyRelationIndex', surveyStore.specificSurveyRelationIndex)
-console.log('specific relation:', surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex])
+// console.log('survey', surveyStore.survey)
+// console.log('isSavingSurveyResponses', surveyStore.isSavingSurveyResponses)
+// console.log('surveyAudioLoading', surveyStore.surveyAudioLoading)
+// console.log('userType', authStore.userData.userType)
 
 
 </script>
 
 <template>
-  <div v-if="surveyStore.survey && !surveyStore.isSavingSurveyResponses && (!surveyStore.surveyAudioLoading || authStore.userData.userType === 'student')">
+  <div v-if="surveyStore.survey && !surveyStore.isSavingSurveyResponses && !surveyStore.surveyAudioLoading">
     <h1 v-if="authStore.userData.userType !== 'student' && surveyStore.isGeneralSurveyComplete" class="text-2xl font-bold text-black text-center">
       {{ authStore.userData.userType === 'parent' ? `${$t('userSurvey.specificRelationDescriptionChildA')} ${surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex].birthMonth} ${$t('userSurvey.specificRelationDescriptionChildB')} ${surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex].birthYear}` : `${$t('userSurvey.specificRelationDescriptionClass')} ${surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex].name}` }}
     </h1>
@@ -67,7 +68,7 @@ console.log('specific relation:', surveyStore.specificSurveyRelationData[surveyS
     </div>
   </div>
 
-  <AppSpinner v-if="!surveyStore.survey || surveyStore.isSavingSurveyResponses || (surveyStore.surveyAudioLoading && authStore.userData.userType !== 'student')" />
+  <AppSpinner v-else-if="!surveyStore.survey || surveyStore.isSavingSurveyResponses || surveyStore.surveyAudioLoading" />
 </template>
 
 <style>

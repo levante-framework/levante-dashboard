@@ -106,7 +106,7 @@ import ConsentModal from '@/components/ConsentModal.vue';
 import GameTabs from '@/components/GameTabs.vue';
 import ParticipantSidebar from '@/components/ParticipantSidebar.vue';
 import { isLevante } from '@/helpers';
-import useSurveyResponses from '@/composables/useSurveyResponses/useSurveyResponses';
+import useSurveyResponsesQuery from '@/composables/useSurveyResponses/useSurveyResponses';
 import { useI18n } from 'vue-i18n';
 import axios from 'axios';
 import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
@@ -117,6 +117,8 @@ import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { initializeSurvey, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
 import { useSurveyStore } from '@/store/survey';
+import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import { fetchDocsById } from '@/helpers/query/utils';
 
 const showConsent = ref(false);
 const consentVersion = ref('');
@@ -127,6 +129,7 @@ const { locale } = useI18n();
 const router = useRouter();
 const toast = useToast();
 const surveyStore = useSurveyStore();
+const queryClient = useQueryClient();
 
 
 const { mutateAsync: updateConsentStatus } = useUpdateConsentMutation();
@@ -152,7 +155,6 @@ onMounted(async () => {
 
 const gameStore = useGameStore();
 const { selectedAdmin } = storeToRefs(gameStore);
-console.log('selectedAdmin: ', selectedAdmin.value);
 
 const {
   isLoading: isLoadingUserData,
@@ -185,9 +187,10 @@ const {
   enabled: tasksQueryEnabled,
 });
 
-const { data: surveyResponsesData } = useSurveyReponsesQuery({
-  enabled: initialized.value && isLevante,
+const { data: surveyResponsesData } = useSurveyResponsesQuery({
+  enabled: isLevante && initialized,
 });
+
 
 const isLoading = computed(() => {
   return isLoadingUserData.value || isLoadingAssignments.value || isLoadingTasks.value;
@@ -203,7 +206,6 @@ const hasAssignments = computed(() => {
 });
 
 async function checkConsent() {
-
   const legal = selectedAdmin.value?.legal;
   if (!legal) return;
 
@@ -213,17 +215,17 @@ async function checkConsent() {
     const currentDate = new Date();
     const age = currentDate.getFullYear() - dob.getFullYear();
 
-  if (!legal?.consent) {
-    // Always show consent form for this test student when running Cypress tests
-    // @TODO: Remove this once we update the E2E tests to handle the consent form without persisting state. This would
-    // improve the test relability as enforcing the below condition defeats parts of the test purpose.
-    if (userData.value?.id === 'O75V6IcVeiTwW8TRjXb76uydlwV2') {
-      consentType.value = 'consent';
-      confirmText.value = 'This is a test student. Please do not accept this form.';
-      showConsent.value = true;
+    if (!legal?.consent) {
+      // Always show consent form for this test student when running Cypress tests
+      // @TODO: Remove this once we update the E2E tests to handle the consent form without persisting state. This would
+      // improve the test relability as enforcing the below condition defeats parts of the test purpose.
+      if (userData.value?.id === 'O75V6IcVeiTwW8TRjXb76uydlwV2') {
+        consentType.value = 'consent';
+        confirmText.value = 'This is a test student. Please do not accept this form.';
+        showConsent.value = true;
+      }
+      return;
     }
-    return;
-  }
 
     const isAdult = age >= 18;
     const isSeniorGrade = grade >= 12;
@@ -236,48 +238,49 @@ async function checkConsent() {
 
     consentType.value = docType;
 
-  const consentStatus = userData.value?.legal?.[consentType.value];
-  const consentDoc = await authStore.getLegalDoc(docType);
-  consentVersion.value = consentDoc.version;
+    const consentStatus = userData.value?.legal?.[consentType.value];
+    const consentDoc = await authStore.getLegalDoc(docType);
+    consentVersion.value = consentDoc.version;
 
-  if (consentStatus?.[consentDoc.version]) {
-    const legalDocs = consentStatus?.[consentDoc.version];
+    if (consentStatus?.[consentDoc.version]) {
+      const legalDocs = consentStatus?.[consentDoc.version];
 
-    let found = false;
-    let signedBeforeAugFirst = false;
+      let found = false;
+      let signedBeforeAugFirst = false;
 
-    const augustFirstThisYear = new Date(currentDate.getFullYear(), 7, 1); // August 1st of the current year
+      const augustFirstThisYear = new Date(currentDate.getFullYear(), 7, 1); // August 1st of the current year
 
-    for (const document of legalDocs) {
-      const signedDate = new Date(document.dateSigned);
+      for (const document of legalDocs) {
+        const signedDate = new Date(document.dateSigned);
 
-      if (document.amount === docAmount && document.expectedTime === docExpectedTime) {
-        found = true;
+        if (document.amount === docAmount && document.expectedTime === docExpectedTime) {
+          found = true;
 
-        if (signedDate < augustFirstThisYear && currentDate >= augustFirstThisYear) {
+          if (signedDate < augustFirstThisYear && currentDate >= augustFirstThisYear) {
+            signedBeforeAugFirst = true;
+            break;
+          }
+        }
+
+        if (isNaN(new Date(document.dateSigned)) && currentDate >= augustFirstThisYear) {
           signedBeforeAugFirst = true;
           break;
         }
       }
 
-      if (isNaN(new Date(document.dateSigned)) && currentDate >= augustFirstThisYear) {
-        signedBeforeAugFirst = true;
-        break;
+      // If any document is signed after August 1st, do not show the consent form
+      if (!found || signedBeforeAugFirst) {
+        if (docAmount !== '' || docExpectedTime !== '' || signedBeforeAugFirst) {
+          confirmText.value = consentDoc.text;
+          showConsent.value = true;
+          return;
+        }
       }
+    } else if (age > 7 || grade > 1) {
+      confirmText.value = consentDoc.text;
+      showConsent.value = true;
+      return;
     }
-
-    // If any document is signed after August 1st, do not show the consent form
-    if (!found || signedBeforeAugFirst) {
-      if (docAmount !== '' || docExpectedTime !== '' || signedBeforeAugFirst) {
-        confirmText.value = consentDoc.text;
-        showConsent.value = true;
-        return;
-      }
-    }
-  } else if (age > 7 || grade > 1) {
-    confirmText.value = consentDoc.text;
-    showConsent.value = true;
-    return;
   }
 }
 
@@ -426,6 +429,175 @@ watch(
   },
   { immediate: true },
 );
+
+
+const { data: surveyData } = useQuery({
+  queryKey: ['surveys'],
+  queryFn: async () => {
+    const userType = userData.value.userType; 
+
+    if (userType === 'student') {
+      const resSurvey = await axios.get(`${LEVANTE_BUCKET_URL}/child_survey.json`);
+      const resAudio = await fetchAudioLinks('child-survey');
+      surveyStore.setAudioLinkMap(resAudio);
+      // console.log('survey responses data: ', surveyResponsesData.value)
+      // console.log('resSurvey: ', resSurvey.data)
+      return {
+        general: resSurvey.data,
+      };
+    } else if (userType === 'teacher') {
+      const resGeneral = await axios.get(`${LEVANTE_BUCKET_URL}/teacher_survey_general.json`);
+      const resClassroom = await axios.get(`${LEVANTE_BUCKET_URL}/teacher_survey_classroom.json`);
+      return {
+        general: resGeneral.data,
+        specific: resClassroom.data,
+      };
+    } else {
+      // parent
+      const resFamily = await axios.get(`${LEVANTE_BUCKET_URL}/parent_survey_family.json`);
+      const resChild = await axios.get(`${LEVANTE_BUCKET_URL}/parent_survey_child.json`);
+      return {
+        general: resFamily.data,
+        specific: resChild.data,
+      };
+    }
+  },
+  enabled: isLevante && userData?.value?.userType !== 'admin' && initialized,
+  staleTime: 24 * 60 * 60 * 1000, // 24 hours
+});
+
+
+const surveyDependenciesLoaded = computed(() => {
+  return surveyData.value && userData.value && selectedAdmin.value && surveyResponsesData.value
+});
+
+const userType = computed(() => userData.value?.userType);
+
+const specificSurveyData = computed(() => {
+  if (!surveyData.value) return null;
+  return userType.value === 'student' ? null : surveyData.value.specific;
+});
+
+function createSurveyInstance(surveyDataToStartAt) {
+  settings.lazyRender = true;
+  const surveyInstance = new Model(surveyDataToStartAt);
+  surveyInstance.locale = locale.value;
+  return surveyInstance;
+}
+
+function setupMarkdownConverter(surveyInstance) {
+  const converter = new Converter();
+  surveyInstance.onTextMarkdown.add((survey, options) => {
+    let str = converter.makeHtml(options.text);
+    str = str.substring(3, str.length - 4);
+    options.html = str;
+  });
+}
+
+
+watch(surveyDependenciesLoaded, async (isLoaded) => {
+  // console.log('survey data in watcher', surveyData.value)
+  // console.log('selectedAdmin in watcher', selectedAdmin.value)
+  // console.log('surveyResponsesData in watcher', surveyResponsesData.value)
+
+
+  const isAssessment = selectedAdmin.value?.assessments.some((task) => task.taskId === 'survey');
+  if (!isLoaded || !isAssessment) return;
+
+  const surveyResponseDoc = surveyResponsesData.value.find((doc) => doc?.administrationId === selectedAdmin.value.id);
+  
+  if (surveyResponseDoc) {
+    if (userType.value === 'student') {
+      const isComplete = surveyResponseDoc.general.isComplete;
+      surveyStore.setIsGeneralSurveyComplete(isComplete);
+      if (isComplete) return;
+    } else {
+      surveyStore.setIsGeneralSurveyComplete(surveyResponseDoc.general.isComplete);
+
+      const numOfSpecificSurveys = userType.value === 'parent' ? userData.value.childIds.length : userData.value.classes.current.length;
+      
+      if (surveyResponseDoc.specific && surveyResponseDoc.specific.length > 0) {
+        if (surveyResponseDoc.specific.length === numOfSpecificSurveys && surveyResponseDoc.specific.every(relation => relation.isComplete)) {
+          surveyStore.setIsSpecificSurveyComplete(true);
+        } else {
+          const incompleteIndex = surveyResponseDoc.specific.findIndex(relation => !relation.isComplete);
+          if (incompleteIndex > -1) {
+            surveyStore.setSpecificSurveyRelationIndex(incompleteIndex);
+          } else {
+            surveyStore.setSpecificSurveyRelationIndex(surveyResponseDoc.specific.length);
+          }
+        }
+      }
+    }
+  }
+
+  if (userType.value === 'student' && surveyStore.isGeneralSurveyComplete) {
+    return
+  } else if (userType.value === 'teacher' || userType.value === 'parent') {
+    if (surveyStore.isGeneralSurveyComplete && surveyStore.isSpecificSurveyComplete) {
+      return
+    }
+  }
+
+
+  const surveyDataToStartAt = userType.value === 'student' || !surveyStore.isGeneralSurveyComplete
+    ? surveyData.value.general
+    : surveyData.value.specific;
+
+  // Fetch child docs for parent or class docs for teacher
+  if ((userType.value === 'parent' || userType.value === 'teacher')) {
+    try {
+      const fetchConfig = userType.value === 'parent'
+        ? userData.value.childIds.map(childId => ({
+            collection: 'users',
+            docId: childId,
+            select: ['birthMonth', 'birthYear'],
+          }))
+        : userData.value.classes.current.map(classId => ({
+            collection: 'classes',
+            docId: classId,
+            select: ['name'],
+          }));
+      
+      const res = await fetchDocsById(fetchConfig);
+      console.log('res', res)
+      surveyStore.setSpecificSurveyRelationData(res);
+    } catch (error) {
+      console.error('Error fetching relation data:', error);
+    }
+  }
+
+  const surveyInstance = createSurveyInstance(surveyDataToStartAt);
+  setupMarkdownConverter(surveyInstance);
+
+  await initializeSurvey({
+    surveyInstance,
+    userType: userType.value,
+    specificSurveyData: specificSurveyData.value,
+    userData: userData.value,
+    surveyStore,
+    locale: locale.value,
+    audioLinkMap: surveyStore.audioLinkMap,
+    generalSurveyData: surveyData.value.general,
+  });
+
+  setupSurveyEventHandlers({
+    surveyInstance,
+    userType: userType.value,
+    roarfirekit: roarfirekit.value,
+    uid: userData.value.id,
+    selectedAdminId: selectedAdmin.value.id,
+    surveyStore,
+    router,
+    toast,
+    queryClient,
+    userData: userData.value,
+    gameStore,
+  });
+
+  surveyStore.setSurvey(surveyInstance);
+
+}, { immediate: true });
 </script>
 <style scoped>
 .tabs-container {
