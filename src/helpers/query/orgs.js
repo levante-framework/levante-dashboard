@@ -274,8 +274,12 @@ export const orgFetcher = async (
     } else if (orgType === 'schools') {
       console.log(`Fetching ${orgType} for ${districtId}`);
     }
+    
+    const response = axiosInstance.post(':runQuery', requestBody).then(({ data }) => {
+      return mapFields(data);
+      })
 
-    return axiosInstance.post(':runQuery', requestBody).then(({ data }) => mapFields(data));
+    return response;
   } else {
     if (['groups', 'families'].includes(orgType)) {
       const promises = (adminOrgs.value[orgType] ?? []).map((orgId) => {
