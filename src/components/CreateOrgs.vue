@@ -31,6 +31,39 @@
           </div>
         </div>
 
+        <div v-if="orgType?.singular === 'group'" class="flex flex-row align-items-center justify-content-start gap-2">
+          <PvCheckbox v-model="groupHasParentOrg" input-id="chbx-group-parent-org" :binary="true" />
+          <label for="chbx-group-parent-org">This group belongs to a parent organization</label>
+        </div>
+
+        <OrgPicker
+          v-if="groupHasParentOrg"
+          for-parent-org="true"
+          class="mt-4"
+          @selection="selection($event)"
+        />
+
+        <!-- <div v-if="groupHasParentOrg" class="grid mt-4">
+          <div class="col-12 md:col-6 lg:col-4">
+            <span class="p-float-label">
+              <PvDropdown
+                v-model="selectedTestOrg"
+                input-id="parent-org"
+                :options="testOrgs"
+                show-clear
+                option-label="label"
+                option-group-label="label"
+                option-group-children="items"
+                placeholder="Select a parent organization"
+                filter
+                class="w-full"
+                data-cy="dropdown-parent-org"
+              />
+              <label for="parent-org">Parent Organization<span id="required-asterisk">*</span></label>
+            </span>
+          </div>
+        </div> -->
+
         <div v-if="parentOrgRequired" class="grid mt-4">
           <div class="col-12 md:col-6 lg:col-4">
             <span class="p-float-label">
@@ -221,10 +254,14 @@ import useDistrictSchoolsQuery from '@/composables/queries/useDistrictSchoolsQue
 import useSchoolClassesQuery from '@/composables/queries/useSchoolClassesQuery';
 import useGroupsListQuery from '@/composables/queries/useGroupsListQuery';
 import { isLevante } from '@/helpers';
+import OrgPicker from '@/components/OrgPicker.vue';
+import _toPairs from 'lodash/toPairs';
+import _isEmpty from 'lodash/isEmpty';
 
 const initialized = ref(false);
 const isTestData = ref(false);
 const isDemoData = ref(false);
+const groupHasParentOrg = ref(false);
 const toast = useToast();
 const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
@@ -238,6 +275,13 @@ const state = reactive({
   parentSchool: undefined,
   grade: undefined,
   tags: [],
+});
+
+const groupParentOrgs = reactive({
+  districts: [],
+  schools: [],
+  classes: [],
+  groups: [],
 });
 
 let unsubscribe;
@@ -332,6 +376,15 @@ const grades = [
   { name: 'Grade 12', value: 12 },
 ];
 
+const selection = (selected) => {
+  console.log('groupParentOrgs before selection:', groupParentOrgs);
+  for (const [key, value] of _toPairs(toRaw(selected))) {
+    groupParentOrgs[key] = value;
+  }
+
+  console.log('groupParentOrgs after selection:', groupParentOrgs);
+};
+
 const allTags = computed(() => {
   const districtTags = (districts.value ?? []).map((org) => org.tags);
   const schoolTags = (districts.value ?? []).map((org) => org.tags);
@@ -377,6 +430,24 @@ const removeAddress = () => {
 const submit = async () => {
   submitted.value = true;
   const isFormValid = await v$.value.$validate();
+
+  if (groupHasParentOrg.value) {
+    const rawParentOrgs = toRaw(groupParentOrgs);
+    console.log('isEmpty result:', _isEmpty(rawParentOrgs.districts));
+    console.log('districts:', rawParentOrgs.districts);
+
+    if (
+      _isEmpty(rawParentOrgs.districts) &&
+      _isEmpty(rawParentOrgs.schools) &&
+      _isEmpty(rawParentOrgs.classes) &&
+      _isEmpty(rawParentOrgs.groups)
+    ) {
+      toast.add({ severity: 'error', summary: 'Error', detail: 'Please select a parent organization', life: 3000 });
+      submitted.value = false;
+      return;
+    }
+  }
+
   if (isFormValid) {
     let orgData = {
       name: state.orgName,

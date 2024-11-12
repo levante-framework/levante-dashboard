@@ -1,8 +1,8 @@
 <template>
   <div class="grid">
     <div class="col-12 md:col-6">
-      <PvPanel class="m-0 p-0" header="Select organizations here">
-        <PvTabView v-if="claimsLoaded" v-model:active-index="activeIndex" class="m-0 p-0" lazy>
+      <PvPanel class="m-0 p-0" :header="`Select ${forParentOrg ? 'parent organization' : 'organization(s)'}`">
+        <PvTabView v-if="claimsLoaded" v-model:activeIndex="activeIndex" class="m-0 p-0" lazy>
           <PvTabPanel v-for="orgType in orgHeaders" :key="orgType" :header="orgType.header">
             <div class="grid column-gap-3">
               <div
@@ -47,7 +47,7 @@
               <PvListbox
                 v-model="selectedOrgs[activeOrgType]"
                 :options="orgData"
-                multiple
+                :multiple="!forParentOrg"
                 :meta-key-selection="false"
                 option-label="name"
                 class="w-full"
@@ -65,7 +65,7 @@
         </PvTabView>
       </PvPanel>
     </div>
-    <div class="col-12 md:col-6">
+    <div v-if="!forParentOrg" class="col-12 md:col-6">
       <PvPanel class="h-full" header="Selected organizations">
         <PvScrollPanel style="width: 100%; height: 26rem">
           <div v-for="orgKey in Object.keys(selectedOrgs)" :key="orgKey">
@@ -128,6 +128,11 @@ const props = defineProps({
         families: [],
       };
     },
+  },
+  forParentOrg: {
+    type: Boolean,
+    required: false,
+    default: false,
   },
 });
 
@@ -244,6 +249,10 @@ const { data: orgData } = useQuery({
   keepPreviousData: true,
   enabled: claimsLoaded,
   staleTime: 5 * 60 * 1000, // 5 minutes
+});
+
+watch(orgData, (newValue) => {
+  console.log('orgData: ', newValue);
 });
 
 const isSelected = (orgType, orgId) => {
