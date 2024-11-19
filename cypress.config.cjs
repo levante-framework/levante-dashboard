@@ -154,5 +154,6 @@ module.exports = defineConfig({
     roarDemoAdministrationName: 'ROAR demo administration',
     roarDemoAdministrationId: 'EWC9corgcnipev7ZnmuN',
     appCheckDebugToken: process.env.VITE_APPCHECK_DEBUG_TOKEN,
+    isLevante: process.env.IS_LEVANTE,
   },
 });
