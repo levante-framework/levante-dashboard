@@ -197,7 +197,7 @@ import RoarDataTable from '@/components/RoarDataTable.vue';
 const router = useRouter();
 const authStore = useAuthStore();
 
-const { roarfirekit } = storeToRefs(authStore);
+const { roarfirekit, userData } = storeToRefs(authStore);
 
 const props = defineProps({
   administrationId: {
@@ -322,12 +322,16 @@ const computedProgressData = computed(() => {
       schoolName = schoolNameDictionary.value[schoolId];
     }
 
+    console.log('assignment: ', assignment);
+    console.log('user: ', user);
+    console.log('userData: ', userData.value);
 
     const currRow = {
       user: {
         username: user.username,
         email: user.email || assignment.userData.email,
         userId: user.userId,
+        userType: userData.value.userType,
         firstName: user?.name?.first || '',
         lastName: user?.name?.last || '',
         grade: grade,
@@ -474,6 +478,7 @@ const progressReportColumns = computed(() => {
   if (isLevante) {
     tableColumns.push({ field: 'user.userId', header: 'UID', dataType: 'text', sort: true, filter: true });
     tableColumns.push({ field: 'user.email', header: 'Email', dataType: 'text', sort: true, filter: true });
+    tableColumns.push({ field: 'user.userType', header: 'User Type', dataType: 'text', sort: true, filter: true });
   }
 
   if (props.orgType === 'district') {
