@@ -35,13 +35,17 @@ function checkIndividualScoreReport() {
 }
 
 describe('The partner admin can view individual score reports for a given administration.', () => {
-  it("Selects an administration and views a student's individual score report", () => {
-    checkUrl();
+  if (Cypress.env('isLevante')) {
+    it.skip('skipped -- levante');
+  } else {
+    it("Selects an administration and views a student's individual score report", () => {
+      checkUrl();
     cy.getAdministrationCard(testPartnerAdministrationName);
     clickScoreButton();
     cy.wait(0.3 * timeout);
     cy.checkUserList(testUserList);
     cy.wait(0.3 * timeout);
-    checkIndividualScoreReport();
-  });
+      checkIndividualScoreReport();
+    });
+  }
 });

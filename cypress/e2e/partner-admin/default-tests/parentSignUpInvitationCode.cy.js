@@ -30,11 +30,15 @@ function completeParentSignUp(org) {
 }
 
 describe('The partner admin user', () => {
-  beforeEach(() => {
-    cy.login(Cypress.env('partnerAdminUsername'), Cypress.env('partnerAdminPassword'));
+  if (Cypress.env('isLevante')) { 
+    it.skip('skipped -- levante');
+  } else {
+    beforeEach(() => {
+      cy.login(Cypress.env('partnerAdminUsername'), Cypress.env('partnerAdminPassword'));
     cy.visit(APP_ROUTES.HOME);
     cy.visit(APP_ROUTES.LIST_ORGS);
-  });
+    });
+  }
 
   orgs.forEach((org) => {
     context(`when navigating to the ${org.tabName} tab`, () => {

@@ -4,14 +4,18 @@ import { isCurrentVersion } from '../../../../support/utils';
 const app = '@bdelab/roar-multichoice';
 
 describe('ROAR - Written Vocabulary Play Through', () => {
-  it('Plays Written Vocabulary with a simulated 3g network', () => {
-    cy.wrap(isCurrentVersion(app)).then((isCurrentVersion) => {
+  if (Cypress.env('isLevante')) {
+    it.skip('skipped -- levante');
+  } else {
+    it('Plays Written Vocabulary with a simulated 3g network', () => {
+      cy.wrap(isCurrentVersion(app)).then((isCurrentVersion) => {
       if (isCurrentVersion) {
         cy.log(`Did not detect a new version of ${app}, skipping test.`);
       } else {
         cy.log(`Detected a new version of ${app}, running test.`);
         playMorphology({ auth: 'username' });
       }
+      });
     });
-  });
+  }
 });

@@ -9,8 +9,11 @@ const endText = 'Has terminado.';
 const app = '@bdelab/roam-apps';
 
 describe('Test playthrough of ROAM ARF-ES as a participant', () => {
-  it('ROAM Playthrough Test', () => {
-    cy.wrap(isCurrentVersion(app)).then((isCurrentVersion) => {
+  if (Cypress.env('isLevante')) {
+    it.skip('skipped -- levante');
+  } else {
+    it('ROAM Playthrough Test', () => {
+      cy.wrap(isCurrentVersion(app)).then((isCurrentVersion) => {
       if (isCurrentVersion) {
         cy.log(`Did not detect a new version of ${app}, skipping test.`);
       } else {
@@ -22,6 +25,7 @@ describe('Test playthrough of ROAM ARF-ES as a participant', () => {
           endText: endText,
         });
       }
+      });
     });
-  });
+  }
 });

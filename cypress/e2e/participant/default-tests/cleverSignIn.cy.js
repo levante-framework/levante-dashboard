@@ -3,8 +3,12 @@ import { signInWithClever } from '../../../support/helper-functions/participant/
 export const timeout = Cypress.env('timeout');
 
 describe('Cypress test to login in Clever', () => {
-  it('passes', () => {
-    cy.visit('/');
-    signInWithClever();
-  });
+  if (Cypress.env('isLevante')) {
+    it.skip('skipped -- levante');
+  } else {
+    it('passes', () => {
+      cy.visit('/');
+      signInWithClever();
+    });
+  }
 });

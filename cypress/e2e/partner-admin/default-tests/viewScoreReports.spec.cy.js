@@ -33,8 +33,11 @@ function checkAssignmentColumns() {
 }
 
 describe('The partner admin can view score reports for a given administration.', () => {
-  it('Selects an administration and views its score report.', () => {
-    checkUrl();
+  if (Cypress.env('isLevante')) {
+    it.skip('skipped -- levante');
+  } else {
+    it('Selects an administration and views its score report.', () => {
+      checkUrl();
     cy.wait(0.3 * timeout);
     cy.getAdministrationCard(testPartnerAdministrationName);
     cy.wait(0.3 * timeout);
@@ -42,6 +45,7 @@ describe('The partner admin can view score reports for a given administration.',
     cy.wait(0.3 * timeout);
     cy.checkUserList(testUserList);
     cy.wait(0.3 * timeout);
-    checkAssignmentColumns(testAssignments);
-  });
+      checkAssignmentColumns(testAssignments);
+    });
+  }
 });

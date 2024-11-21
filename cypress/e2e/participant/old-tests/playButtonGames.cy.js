@@ -3,8 +3,11 @@ import { games } from '../../../fixtures/participant/buttonGamesList.js';
 const timeout = Cypress.env('timeout');
 
 describe('Testing play through of vocab, cva, letter, and multichoice games as a participant', () => {
-  games.forEach((game) => {
-    it(`${game.name} Play through Test`, () => {
+  if (Cypress.env('isLevante')) {
+    it.skip('skipped -- levante');
+  } else {
+    games.forEach((game) => {
+      it(`${game.name} Play through Test`, () => {
       cy.login(Cypress.env('participantUsername'), Cypress.env('participantPassword'));
       cy.visit('/', { timeout: 2 * timeout });
 
@@ -49,8 +52,9 @@ describe('Testing play through of vocab, cva, letter, and multichoice games as a
       cy.get('.tabview-nav-link-label', { timeout: 5 * timeout })
         .contains(game.name)
         .should('exist');
+      });
     });
-  });
+  }
 });
 
 function playROARGame(game) {

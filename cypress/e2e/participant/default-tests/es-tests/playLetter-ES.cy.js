@@ -8,8 +8,11 @@ const gameCompleteText = '¡Has terminado! ¡Gracias por ayudarme a encontrar es
 const app = '@bdelab/roar-letter';
 
 describe('ROAR - Letra Play Through', () => {
-  it('Plays Letra', () => {
-    cy.wrap(isCurrentVersion(app)).then((isCurrentVersion) => {
+  if (Cypress.env('isLevante')) {
+    it.skip('skipped -- levante');
+  } else {
+    it('Plays Letra', () => {
+      cy.wrap(isCurrentVersion(app)).then((isCurrentVersion) => {
       if (isCurrentVersion) {
         cy.log(`Did not detect a new version of ${app}, skipping test.`);
       } else {
@@ -20,6 +23,7 @@ describe('ROAR - Letra Play Through', () => {
           gameCompleteText: gameCompleteText,
         });
       }
+      });
     });
-  });
+  }
 });
