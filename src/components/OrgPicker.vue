@@ -43,6 +43,10 @@
                 </span>
               </div>
             </div>
+            <!-- multiple: false
+                meta-key-selection: true -->
+            <!-- false
+                false -->
             <div class="card flex justify-content-center">
               <PvListbox
                 v-model="selectedOrgs[activeOrgType]"
@@ -88,7 +92,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted, watch } from 'vue';
+import { reactive, ref, computed, onMounted, watch, toRaw } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { storeToRefs } from 'pinia';
 import _capitalize from 'lodash/capitalize';
@@ -135,6 +139,8 @@ const props = defineProps({
     default: false,
   },
 });
+
+console.log('props.forParentOrg: ', props.forParentOrg);
 
 const selectedOrgs = reactive({
   districts: [],
@@ -256,11 +262,27 @@ watch(orgData, (newValue) => {
 });
 
 const isSelected = (orgType, orgId) => {
-  return selectedOrgs[orgType].map((org) => org.id).includes(orgId);
+  console.log('orgId in isSelected: ', orgId);
+  console.log('orgType in isSelected: ', orgType);
+  console.log('selectedOrgs in isSelected: ', selectedOrgs);
+
+  // Subgroups belong to only one parent org, and in this case selectedOrgs becomes an object
+  const rawSelectedOrgs = toRaw(selectedOrgs);
+  if (Array.isArray(rawSelectedOrgs[orgType])) {
+    return rawSelectedOrgs[orgType].map((org) => org.id).includes(orgId);
+  } else {
+    return rawSelectedOrgs[orgType].id === orgId;
+  }
 };
 
 const remove = (org, orgKey) => {
-  selectedOrgs[orgKey] = selectedOrgs[orgKey].filter((_org) => _org.id !== org.id);
+  // same as above
+  const rawSelectedOrgs = toRaw(selectedOrgs);
+  if (Array.isArray(rawSelectedOrgs[orgKey])) {
+    selectedOrgs[orgKey] = selectedOrgs[orgKey].filter((_org) => _org.id !== org.id);
+  } else {
+    selectedOrgs[orgKey] = undefined;
+  }
 };
 
 let unsubscribe;

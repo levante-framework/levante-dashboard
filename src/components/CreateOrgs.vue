@@ -38,7 +38,7 @@
 
         <OrgPicker
           v-if="groupHasParentOrg"
-          for-parent-org="true"
+          :for-parent-org="true"
           class="mt-4"
           @selection="selection($event)"
         />
@@ -431,28 +431,37 @@ const submit = async () => {
   submitted.value = true;
   const isFormValid = await v$.value.$validate();
 
-  if (groupHasParentOrg.value) {
-    const rawParentOrgs = toRaw(groupParentOrgs);
-    console.log('isEmpty result:', _isEmpty(rawParentOrgs.districts));
-    console.log('districts:', rawParentOrgs.districts);
-
-    if (
-      _isEmpty(rawParentOrgs.districts) &&
-      _isEmpty(rawParentOrgs.schools) &&
-      _isEmpty(rawParentOrgs.classes) &&
-      _isEmpty(rawParentOrgs.groups)
-    ) {
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Please select a parent organization', life: 3000 });
-      submitted.value = false;
-      return;
-    }
-  }
-
   if (isFormValid) {
     let orgData = {
       name: state.orgName,
       abbreviation: state.orgInitials,
     };
+
+
+    if (groupHasParentOrg.value) {
+      const singularMap = {
+        districts: 'district',
+        schools: 'school',
+        classes: 'class',
+        groups: 'group',
+        families: 'family',
+      };
+
+      const rawParentOrgs = toRaw(groupParentOrgs);
+      const parentOrgKey = Object.keys(rawParentOrgs).find(key => !_isEmpty(rawParentOrgs[key]));
+
+      if (!parentOrgKey) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Please select a parent organization', life: 3000 });
+        submitted.value = false;
+        return;
+      }
+
+      const parentOrg = rawParentOrgs[parentOrgKey][0];
+      orgData.parentOrgId = parentOrg.id;
+      orgData.parentOrgType = singularMap[parentOrgKey];
+      console.log('orgData:', orgData);
+    }
+
 
     if (state.grade) orgData.grade = toRaw(state.grade).value;
     if (state.ncesId) orgData.ncesId = state.ncesId;
@@ -469,6 +478,7 @@ const submit = async () => {
     await roarfirekit.value
       .createOrg(orgType.value.firestoreCollection, orgData, isTestData.value, isDemoData.value)
       .then((data) => {
+        console.log('create org response:', data);
         toast.add({ severity: 'success', summary: 'Success', detail: 'Org created', life: 3000 });
         submitted.value = false;
         resetForm();
