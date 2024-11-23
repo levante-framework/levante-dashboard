@@ -448,15 +448,35 @@ const submit = async () => {
       };
 
       const rawParentOrgs = toRaw(groupParentOrgs);
-      const parentOrgKey = Object.keys(rawParentOrgs).find(key => !_isEmpty(rawParentOrgs[key]));
+      let parentOrg;
+      let parentOrgKey;
 
-      if (!parentOrgKey) {
+      // Check if any key's value is an array
+      const arrayKey = Object.keys(rawParentOrgs).find(key => Array.isArray(rawParentOrgs[key]) && rawParentOrgs[key].length > 0);
+      if (arrayKey) {
+        parentOrgKey = arrayKey;
+        parentOrg = rawParentOrgs[arrayKey][0];
+      } else {
+        // Check if any key's value is an object with values
+        parentOrgKey = Object.keys(rawParentOrgs).find(key => 
+          typeof rawParentOrgs[key] === 'object' && 
+          !Array.isArray(rawParentOrgs[key]) && 
+          !_isEmpty(rawParentOrgs[key])
+        );
+        if (parentOrgKey) {
+          parentOrg = rawParentOrgs[parentOrgKey][0];
+        }
+      }
+
+      if (!parentOrg) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Please select a parent organization', life: 3000 });
         submitted.value = false;
         return;
       }
 
-      const parentOrg = rawParentOrgs[parentOrgKey][0];
+      console.log('rawParentOrgs: ', rawParentOrgs);
+      console.log('parentOrgKey: ', parentOrgKey);
+
       orgData.parentOrgId = parentOrg.id;
       orgData.parentOrgType = singularMap[parentOrgKey];
       console.log('orgData:', orgData);

@@ -111,6 +111,7 @@ import { orgFetcher, orgFetchAll } from '@/helpers/query/orgs';
 import { orderByDefault } from '@/helpers/query/utils';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
+import { isLevante } from '@/helpers';
 
 const initialized = ref(false);
 const authStore = useAuthStore();
@@ -140,7 +141,6 @@ const props = defineProps({
   },
 });
 
-console.log('props.forParentOrg: ', props.forParentOrg);
 
 const selectedOrgs = reactive({
   districts: [],
@@ -183,9 +183,16 @@ const orgHeaders = computed(() => {
     groups: { header: 'Groups', id: 'groups' },
   };
 
-  if (isSuperAdmin.value) return headers;
+  if (isSuperAdmin.value && !isLevante) return headers;
 
   const result = {};
+
+  if (isLevante && props.forParentOrg) {
+    result.districts = { header: 'Districts', id: 'districts' };
+    result.groups = { header: 'Groups', id: 'groups' };
+    return result;
+  }
+
   if ((adminOrgs.value?.districts ?? []).length > 0) {
     result.districts = { header: 'Districts', id: 'districts' };
     result.schools = { header: 'Schools', id: 'schools' };
