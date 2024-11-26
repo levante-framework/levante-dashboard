@@ -19,7 +19,7 @@
               <PvDropdown
                 v-model="orgType"
                 input-id="org-type"
-                :options="isLevante ? levanteOrgTypes : orgTypes"
+                :options="orgTypes"
                 show-clear
                 option-label="singular"
                 placeholder="Select an org type"
@@ -30,6 +30,39 @@
             </span>
           </div>
         </div>
+
+        <div v-if="orgType?.singular === 'group'" class="flex flex-row align-items-center justify-content-start gap-2">
+          <PvCheckbox v-model="groupHasParentOrg" input-id="chbx-group-parent-org" :binary="true" />
+          <label for="chbx-group-parent-org">This group belongs to a parent organization</label>
+        </div>
+
+        <OrgPicker
+          v-if="groupHasParentOrg"
+          :for-parent-org="true"
+          class="mt-4"
+          @selection="selection($event)"
+        />
+
+        <!-- <div v-if="groupHasParentOrg" class="grid mt-4">
+          <div class="col-12 md:col-6 lg:col-4">
+            <span class="p-float-label">
+              <PvDropdown
+                v-model="selectedTestOrg"
+                input-id="parent-org"
+                :options="testOrgs"
+                show-clear
+                option-label="label"
+                option-group-label="label"
+                option-group-children="items"
+                placeholder="Select a parent organization"
+                filter
+                class="w-full"
+                data-cy="dropdown-parent-org"
+              />
+              <label for="parent-org">Parent Organization<span id="required-asterisk">*</span></label>
+            </span>
+          </div>
+        </div> -->
 
         <div v-if="parentOrgRequired" class="grid mt-4">
           <div class="col-12 md:col-6 lg:col-4">
@@ -198,7 +231,6 @@
     </section>
   </main>
 </template>
-
 <script setup>
 import { computed, reactive, ref, toRaw, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
@@ -221,10 +253,14 @@ import useDistrictSchoolsQuery from '@/composables/queries/useDistrictSchoolsQue
 import useSchoolClassesQuery from '@/composables/queries/useSchoolClassesQuery';
 import useGroupsListQuery from '@/composables/queries/useGroupsListQuery';
 import { isLevante } from '@/helpers';
+import OrgPicker from '@/components/OrgPicker.vue';
+import _toPairs from 'lodash/toPairs';
+import _isEmpty from 'lodash/isEmpty';
 
 const initialized = ref(false);
 const isTestData = ref(false);
 const isDemoData = ref(false);
+const groupHasParentOrg = ref(false);
 const toast = useToast();
 const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
@@ -238,6 +274,13 @@ const state = reactive({
   parentSchool: undefined,
   grade: undefined,
   tags: [],
+});
+
+const groupParentOrgs = reactive({
+  districts: [],
+  schools: [],
+  classes: [],
+  groups: [],
 });
 
 let unsubscribe;
@@ -304,8 +347,6 @@ const orgTypes = [
   { firestoreCollection: 'groups', singular: 'group' },
 ];
 
-const levanteOrgTypes = [{ firestoreCollection: 'groups', singular: 'group' }];
-
 const orgType = ref();
 const orgTypeLabel = computed(() => {
   if (orgType.value) {
@@ -333,6 +374,12 @@ const grades = [
   { name: 'Grade 11', value: 11 },
   { name: 'Grade 12', value: 12 },
 ];
+
+const selection = (selected) => {
+  for (const [key, value] of _toPairs(toRaw(selected))) {
+    groupParentOrgs[key] = value;
+  }
+};
 
 const allTags = computed(() => {
   const districtTags = (districts.value ?? []).map((org) => org.tags);
@@ -379,11 +426,49 @@ const removeAddress = () => {
 const submit = async () => {
   submitted.value = true;
   const isFormValid = await v$.value.$validate();
+
   if (isFormValid) {
     let orgData = {
       name: state.orgName,
       abbreviation: state.orgInitials,
     };
+
+
+    if (groupHasParentOrg.value) {
+      const singularMap = {
+        districts: 'district',
+        schools: 'school',
+        classes: 'class',
+        groups: 'group',
+        families: 'family',
+      };
+
+      const rawParentOrgs = toRaw(groupParentOrgs);
+      let parentOrg;
+      let parentOrgKey;
+
+      // Find first key with non-empty array or object value
+      parentOrgKey = Object.keys(rawParentOrgs).find(key => {
+        const value = rawParentOrgs[key];
+        return (Array.isArray(value) && value.length > 0) || 
+               (!Array.isArray(value) && typeof value === 'object' && value !== null);
+      });
+
+      if (parentOrgKey) {
+        const value = rawParentOrgs[parentOrgKey];
+        parentOrg = Array.isArray(value) ? value[0] : value;
+      }
+
+      if (!parentOrg || !parentOrgKey) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Please select a parent organization', life: 3000 });
+        submitted.value = false;
+        return;
+      }
+
+      orgData.parentOrgId = parentOrg.id;
+      orgData.parentOrgType = singularMap[parentOrgKey];
+    }
+
 
     if (state.grade) orgData.grade = toRaw(state.grade).value;
     if (state.ncesId) orgData.ncesId = state.ncesId;
@@ -397,33 +482,18 @@ const submit = async () => {
       orgData.districtId = toRaw(state.parentDistrict).id;
     }
 
-    if (isLevante) {
-      await roarfirekit.value
-        .createLevanteGroup(orgData)
-        .then(() => {
-          toast.add({ severity: 'success', summary: 'Success', detail: 'Org created', life: 3000 });
-          submitted.value = false;
-          resetForm();
-        })
-        .catch((error) => {
-          toast.add({ severity: 'error', summary: 'Error', detail: error.message, life: 3000 });
-          console.error('Error creating org:', error);
-          submitted.value = false;
-        });
-    } else {
-      await roarfirekit.value
-        .createOrg(orgType.value.firestoreCollection, orgData, isTestData.value, isDemoData.value)
-        .then(() => {
-          toast.add({ severity: 'success', summary: 'Success', detail: 'Org created', life: 3000 });
-          submitted.value = false;
-          resetForm();
-        })
-        .catch((error) => {
-          toast.add({ severity: 'error', summary: 'Error', detail: error.message, life: 3000 });
-          console.error('Error creating org:', error);
-          submitted.value = false;
-        });
-    }
+    await roarfirekit.value
+      .createOrg(orgType.value.firestoreCollection, orgData, isTestData.value, isDemoData.value)
+      .then((data) => {
+        toast.add({ severity: 'success', summary: 'Success', detail: 'Org created', life: 3000 });
+        submitted.value = false;
+        resetForm();
+      })
+      .catch((error) => {
+        toast.add({ severity: 'error', summary: 'Error', detail: error.message, life: 3000 });
+        console.error('Error creating org:', error);
+        submitted.value = false;
+      });
   } else {
     console.error('Form is invalid');
   }
@@ -573,3 +643,4 @@ g {
   color: #ff0000;
 }
 </style>
+

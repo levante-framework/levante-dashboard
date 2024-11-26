@@ -1,8 +1,8 @@
 <template>
   <div class="grid">
     <div class="col-12 md:col-6">
-      <PvPanel class="m-0 p-0" header="Select organizations here">
-        <PvTabView v-if="claimsLoaded" v-model:active-index="activeIndex" class="m-0 p-0" lazy>
+      <PvPanel class="m-0 p-0" :header="`Select ${forParentOrg ? 'parent organization' : 'organization(s)'}`">
+        <PvTabView v-if="claimsLoaded" v-model:activeIndex="activeIndex" class="m-0 p-0" lazy>
           <PvTabPanel v-for="orgType in orgHeaders" :key="orgType" :header="orgType.header">
             <div class="grid column-gap-3">
               <div
@@ -43,11 +43,15 @@
                 </span>
               </div>
             </div>
+            <!-- multiple: false
+                meta-key-selection: true -->
+            <!-- false
+                false -->
             <div class="card flex justify-content-center">
               <PvListbox
                 v-model="selectedOrgs[activeOrgType]"
                 :options="orgData"
-                multiple
+                :multiple="!forParentOrg"
                 :meta-key-selection="false"
                 option-label="name"
                 class="w-full"
@@ -65,7 +69,7 @@
         </PvTabView>
       </PvPanel>
     </div>
-    <div class="col-12 md:col-6">
+    <div v-if="!forParentOrg" class="col-12 md:col-6">
       <PvPanel class="h-full" header="Selected organizations">
         <PvScrollPanel style="width: 100%; height: 26rem">
           <div v-for="orgKey in Object.keys(selectedOrgs)" :key="orgKey">
@@ -88,7 +92,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted, watch } from 'vue';
+import { reactive, ref, computed, onMounted, watch, toRaw } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { storeToRefs } from 'pinia';
 import _capitalize from 'lodash/capitalize';
@@ -107,6 +111,7 @@ import { orgFetcher, orgFetchAll } from '@/helpers/query/orgs';
 import { orderByDefault } from '@/helpers/query/utils';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
+import { isLevante } from '@/helpers';
 
 const initialized = ref(false);
 const authStore = useAuthStore();
@@ -129,7 +134,13 @@ const props = defineProps({
       };
     },
   },
+  forParentOrg: {
+    type: Boolean,
+    required: false,
+    default: false,
+  },
 });
+
 
 const selectedOrgs = reactive({
   districts: [],
@@ -175,6 +186,13 @@ const orgHeaders = computed(() => {
   if (isSuperAdmin.value) return headers;
 
   const result = {};
+
+  if (isLevante && props.forParentOrg) {
+    result.districts = { header: 'Districts', id: 'districts' };
+    result.groups = { header: 'Groups', id: 'groups' };
+    return result;
+  }
+
   if ((adminOrgs.value?.districts ?? []).length > 0) {
     result.districts = { header: 'Districts', id: 'districts' };
     result.schools = { header: 'Schools', id: 'schools' };
@@ -246,12 +264,41 @@ const { data: orgData } = useQuery({
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
+// reset selections when changing tabs if forParentOrg is true
+watch(activeOrgType, () => {
+  if (props.forParentOrg) {
+    // Reset all selections
+    Object.keys(selectedOrgs).forEach(key => {
+      selectedOrgs[key] = [];
+    });
+  }
+});
+
+// Modify the isSelected function to handle single selection
 const isSelected = (orgType, orgId) => {
-  return selectedOrgs[orgType].map((org) => org.id).includes(orgId);
+  const rawSelectedOrgs = toRaw(selectedOrgs);
+  
+  // ensure only one item can be selected across all org types
+  if (props.forParentOrg) {
+    const allSelections = Object.values(rawSelectedOrgs).flat();
+    return allSelections.some(org => org.id === orgId);
+  }
+  
+  if (Array.isArray(rawSelectedOrgs[orgType])) {
+    return rawSelectedOrgs[orgType].map((org) => org.id).includes(orgId);
+  } else {
+    return rawSelectedOrgs[orgType].id === orgId;
+  }
 };
 
+
 const remove = (org, orgKey) => {
-  selectedOrgs[orgKey] = selectedOrgs[orgKey].filter((_org) => _org.id !== org.id);
+  const rawSelectedOrgs = toRaw(selectedOrgs);
+  if (Array.isArray(rawSelectedOrgs[orgKey])) {
+    selectedOrgs[orgKey] = selectedOrgs[orgKey].filter((_org) => _org.id !== org.id);
+  } else {
+    selectedOrgs[orgKey] = undefined;
+  }
 };
 
 let unsubscribe;
