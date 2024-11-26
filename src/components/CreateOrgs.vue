@@ -231,7 +231,6 @@
     </section>
   </main>
 </template>
-
 <script setup>
 import { computed, reactive, ref, toRaw, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
@@ -377,12 +376,9 @@ const grades = [
 ];
 
 const selection = (selected) => {
-  console.log('groupParentOrgs before selection:', groupParentOrgs);
   for (const [key, value] of _toPairs(toRaw(selected))) {
     groupParentOrgs[key] = value;
   }
-
-  console.log('groupParentOrgs after selection:', groupParentOrgs);
 };
 
 const allTags = computed(() => {
@@ -451,35 +447,26 @@ const submit = async () => {
       let parentOrg;
       let parentOrgKey;
 
-      // Check if any key's value is an array
-      const arrayKey = Object.keys(rawParentOrgs).find(key => Array.isArray(rawParentOrgs[key]) && rawParentOrgs[key].length > 0);
-      if (arrayKey) {
-        parentOrgKey = arrayKey;
-        parentOrg = rawParentOrgs[arrayKey][0];
-      } else {
-        // Check if any key's value is an object with values
-        parentOrgKey = Object.keys(rawParentOrgs).find(key => 
-          typeof rawParentOrgs[key] === 'object' && 
-          !Array.isArray(rawParentOrgs[key]) && 
-          !_isEmpty(rawParentOrgs[key])
-        );
-        if (parentOrgKey) {
-          parentOrg = rawParentOrgs[parentOrgKey][0];
-        }
+      // Find first key with non-empty array or object value
+      parentOrgKey = Object.keys(rawParentOrgs).find(key => {
+        const value = rawParentOrgs[key];
+        return (Array.isArray(value) && value.length > 0) || 
+               (!Array.isArray(value) && typeof value === 'object' && value !== null);
+      });
+
+      if (parentOrgKey) {
+        const value = rawParentOrgs[parentOrgKey];
+        parentOrg = Array.isArray(value) ? value[0] : value;
       }
 
-      if (!parentOrg) {
+      if (!parentOrg || !parentOrgKey) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Please select a parent organization', life: 3000 });
         submitted.value = false;
         return;
       }
 
-      console.log('rawParentOrgs: ', rawParentOrgs);
-      console.log('parentOrgKey: ', parentOrgKey);
-
       orgData.parentOrgId = parentOrg.id;
       orgData.parentOrgType = singularMap[parentOrgKey];
-      console.log('orgData:', orgData);
     }
 
 
@@ -498,7 +485,6 @@ const submit = async () => {
     await roarfirekit.value
       .createOrg(orgType.value.firestoreCollection, orgData, isTestData.value, isDemoData.value)
       .then((data) => {
-        console.log('create org response:', data);
         toast.add({ severity: 'success', summary: 'Success', detail: 'Org created', life: 3000 });
         submitted.value = false;
         resetForm();
@@ -657,3 +643,4 @@ g {
   color: #ff0000;
 }
 </style>
+

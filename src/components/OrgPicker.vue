@@ -183,7 +183,7 @@ const orgHeaders = computed(() => {
     groups: { header: 'Groups', id: 'groups' },
   };
 
-  if (isSuperAdmin.value && !isLevante) return headers;
+  if (isSuperAdmin.value) return headers;
 
   const result = {};
 
@@ -264,17 +264,26 @@ const { data: orgData } = useQuery({
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
-watch(orgData, (newValue) => {
-  console.log('orgData: ', newValue);
+// reset selections when changing tabs if forParentOrg is true
+watch(activeOrgType, () => {
+  if (props.forParentOrg) {
+    // Reset all selections
+    Object.keys(selectedOrgs).forEach(key => {
+      selectedOrgs[key] = [];
+    });
+  }
 });
 
+// Modify the isSelected function to handle single selection
 const isSelected = (orgType, orgId) => {
-  console.log('orgId in isSelected: ', orgId);
-  console.log('orgType in isSelected: ', orgType);
-  console.log('selectedOrgs in isSelected: ', selectedOrgs);
-
-  // Subgroups belong to only one parent org, and in this case selectedOrgs becomes an object
   const rawSelectedOrgs = toRaw(selectedOrgs);
+  
+  // ensure only one item can be selected across all org types
+  if (props.forParentOrg) {
+    const allSelections = Object.values(rawSelectedOrgs).flat();
+    return allSelections.some(org => org.id === orgId);
+  }
+  
   if (Array.isArray(rawSelectedOrgs[orgType])) {
     return rawSelectedOrgs[orgType].map((org) => org.id).includes(orgId);
   } else {
@@ -282,8 +291,8 @@ const isSelected = (orgType, orgId) => {
   }
 };
 
+
 const remove = (org, orgKey) => {
-  // same as above
   const rawSelectedOrgs = toRaw(selectedOrgs);
   if (Array.isArray(rawSelectedOrgs[orgKey])) {
     selectedOrgs[orgKey] = selectedOrgs[orgKey].filter((_org) => _org.id !== org.id);
