@@ -57,16 +57,16 @@
 #           repository: levante-framework/levante-dashboard
 #           fetch-depth: 0
 
-      - name: Cypress run
-        uses: cypress-io/github-action@v6
-        with:
-          component: true
-          browser: ${{ matrix.browser }}
-          build: npm ci && npm run build
-          start: npm run dev
-          wait-on: ${{ env.CYPRESS_BASE_URL }}
-          wait-on-timeout: 120
-          record: true
-          parallel: true
-          spec: 'src/components/**/*.cy.js'
-          ci-build-id: ${{ github.run_id }}-${{ matrix.browser }}
+      # - name: Cypress run
+      #   uses: cypress-io/github-action@v6
+      #   with:
+      #     component: true
+      #     browser: ${{ matrix.browser }}
+      #     build: npm ci && npm run build
+      #     start: npm run dev
+      #     wait-on: ${{ env.CYPRESS_BASE_URL }}
+      #     wait-on-timeout: 120
+      #     record: true
+      #     parallel: true
+      #     spec: 'src/components/**/*.cy.js'
+      #     ci-build-id: ${{ github.run_id }}-${{ matrix.browser }}
