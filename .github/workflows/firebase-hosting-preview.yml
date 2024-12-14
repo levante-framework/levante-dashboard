@@ -62,6 +62,7 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV_ADMIN }}'
           projectId: '${{ secrets.FIREBASE_PROJECT }}'
           target: ${{ contains(github.repository, 'levante') && 'production' || 'staging' }}
+          channelId: ''
 
       - name: Output Deploy URL
         run: echo ${{ fromJson(steps.firebase-deploy.outputs.urls)[0] }}
