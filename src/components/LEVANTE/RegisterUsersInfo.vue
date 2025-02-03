@@ -4,17 +4,6 @@
       <i class="pi pi-exclamation-circle"></i>
       <p>Organizations must be created before registering users. You cannot register users otherwise.</p>
     </div>
-    <PvDivider />
-    <div class="mb-4">
-      <h3>CSV Template:</h3>
-      <p>Download and use our CSV template to make sure your data is formatted correctly:</p>
-     <PvButton
-        label="CSV Template"
-        class="bg-primary mb-2 p-3 w-3 text-white border-none border-round h-3rem m-0 hover:bg-red-900"
-        icon="pi pi-download"
-      />
-    </div>   
-    <PvDivider />
     <h3>Instructions:</h3 >
     <p>These fields are <b>REQUIRED</b> for registering users:</p>
     <ul>
@@ -37,6 +26,16 @@
       alt="CSV upload example"
       style="width: 100%; max-width: 600px; height: auto;"
     />
+    <PvDivider />
+    <div class="mb-4">
+      <h3>CSV Template:</h3>
+      <p>Download and use our CSV template to make sure your data is formatted correctly:</p>
+     <PvButton
+        label="CSV Template"
+        class="bg-primary mb-2 p-3 w-3 text-white border-none border-round h-3rem m-0 hover:bg-red-900"
+        icon="pi pi-download"
+      />
+    </div>   
   </PvPanel>
 </template>
 
