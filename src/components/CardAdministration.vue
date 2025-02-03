@@ -7,7 +7,10 @@
     <div class="card-admin-body w-full">
       <div class="flex flex-row w-full md:h-2rem sm:h-3rem">
         <div class="flex-grow-1 pr-3 mr-2 p-0 m-0">
-          <h2 data-cy="h2-card-admin-title" class="sm:text-lg lg:text-lx m-0">{{ title }}</h2>
+          <h2 data-cy="h2-card-admin-title" class="sm:text-lg lg:text-lx m-0 h2-card-admin-title">{{ title }}</h2>
+         <span :class="['status-tag', statusClass]">
+          {{ status }}
+        </span>
         </div>
         <div v-if="isSuperAdmin" class="flex justify-content-end w-3 pl-5 pb-5 ml-2 mb-6">
           <PvSpeedDial
@@ -199,6 +202,18 @@ const confirm = useConfirm();
 const toast = useToast();
 
 const { mutateAsync: deleteAdministration } = useDeleteAdministrationMutation();
+
+const status = computed(() => {
+  const now = new Date();
+  const dateStart = new Date(props.dates.start);
+  const dateClosed = new Date(props.dates.end);
+
+  if (now > dateClosed) return 'CLOSED';
+  if (now >= dateStart && now <= dateClosed) return 'IN PROGRESS';
+  return 'OPEN';
+});
+
+const statusClass = computed(() => status.value.toLowerCase().replace(' ', '-'));
 
 const speedDialItems = ref([
   {
@@ -521,5 +536,33 @@ onMounted(() => {
   &:not(:last-child):after {
     content: ', ';
   }
+}
+
+.status-tag {
+  font-weight: bold;
+  font-family: var(--font-family);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--p-border-radius-xl);
+  font-size: 0.8rem;
+  margin-left: 0.8rem;
+
+  &.open {
+    background-color: var(--green-100);
+    color: var(--green-800);
+  }
+
+  &.in-progress {
+    background-color: var(--red-100);
+    color: var(--red-900);
+  }
+
+  &.closed {
+    background-color: var(--gray-300);
+    color: var(--red-900);
+  }
+}
+
+.h2-card-admin-title {
+  float: left;
 }
 </style>
