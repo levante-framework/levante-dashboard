@@ -53,7 +53,7 @@ const downloadCSV = async () => {
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = "template.csv";
+    a.download = "register-users-example.csv";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -62,7 +62,6 @@ const downloadCSV = async () => {
     console.error("Error downloading CSV:", error);
   }
 };
-
 </script>
 
 <style scoped>
