@@ -32,7 +32,7 @@
       label="CSV Template"
       class="bg-primary mb-2 p-3 w-2 text-white border-none border-round h-3rem m-0 hover:bg-red-900"
       icon="pi pi-download"
-      @click="downloadCSV"
+      @click="handleDownloadCSV"
     />
   </PvPanel>
 </template>
@@ -41,26 +41,10 @@
 import PvPanel from 'primevue/panel';
 import PvDivider from 'primevue/divider';
 import PvButton from 'primevue/button';
+import downloadFile from '@/helpers/downloadFile';
 
-const csvUrl = "../../assets/register-users-example.csv";
-const downloadCSV = async () => {
-  try {
-    const response = await fetch(csvUrl);
-    if (!response.ok) throw new Error("Download failed");
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "register-users-example.csv";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("Error downloading CSV:", error);
-  }
+const handleDownloadCSV = () => {
+  downloadFile("/assets/register-users-example.csv", "register-users-example.csv");
 };
 </script>
 
