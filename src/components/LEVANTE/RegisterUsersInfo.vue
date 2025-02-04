@@ -7,7 +7,6 @@
     <h3>Instructions:</h3 >
     <p>These fields are <b>REQUIRED</b> for registering users:</p>
     <ul>
-      <!-- <li><b>id</b> - The unique identifier for the user. Start from 1.</li> -->
       <li><b>userType</b> - The type of user. Must be one of the following: child, parent, or teacher.</li>
       <li><b>month</b> - The month of the year the user was born.<span class="required">*</span></li>
       <li><b>year</b> - The year the user was born.<span class="required">*</span></li>
@@ -27,15 +26,14 @@
       style="width: 100%; max-width: 600px; height: auto;"
     />
     <PvDivider />
-    <div class="mb-4">
-      <h3>CSV Template:</h3>
-      <p>Download and use our CSV template to make sure your data is formatted correctly:</p>
-     <PvButton
-        label="CSV Template"
-        class="bg-primary mb-2 p-3 w-3 text-white border-none border-round h-3rem m-0 hover:bg-red-900"
-        icon="pi pi-download"
-      />
-    </div>   
+    <h3>CSV Template:</h3>
+    <p>Download and use our CSV template to make sure your data is formatted correctly:</p>
+    <PvButton
+      label="CSV Template"
+      class="bg-primary mb-2 p-3 w-2 text-white border-none border-round h-3rem m-0 hover:bg-red-900"
+      icon="pi pi-download"
+      @click="downloadCSV"
+    />
   </PvPanel>
 </template>
 
@@ -43,6 +41,28 @@
 import PvPanel from 'primevue/panel';
 import PvDivider from 'primevue/divider';
 import PvButton from 'primevue/button';
+
+const csvUrl = "../../assets/register-users-example.csv";
+const downloadCSV = async () => {
+  try {
+    const response = await fetch(csvUrl);
+    if (!response.ok) throw new Error("Download failed");
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "template.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error downloading CSV:", error);
+  }
+};
+
 </script>
 
 <style scoped>
