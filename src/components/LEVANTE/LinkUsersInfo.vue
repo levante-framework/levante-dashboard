@@ -39,7 +39,7 @@ import PvButton from 'primevue/button';
 import downloadFile from '@/helpers/downloadFile';
 
 const handleDownloadCSV = () => {
-  downloadFile("/assets/link-users-example.csv", "link-users-example.csv");
+  downloadFile("/assets/users-template-levante.csv", "link-users-template.csv");
 };
 
 </script>
