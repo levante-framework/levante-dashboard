@@ -3,9 +3,7 @@
       <section class="main-body">
         <!--Upload file section-->
         <RegisterUsersInfo />
-  
         <PvDivider />
-  
         <div v-if="!isFileUploaded" class="text-gray-500 mb-2 surface-100 border-round p-2">
           <PvFileUpload
             v-if="!isFileUploaded"
@@ -25,7 +23,6 @@
             </template>
           </PvFileUpload>
         </div>
-  
         <div v-if="isFileUploaded && !errorMissingColumns && !errorUsers.length">
           <PvDataTable
             ref="dataTable"
@@ -46,7 +43,6 @@
               </template>
             </PvColumn>
           </PvDataTable>
-  
           <div class="submit-container">
             <PvButton
             v-if="registeredUsers.length"
