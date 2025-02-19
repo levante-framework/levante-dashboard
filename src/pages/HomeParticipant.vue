@@ -7,12 +7,11 @@
     <div v-else-if="!hasAssignments">
       <div class="col-full text-center py-8">
         <h1>{{ $t('homeParticipant.noAssignments') }}</h1>
-        <p class="text-center">{{ $t('homeParticipant.contactAdministrator') }}</p>
         <PvButton
-          :label="$t('navBar.signOut')"
+          :label="$t('homeParticipant.noAssignmentsButton')"
           class="no-underline bg-primary border-none border-round p-2 text-white hover:bg-red-900"
           icon="pi pi-sign-out"
-          @click="signOut"
+          @click="createAdministration"
         />
       </div>
     </div>
@@ -103,7 +102,6 @@ import useUserAssignmentsQuery from '@/composables/queries/useUserAssignmentsQue
 import useTasksQuery from '@/composables/queries/useTasksQuery';
 import useSurveyResponsesQuery from '@/composables/useSurveyResponses/useSurveyResponses';
 import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
-import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import ConsentModal from '@/components/ConsentModal.vue';
 import GameTabs from '@/components/GameTabs.vue';
 import ParticipantSidebar from '@/components/ParticipantSidebar.vue';
@@ -134,7 +132,6 @@ const surveyStore = useSurveyStore();
 
 
 const { mutateAsync: updateConsentStatus } = useUpdateConsentMutation();
-const { mutate: signOut } = useSignOutMutation();
 
 let unsubscribe;
 const initialized = ref(false);

@@ -39,6 +39,7 @@
     "loadingAssignments": "Loading Assignments",
     "selectAssignment": "Select an assignment",
     "noAssignments": "You have no administrations. Go create one here:",
+    "noAssignmentsButton": "Create administration",
     "contactAdministrator": "Please contact your administrator to get added to an assignment."
   },
   "homeSelector": {
