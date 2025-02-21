@@ -6,11 +6,11 @@
     </div>
     <div v-else-if="!hasAssignments">
       <div class="col-full text-center py-8">
-        <h1>{{ $t('homeParticipant.noAssignments') }}</h1>
+        <h2>{{ $t('homeParticipant.noAssignments') }}</h2>
         <PvButton
           :label="$t('homeParticipant.noAssignmentsButton')"
           class="no-underline bg-primary border-none border-round p-2 text-white hover:bg-red-900"
-          icon="pi pi-sign-out"
+          icon="pi pi-sliders-h text-white rounded"
           @click="createAdministration"
         />
       </div>
@@ -130,6 +130,9 @@ const toast = useToast();
 const queryClient = useQueryClient();
 const surveyStore = useSurveyStore();
 
+const createAdministration = () => {
+  router.push({ name: 'CreateAdministration' });
+};
 
 const { mutateAsync: updateConsentStatus } = useUpdateConsentMutation();
 
@@ -611,6 +614,7 @@ watch(surveyDependenciesLoaded, async (isLoaded) => {
 
   surveyStore.setSurvey(surveyInstance);
 }, { immediate: true });
+
 </script>
 <style scoped>
 .tabs-container {
