@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "edge",
+        "request": "launch",
+        "name": "Vue.js: Chrome",
+        "url": "https://localhost:5173",
+        "webRoot": "${workspaceFolder}",
+        "sourceMapPathOverrides": {
+          "webpack:///src/*": "${webRoot}/src/*"
+        }
+      }
+          ]
+  }
+  
