@@ -422,6 +422,9 @@
     let processedUserCount = 0;
     for (const users of chunkedUsersToBeRegistered) {
       try {
+
+        // This is the most likely place for an error, due to 
+        // permissions, etc. If so, drop to Catch block
         const res = await authStore.createUsers(users);
         const currentRegisteredUsers = res.data.data;
         
@@ -439,7 +442,14 @@
         
         // Update the count of processed users
         processedUserCount += currentRegisteredUsers.length;
-
+        toast.add({
+          severity: 'success',
+          summary: 'User Creation Success',
+          life: 9000,
+        convertUsersToCSV();
+      });
+    
+      // User registration failed, so don't download .csv
       } catch (error) {
         // TODO: Show users that failed to register
         console.error(error);
@@ -452,14 +462,8 @@
       }
     }
 
+    /* We want to clear this flag whether we got an error or not */
     activeSubmit.value = false;
-    toast.add({
-      severity: 'success',
-      summary: 'User Creation Success',
-      life: 9000,
-    });
-    
-    convertUsersToCSV();
   }
 
 

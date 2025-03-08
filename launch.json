@@ -1,15 +1,34 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-      {
-        "type": "chrome",
-        "request": "launch",
-        "name": "Debug w. Chrome",
-        "url": "https://localhost:5173",
-        "webRoot": "${workspaceFolder}",
-        "sourceMapPathOverrides": {
-          "webpack:///src/*": "${webRoot}/src/*"
-        }
-      }
-          ]
-  }
+  "version": "0.2.0",
+  "compounds": [
+    {
+      "name": "Run dev:levante and Debug w. Chrome",
+      "configurations": ["npm run dev:levante", "Debug w. Chrome"],
+      "stopAll": true
+    }
+  ],
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "npm run dev:levante",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:levante"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "chrome",
+      "name": "Debug w. Chrome",
+      "request": "launch",
+      "url": "https://localhost:5173",
+      "webRoot": "${workspaceFolder}",
+      "sourceMapPathOverrides": {
+        "webpack:///src/*": "${webRoot}/src/*"
+      },
+      "runtimeExecutable": "\"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\"",
+      "runtimeArgs": ["--remote-debugging-port=9222"],
+      "userDataDir": false
+    }
+  ]
+}
