@@ -210,6 +210,28 @@ const onFileUpload = async (event) => {
   lines[0] = headers.map(header => 
     header.trim() === 'userType' ? header : header.toLowerCase()
   ).join(',');
+
+// We create a password column with our hashes, so there isn't any
+// need for a user-defined column, and passwords in it shouldn't
+// be used in any case, per our current policy
+
+// First, identify the index of the 'password' column
+const passwordIndex = headers.findIndex(header => header.trim().toLowerCase() === 'password');
+
+if (passwordIndex !== -1) {
+  // Remove the 'password' column from each line
+  lines.forEach((line, index) => {
+    if (index === 0) {
+      // Remove from the header
+      lines[index] = headers.filter((header, i) => i !== passwordIndex).join(',');
+    } else {
+      // Remove from data rows
+      const values = line.split(',');
+      lines[index] = values.filter((value, i) => i !== passwordIndex).join(',');
+    }
+  });
+}
+
   
   // Create a new Blob with modified content
   const modifiedFile = new Blob([lines.join('\n')], { type: file.type });
