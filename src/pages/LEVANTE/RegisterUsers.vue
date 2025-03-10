@@ -214,6 +214,8 @@ const onFileUpload = async (event) => {
   // Create a new Blob with modified content
   const modifiedFile = new Blob([lines.join('\n')], { type: file.type });
   
+  // We don't want to allow the user to try and upload their own passwords
+
   // Parse the modified file
   rawUserFile.value = await csvFileToJson(modifiedFile);
 
@@ -222,8 +224,16 @@ const onFileUpload = async (event) => {
   // Conditional (child): Month, Year 
   // Conditional (Either): Group OR District + School 
 
-  const allColumns = Object.keys(toRaw(rawUserFile.value[0])).map((col) => col !== 'userType' ? col.toLowerCase() : col);
+  let allColumns = Object.keys(toRaw(rawUserFile.value[0])).map((col) => col !== 'userType' ? col.toLowerCase() : col);
 
+  // fixing the issue where the user can preset passwords, and
+  // where simply adding a password column causes registration to fail
+  allColumns = allColumns.value.map(row => {
+  const newRow = { ...row };
+  delete newRow.password; // Remove the password column
+  return newRow;
+});
+  
   // Check the only required column is present
   const hasUserType = allColumns.includes('userType');
   if (!hasUserType) {
