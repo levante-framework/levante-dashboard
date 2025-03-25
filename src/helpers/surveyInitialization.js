@@ -7,6 +7,15 @@ import {
   saveSurveyData,
 } from '@/helpers/survey';
 
+// Debounce function for performance
+const debounce = (fn, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+};
+
 export async function initializeSurvey({
   surveyInstance,
   userType,
@@ -17,36 +26,47 @@ export async function initializeSurvey({
   audioLinkMap,
   generalSurveyData,
 }) {
-  const { isRestored, pageNo } = restoreSurveyData({
-    surveyInstance,
-    uid: userData.id,
-    selectedAdmin: userData.selectedAdminId,
-    surveyResponsesData: userData.surveyResponsesData,
-    surveyStore,
-  });
+  // Restore survey data with error handling
+  try {
+    const { isRestored, pageNo } = await restoreSurveyData({
+      surveyInstance,
+      uid: userData.id,
+      selectedAdmin: userData.selectedAdminId,
+      surveyResponsesData: userData.surveyResponsesData,
+      surveyStore,
+    });
 
-  // Store all pages from the survey JSON
-  const allGeneralPages = generalSurveyData.pages;
-  const allSpecificPages = specificSurveyData?.pages || [];
-  surveyStore.setAllSurveyPages(allGeneralPages);
-  surveyStore.setAllSpecificPages(allSpecificPages);
+    // Store pages progressively
+    const allGeneralPages = generalSurveyData.pages;
+    const allSpecificPages = specificSurveyData?.pages || [];
+    
+    // Use requestAnimationFrame for smooth UI updates
+    requestAnimationFrame(() => {
+      surveyStore.setAllSurveyPages(allGeneralPages);
+      surveyStore.setAllSpecificPages(allSpecificPages);
+    });
 
-  const numGeneralPages = allGeneralPages.length;
-  const numSpecificPages = allSpecificPages.length;
-  surveyStore.setNumberOfSurveyPages(numGeneralPages, numSpecificPages);
+    const numGeneralPages = allGeneralPages.length;
+    const numSpecificPages = allSpecificPages.length;
+    
+    // Batch state updates
+    surveyStore.setNumberOfSurveyPages(numGeneralPages, numSpecificPages);
 
-
-  if (userType === 'student') {
-    await setupStudentAudio(surveyInstance, locale, audioLinkMap, surveyStore);
+    // Setup audio only for students and only if needed
+    if (userType === 'student' && !surveyStore.surveyAudioPlayerBuffers[getParsedLocale(locale)]) {
+      await setupStudentAudio(surveyInstance, locale, audioLinkMap, surveyStore);
+    }
+  } catch (error) {
+    console.error('Error initializing survey:', error);
+    // Handle error appropriately
   }
-
-  surveyStore.setNumberOfSurveyPages(numGeneralPages, numSpecificPages);
 }
-
 
 export async function setupStudentAudio(surveyInstance, locale, audioLinkMap, surveyStore) {
   const parsedLocale = getParsedLocale(locale);
-  await fetchBuffer({ 
+  
+  // Start audio loading in the background
+  fetchBuffer({ 
     parsedLocale, 
     setSurveyAudioLoading: surveyStore.setSurveyAudioLoading, 
     audioLinks: audioLinkMap, 
@@ -54,15 +74,33 @@ export async function setupStudentAudio(surveyInstance, locale, audioLinkMap, su
     setSurveyAudioPlayerBuffers: surveyStore.setSurveyAudioPlayerBuffers 
   });
 
-  surveyInstance.onAfterRenderPage.add((__, { htmlElement }) => {
+  // Debounce the audio button setup to prevent excessive DOM updates
+  const debouncedSetupAudioButtons = debounce((htmlElement) => {
     const questionElements = htmlElement.querySelectorAll('div[id^=sq_]');
     if (surveyStore.currentSurveyAudioSource) {
       surveyStore.currentSurveyAudioSource.stop();
     }
+    
+    // Use DocumentFragment for better performance
+    const fragment = document.createDocumentFragment();
     questionElements.forEach((el) => {
       const playAudioButton = document.getElementById('audio-button-' + el.dataset.name);
-      showAndPlaceAudioButton({playAudioButton, el});
+      if (playAudioButton) {
+        fragment.appendChild(playAudioButton);
+      }
     });
+    
+    // Batch DOM updates
+    requestAnimationFrame(() => {
+      questionElements.forEach((el) => {
+        const playAudioButton = document.getElementById('audio-button-' + el.dataset.name);
+        showAndPlaceAudioButton({playAudioButton, el});
+      });
+    });
+  }, 100);
+
+  surveyInstance.onAfterRenderPage.add((__, { htmlElement }) => {
+    debouncedSetupAudioButtons(htmlElement);
   });
 }
 
@@ -86,8 +124,8 @@ export function setupSurveyEventHandlers({
     specificIds = userData.classes.current;
   }
 
-  
-  surveyInstance.onValueChanged.add((sender, options) => 
+  // Debounce save operations
+  const debouncedSave = debounce((sender, options) => {
     saveSurveyData({ 
       survey: sender, 
       roarfirekit, 
@@ -101,9 +139,10 @@ export function setupSurveyEventHandlers({
       surveyStore,
       specificIds: specificIds,
       saveSurveyResponses: roarfirekit.saveSurveyResponses
-    })
-  );
+    });
+  }, 1000);
 
+  surveyInstance.onValueChanged.add((sender, options) => debouncedSave(sender, options));
 
   surveyInstance.onComplete.add((sender) => 
     saveFinalSurveyData({ 
@@ -120,5 +159,4 @@ export function setupSurveyEventHandlers({
       gameStore,
     })
   );
-
 }
