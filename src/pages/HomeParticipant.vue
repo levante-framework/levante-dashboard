@@ -120,6 +120,8 @@ import { useQueryClient, useQuery } from '@tanstack/vue-query';
 import { initializeSurvey, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
 import { useSurveyStore } from '@/store/survey';
 import { fetchDocsById } from '@/helpers/query/utils';
+import CareGiverGeneral from './caregiver_general.json'
+import CareGiverChild from './caregiver_child.json'
 
 const showConsent = ref(false);
 const consentVersion = ref('');
@@ -457,39 +459,42 @@ watch(
   { immediate: true },
 );
 
-const {  data: surveyData } = useQuery({
-  queryKey: ['surveys'],
-  queryFn: async () => {
-    const userType = userData.value.userType; 
+// const {  data: surveyData } = useQuery({
+//   queryKey: ['surveys'],
+//   queryFn: async () => {
+//     const userType = userData.value.userType; 
 
-    if (userType === 'student') {
-      const resSurvey = await axios.get(`${LEVANTE_BUCKET_URL}/child_survey.json`);
-      const resAudio = await fetchAudioLinks('child-survey');
-      surveyStore.setAudioLinkMap(resAudio);
-      return {
-        general: resSurvey.data,
-      };
-    } else if (userType === 'teacher') {
-      const resGeneral = await axios.get(`${LEVANTE_BUCKET_URL}/teacher_survey_general.json`);
-      const resClassroom = await axios.get(`${LEVANTE_BUCKET_URL}/teacher_survey_classroom.json`);
-      return {
-        general: resGeneral.data,
-        specific: resClassroom.data,
-      };
-    } else {
-      // parent
-      const resFamily = await axios.get(`${LEVANTE_BUCKET_URL}/parent_survey_family.json`);
-      const resChild = await axios.get(`${LEVANTE_BUCKET_URL}/parent_survey_child.json`);
-      return {
-        general: resFamily.data,
-        specific: resChild.data,
-      };
-    }
-  },
-  enabled: isLevante && userData?.value?.userType !== 'admin' && initialized,
-  staleTime: 24 * 60 * 60 * 1000, // 24 hours
-});
+//     if (userType === 'student') {
+//       const resSurvey = await axios.get(`${LEVANTE_BUCKET_URL}/child_survey.json`);
+//       const resAudio = await fetchAudioLinks('child-survey');
+//       surveyStore.setAudioLinkMap(resAudio);
+//       return {
+//         general: resSurvey.data,
+//       };
+//     } else if (userType === 'teacher') {
+//       const resGeneral = await axios.get(`${LEVANTE_BUCKET_URL}/teacher_survey_general.json`);
+//       const resClassroom = await axios.get(`${LEVANTE_BUCKET_URL}/teacher_survey_classroom.json`);
+//       return {
+//         general: resGeneral.data,
+//         specific: resClassroom.data,
+//       };
+//     } else {
+//       // parent
+//       // const resFamily = await axios.get(`${LEVANTE_BUCKET_URL}/parent_survey_family.json`);
+//       // const resChild = await axios.get(`${LEVANTE_BUCKET_URL}/parent_survey_child.json`);
+//       const resFamily = CareGiverGeneral
+//       const resChild = CareGiverChild
+//       return {
+//         general: resFamily.data,
+//         specific: resChild.data,
+//       };
+//     }
+//   },
+//   enabled: isLevante && userData?.value?.userType !== 'admin' && initialized,
+//   staleTime: 24 * 60 * 60 * 1000, // 24 hours
+// });
 
+const surveyData = ref({general: CareGiverGeneral, specific: CareGiverChild})
 
 const surveyDependenciesLoaded = computed(() => {
   return surveyData.value && userData.value && selectedAdmin.value && surveyResponsesData.value
@@ -532,7 +537,7 @@ watch(surveyDependenciesLoaded, async (isLoaded) => {
     } else {
       surveyStore.setIsGeneralSurveyComplete(surveyResponseDoc.general.isComplete);
 
-      const numOfSpecificSurveys = userType.value === 'parent' ? userData.value.childIds.length : userData.value.classes.current.length;
+      const numOfSpecificSurveys = userType.value === 'parent' ? userData.value?.childIds?.length : userData.value?.classes?.current.length;
       
       if (surveyResponseDoc.specific && surveyResponseDoc.specific.length > 0) {
         if (surveyResponseDoc.specific.length === numOfSpecificSurveys && surveyResponseDoc.specific.every(relation => relation.isComplete)) {

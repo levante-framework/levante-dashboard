@@ -1,5 +1,6 @@
 <script setup>
-import 'survey-core/defaultV2.min.css';
+// import 'survey-core/defaultV2.min.css';
+import "survey-core/survey-core.css"
 import { SurveyComponent } from 'survey-vue3-ui';
 import { useAuthStore } from '@/store/auth';
 import AppSpinner from '@/components/AppSpinner.vue';
