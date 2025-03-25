@@ -50,7 +50,7 @@ console.log('specific relation:', surveyStore.specificSurveyRelationData[surveyS
 <template>
   <div v-if="surveyStore.survey && !surveyStore.isSavingSurveyResponses && (!surveyStore.surveyAudioLoading || authStore.userData.userType === 'student')">
     <h1 v-if="authStore.userData.userType !== 'student' && surveyStore.isGeneralSurveyComplete" class="text-2xl font-bold text-black text-center">
-      {{ authStore.userData.userType === 'parent' ? `${$t('userSurvey.specificRelationDescriptionChildA')} ${surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex].birthMonth} ${$t('userSurvey.specificRelationDescriptionChildB')} ${surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex].birthYear}` : `${$t('userSurvey.specificRelationDescriptionClass')} ${surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex].name}` }}
+      {{ authStore.userData.userType === 'parent' ? `${$t('userSurvey.specificRelationDescriptionChildA')} ${surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex].birthMonth} ${$t('userSurvey.specificRelationDescriptionChildB')} ${surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex].birthYear}` : `${$t('userSurvey.specificRelationDescriptionClass')} ${surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex]?.name}` }}
     </h1>
     
     <SurveyComponent :model="surveyStore.survey" />
