@@ -4,8 +4,8 @@ import {
   showAndPlaceAudioButton, 
   restoreSurveyData, 
   saveFinalSurveyData,
-  saveSurveyData,
 } from '@/helpers/survey';
+import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 
 export async function initializeSurvey({
   surveyInstance,
@@ -17,7 +17,7 @@ export async function initializeSurvey({
   audioLinkMap,
   generalSurveyData,
 }) {
-  const { isRestored, pageNo } = restoreSurveyData({
+  restoreSurveyData({
     surveyInstance,
     uid: userData.id,
     selectedAdmin: userData.selectedAdminId,
@@ -87,23 +87,97 @@ export function setupSurveyEventHandlers({
   }
 
   
-  surveyInstance.onValueChanged.add((sender, options) => 
-    saveSurveyData({ 
-      survey: sender, 
-      roarfirekit, 
-      uid, 
-      selectedAdmin: selectedAdminId, 
-      questionName: options.name, 
-      responseValue: options.value,
-      userType,
-      numGeneralPages: surveyStore.numGeneralPages,
-      numSpecificPages: surveyStore.numSpecificPages,
-      surveyStore,
-      specificIds: specificIds,
-      saveSurveyResponses: roarfirekit.saveSurveyResponses
-    })
-  );
+  surveyInstance.onValueChanged.add((sender, options) => {
+    const currentPageNo = sender.currentPageNo;
+    console.log('currentPageNo: ', currentPageNo);
+    const questionName = options.name;
+    const responseValue = options.value;
+    const isGeneralSurvey = !surveyStore.isGeneralSurveyComplete;
+    
+    // Initialize or get existing data from localStorage
+    let responsesData = JSON.parse(localStorage.getItem(`${LEVANTE_SURVEY_RESPONSES_KEY}-${uid}`) || "{}");
+    
+    if (!responsesData?.responses) {
+      console.log('initializing responsesData');
+      responsesData.responses = { general: {}, specific: {}, currentPageNo: currentPageNo };
+    }
+    
+    // Save data based on whether it's a general or specific survey
+    if (isGeneralSurvey) {
+      // For general survey
+      if (!responsesData.responses.general[currentPageNo]) {
+        responsesData.responses.general[currentPageNo] = {};
+      }
+      responsesData.responses.general[currentPageNo][questionName] = responseValue;
+    } else {
+      // For specific survey, add an additional level based on userType
+      if (!responsesData.responses.specific) {
+        responsesData.responses.specific = {};
+      }
+      
+      const specificIndex = surveyStore.specificSurveyRelationIndex;
+      const specificId = specificIds[specificIndex];
+      
+      // Create the specific id key if it doesn't exist
+      if (!responsesData.responses.specific[specificId]) {
+        responsesData.responses.specific[specificId] = {};
+      }
+      
+      // Create the page number key if it doesn't exist
+      if (!responsesData.responses.specific[specificId][currentPageNo]) {
+        responsesData.responses.specific[specificId][currentPageNo] = {};
+      }
+      
+      // Save the response
+      responsesData.responses.specific[specificId][currentPageNo][questionName] = responseValue;
+    }
+    
+    // Save to localStorage
+    localStorage.setItem(`${LEVANTE_SURVEY_RESPONSES_KEY}-${uid}`, JSON.stringify(responsesData));
+  });
 
+  surveyInstance.onCurrentPageChanged.add((sender) => {  
+    const currentPageNo = sender.currentPageNo;
+    const previousPageNo = currentPageNo > 0 ? currentPageNo - 1 : 0;
+    
+    // Update the current page index in the store
+    surveyStore.setCurrentPageIndex(currentPageNo);
+
+    const localStorageData   = JSON.parse(localStorage.getItem(`${LEVANTE_SURVEY_RESPONSES_KEY}-${uid}`))
+    const isGeneralSurvey = !surveyStore.isGeneralSurveyComplete;
+    const prevPageData = isGeneralSurvey ? localStorageData.responses.general[previousPageNo] :
+     localStorageData.responses.specific[specificIds[surveyStore.specificSurveyRelationIndex]][previousPageNo];
+    
+    console.log('prevPageData: ', prevPageData);
+    
+    if (prevPageData.length > 0) {            
+      // Create a structured data object similar for the backend
+      const structuredResponses = {
+        pageNo: previousPageNo,
+        isGeneral: !surveyStore.isGeneralSurveyComplete,
+        isComplete: false,
+        responses: prevPageData,
+        userType: userType,
+      };
+      
+      // Set specificId if it's a specific survey
+      if (surveyStore.isGeneralSurveyComplete) {
+        const specificIndex = surveyStore.specificSurveyRelationIndex;
+        structuredResponses.specificId = specificIds[specificIndex];
+      }
+      
+      // Save to the database
+      try {
+        roarfirekit.saveSurveyResponses({
+          surveyData: structuredResponses,
+          administrationId: selectedAdminId ?? null,
+        });
+      } catch (error) {
+        console.error('Error saving survey responses on page change: ', error);
+      }
+      
+    }
+  });
 
   surveyInstance.onComplete.add((sender) => 
     saveFinalSurveyData({ 

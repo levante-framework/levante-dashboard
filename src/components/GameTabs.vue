@@ -223,7 +223,7 @@ const getSpecificSurveyProgress = computed(() => (loopIndex) => {
 
         if (localStorageData.isComplete) return 100;
 
-        const currentPage = localStorageData.pageNo || 0;
+        const currentPage = localStorageData.currentPageNo || 0;
         const totalPages = surveyStore.numSpecificPages || 1;
 
         return Math.round((currentPage / totalPages) * 100);

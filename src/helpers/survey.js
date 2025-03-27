@@ -59,11 +59,44 @@ export function getParsedLocale(locale) {
   export function restoreSurveyData({ surveyInstance, uid, selectedAdmin, surveyResponsesData, surveyStore }) {
     // Try to get data from localStorage first
     const prevData = window.localStorage.getItem(`${LEVANTE_SURVEY_RESPONSES_KEY}-${uid}`);
+    
     if (prevData) {
       const parsedData = JSON.parse(prevData);
-      surveyInstance.data = parsedData.responses;
-      surveyInstance.currentPageNo = parsedData.pageNo;
-      return { isRestored: true, pageNo: parsedData.pageNo };
+      const currentPageNo = surveyInstance.currentPageNo;
+      
+      // Check if we're in general or specific survey
+      if (!surveyStore.isGeneralSurveyComplete) {
+        // For general survey, flatten the responses by page number
+        const responses = {};
+        
+        if (parsedData.responses && parsedData.responses.general) {
+          // Loop through each page and aggregate all responses
+          Object.keys(parsedData.responses.general).forEach(pageNo => {
+            Object.assign(responses, parsedData.responses.general[pageNo]);
+          });
+        }
+        
+        surveyInstance.data = responses;
+      } else {
+        // For specific survey
+        const responses = {};
+        const specificIndex = surveyStore.specificSurveyRelationIndex;
+        const specificId = surveyStore.specificSurveyRelationData[specificIndex];
+        
+        if (parsedData.responses && 
+            parsedData.responses.specific && 
+            parsedData.responses.specific[specificId]) {
+          // Loop through each page and aggregate all responses
+          Object.keys(parsedData.responses.specific[specificId]).forEach(pageNo => {
+            Object.assign(responses, parsedData.responses.specific[specificId][pageNo]);
+          });
+        }
+        
+        surveyInstance.data = responses;
+        surveyInstance.currentPageNo = prevData.currentPageNo;
+      }
+      
+      return { isRestored: true, pageNo: currentPageNo };
     } else if (surveyResponsesData) {
       // If not in localStorage, try to find data from the server
       const surveyResponse = surveyResponsesData.find((doc) => doc?.administrationId === selectedAdmin);
@@ -176,25 +209,50 @@ export function getParsedLocale(locale) {
 
     // NOTE: Values from the second object overwrite values from the first
     const responsesWithAllQuestions = _merge(unansweredQuestions, sender.data);
-
-    // Structure the data
-    const structuredResponses = {
-      pageNo: 0,
-      isGeneral: true,
-      isComplete: true,
-      specificId: 0,
-      responses: responsesWithAllQuestions,
-      userType: userType,
-    };
-
-    console.log('structuredResponses: ', structuredResponses);
-
-    // Update specificId if it's a specific survey
-    if (surveyStore.isGeneralSurveyComplete) {
-      structuredResponses.isGeneral = false;
-      const specificIndex = surveyStore.specificSurveyRelationIndex;
-      structuredResponses.specificId = specificIds[specificIndex];
+    const currentPageNo = sender.currentPageNo;
+    const isGeneralSurvey = !surveyStore.isGeneralSurveyComplete;
+    
+    // Get existing responses from localStorage or initialize
+    const prevData = localStorage.getItem(`${LEVANTE_SURVEY_RESPONSES_KEY}-${uid}`);
+    let responsesData = prevData ? JSON.parse(prevData) : { responses: { general: {}, specific: {} } };
+    
+    if (!responsesData.responses) {
+      responsesData.responses = { general: {}, specific: {} };
     }
+
+    responsesData.isGeneral = surveyStore.isGeneralSurveyComplete;
+    responsesData.specificId = surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex];
+    
+    // Update the data structure based on general or specific survey
+    if (isGeneralSurvey) {
+      // For general survey, update the last page
+      if (!responsesData.responses.general[currentPageNo]) {
+        responsesData.responses.general[currentPageNo] = {};
+      }
+      
+      // Merge all questions with responses
+      Object.assign(responsesData.responses.general[currentPageNo], responsesWithAllQuestions);
+    } else {
+      // For specific survey
+      const specificIndex = surveyStore.specificSurveyRelationIndex;
+      const specificId = specificIds[specificIndex];
+      
+      if (!responsesData.responses.specific[specificId]) {
+        responsesData.responses.specific[specificId] = {};
+      }
+      
+      if (!responsesData.responses.specific[specificId][currentPageNo]) {
+        responsesData.responses.specific[specificId][currentPageNo] = {};
+      }
+      
+      // Merge all questions with responses
+      Object.assign(responsesData.responses.specific[specificId][currentPageNo], responsesWithAllQuestions);
+    }
+    
+    // Add metadata
+    responsesData.userType = userType;
+    responsesData.isComplete = true;
+    responsesData.pageNo = currentPageNo;
 
     // turn on loading state
     surveyStore.setIsSavingSurveyResponses(true);
@@ -202,7 +260,7 @@ export function getParsedLocale(locale) {
     // call cloud function to save the survey results
     try {
       await roarfirekit.saveSurveyResponses({
-        surveyData: structuredResponses,
+        surveyData: responsesData,
         administrationId: selectedAdmin ?? null,
       });
 
