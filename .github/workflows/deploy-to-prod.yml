@@ -1,0 +1,62 @@
+name: Build Vue Project and Upload to Sentry
+
+on:
+  push:
+    branches:
+      - main # Trigger the workflow only on push to the main branch
+  pull_request:
+    branches:
+      - main # Optionally, trigger on PR to main branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "20" # Use the desired Node.js version
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 4: Update app version in package.json
+      - name: Bump version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NEW_VERSION=$(echo $VERSION | awk -F. -v OFS=. '{$NF++;print}')
+          npm version $NEW_VERSION --no-git-tag-version
+          echo "Updated version to $NEW_VERSION"
+
+      # Step 5: Build the Vue project using Vite for production
+      - name: Build Vue app (production)
+        run: npm run build
+
+      # Step 6: Upload sourcemaps to Sentry (secure SENTRY_AUTH_TOKEN required)
+      - name: Upload sourcemaps to Sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }} # Add Sentry auth token in secrets
+          SENTRY_PROJECT: your-sentry-project # Replace with your Sentry project name
+          SENTRY_ORG: your-sentry-org # Replace with your Sentry organization
+        run: |
+          # Install sentry-cli
+          curl -sL https://sentry.io/get-cli/ | bash
+          export PATH="$HOME/.sentry-cli/bin:$PATH"
+
+          # Upload sourcemaps (ensure to point to correct dist folder)
+          sentry-cli releases new $NEW_VERSION  # Create a new release
+          sentry-cli releases files $NEW_VERSION upload-sourcemaps dist/assets --url-prefix '~/assets'  # Upload sourcemaps
+          sentry-cli releases finalize $NEW_VERSION  # Finalize the release
+
+      # Step 7: Create a new Git tag for the new version
+      - name: Create Git tag and push
+        run: |
+          git tag $NEW_VERSION
+          git push origin $NEW_VERSION
