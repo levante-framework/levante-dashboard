@@ -172,7 +172,19 @@ const { spinner, ssoProvider, routeToProfile, roarfirekit } = storeToRefs(authSt
 const warningModalOpen = ref(false);
 
 const storeDeviceInfo = () => {
-  console.log(getDevice())
+  const device = getDevice();
+
+  if (!authStore.deviceInfo) {
+    authStore.deviceInfo = { desktop: 0, mobile: 0 };
+  }
+
+  if (device === 'desktop') {
+    authStore.deviceInfo.desktop += 1;
+  } else if (device === 'mobile') {
+    authStore.deviceInfo.mobile += 1;
+  }
+
+  console.log(authStore.deviceInfo);
 };
 
 authStore.$subscribe(() => {
