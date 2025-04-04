@@ -216,6 +216,12 @@ const validateRoarEmail = _debounce(
       return;
     }
 
+    if (!roarfirekit.value) {
+      console.error('roarfirekit is not initialized');
+      evaluatingEmail.value = false;
+      return;
+    }
+
     const isRoarAuth = roarfirekit.value.isRoarAuthEmail(email);
 
     try {
