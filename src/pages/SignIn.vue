@@ -152,6 +152,7 @@ import { useRouter } from 'vue-router';
 import PvButton from 'primevue/button';
 import PvImage from 'primevue/image';
 import PvPassword from 'primevue/password';
+import { getDevice } from '@bdelab/roar-utils';
 import { useAuthStore } from '@/store/auth';
 import { isMobileBrowser } from '@/helpers';
 import { fetchDocById } from '@/helpers/query/utils';
@@ -170,10 +171,24 @@ const adminSignIn = ref(false);
 const { spinner, ssoProvider, routeToProfile, roarfirekit } = storeToRefs(authStore);
 const warningModalOpen = ref(false);
 
+const storeDeviceInfo = () => {
+  const device = getDevice();
+
+  if (!authStore.deviceInfo) {
+    authStore.deviceInfo = { desktop: 0, mobile: 0 };
+  }
+
+  if (device === 'desktop') {
+    authStore.deviceInfo.desktop += 1;
+  } else if (device === 'mobile') {
+    authStore.deviceInfo.mobile += 1;
+  }
+
+  console.log(authStore.deviceInfo);
+};
+
 authStore.$subscribe(() => {
   if (authStore.uid) {
-
-
     if (ssoProvider.value) {
       router.push({ path: APP_ROUTES.SSO });
     } else if (routeToProfile.value) {
@@ -203,6 +218,7 @@ const authWithGoogle = () => {
           const userData = await fetchDocById('users', authStore.roarUid);
           authStore.userData = userData;
         }
+        storeDeviceInfo();
       })
       .catch((e) => {
         const errorCode = e.code;
@@ -230,6 +246,7 @@ const authWithClever = () => {
     authStore.signInWithCleverRedirect();
   }
   spinner.value = true;
+  storeDeviceInfo();
 };
 
 const authWithClassLink = () => {
@@ -241,6 +258,7 @@ const authWithClassLink = () => {
     authStore.signInWithClassLinkRedirect();
     spinner.value = true;
   }
+  storeDeviceInfo();
 };
 
 const authWithEmail = async (state) => {
@@ -270,6 +288,7 @@ const authWithEmail = async (state) => {
         }
 
         spinner.value = true;
+        storeDeviceInfo();
       })
       .catch((e) => {
         incorrect.value = true;
