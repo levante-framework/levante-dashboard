@@ -1,37 +1,59 @@
-import { useQuery, UseQueryReturnType } from '@tanstack/vue-query';
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides.ts';
-import { fetchDocumentsById } from '@/helpers/query/utils';
+import { computed, toValue, Ref } from 'vue';
+import { useQuery } from '@tanstack/vue-query';
+import _isEmpty from 'lodash/isEmpty';
+import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
+import { administrationPageFetcher } from '@/helpers/query/administrations';
+import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
+import useUserType from '@/composables/useUserType';
 import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
-import { MaybeRef } from 'vue';
 
-interface QueryOptions {
-  enabled?: MaybeRef<boolean>;
+interface Administration {
   [key: string]: any;
 }
 
-interface Administration {
-  id: string;
-  name: string;
+interface QueryOptions {
+  enabled?: boolean;
   [key: string]: any;
 }
 
 /**
  * Administrations list query.
  *
+ * @param {Ref<string>} orderBy – A Vue ref containing the field to order the query by.
+ * @param {Ref<boolean>} [testAdministrationsOnly=false] – A Vue ref containing whether to fetch only test data.
  * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
- * @returns {UseQueryReturnType} The TanStack query result.
+ * @returns The TanStack query result.
  */
 const useAdministrationsListQuery = (
-  queryOptions?: QueryOptions
-): UseQueryReturnType<Administration[], Error> => {
-  // Ensure all necessary data is available before enabling the query.
-  const conditions = [() => true];
-  const { isQueryEnabled, options } = computeQueryOverrides(conditions, queryOptions);
+  orderBy: Ref<string>,
+  testAdministrationsOnly: Ref<boolean> | boolean = false,
+  queryOptions: QueryOptions | undefined = undefined
+) => {
+  // Fetch the user claims.
+  const { data: userClaims } = useUserClaimsQuery({
+    enabled: queryOptions?.enabled ?? true,
+  });
+
+  // Get admin status and administation orgs.
+  const { isSuperAdmin } = useUserType(userClaims);
+  const exhaustiveAdministrationOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
+
+  // Ensure all necessary data is loaded before enabling the query.
+  const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
+  const queryConditions = [() => claimsLoaded.value];
+  const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
+
+  // Build query key, based on whether or not we only fetch test administrations.
+  const queryKey = computed(() =>
+    toValue(testAdministrationsOnly)
+      ? [ADMINISTRATIONS_LIST_QUERY_KEY, 'test-data', orderBy]
+      : [ADMINISTRATIONS_LIST_QUERY_KEY, orderBy],
+  );
 
   return useQuery({
-    queryKey: [ADMINISTRATIONS_LIST_QUERY_KEY],
-    queryFn: () => fetchDocumentsById(FIRESTORE_COLLECTIONS.ADMINISTRATIONS, []),
+    queryKey,
+    queryFn: () =>
+      administrationPageFetcher(isSuperAdmin, exhaustiveAdministrationOrgs, testAdministrationsOnly, orderBy),
     enabled: isQueryEnabled,
     ...options,
   });

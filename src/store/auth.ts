@@ -239,6 +239,46 @@ export const useAuthStore = defineStore('authStore', {
   persist: {
     storage: sessionStorage,
     debug: false,
+    paths: [
+      'spinner',
+      'adminOrgs',
+      'userData',
+      'userClaims',
+      'cleverOAuthRequested',
+      'classLinkOAuthRequested',
+      'routeToProfile',
+      'ssoProvider',
+      'showOptionalAssessments'
+    ],
+    serializer: {
+      serialize: (state) => {
+        const serializedState = {
+          spinner: state.spinner,
+          adminOrgs: state.adminOrgs,
+          userData: state.userData,
+          userClaims: state.userClaims,
+          cleverOAuthRequested: state.cleverOAuthRequested,
+          classLinkOAuthRequested: state.classLinkOAuthRequested,
+          routeToProfile: state.routeToProfile,
+          ssoProvider: state.ssoProvider,
+          showOptionalAssessments: state.showOptionalAssessments
+        };
+        return JSON.stringify(serializedState);
+      },
+      deserialize: (str) => {
+        const parsed = JSON.parse(str);
+        return {
+          ...parsed,
+          firebaseUser: {
+            adminFirebaseUser: null,
+            appFirebaseUser: null,
+          },
+          roarfirekit: null,
+          adminAuthStateListener: null,
+          appAuthStateListener: null,
+        };
+      }
+    }
   },
 });
 
