@@ -1,34 +1,53 @@
-import { RoarFirekit, RoarConfig } from '@levante-framework/firekit';
+import { RoarFirekit } from '@levante-framework/firekit';
 import { AuthPersistence } from '@levante-framework/firekit/lib/firestore/util';
 import levanteFirebaseConfig from './config/firebaseLevante';
 import { isLevante } from './helpers';
 
-const roarConfig: RoarConfig = levanteFirebaseConfig;
-
-export async function initNewFirekit(): Promise<RoarFirekit> {
-  console.log('Initializing Firekit with config:', roarConfig);
-  const firekit = new RoarFirekit({
-    roarConfig,
-    authPersistence: AuthPersistence.SESSION,
-    markRawConfig: {
-      auth: false,
-      db: false,
-      functions: false,
-    },
-    verboseLogging: isLevante ? false : true,
-
-    // The site key is used for app check token verification
-    // The debug token is used to bypass app check for local development
-    siteKey: roarConfig?.siteKey,
-    debugToken: roarConfig?.debugToken,
-  });
-  console.log('Firekit instance created, initializing...');
+// Clear existing IndexedDB instances
+const clearIndexedDB = async () => {
   try {
-    const initializedFirekit = await firekit.init();
-    console.log('Firekit initialized successfully');
-    return initializedFirekit;
+    const databases = await window.indexedDB.databases();
+    for (const db of databases) {
+      if (db.name) {
+        window.indexedDB.deleteDatabase(db.name);
+      }
+    }
+    console.log('Cleared existing IndexedDB instances');
+  } catch (error) {
+    console.error('Error clearing IndexedDB:', error);
+  }
+};
+
+export const initNewFirekit = async () => {
+  try {
+    // Clear existing IndexedDB instances before initialization
+    await clearIndexedDB();
+
+    console.log('Initializing Firekit with session persistence...');
+    const roarfirekit = new RoarFirekit({
+      roarConfig: {
+        app: levanteFirebaseConfig.app,
+        admin: levanteFirebaseConfig.admin,
+      },
+      dbPersistence: false,
+      authPersistence: AuthPersistence.session,
+      markRawConfig: {
+        auth: false,
+        db: false,
+        functions: false,
+      },
+      verboseLogging: isLevante ? false : true,
+    });
+
+    console.log('Firekit instance created with session persistence, initializing...');
+    await roarfirekit.init();
+    console.log('Firekit initialization completed successfully');
+
+    return roarfirekit;
   } catch (error) {
     console.error('Error initializing Firekit:', error);
     throw error;
   }
-} 
+};
+
+export default initNewFirekit; 

@@ -113,9 +113,6 @@ export const useAuthStore = defineStore('authStore', {
       console.log('Auth store: Initializing Firekit');
       try {
         this.roarfirekit = await initNewFirekit();
-        // Disable Firebase persistence
-        this.roarfirekit.admin.auth.setPersistence('none');
-        this.roarfirekit.app.auth.setPersistence('none');
         console.log('Auth store: Firekit initialized successfully');
         await this.setAuthStateListeners();
         console.log('Auth store: Auth state listeners set');
@@ -127,6 +124,11 @@ export const useAuthStore = defineStore('authStore', {
     async setAuthStateListeners(): Promise<void> {
       console.log('Setting up auth state listeners');
       
+      if (!this.roarfirekit?.initialized) {
+        console.error('Cannot set auth state listeners: Firekit not initialized');
+        return;
+      }
+      
       // Clear existing listeners if any
       if (this.adminAuthStateListener) {
         this.adminAuthStateListener();
@@ -136,7 +138,7 @@ export const useAuthStore = defineStore('authStore', {
       }
 
       // Set up new listeners
-      this.adminAuthStateListener = onAuthStateChanged(this.roarfirekit?.admin.auth, async (user: User | null) => {
+      this.adminAuthStateListener = onAuthStateChanged(this.roarfirekit.admin.auth, async (user: User | null) => {
         console.log('Admin auth state changed:', user ? 'User logged in' : 'User logged out');
         if (user) {
           this.firebaseUser.adminFirebaseUser = user;
@@ -160,7 +162,7 @@ export const useAuthStore = defineStore('authStore', {
         }
       });
 
-      this.appAuthStateListener = onAuthStateChanged(this.roarfirekit?.app.auth, async (user: User | null) => {
+      this.appAuthStateListener = onAuthStateChanged(this.roarfirekit.app.auth, async (user: User | null) => {
         console.log('App auth state changed:', user ? 'User logged in' : 'User logged out');
         if (user) {
           this.firebaseUser.appFirebaseUser = user;

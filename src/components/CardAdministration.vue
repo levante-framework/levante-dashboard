@@ -73,7 +73,13 @@
         :loading="loadingTreeTable"
         :value="treeTableOrgs"
         @node-expand="onExpand"
-        
+        :pt="{
+          row: {
+            props: {
+              'aria-posinset': (node) => node.index + 1
+            }
+          }
+        }"
       >
         <PvColumn field="name" expander style="width: 20rem"></PvColumn>
         <PvColumn v-if="props.stats && isWideScreen" field="id">
@@ -88,7 +94,7 @@
         </PvColumn>
         <PvColumn field="id" header="" style="width: 14rem">
           <template #body="{ node }">
-            <div v-if="node.data.id" class="flex m-0">
+            <div v-if="node?.data?.id" class="flex m-0">
               <router-link
                 :to="{
                   name: 'ProgressReport',
@@ -286,18 +292,26 @@ const loadingTreeTable = computed(() => {
 
 const treeTableOrgs = ref([]);
 watch(orgs, (newValue) => {
-  treeTableOrgs.value = newValue;
+  if (newValue) {
+    treeTableOrgs.value = newValue;
+  }
 });
 
 watch(showTable, (newValue) => {
-  if (newValue) treeTableOrgs.value = orgs.value;
+  if (newValue && orgs.value) {
+    treeTableOrgs.value = orgs.value;
+  }
 });
 
 const expanding = ref(false);
 const onExpand = async (node) => {
-  if (node.data.orgType === SINGULAR_ORG_TYPES.SCHOOLS && node.children?.length > 0 && !node.data.expanded) {
-    expanding.value = true;
+  if (!node?.data || node.data.orgType !== SINGULAR_ORG_TYPES.SCHOOLS || !node.children?.length || node.data.expanded) {
+    return;
+  }
 
+  expanding.value = true;
+
+  try {
     const classPaths = node.children.map(({ data }) => `classes/${data.id}`);
     const statPaths = node.children.map(({ data }) => `administrations/${props.id}/stats/${data.id}`);
 
@@ -305,26 +319,26 @@ const onExpand = async (node) => {
 
     const [classDocs, classStats] = await Promise.all(classPromises);
 
-    // Lazy node is a copy of the expanding node. We will insert more detailed
-    // children nodes later.
     const lazyNode = {
       key: node.key,
       data: {
         ...node.data,
         expanded: true,
       },
+      children: [] // Initialize children array
     };
 
     const childNodes = _without(
       _zip(classDocs, classStats).map(([orgDoc, stats], index) => {
-        const { collection = FIRESTORE_COLLECTIONS.CLASSES, ...nodeData } = orgDoc ?? {};
+        if (!orgDoc) return undefined;
 
-        if (_isEmpty(nodeData)) return undefined;
+        const { collection = FIRESTORE_COLLECTIONS.CLASSES, ...nodeData } = orgDoc;
+        const orgType = SINGULAR_ORG_TYPES[collection.toUpperCase()] || SINGULAR_ORG_TYPES.CLASSES;
 
         return {
           key: `${node.key}-${index}`,
           data: {
-            orgType: SINGULAR_ORG_TYPES[collection.toUpperCase()],
+            orgType,
             ...(stats && { stats }),
             ...nodeData,
           },
@@ -335,24 +349,19 @@ const onExpand = async (node) => {
 
     lazyNode.children = childNodes;
 
-    // Replace the existing nodes with a map that inserts the child nodes at the
-    // appropriate position
     const newNodes = treeTableOrgs.value.map((n) => {
-      // First, match on the districtId if the expanded school is part of a district
+      if (!n?.data) return n;
+
       if (n.data.id === node.data.districtId) {
-        const newNode = {
+        return {
           ...n,
-          // Replace the existing school child nodes with a map that inserts the
-          // classes at the appropriate position
-          children: n.children.map((child) => {
+          children: n.children?.map((child) => {
             if (child.data.id === node.data.id) {
               return lazyNode;
             }
             return child;
-          }),
+          }) || [],
         };
-        return newNode;
-        // Next check to see if the expanded node was the school node itself
       } else if (n.data.id === node.data.id) {
         return lazyNode;
       }
@@ -360,25 +369,10 @@ const onExpand = async (node) => {
       return n;
     });
 
-    // Sort the classes by existence of stats then alphabetically
-    // TODO: This fails currently as it tries to set a read only reactive handler
-    // Specifically, setting the `children` key fails because the
-    // schoolNode target is read-only.
-    // Also, I'm pretty sure this is useless now because all classes will have stats
-    // due to preallocation of accounts.
-    for (const districtNode of newNodes ?? []) {
-      for (const schoolNode of districtNode?.children ?? []) {
-        if (schoolNode.children) {
-          schoolNode.children = schoolNode.children.toSorted((a, b) => {
-            if (!a.data.stats) return 1;
-            if (!b.data.stats) return -1;
-            return a.data.name.localeCompare(b.data.name);
-          });
-        }
-      }
-    }
-
     treeTableOrgs.value = newNodes;
+  } catch (error) {
+    console.error('Error expanding node:', error);
+  } finally {
     expanding.value = false;
   }
 };
@@ -401,22 +395,22 @@ const setDoughnutChartOptions = () => ({
 
 const setDoughnutChartData = () => {
   const docStyle = getComputedStyle(document.documentElement);
-  let { assigned = 0, started = 0, completed = 0 } = props.stats.total?.assignment || {};
+  const stats = props.stats?.total?.assignment || {};
+  const { assigned = 0, started = 0, completed = 0 } = stats;
 
-  started -= completed;
-  assigned -= started + completed;
+  const adjustedStarted = Math.max(0, started - completed);
+  const adjustedAssigned = Math.max(0, assigned - (adjustedStarted + completed));
 
   return {
     labels: ['Completed', 'Started', 'Assigned'],
     datasets: [
       {
-        data: [completed, started, assigned],
+        data: [completed, adjustedStarted, adjustedAssigned],
         backgroundColor: [
           docStyle.getPropertyValue('--bright-green'),
           docStyle.getPropertyValue('--yellow-100'),
           docStyle.getPropertyValue('--surface-d'),
         ],
-        // hoverBackgroundColor: ['green', docStyle.getPropertyValue('--surface-d')]
       },
     ],
   };
@@ -428,6 +422,14 @@ onMounted(() => {
     doughnutChartOptions.value = setDoughnutChartOptions();
   }
 });
+
+// Add watcher for stats changes
+watch(() => props.stats, (newStats) => {
+  if (newStats) {
+    doughnutChartData.value = setDoughnutChartData();
+    doughnutChartOptions.value = setDoughnutChartOptions();
+  }
+}, { deep: true });
 </script>
 
 <style lang="scss">

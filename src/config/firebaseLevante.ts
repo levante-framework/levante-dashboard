@@ -5,6 +5,8 @@ interface FirebaseConfig {
   storageBucket: string;
   messagingSenderId: string;
   appId: string;
+  siteKey: string;
+  debugToken?: string;
 }
 
 interface LevanteConfig {
@@ -23,6 +25,7 @@ if (import.meta.env.VITE_FIREBASE_PROJECT === 'DEV') {
     storageBucket: 'hs-levante-assessment-dev.appspot.com',
     messagingSenderId: '46792247600',
     appId: '1:46792247600:web:ea20e1fe94e0541dd5a0f5',
+    siteKey: 'your-site-key',
   };
 
   adminConfig = {
@@ -32,6 +35,7 @@ if (import.meta.env.VITE_FIREBASE_PROJECT === 'DEV') {
     storageBucket: 'hs-levante-admin-dev.appspot.com',
     messagingSenderId: '41590333418',
     appId: '1:41590333418:web:3468a7caadab802d6e5c93',
+    siteKey: 'your-site-key',
   };
 } else {
   // production
@@ -42,6 +46,7 @@ if (import.meta.env.VITE_FIREBASE_PROJECT === 'DEV') {
     storageBucket: 'hs-levante-assessment-prod.appspot.com',
     messagingSenderId: '928482088295',
     appId: '1:928482088295:web:1cab64d5dccb2d19ae8bc2',
+    siteKey: 'your-site-key',
   };
 
   adminConfig = {
@@ -51,6 +56,7 @@ if (import.meta.env.VITE_FIREBASE_PROJECT === 'DEV') {
     storageBucket: 'hs-levante-admin-prod.appspot.com',
     messagingSenderId: '348449903279',
     appId: '1:348449903279:web:a1b9dad734e2237c7ffa5a',
+    siteKey: 'your-site-key',
   };
 }
 

@@ -61,7 +61,7 @@ const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
 
 const initialized = ref(false);
-const menu = ref();
+const menu = ref(null);
 const screenWidth = ref(window.innerWidth);
 let unsubscribe;
 
@@ -70,22 +70,21 @@ const init = () => {
   initialized.value = true;
 };
 
-unsubscribe = authStore.$subscribe(async (mutation, state) => {
-  if (state.roarfirekit.restConfig) init();
+onMounted(() => {
+  if (roarfirekit.value?.restConfig) {
+    init();
+  }
+  window.addEventListener('resize', handleResize);
+});
+
+onUnmounted(() => {
+  if (unsubscribe) unsubscribe();
+  window.removeEventListener('resize', handleResize);
 });
 
 const handleResize = () => {
   screenWidth.value = window.innerWidth;
 };
-
-onMounted(() => {
-  if (roarfirekit.value.restConfig) init();
-  window.addEventListener('resize', handleResize);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize);
-});
 
 const { isLoading: isLoadingClaims, data: userClaims } = useUserClaimsQuery({
   enabled: initialized,
@@ -180,7 +179,9 @@ const rawActions = computed(() => {
 });
 
 const toggleMenu = (event) => {
-  menu.value.toggle(event);
+  if (menu.value) {
+    menu.value.toggle(event);
+  }
 };
 </script>
 
