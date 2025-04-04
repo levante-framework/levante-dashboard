@@ -113,23 +113,53 @@ export const useAuthStore = defineStore('authStore', {
       console.log('Auth store: Initializing Firekit');
       try {
         this.roarfirekit = await initNewFirekit();
+        // Disable Firebase persistence
+        this.roarfirekit.admin.auth.setPersistence('none');
+        this.roarfirekit.app.auth.setPersistence('none');
         console.log('Auth store: Firekit initialized successfully');
-        this.setAuthStateListeners();
+        await this.setAuthStateListeners();
         console.log('Auth store: Auth state listeners set');
       } catch (error) {
         console.error('Error initializing Firekit:', error);
+        throw error;
       }
     },
-    setAuthStateListeners(): void {
+    async setAuthStateListeners(): Promise<void> {
       console.log('Setting up auth state listeners');
+      
+      // Clear existing listeners if any
+      if (this.adminAuthStateListener) {
+        this.adminAuthStateListener();
+      }
+      if (this.appAuthStateListener) {
+        this.appAuthStateListener();
+      }
+
+      // Set up new listeners
       this.adminAuthStateListener = onAuthStateChanged(this.roarfirekit?.admin.auth, async (user: User | null) => {
         console.log('Admin auth state changed:', user ? 'User logged in' : 'User logged out');
         if (user) {
           this.firebaseUser.adminFirebaseUser = user;
+          try {
+            // Force token refresh to ensure permissions are up to date
+            await user.getIdToken(true);
+            const tokenResult = await user.getIdTokenResult();
+            const claims = tokenResult.claims as {
+              roarUid?: string;
+              super_admin?: boolean;
+              admin?: boolean;
+              minimalAdminOrgs?: Record<string, string[]>;
+            };
+            this.userClaims = { claims };
+          } catch (error) {
+            console.error('Error getting user claims:', error);
+          }
         } else {
           this.firebaseUser.adminFirebaseUser = null;
+          this.userClaims = null;
         }
       });
+
       this.appAuthStateListener = onAuthStateChanged(this.roarfirekit?.app.auth, async (user: User | null) => {
         console.log('App auth state changed:', user ? 'User logged in' : 'User logged out');
         if (user) {
@@ -254,9 +284,9 @@ export const useAuthStore = defineStore('authStore', {
       serialize: (state) => {
         const serializedState = {
           spinner: state.spinner,
-          adminOrgs: state.adminOrgs,
-          userData: state.userData,
-          userClaims: state.userClaims,
+          adminOrgs: state.adminOrgs ? JSON.parse(JSON.stringify(state.adminOrgs)) : null,
+          userData: state.userData ? JSON.parse(JSON.stringify(state.userData)) : null,
+          userClaims: state.userClaims ? JSON.parse(JSON.stringify(state.userClaims)) : null,
           cleverOAuthRequested: state.cleverOAuthRequested,
           classLinkOAuthRequested: state.classLinkOAuthRequested,
           routeToProfile: state.routeToProfile,
