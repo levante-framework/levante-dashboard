@@ -116,17 +116,26 @@ export const useAuthStore = defineStore('authStore', {
         // Clear existing IndexedDB instances before initialization
         try {
           await clearIndexedDB();
+          console.log('Auth store: Successfully cleared IndexedDB instances');
         } catch (error) {
-          console.warn('Error clearing IndexedDB:', error);
+          console.warn('Auth store: Error clearing IndexedDB:', error);
           // Continue with initialization even if clearing fails
         }
 
         this.roarfirekit = await initNewFirekit();
         console.log('Auth store: Firekit initialized successfully');
+
+        // Verify that the restConfig is properly set
+        if (!this.roarfirekit?.restConfig?.admin?.baseURL || !this.roarfirekit?.restConfig?.app?.baseURL) {
+          throw new Error('Firekit initialization failed: restConfig not properly set');
+        }
+
         await this.setAuthStateListeners();
         console.log('Auth store: Auth state listeners set');
       } catch (error) {
-        console.error('Error initializing Firekit:', error);
+        console.error('Auth store: Error initializing Firekit:', error);
+        // Reset the roarfirekit state on error
+        this.roarfirekit = null;
         throw error;
       }
     },

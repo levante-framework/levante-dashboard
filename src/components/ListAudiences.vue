@@ -158,8 +158,8 @@
     </template>
   </RoarModal>
 </template>
-<script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+<script setup lang="ts">
+import { ref, computed, onMounted, watch, watchEffect, Ref } from 'vue';
 import * as Sentry from '@sentry/vue';
 import { storeToRefs } from 'pinia';
 import { useToast } from 'primevue/usetoast';
@@ -190,19 +190,127 @@ import { CSV_EXPORT_MAX_RECORD_COUNT } from '@/constants/csvExport';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts.ts';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import PvFloatLabel from 'primevue/floatlabel';
+import { District } from '@/types/district';
+import { SingularOrgType } from '@/types/organization';
+
+interface TableDataItem {
+  id: string;
+  name: string;
+  userCount: number;
+  routeParams: {
+    orgType: string;
+    orgId: string;
+    orgName: string;
+    tooltip: string;
+  };
+}
+
+interface TableColumn {
+  field?: string;
+  header: string;
+  dataType?: string;
+  pinned?: boolean;
+  sort?: boolean;
+  link?: boolean;
+  routeName?: string;
+  routeTooltip?: string;
+  routeLabel?: string;
+  routeIcon?: string;
+  button?: boolean;
+  eventName?: string;
+  buttonIcon?: string;
+  buttonLabel?: string;
+  routeParams?: (row: any) => Record<string, string>;
+}
+
+interface UserClaims {
+  claims?: {
+    minimalAdminOrgs?: {
+      districts?: any[];
+      schools?: any[];
+      classes?: any[];
+      groups?: any[];
+      families?: any[];
+    };
+  };
+}
+
+interface Roarfirekit {
+  restConfig?: {
+    apiKey?: string;
+  };
+}
 
 const router = useRouter();
 const initialized = ref(false);
-const selectedDistrict = ref(undefined);
-const selectedSchool = ref(undefined);
+const selectedDistrict = ref<string | undefined>(undefined);
+const selectedSchool = ref<string | undefined>(undefined);
 const orderBy = ref(orderByDefault);
-let activationCode = ref(null);
+const activationCode = ref<string | null>(null);
 const isDialogVisible = ref(false);
 const toast = useToast();
 const isEditModalEnabled = ref(false);
-const currentEditOrgId = ref(null);
-const localOrgData = ref(null);
+const currentEditOrgId = ref<string | null>(null);
+const localOrgData = ref<any>(null);
 const isSubmitting = ref(false);
+
+const tableData = ref<TableDataItem[]>([]);
+
+const tableColumns = computed<TableColumn[]>(() => {
+  const columns: TableColumn[] = [
+    { field: 'name', header: 'Name', dataType: 'string', pinned: true, sort: true },
+  ];
+
+  if (['districts', 'schools'].includes(activeOrgType.value)) {
+    columns.push();
+  }
+
+  columns.push(
+    {
+      header: 'Users',
+      link: true,
+      routeName: 'ListUsers',
+      routeTooltip: 'View users',
+      routeLabel: 'Users',
+      routeIcon: 'pi pi-user',
+      sort: false,
+      routeParams: (row) => {
+        if (!row?.id) {
+          console.warn('Missing required data for route params:', row);
+          return { orgType: '', orgId: '', orgName: '' };
+        }
+        return {
+          orgType: activeOrgType.value,
+          orgId: row.id,
+          orgName: row.name || 'Unnamed Organization'
+        };
+      }
+    },
+    {
+      header: 'Edit',
+      button: true,
+      eventName: 'edit-button',
+      buttonIcon: 'pi pi-pencil',
+      sort: false,
+    },
+    {
+      header: 'Export Users',
+      buttonLabel: 'Export Users',
+      button: true,
+      eventName: 'export-org-users',
+      buttonIcon: 'pi pi-download mr-2',
+      sort: false,
+    },
+  );
+
+  return columns;
+});
+
+watchEffect(() => {
+  if (selectedDistrict.value) {
+    selectedSchool.value = undefined;
+  }
+});
 
 const addUsers = () => {
   router.push({ name: 'Add Users' });
@@ -213,16 +321,21 @@ const newAudience = () => {
 };
 
 const authStore = useAuthStore();
-const { roarfirekit } = storeToRefs(authStore);
+const { roarfirekit } = storeToRefs(authStore) as { roarfirekit: Ref<Roarfirekit> };
 
 const { data: userClaims } = useUserClaimsQuery({
-  enabled: initialized,
-});
+  enabled: computed(() => Boolean(roarfirekit.value?.restConfig?.apiKey)),
+  queryKey: ['userClaims']
+}) as { data: Ref<UserClaims> };
 
 const { isSuperAdmin } = useUserType(userClaims);
-const adminOrgs = computed(() => userClaims?.value?.claims?.minimalAdminOrgs);
+const adminOrgs = computed(() => userClaims.value?.claims?.minimalAdminOrgs);
 
 const orgHeaders = computed(() => {
+  if (!userClaims?.value?.claims) {
+    return {};
+  }
+
   const headers = {
     districts: { header: 'Districts', id: 'districts' },
     schools: { header: 'Schools', id: 'schools' },
@@ -233,23 +346,25 @@ const orgHeaders = computed(() => {
 
   if (isSuperAdmin.value) return headers;
 
-  const result = {};
-  if ((adminOrgs.value?.districts ?? []).length > 0) {
+  const result: Record<string, { header: string; id: string }> = {};
+  const adminOrgsValue = adminOrgs.value || {};
+
+  if ((adminOrgsValue.districts ?? []).length > 0) {
     result.districts = { header: 'Districts', id: 'districts' };
     result.schools = { header: 'Schools', id: 'schools' };
     result.classes = { header: 'Classes', id: 'classes' };
   }
-  if ((adminOrgs.value?.schools ?? []).length > 0) {
+  if ((adminOrgsValue.schools ?? []).length > 0) {
     result.schools = { header: 'Schools', id: 'schools' };
     result.classes = { header: 'Classes', id: 'classes' };
   }
-  if ((adminOrgs.value?.classes ?? []).length > 0) {
+  if ((adminOrgsValue.classes ?? []).length > 0) {
     result.classes = { header: 'Classes', id: 'classes' };
   }
-  if ((adminOrgs.value?.groups ?? []).length > 0) {
+  if ((adminOrgsValue.groups ?? []).length > 0) {
     result.groups = { header: 'Groups', id: 'groups' };
   }
-  if ((adminOrgs.value?.families ?? []).length > 0) {
+  if ((adminOrgsValue.families ?? []).length > 0) {
     result.families = { header: 'Families', id: 'families' };
   }
   return result;
@@ -282,10 +397,10 @@ const {
   enabled: claimsLoaded,
 });
 
-function copyToClipboard(text) {
+const copyToClipboard = (text: string) => {
   navigator.clipboard
     .writeText(text)
-    .then(function () {
+    .then(() => {
       toast.add({
         severity: TOAST_SEVERITIES.SUCCESS,
         summary: 'Hoorah!',
@@ -293,7 +408,7 @@ function copyToClipboard(text) {
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
     })
-    .catch(function () {
+    .catch(() => {
       toast.add({
         severity: TOAST_SEVERITIES.ERROR,
         summary: 'Error!',
@@ -301,7 +416,7 @@ function copyToClipboard(text) {
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
     });
-}
+};
 
 const exportAll = async () => {
   const exportData = await orgFetchAll(
@@ -331,9 +446,8 @@ const exportAll = async () => {
  *
  * @returns {Promise<void>} - A promise that resolves when the export is complete.
  */
-const exportOrgUsers = async (orgType) => {
+const exportOrgUsers = async (orgType: { id: string; name: string }) => {
   try {
-    // First, count the users
     const userCount = await countUsersByOrg(activeOrgType.value, orgType.id, orderBy);
 
     if (userCount === 0) {
@@ -356,7 +470,6 @@ const exportOrgUsers = async (orgType) => {
       return;
     }
 
-    // Fetch the users if the count is within acceptable limits
     const users = await fetchUsersByOrg(activeOrgType.value, orgType.id, userCount, ref(0), orderBy);
 
     const computedExportData = users.map((user) => ({
@@ -376,7 +489,6 @@ const exportOrgUsers = async (orgType) => {
       home_language: _get(user, 'studentData.home_language'),
     }));
 
-    // ex. cypress-test-district-users-export.csv
     exportCsv(computedExportData, `${_kebabCase(orgType.name)}-users-export.csv`);
 
     toast.add({
@@ -396,72 +508,52 @@ const exportOrgUsers = async (orgType) => {
   }
 };
 
-const tableColumns = computed(() => {
-  const columns = [
-    { field: 'name', header: 'Name', dataType: 'string', pinned: true, sort: true },
-  ];
-
-  if (['districts', 'schools'].includes(activeOrgType.value)) {
-    columns.push(
-    );
-  }
-
-  columns.push(
-    {
-      header: 'Users',
-      link: true,
-      routeName: 'ListUsers',
-      routeTooltip: 'View users',
-      routeLabel: 'Users',
-      routeIcon: 'pi pi-user',
-      sort: false,
-    },
-    {
-      header: 'Edit',
-      button: true,
-      eventName: 'edit-button',
-      buttonIcon: 'pi pi-pencil',
-      sort: false,
-    },
-    {
-      header: 'Export Users',
-      buttonLabel: 'Export Users',
-      button: true,
-      eventName: 'export-org-users',
-      buttonIcon: 'pi pi-download mr-2',
-      sort: false,
-    },
-  );
-
-  return columns;
+const tableKey = ref(0);
+watch([selectedDistrict, selectedSchool], () => {
+  tableKey.value += 1;
 });
 
-const tableData = ref([]);
-
-watch(async () => {
-  if (isLoading.value) {
+watch([orgData, isLoading, activeOrgType], async ([newOrgData, newIsLoading, newActiveOrgType]) => {
+  if (newIsLoading || !newActiveOrgType) {
     tableData.value = [];
     return;
   }
 
-  const mappedData = await Promise.all(
-    orgData?.value?.map(async (org) => {
-      const userCount = await countUsersByOrg(activeOrgType.value, org.id);
-      return {
-        ...org,
-        userCount,
-        routeParams: {
-          orgType: activeOrgType.value,
-          orgId: org.id,
-          orgName: org.name,
-          tooltip: 'View Users in ' + org.name,
-        },
-      };
-    }) || []
-  );
+  try {
+    if (!newOrgData || !Array.isArray(newOrgData)) {
+      console.warn('Invalid orgData:', newOrgData);
+      tableData.value = [];
+      return;
+    }
 
-  tableData.value = mappedData;
-});
+    const mappedData = await Promise.all(
+      newOrgData.map(async (org) => {
+        if (!org?.id) {
+          console.warn('Invalid organization data:', org);
+          return null;
+        }
+        
+        const userCount = await countUsersByOrg(newActiveOrgType, org.id);
+        return {
+          id: org.id,
+          name: org.name || 'Unnamed Organization',
+          userCount: userCount || 0,
+          routeParams: {
+            orgType: newActiveOrgType,
+            orgId: org.id,
+            orgName: org.name || 'Unnamed Organization'
+          }
+        };
+      })
+    );
+
+    tableData.value = mappedData.filter(Boolean);
+    console.log('Updated table data:', tableData.value);
+  } catch (error) {
+    console.error('Error mapping organization data:', error);
+    tableData.value = [];
+  }
+}, { immediate: true });
 
 const showCode = async (selectedOrg) => {
   const orgInfo = await fetchDocById(activeOrgType.value, selectedOrg.id);
@@ -525,11 +617,15 @@ const initTable = () => {
 };
 
 unsubscribe = authStore.$subscribe(async (mutation, state) => {
-  if (state.roarfirekit.restConfig) initTable();
+  if (state.roarfirekit?.restConfig) {
+    initTable();
+  }
 });
 
 onMounted(() => {
-  if (roarfirekit.value.restConfig) initTable();
+  if (roarfirekit.value?.restConfig) {
+    initTable();
+  }
 });
 
 watch(allDistricts, (newValue) => {
@@ -538,10 +634,5 @@ watch(allDistricts, (newValue) => {
 
 watch(allSchools, (newValue) => {
   selectedSchool.value = _get(_head(newValue), 'id');
-});
-
-const tableKey = ref(0);
-watch([selectedDistrict, selectedSchool], () => {
-  tableKey.value += 1;
 });
 </script>

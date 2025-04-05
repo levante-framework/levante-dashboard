@@ -117,13 +117,19 @@ export const getProjectId = (project = 'admin'): string | undefined => {
 export const getAxiosInstance = (db = FIRESTORE_DATABASES.ADMIN, unauthenticated = false): AxiosInstance => {
   const authStore = useAuthStore();
   const { roarfirekit } = storeToRefs(authStore);
+  
+  console.log('Getting axios instance for database:', db);
+  console.log('Roarfirekit initialized:', roarfirekit.value?.initialized);
+  console.log('Roarfirekit restConfig:', roarfirekit.value?.restConfig);
+  
   const axiosOptions = _get(roarfirekit.value.restConfig, db) ?? {};
-
+  
   if (unauthenticated) {
     delete axiosOptions.headers;
   }
 
   if (!axiosOptions.baseURL) {
+    console.error('Base URL is not set for database:', db);
     throw new Error('Base URL is not set.');
   }
 

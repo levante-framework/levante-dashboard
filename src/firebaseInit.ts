@@ -21,7 +21,13 @@ const clearIndexedDB = async () => {
 export const initNewFirekit = async () => {
   try {
     // Clear existing IndexedDB instances before initialization
-    await clearIndexedDB();
+    try {
+      await clearIndexedDB();
+      console.log('Successfully cleared IndexedDB instances');
+    } catch (error) {
+      console.warn('Warning: Could not clear IndexedDB instances:', error);
+      // Continue with initialization even if clearing fails
+    }
 
     console.log('Initializing Firekit with session persistence...');
     const roarfirekit = new RoarFirekit({
@@ -42,6 +48,11 @@ export const initNewFirekit = async () => {
     console.log('Firekit instance created with session persistence, initializing...');
     await roarfirekit.init();
     console.log('Firekit initialization completed successfully');
+
+    // Verify that the restConfig is properly set
+    if (!roarfirekit.restConfig?.admin?.baseURL || !roarfirekit.restConfig?.app?.baseURL) {
+      throw new Error('Firekit initialization failed: restConfig not properly set');
+    }
 
     return roarfirekit;
   } catch (error) {
