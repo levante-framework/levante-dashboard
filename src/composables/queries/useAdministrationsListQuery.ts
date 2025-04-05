@@ -1,11 +1,10 @@
-import { computed, toValue, Ref } from 'vue';
+import { computed, toValue, Ref, ComputedRef } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { administrationPageFetcher } from '@/helpers/query/administrations';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import useUserType from '@/composables/useUserType';
-import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
+import useUserType from '@/composables/useUserType.js';
+import { ADMINISTRATIONS_LIST_QUERY_KEY, USER_CLAIMS_QUERY_KEY } from '@/constants/queryKeys';
 
 interface Administration {
   [key: string]: any;
@@ -14,6 +13,14 @@ interface Administration {
 interface QueryOptions {
   enabled?: boolean;
   [key: string]: any;
+}
+
+// Define an interface for the return type of useUserType
+interface UserTypeInfo {
+  userType: ComputedRef<string | undefined>;
+  isAdmin: ComputedRef<boolean>;
+  isParticipant: ComputedRef<boolean>;
+  isSuperAdmin: ComputedRef<boolean>;
 }
 
 /**
@@ -29,19 +36,34 @@ const useAdministrationsListQuery = (
   testAdministrationsOnly: Ref<boolean> | boolean = false,
   queryOptions: QueryOptions | undefined = undefined
 ) => {
-  // Fetch the user claims.
-  const { data: userClaims } = useUserClaimsQuery({
-    enabled: queryOptions?.enabled ?? true,
-  });
+  console.log('useAdministrationsListQuery running...', { orderBy: toValue(orderBy), testAdministrationsOnly: toValue(testAdministrationsOnly), queryOptions });
 
-  // Get admin status and administation orgs.
-  const { isSuperAdmin } = useUserType(userClaims);
+  // Fetch the user claims - ensure it reacts to queryOptions.enabled
+  const { data: userClaims } = useUserClaimsQuery({
+    queryKey: [USER_CLAIMS_QUERY_KEY],
+    enabled: computed(() => toValue(queryOptions?.enabled ?? true)), // Pass enabled as a computed ref
+  });
+  console.log('useAdministrationsListQuery - User Claims Data:', userClaims.value);
+
+  // Cast the result to the defined interface
+  const userTypeInfo = useUserType(userClaims) as UserTypeInfo;
+  const isSuperAdmin = userTypeInfo.isSuperAdmin;
   const exhaustiveAdministrationOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
 
   // Ensure all necessary data is loaded before enabling the query.
-  const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
-  const queryConditions = [() => claimsLoaded.value];
-  const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
+  const claimsLoaded = computed(() => {
+    const loaded = !_isEmpty(userClaims?.value?.claims);
+    console.log('useAdministrationsListQuery - claimsLoaded computed:', loaded, 'Based on:', userClaims?.value?.claims);
+    return loaded;
+  });
+
+  // Directly compute the final enabled state
+  const finalEnabled = computed(() => {
+    const passedEnabled = toValue(queryOptions?.enabled ?? true);
+    const isEnabled = passedEnabled && claimsLoaded.value;
+    console.log(`useAdministrationsListQuery - finalEnabled computed: ${isEnabled} (passedEnabled: ${passedEnabled}, claimsLoaded: ${claimsLoaded.value})`);
+    return isEnabled;
+  });
 
   // Build query key, based on whether or not we only fetch test administrations.
   const queryKey = computed(() =>
@@ -52,10 +74,19 @@ const useAdministrationsListQuery = (
 
   return useQuery({
     queryKey,
-    queryFn: () =>
-      administrationPageFetcher(isSuperAdmin, exhaustiveAdministrationOrgs, testAdministrationsOnly, orderBy),
-    enabled: isQueryEnabled,
-    ...options,
+    queryFn: () => {
+      console.log('useAdministrationsListQuery - Query Function (queryFn) IS RUNNING!');
+      return administrationPageFetcher(
+        isSuperAdmin,
+        exhaustiveAdministrationOrgs,
+        toValue(testAdministrationsOnly),
+        orderBy
+      );
+    },
+    // Use the directly computed reactive ref for enabled state
+    enabled: finalEnabled,
+    // Pass other options, ensuring enabled isn't duplicated if computeQueryOverrides was modifying them
+    ...(queryOptions ?? {}),
   });
 };
 

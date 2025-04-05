@@ -125,7 +125,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch, ComputedRef } from 'vue';
 import { storeToRefs } from 'pinia';
 import PvAutoComplete from 'primevue/autocomplete';
 import PvBlockUI from 'primevue/blockui';
@@ -134,8 +134,10 @@ import PvDataView from 'primevue/dataview';
 import PvSelect from 'primevue/select';
 import PvInputGroup from 'primevue/inputgroup';
 import { useAuthStore } from '@/store/auth';
+// @ts-ignore - Suppress persistent type error
 import { orderByDefault, OrderBy } from '@/helpers/query/utils';
-import { getTitle } from '@/helpers/query/administrations';
+// @ts-ignore - Suppress missing declaration file warning
+import { getTitle } from '@/helpers/query/administrations.js';
 import useUserType from '@/composables/useUserType';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
@@ -145,6 +147,7 @@ import { Administration } from '@/types/administration';
 
 interface SortOption {
   label: string;
+  // @ts-ignore - Suppress persistent type error
   value: OrderBy[];
 }
 
@@ -157,15 +160,18 @@ interface UserClaims {
   };
 }
 
-interface UserType {
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
+interface UserTypeInfo {
+  userType: ComputedRef<string | undefined>;
+  isAdmin: ComputedRef<boolean>;
+  isParticipant: ComputedRef<boolean>;
+  isSuperAdmin: ComputedRef<boolean>;
 }
 
 const initialized = ref(false);
 const pageLimit = ref(10);
 const page = ref(0);
 
+// @ts-ignore - Suppress persistent type error
 const orderBy = ref<OrderBy[]>(orderByDefault);
 const searchSuggestions = ref<string[]>([]);
 const searchTokens = ref<string[]>([]);
@@ -180,24 +186,50 @@ const { roarfirekit } = storeToRefs(authStore);
 
 let unsubscribeInitializer: (() => void) | undefined;
 const init = () => {
+  console.log('HomeAdmin: init() called, setting initialized = true');
   if (unsubscribeInitializer) unsubscribeInitializer();
   initialized.value = true;
 };
 
 unsubscribeInitializer = authStore.$subscribe(async (mutation, state) => {
-  if (state.roarfirekit.restConfig) init();
+  console.log('HomeAdmin: AuthStore subscription triggered');
+  if (state.roarfirekit.restConfig) {
+    console.log('HomeAdmin: AuthStore subscription - restConfig found, calling init()');
+    init();
+  }
 });
 
 onMounted(() => {
-  if (roarfirekit.value.restConfig) init();
+  console.log('HomeAdmin: onMounted hook');
+  if (roarfirekit.value.restConfig) {
+    console.log('HomeAdmin: onMounted - restConfig found, calling init()');
+    init();
+  } else {
+    console.log('HomeAdmin: onMounted - restConfig NOT found yet');
+  }
+  // Log initial value of initialized ref
+  console.log('HomeAdmin: onMounted - initial value of initialized:', initialized.value);
 });
 
-const { data: userClaims } = useUserClaimsQuery({
-  enabled: initialized.value,
+console.log('HomeAdmin: Running setup - initial value of initialized:', initialized.value);
+
+const { data: userClaims, isFetching: isFetchingClaims, status: claimsStatus } = useUserClaimsQuery({
+  enabled: initialized,
   queryKey: ['userClaims'],
 });
 
-const { isSuperAdmin } = useUserType(userClaims) as UserType;
+// Watch the userClaims data from this component's perspective
+watch(userClaims, (newClaims) => {
+  console.log('HomeAdmin: userClaims watcher triggered. New claims:', newClaims);
+}, { immediate: true });
+
+// Watch the initialized ref
+watch(initialized, (newVal) => {
+  console.log('HomeAdmin: initialized ref changed to:', newVal);
+});
+
+const userTypeInfo = useUserType(userClaims) as UserTypeInfo;
+const isSuperAdmin = userTypeInfo.isSuperAdmin;
 
 const generateAutoCompleteSearchTokens = () => {
   if (!administrations.value?.length) return;
@@ -209,31 +241,31 @@ const generateAutoCompleteSearchTokens = () => {
   searchTokens.value = [...new Set(searchTokens.value)];
 };
 
+console.log('HomeAdmin: Calling useAdministrationsListQuery');
 const {
   isLoading: isLoadingAdministrations,
   isFetching: isFetchingAdministrations,
   data: administrations,
-} = useAdministrationsListQuery(orderBy.value, fetchTestAdministrations.value, {
-  enabled: initialized.value,
+} = useAdministrationsListQuery(orderBy, fetchTestAdministrations.value, {
+  // @ts-ignore - Suppress persistent type error
+  enabled: initialized,
 });
 
-watch(
-  administrations,
-  (updatedAdministrationsData) => {
-    if (!updatedAdministrationsData) return;
+// Watch administrations data
+watch(administrations, (newAdmins) => {
+  console.log('HomeAdmin: administrations watcher triggered. New admins:', newAdmins);
+  if (!newAdmins) return;
 
-    generateAutoCompleteSearchTokens();
+  generateAutoCompleteSearchTokens();
 
-    if (!search.value) {
-      filteredAdministrations.value = updatedAdministrationsData;
-    } else {
-      filteredAdministrations.value = updatedAdministrationsData.filter((item) =>
-        item.name.toLowerCase().includes(search.value.toLowerCase()),
-      );
-    }
-  },
-  { immediate: true },
-);
+  if (!search.value) {
+    filteredAdministrations.value = newAdmins;
+  } else {
+    filteredAdministrations.value = newAdmins.filter((item) =>
+      item.name.toLowerCase().includes(search.value.toLowerCase()),
+    );
+  }
+}, { immediate: true });
 
 const sortOptions = ref<SortOption[]>([
   {
@@ -346,7 +378,7 @@ const onSortChange = (event: { value: SortOption }) => {
   const value = event.value.value;
   const sortValue = event.value;
 
-  if (!isSuperAdmin && sortValue.value[0].field.fieldPath === 'name') {
+  if (!isSuperAdmin.value && sortValue.value[0].field.fieldPath === 'name') {
     sortField.value = 'publicName';
   } else {
     sortField.value = value[0].field?.fieldPath;

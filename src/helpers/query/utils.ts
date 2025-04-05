@@ -13,6 +13,7 @@ import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
 import { flattenObj } from '@/helpers';
 import { FIRESTORE_DATABASES, FirestoreDatabase } from '@/constants/firebase';
+import { Ref } from 'vue';
 
 interface FirestoreValue {
   nullValue?: null;
@@ -66,6 +67,12 @@ interface StructuredQuery {
   };
 }
 
+// Define and export OrderBy type
+export interface OrderBy {
+  field: { fieldPath: string };
+  direction: 'ASCENDING' | 'DESCENDING';
+}
+
 export const convertValues = (value: FirestoreValue): any => {
   const passThroughKeys = [
     'nullValue',
@@ -111,7 +118,7 @@ export const mapFields = (data: QueryResponse[], getParentDocId?: boolean): Docu
   return fields.map((item) => _mapValues(item, (value) => convertValues(value))) as DocumentData[];
 };
 
-export const orderByDefault = [
+export const orderByDefault: OrderBy[] = [
   {
     field: { fieldPath: 'name' },
     direction: 'ASCENDING',

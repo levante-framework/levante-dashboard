@@ -181,54 +181,95 @@ export const administrationPageFetcher = async (
   fetchTestData = false,
   orderBy?: Ref<any>
 ): Promise<Administration[]> => {
+  console.log('Fetching administrations with params:', {
+    isSuperAdmin: toValue(isSuperAdmin),
+    exhaustiveAdminOrgs: toValue(exhaustiveAdminOrgs),
+    fetchTestData: toValue(fetchTestData),
+    orderBy: toValue(orderBy),
+  });
+
   const authStore = useAuthStore();
   const { roarfirekit } = storeToRefs(authStore);
-  const administrationIds = await roarfirekit.value.getAdministrations({
-    testData: toValue(fetchTestData),
-  });
 
-  const axiosInstance = getAxiosInstance();
-  const baseURL = axiosInstance.defaults.baseURL ?? '';
-  const documentPrefix = baseURL.replace(
-    'https://firestore.googleapis.com/v1/',
-    ''
-  );
-  const documents = administrationIds.map(
-    (id: string) => `${documentPrefix}/administrations/${id}`
-  );
+  if (!roarfirekit.value?.initialized) {
+    console.error('AdministrationFetcher: Roarfirekit not initialized!');
+    return []; // Return empty if not initialized
+  }
 
-  const { data } = await axiosInstance.post(':batchGet', { documents });
-
-  const administrationData = data
-    .map(({ found }: BatchGetResponse) => {
-      if (found) {
-        return {
-          name: found.name,
-          data: {
-            id: _last(found.name.split('/')),
-            ..._mapValues(found.fields, (value) => convertValues(value)),
-          },
-        };
-      }
-      return undefined;
-    })
-    .filter((item: { name: string; data: any } | undefined): item is { name: string; data: any } => item !== undefined);
-
-  const administrations = await mapAdministrations({
-    isSuperAdmin,
-    data: administrationData,
-    adminOrgs: exhaustiveAdminOrgs,
-  });
-
-  const orderField = (orderBy?.value ?? orderByDefault)[0].field.fieldPath;
-  const orderDirection = (orderBy?.value ?? orderByDefault)[0].direction;
-  const sortedAdministrations = administrations
-    .filter((a) => a[orderField] !== undefined)
-    .sort((a, b) => {
-      if (orderDirection === 'ASCENDING') return 2 * +(a[orderField] > b[orderField]) - 1;
-      if (orderDirection === 'DESCENDING') return 2 * +(b[orderField] > a[orderField]) - 1;
-      return 0;
+  try {
+    // Log before calling getAdministrations
+    console.log('Calling roarfirekit.getAdministrations...');
+    const administrationIds = await roarfirekit.value.getAdministrations({
+      testData: toValue(fetchTestData),
     });
+    console.log('Fetched administration IDs:', administrationIds);
 
-  return sortedAdministrations;
+    if (!administrationIds || administrationIds.length === 0) {
+      console.log('No administration IDs found, returning empty list.');
+      return [];
+    }
+
+    const axiosInstance = getAxiosInstance();
+    const baseURL = axiosInstance.defaults.baseURL ?? '';
+    const documentPrefix = baseURL.replace(
+      'https://firestore.googleapis.com/v1/',
+      ''
+    );
+    const documents = administrationIds.map(
+      (id: string) => `${documentPrefix}/administrations/${id}`
+    );
+    console.log('Constructed document paths for batchGet:', documents);
+
+    // Log before calling batchGet
+    console.log('Calling axiosInstance.post(:batchGet) for administrations...');
+    const { data } = await axiosInstance.post(':batchGet', { documents });
+    console.log('Received batchGet response data:', data);
+
+    const administrationData = data
+      .map(({ found }: BatchGetResponse) => {
+        if (found) {
+          return {
+            name: found.name,
+            data: {
+              id: _last(found.name.split('/')),
+              ..._mapValues(found.fields, (value) => convertValues(value)),
+            },
+          };
+        }
+        return undefined;
+      })
+      .filter((item: { name: string; data: any } | undefined): item is { name: string; data: any } => item !== undefined);
+    console.log('Mapped administration data before stats:', administrationData);
+
+    const administrations = await mapAdministrations({
+      isSuperAdmin,
+      data: administrationData,
+      adminOrgs: exhaustiveAdminOrgs,
+    });
+    console.log('Mapped administrations after stats:', administrations);
+
+    const orderField = (orderBy?.value ?? orderByDefault)[0].field.fieldPath;
+    const orderDirection = (orderBy?.value ?? orderByDefault)[0].direction;
+    const sortedAdministrations = administrations
+      .filter((a) => a[orderField] !== undefined)
+      .sort((a, b) => {
+        if (orderDirection === 'ASCENDING') return 2 * +(a[orderField] > b[orderField]) - 1;
+        if (orderDirection === 'DESCENDING') return 2 * +(b[orderField] > a[orderField]) - 1;
+        return 0;
+      });
+
+    console.log('Returning final sorted administrations:', sortedAdministrations);
+    return sortedAdministrations;
+  } catch (error: any) {
+    console.error('Error in administrationPageFetcher:', error);
+    if (error.response) {
+      console.error('Error response details:', {
+        status: error.response.status,
+        data: JSON.stringify(error.response.data, null, 2),
+        headers: error.response.headers,
+      });
+    }
+    // Depending on requirements, might want to throw or return []
+    return []; // Return empty array on error for now
+  }
 }; 
