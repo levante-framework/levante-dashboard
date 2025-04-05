@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
 import { administrationPageFetcher } from '@/helpers/query/administrations';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import useUserType from '@/composables/useUserType.js';
+import useUserType, { UserTypeInfo } from '@/composables/useUserType';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, USER_CLAIMS_QUERY_KEY } from '@/constants/queryKeys';
 
 interface Administration {
@@ -13,14 +13,6 @@ interface Administration {
 interface QueryOptions {
   enabled?: boolean;
   [key: string]: any;
-}
-
-// Define an interface for the return type of useUserType
-interface UserTypeInfo {
-  userType: ComputedRef<string | undefined>;
-  isAdmin: ComputedRef<boolean>;
-  isParticipant: ComputedRef<boolean>;
-  isSuperAdmin: ComputedRef<boolean>;
 }
 
 /**
@@ -45,7 +37,7 @@ const useAdministrationsListQuery = (
   });
   console.log('useAdministrationsListQuery - User Claims Data:', userClaims.value);
 
-  // Cast the result to the defined interface
+  // Cast the result to the imported interface
   const userTypeInfo = useUserType(userClaims) as UserTypeInfo;
   const isSuperAdmin = userTypeInfo.isSuperAdmin;
   const exhaustiveAdministrationOrgs = computed(() => userClaims.value?.claims?.adminOrgs);

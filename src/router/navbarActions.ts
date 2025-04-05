@@ -5,10 +5,10 @@ interface NavbarAction {
   title: string;
   icon?: string;
   buttonLink: RouteLocationRaw;
-  requiresSuperAdmin: boolean;
-  requiresAdmin: boolean;
+  requiresSuperAdmin?: boolean;
+  requiresAdmin?: boolean;
   project: 'ALL' | 'LEVANTE' | 'ROAR';
-  category: 'Home' | 'Audience' | 'Assignments' | 'Users';
+  category: string;
 }
 
 interface GetNavbarActionsParams {
@@ -57,7 +57,6 @@ const navbarActionOptions: NavbarAction[] = [
     icon: 'pi pi-pencil',
     buttonLink: { name: 'ManageTasksVariants' },
     requiresSuperAdmin: true,
-    requiresAdmin: false,
     project: 'ALL',
     category: 'Assignments',
   },
@@ -94,7 +93,6 @@ const navbarActionOptions: NavbarAction[] = [
     icon: 'pi pi-home',
     buttonLink: { name: 'Register' },
     requiresSuperAdmin: true,
-    requiresAdmin: false,
     project: 'ROAR',
     category: 'Users',
   },
@@ -121,20 +119,18 @@ const navbarActionOptions: NavbarAction[] = [
     icon: 'pi pi-user-plus',
     buttonLink: { name: 'CreateAdministrator' },
     requiresSuperAdmin: true,
-    requiresAdmin: false,
     project: 'ALL',
     category: 'Users',
   },
 ];
 
-export const getNavbarActions = ({ isSuperAdmin = false, isAdmin = false }: GetNavbarActionsParams): NavbarAction[] => {
+export const getNavbarActions = ({
+  isSuperAdmin = false,
+  isAdmin = false,
+}: GetNavbarActionsParams): NavbarAction[] => {
   if (isLevante) {
     return navbarActionOptions.filter((action) => {
       if (action.project === 'LEVANTE' || action.project === 'ALL') {
-        // If the action requires admin and the user is an admin, or if the action
-        // requires super admin and the user is a super admin,
-        // or if the action does not require admin or super admin,
-        // the action will be in the dropdown
         if (
           (action.requiresAdmin && isAdmin) ||
           (action.requiresSuperAdmin && isSuperAdmin) ||
@@ -148,19 +144,17 @@ export const getNavbarActions = ({ isSuperAdmin = false, isAdmin = false }: GetN
       return false;
     });
   } else {
-    const actions = navbarActionOptions.filter((action) => {
+    return navbarActionOptions.filter((action) => {
       if (action.project === 'ROAR' || action.project === 'ALL') {
-        if (action.requiresSuperAdmin && !isSuperAdmin) {
+        if (action.requiresSuperAdmin === true && !isSuperAdmin) {
           return false;
         }
-        if (action.requiresAdmin && !isAdmin) {
+        if (action.requiresAdmin === true && !isAdmin) {
           return false;
         }
         return true;
       }
       return false;
     });
-
-    return actions;
   }
 }; 

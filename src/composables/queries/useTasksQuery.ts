@@ -1,55 +1,67 @@
-import { toValue, Ref } from 'vue';
-import { useQuery, UseQueryOptions } from '@tanstack/vue-query';
+import { toValue, MaybeRef, Ref, computed } from 'vue';
+import { useQuery, UseQueryReturnType, QueryKey } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
 import { taskFetcher, fetchByTaskId } from '@/helpers/query/tasks';
 import { TASKS_QUERY_KEY } from '@/constants/queryKeys';
 
-interface Task {
+// Define TaskData structure (or import if defined elsewhere)
+interface TaskData {
   id: string;
+  name: string;
+  testData?: any;
+  demoData?: any;
+  registered?: boolean;
   [key: string]: any;
 }
 
-type QueryOptions = {
-  enabled?: boolean;
+// Define QueryOptions structure (similar to useUserClaimsQuery)
+interface QueryOptions {
+  enabled?: MaybeRef<boolean>;
   [key: string]: any;
-} & Partial<UseQueryOptions<Task[], Error>>;
-
-type TaskIds = string[] | undefined;
+}
 
 /**
  * Tasks query.
  *
- * @param {Ref<boolean> | boolean} [registeredTasksOnly=false] – Whether to fetch only registered tasks.
- * @param {Ref<TaskIds> | TaskIds} [taskIds=undefined] – An optional array of task IDs to fetch.
- * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
- * @returns The TanStack query result.
+ * @param {MaybeRef<boolean>} [registeredTasksOnly=true] – Whether to fetch only registered tasks.
+ * @param {MaybeRef<string[] | undefined>} [taskIds=undefined] – An optional array of task IDs to fetch.
+ * @param {QueryOptions | undefined} queryOptions – Optional TanStack query options.
+ * @returns {UseQueryReturnType<TaskData[], Error>} The TanStack query result.
  */
 const useTasksQuery = (
-  registeredTasksOnly: Ref<boolean> | boolean = false,
-  taskIds: Ref<TaskIds> | TaskIds = undefined,
-  queryOptions: QueryOptions | undefined = undefined
-) => {
-  const resolvedTaskIds = toValue(taskIds);
-  const resolvedRegisteredTasksOnly = toValue(registeredTasksOnly);
+  registeredTasksOnly: MaybeRef<boolean> = true,
+  taskIds: MaybeRef<string[] | undefined> = undefined,
+  queryOptions: QueryOptions = {}
+): UseQueryReturnType<TaskData[], Error> => {
 
-  const queryFn = !_isEmpty(resolvedTaskIds)
-    ? async () => {
-        const tasks = await fetchByTaskId(resolvedTaskIds as string[]);
-        return tasks as Task[];
+  const queryKey = computed(() => {
+    const ids = toValue(taskIds);
+    if (!_isEmpty(ids)) {
+      return [TASKS_QUERY_KEY, ids] as const;
+    } else if (toValue(registeredTasksOnly)) {
+      return [TASKS_QUERY_KEY, 'registered'] as const;
+    } else {
+      return [TASKS_QUERY_KEY] as const;
+    }
+  });
+
+  const queryFn = async (): Promise<TaskData[]> => {
+    const ids = toValue(taskIds);
+    if (!_isEmpty(ids)) {
+      if (ids === undefined) {
+        console.warn('useTasksQuery: taskIds were considered non-empty but are undefined.');
+        return [];
       }
-    : async () => {
-        const tasks = await taskFetcher(resolvedRegisteredTasksOnly, true);
-        return tasks as Task[];
-      };
+      return fetchByTaskId(ids);
+    } else {
+      return taskFetcher(toValue(registeredTasksOnly), true);
+    }
+  };
 
-  return useQuery<Task[], Error>({
-    queryKey: resolvedRegisteredTasksOnly
-      ? [TASKS_QUERY_KEY, 'registered']
-      : !_isEmpty(resolvedTaskIds)
-      ? [TASKS_QUERY_KEY, resolvedTaskIds]
-      : [TASKS_QUERY_KEY],
+  return useQuery<TaskData[], Error>({
+    queryKey,
     queryFn,
-    ...queryOptions,
+    ...(queryOptions ?? {}),
   });
 };
 

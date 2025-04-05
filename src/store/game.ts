@@ -1,32 +1,34 @@
 import { defineStore } from 'pinia';
 import { parse, stringify } from 'zipson';
 
+// Define the state shape
 interface GameState {
-  selectedAdmin?: string;
+  selectedAdmin: any; // Use 'any' or a more specific type if known
   requireRefresh: boolean;
 }
 
-export const useGameStore = () => {
-  return defineStore({
-    id: 'gameStore',
-    state: (): GameState => {
-      return {
-        selectedAdmin: undefined,
-        requireRefresh: false,
-      };
+// Define the store, explicitly typing the state
+export const useGameStore = defineStore('gameStore', {
+  state: (): GameState => {
+    return {
+      selectedAdmin: undefined,
+      requireRefresh: false,
+    };
+  },
+  actions: {
+    requireHomeRefresh(): void {
+      this.requireRefresh = true;
     },
-    actions: {
-      requireHomeRefresh(): void {
-        this.requireRefresh = true;
-      },
+  },
+  persist: {
+    storage: sessionStorage,
+    debug: false,
+    serializer: {
+      // Assuming zipson types are not readily available or complex,
+      // using Function type or any might be necessary initially.
+      // Ideally, install @types/zipson if available.
+      deserialize: parse as (value: string) => any,
+      serialize: stringify as (value: any) => string,
     },
-    persist: {
-      storage: sessionStorage,
-      debug: false,
-      serializer: {
-        deserialize: parse,
-        serialize: stringify,
-      },
-    },
-  })();
-}; 
+  },
+}); 
