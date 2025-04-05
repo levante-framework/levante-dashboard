@@ -78,6 +78,7 @@
   "devDependencies": {
     "@pinia/testing": "^0.1.5",
     "@testing-library/vue": "^8.1.0",
+    "@types/algoliasearch": "^3.34.11",
     "@types/lodash": "^4.14.196",
     "@unhead/addons": "^1.9.16",
     "@vite-pwa/assets-generator": "^0.2.4",

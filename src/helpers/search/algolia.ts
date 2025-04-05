@@ -1,4 +1,4 @@
-import algoliasearch, { SearchClient } from 'algoliasearch-lite';
+import algoliasearch, { SearchClient } from 'algoliasearch/lite';
 
 export const searchClient: SearchClient = algoliasearch(
   'RSFKXBNT4H',

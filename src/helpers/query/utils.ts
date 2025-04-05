@@ -38,13 +38,15 @@ interface QueryResponse {
   document?: Document;
 }
 
-interface DocumentData {
+// Export DocumentData interface
+export interface DocumentData {
   id: string;
   collection?: string;
   [key: string]: any;
 }
 
-interface DocumentRequest {
+// Export DocumentRequest interface
+export interface DocumentRequest {
   collection: string;
   docId: string;
   select?: string[];

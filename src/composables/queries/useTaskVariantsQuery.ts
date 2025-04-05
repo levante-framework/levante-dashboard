@@ -1,40 +1,54 @@
-import { toValue, Ref } from 'vue';
-import { useQuery, UseQueryOptions } from '@tanstack/vue-query';
+import { toValue, MaybeRef, computed } from 'vue';
+import { useQuery, UseQueryReturnType, QueryKey } from '@tanstack/vue-query';
 import { variantsFetcher } from '@/helpers/query/tasks';
 import { TASK_VARIANTS_QUERY_KEY } from '@/constants/queryKeys';
 
-interface TaskVariant {
+// Define TaskData structure (if not imported)
+interface TaskData {
   id: string;
+  name: string;
   [key: string]: any;
 }
 
-type QueryOptions = {
-  enabled?: boolean;
+// Define VariantData structure (matching return of variantsFetcher)
+interface VariantData {
+  id: string;
+  variant: any; // Replace 'any' with more specific type if known
+  task: TaskData;
   [key: string]: any;
-} & Partial<UseQueryOptions<TaskVariant[], Error>>;
+}
+
+// Define QueryOptions structure
+interface QueryOptions {
+  enabled?: MaybeRef<boolean>;
+  [key: string]: any;
+}
 
 /**
  * Tasks Variants query.
  *
- * @param {Ref<boolean> | boolean} [registeredVariantsOnly=false] – Whether to fetch only registered variants.
+ * @param {MaybeRef<boolean>} [registeredVariantsOnly=false] – Whether to fetch only registered variants.
  * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
- * @returns The TanStack query result.
+ * @returns {UseQueryReturnType<VariantData[], Error>} The TanStack query result.
  */
 const useTaskVariantsQuery = (
-  registeredVariantsOnly: Ref<boolean> | boolean = false,
-  queryOptions: QueryOptions | undefined = undefined
-) => {
-  const resolvedRegisteredVariantsOnly = toValue(registeredVariantsOnly);
+  registeredVariantsOnly: MaybeRef<boolean> = false,
+  queryOptions: QueryOptions = {}
+): UseQueryReturnType<VariantData[], Error> => {
 
-  return useQuery<TaskVariant[], Error>({
-    queryKey: resolvedRegisteredVariantsOnly
-      ? [TASK_VARIANTS_QUERY_KEY, 'registered']
-      : [TASK_VARIANTS_QUERY_KEY],
-    queryFn: async () => {
-      const variants = await variantsFetcher(resolvedRegisteredVariantsOnly);
-      return variants as TaskVariant[];
-    },
-    ...queryOptions,
+  const queryKey = computed(() =>
+    toValue(registeredVariantsOnly)
+      ? [TASK_VARIANTS_QUERY_KEY, 'registered'] as const
+      : [TASK_VARIANTS_QUERY_KEY] as const
+  );
+
+  // Define queryFn with explicit return type
+  const queryFn = (): Promise<VariantData[]> => variantsFetcher(toValue(registeredVariantsOnly));
+
+  return useQuery<VariantData[], Error>({
+    queryKey,
+    queryFn,
+    ...(queryOptions ?? {}),
   });
 };
 
