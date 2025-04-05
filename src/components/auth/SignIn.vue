@@ -1,6 +1,9 @@
 <template>
   <div class="card">
-    <form class="p-fluid" @submit.prevent="handleFormSubmit(!v$.$invalid)">
+    <div v-if="!isFirekitInit" class="flex justify-content-center align-items-center" style="height: 200px">
+      <PvProgressSpinner />
+    </div>
+    <form v-else class="p-fluid" @submit.prevent="handleFormSubmit(!v$.$invalid)">
       <div class="field mt-2">
         <div class="p-input-icon-right">
           <PvInputText
@@ -59,7 +62,7 @@
             toggle-mask
             show-icon="pi pi-eye-slash"
             hide-icon="pi pi-eye"
-            :feedback="false"
+            :feedback="true"
             :placeholder="$t('authSignIn.passwordPlaceholder')"
             data-cy="input-password"
             @keyup="checkForCapsLock"
@@ -68,8 +71,7 @@
             <template #header>
               <h6>{{ $t('authSignIn.pickPassword') }}</h6>
             </template>
-            <template #footer="sp">
-              {{ sp.level }}
+            <template #footer>
               <PvDivider />
               <p class="mt-2">{{ $t('authSignIn.suggestions') }}</p>
               <ul class="pl-2 ml-2 mt-0" style="line-height: 1.5">
@@ -150,7 +152,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue';
+import { reactive, ref, watch, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { required, requiredUnless } from '@vuelidate/validators';
 import { useVuelidate } from '@vuelidate/core';
@@ -160,11 +162,12 @@ import PvDivider from 'primevue/divider';
 import PvInputText from 'primevue/inputtext';
 import PvPassword from 'primevue/password';
 import PvSkeleton from 'primevue/skeleton';
+import PvProgressSpinner from 'primevue/progressspinner';
 import { useAuthStore } from '@/store/auth';
 import RoarModal from '../modals/RoarModal.vue';
 
 const authStore = useAuthStore();
-const { roarfirekit } = storeToRefs(authStore);
+const { roarfirekit, isFirekitInit } = storeToRefs(authStore);
 
 const emit = defineEmits(['submit', 'update:email']);
 // eslint-disable-next-line no-unused-vars
@@ -190,6 +193,9 @@ const v$ = useVuelidate(rules, state);
 const capsLockEnabled = ref(false);
 const forgotPasswordModalOpen = ref(false);
 
+/**
+ * @param {boolean} isFormValid - Whether the form is valid
+ */
 const handleFormSubmit = (isFormValid) => {
   submitted.value = true;
   if (!isFormValid) {
@@ -198,6 +204,10 @@ const handleFormSubmit = (isFormValid) => {
   emit('submit', state);
 };
 
+/**
+ * @param {string} email - The email to validate
+ * @returns {boolean} Whether the email is valid
+ */
 const isValidEmail = (email) => {
   var re =
     /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -248,6 +258,9 @@ const validateRoarEmail = _debounce(
   { maxWait: 1000 },
 );
 
+/**
+ * @param {KeyboardEvent} e - The keyboard event
+ */
 function checkForCapsLock(e) {
   // Make sure the event is a keyboard event.
   // Using password autofill will trigger a regular

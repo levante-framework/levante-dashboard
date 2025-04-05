@@ -5,6 +5,7 @@ import _isEmpty from 'lodash/isEmpty';
 import _union from 'lodash/union';
 import { initNewFirekit } from '../firebaseInit';
 import { AUTH_SSO_PROVIDERS } from '../constants/auth';
+import { clearIndexedDB } from '../utils/indexedDBUtils';
 
 interface FirebaseUser {
   adminFirebaseUser: User | null;
@@ -112,6 +113,14 @@ export const useAuthStore = defineStore('authStore', {
     async initFirekit(): Promise<void> {
       console.log('Auth store: Initializing Firekit');
       try {
+        // Clear existing IndexedDB instances before initialization
+        try {
+          await clearIndexedDB();
+        } catch (error) {
+          console.warn('Error clearing IndexedDB:', error);
+          // Continue with initialization even if clearing fails
+        }
+
         this.roarfirekit = await initNewFirekit();
         console.log('Auth store: Firekit initialized successfully');
         await this.setAuthStateListeners();

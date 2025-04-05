@@ -124,7 +124,7 @@
   </main>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import PvAutoComplete from 'primevue/autocomplete';
@@ -134,33 +134,51 @@ import PvDataView from 'primevue/dataview';
 import PvSelect from 'primevue/select';
 import PvInputGroup from 'primevue/inputgroup';
 import { useAuthStore } from '@/store/auth';
-import { orderByDefault } from '@/helpers/query/utils';
+import { orderByDefault, OrderBy } from '@/helpers/query/utils';
 import { getTitle } from '@/helpers/query/administrations';
 import useUserType from '@/composables/useUserType';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
 import CardAdministration from '@/components/CardAdministration.vue';
 import { isLevante } from '@/helpers';
+import { Administration } from '@/types/administration';
+
+interface SortOption {
+  label: string;
+  value: OrderBy[];
+}
+
+interface UserClaims {
+  claims?: {
+    roarUid?: string;
+    super_admin?: boolean;
+    admin?: boolean;
+    minimalAdminOrgs?: Record<string, string[]>;
+  };
+}
+
+interface UserType {
+  isSuperAdmin: boolean;
+  isAdmin: boolean;
+}
 
 const initialized = ref(false);
 const pageLimit = ref(10);
 const page = ref(0);
 
-const orderBy = ref(orderByDefault);
-const searchSuggestions = ref([]);
-const searchTokens = ref([]);
+const orderBy = ref<OrderBy[]>(orderByDefault);
+const searchSuggestions = ref<string[]>([]);
+const searchTokens = ref<string[]>([]);
 const searchInput = ref('');
 const search = ref('');
 
-const filteredAdministrations = ref([]);
+const filteredAdministrations = ref<Administration[]>([]);
 const fetchTestAdministrations = ref(false);
 
-
 const authStore = useAuthStore();
-
 const { roarfirekit } = storeToRefs(authStore);
 
-let unsubscribeInitializer;
+let unsubscribeInitializer: (() => void) | undefined;
 const init = () => {
   if (unsubscribeInitializer) unsubscribeInitializer();
   initialized.value = true;
@@ -175,29 +193,19 @@ onMounted(() => {
 });
 
 const { data: userClaims } = useUserClaimsQuery({
-  enabled: initialized,
+  enabled: initialized.value,
+  queryKey: ['userClaims'],
 });
 
-const { isSuperAdmin } = useUserType(userClaims);
+const { isSuperAdmin } = useUserType(userClaims) as UserType;
 
-/**
- * Generate search tokens for autocomplete.
- *
- * Using the administrations data, generates search tokens for the autocomplete search feature by splitting the
- * invididual administration names into separate tokens. For example, the administration "Partner Test Administration"
- * would be split into three tokens: "partner", "test", and "administration".
- *
- * @returns {void}
- */
 const generateAutoCompleteSearchTokens = () => {
   if (!administrations.value?.length) return;
 
-  // Set search tokens based on each administration's name.
   for (const item of administrations.value) {
     searchTokens.value.push(...item.name.toLowerCase().split(' '));
   }
 
-  // Remove duplicates from array.
   searchTokens.value = [...new Set(searchTokens.value)];
 };
 
@@ -205,32 +213,21 @@ const {
   isLoading: isLoadingAdministrations,
   isFetching: isFetchingAdministrations,
   data: administrations,
-} = useAdministrationsListQuery(orderBy, fetchTestAdministrations, {
-  enabled: initialized,
+} = useAdministrationsListQuery(orderBy.value, fetchTestAdministrations.value, {
+  enabled: initialized.value,
 });
 
-
-/**
- * Administration data watcher
- *
- * Watches the administrations data, and once data is available, generates search tokens and sets the filtered
- * administrations based on the search value.
- *
- * @returns {void}
- */
 watch(
   administrations,
   (updatedAdministrationsData) => {
     if (!updatedAdministrationsData) return;
 
-    // Generate auto-complete search tokens based on the data.
     generateAutoCompleteSearchTokens();
 
-    // Set the filtered administrations based on the search value.
     if (!search.value) {
       filteredAdministrations.value = updatedAdministrationsData;
     } else {
-      filteredAdministrations.value = updatedAdministrationsData?.filter((item) =>
+      filteredAdministrations.value = updatedAdministrationsData.filter((item) =>
         item.name.toLowerCase().includes(search.value.toLowerCase()),
       );
     }
@@ -238,8 +235,7 @@ watch(
   { immediate: true },
 );
 
-// Table sort options
-const sortOptions = ref([
+const sortOptions = ref<SortOption[]>([
   {
     label: 'Name (ascending)',
     value: [
@@ -313,58 +309,44 @@ const sortOptions = ref([
     ],
   },
 ]);
+
 const sortKey = ref(sortOptions.value[0]);
-const sortOrder = ref();
-const sortField = ref();
+const sortOrder = ref<number>();
+const sortField = ref<string>();
 const dataViewKey = ref(0);
 
-/**
- * Clear the search input and reset the filtered administrations list.
- * @returns {void}
- */
 const clearSearch = () => {
   search.value = '';
   searchInput.value = '';
-  filteredAdministrations.value = administrations.value;
+  if (administrations.value) {
+    filteredAdministrations.value = administrations.value;
+  }
 };
 
-/**
- * Perform a search based on the search input value.
- * @returns {void}
- */
 const onSearch = () => {
   search.value = searchInput.value;
-  if (!search.value) filteredAdministrations.value = administrations.value;
-  else {
+  if (!search.value && administrations.value) {
+    filteredAdministrations.value = administrations.value;
+  } else if (administrations.value) {
     filteredAdministrations.value = administrations.value.filter((item) =>
       item.name.toLowerCase().includes(search.value.toLowerCase()),
     );
   }
 };
 
-/**
- * Perform an autocomplete search based on the search input value.
- * @returns {void}
- */
 const autocomplete = () => {
   searchSuggestions.value = searchTokens.value.filter((item) => {
     return item.toLowerCase().includes(searchInput.value.toLowerCase());
   });
 };
 
-/**
- * Sort change event handler
- * @param {*} event – The sort event object emitted by PrimeVue
- * @returns {void}
- */
-const onSortChange = (event) => {
+const onSortChange = (event: { value: SortOption }) => {
   dataViewKey.value += 1;
   page.value = 0;
   const value = event.value.value;
   const sortValue = event.value;
 
-  if (!isSuperAdmin.value && sortValue[0].field.fieldPath === 'name') {
-    // catches edge case where a partner admin should sort by the public name attribute
+  if (!isSuperAdmin && sortValue.value[0].field.fieldPath === 'name') {
     sortField.value = 'publicName';
   } else {
     sortField.value = value[0].field?.fieldPath;
