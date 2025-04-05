@@ -12,7 +12,7 @@ import _without from 'lodash/without';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
 import { flattenObj } from '@/helpers';
-import { FIRESTORE_DATABASES } from '@/constants/firebase';
+import { FIRESTORE_DATABASES, FirestoreDatabase } from '@/constants/firebase';
 
 interface FirestoreValue {
   nullValue?: null;
@@ -53,6 +53,16 @@ interface BatchGetResponse {
   found?: {
     name: string;
     fields: Record<string, FirestoreValue>;
+  };
+}
+
+interface StructuredQuery {
+  from: {
+    collectionId: string;
+    allDescendants: boolean;
+  }[];
+  select?: {
+    fields: { fieldPath: string }[];
   };
 }
 
@@ -108,19 +118,30 @@ export const orderByDefault = [
   },
 ];
 
-export const getProjectId = (project = 'admin'): string | undefined => {
+export const getProjectId = (project: FirestoreDatabase): string | undefined => {
   const authStore = useAuthStore();
   const { roarfirekit } = storeToRefs(authStore);
   return roarfirekit.value.roarConfig?.[project]?.projectId;
 };
 
-export const getAxiosInstance = (db = FIRESTORE_DATABASES.ADMIN, unauthenticated = false): AxiosInstance => {
+export const getAxiosInstance = (db: FirestoreDatabase = FIRESTORE_DATABASES.ADMIN, unauthenticated = false): AxiosInstance => {
   const authStore = useAuthStore();
   const { roarfirekit } = storeToRefs(authStore);
   
   console.log('Getting axios instance for database:', db);
-  console.log('Roarfirekit initialized:', roarfirekit.value?.initialized);
-  console.log('Roarfirekit restConfig:', roarfirekit.value?.restConfig);
+  console.log('Roarfirekit state:', {
+    initialized: roarfirekit.value?.initialized,
+    hasRestConfig: !!roarfirekit.value?.restConfig,
+    baseURLs: {
+      admin: roarfirekit.value?.restConfig?.admin?.baseURL,
+      app: roarfirekit.value?.restConfig?.app?.baseURL
+    }
+  });
+  
+  if (!roarfirekit.value?.initialized) {
+    console.error('Roarfirekit is not initialized');
+    throw new Error('Roarfirekit is not initialized');
+  }
   
   const axiosOptions = _get(roarfirekit.value.restConfig, db) ?? {};
   
@@ -130,6 +151,7 @@ export const getAxiosInstance = (db = FIRESTORE_DATABASES.ADMIN, unauthenticated
 
   if (!axiosOptions.baseURL) {
     console.error('Base URL is not set for database:', db);
+    console.error('Available restConfig:', roarfirekit.value?.restConfig);
     throw new Error('Base URL is not set.');
   }
 
@@ -297,23 +319,23 @@ export const fetchSubcollection = async (
   db = FIRESTORE_DATABASES.ADMIN,
 ): Promise<DocumentData[]> => {
   const axiosInstance = getAxiosInstance(db);
-  const requestBody = {
-    structuredQuery: {
-      from: [
-        {
-          collectionId: subcollectionName,
-          allDescendants: false,
-        },
-      ],
-    },
+  const structuredQuery: StructuredQuery = {
+    from: [
+      {
+        collectionId: subcollectionName,
+        allDescendants: false,
+      },
+    ],
   };
 
   if (select.length > 0) {
-    requestBody.structuredQuery.select = {
+    structuredQuery.select = {
       fields: select.map((field) => ({ fieldPath: field })),
     };
   }
 
-  const { data } = await axiosInstance.post(`${collectionPath}:runQuery`, requestBody);
+  const { data } = await axiosInstance.post(`${collectionPath}:runQuery`, {
+    structuredQuery,
+  });
   return mapFields(data);
 }; 

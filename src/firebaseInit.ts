@@ -20,8 +20,11 @@ const clearIndexedDB = async () => {
 
 export const initNewFirekit = async () => {
   try {
+    console.log('Starting Firekit initialization...');
+    
     // Clear existing IndexedDB instances before initialization
     try {
+      console.log('Clearing IndexedDB instances...');
       await clearIndexedDB();
       console.log('Successfully cleared IndexedDB instances');
     } catch (error) {
@@ -30,6 +33,17 @@ export const initNewFirekit = async () => {
     }
 
     console.log('Initializing Firekit with session persistence...');
+    console.log('Using Firebase config:', {
+      app: {
+        projectId: levanteFirebaseConfig.app.projectId,
+        authDomain: levanteFirebaseConfig.app.authDomain
+      },
+      admin: {
+        projectId: levanteFirebaseConfig.admin.projectId,
+        authDomain: levanteFirebaseConfig.admin.authDomain
+      }
+    });
+    
     const roarfirekit = new RoarFirekit({
       roarConfig: {
         app: levanteFirebaseConfig.app,
@@ -45,18 +59,35 @@ export const initNewFirekit = async () => {
       verboseLogging: isLevante ? false : true,
     });
 
-    console.log('Firekit instance created with session persistence, initializing...');
+    // Initialize roarfirekit
     await roarfirekit.init();
-    console.log('Firekit initialization completed successfully');
+    console.log('Roarfirekit initialized successfully');
 
-    // Verify that the restConfig is properly set
-    if (!roarfirekit.restConfig?.admin?.baseURL || !roarfirekit.restConfig?.app?.baseURL) {
-      throw new Error('Firekit initialization failed: restConfig not properly set');
+    // Verify that roarfirekit is properly initialized
+    if (!roarfirekit.initialized) {
+      console.error('Roarfirekit initialization failed - not marked as initialized');
+      throw new Error('Roarfirekit initialization failed: not marked as initialized');
     }
+
+    // Verify that restConfig is properly set
+    if (!roarfirekit.restConfig?.admin?.baseURL || !roarfirekit.restConfig?.app?.baseURL) {
+      console.error('Roarfirekit initialization failed - restConfig not properly set');
+      console.error('Current restConfig:', roarfirekit.restConfig);
+      throw new Error('Roarfirekit initialization failed: restConfig not properly set');
+    }
+
+    console.log('Roarfirekit state after initialization:', {
+      initialized: roarfirekit.initialized,
+      hasRestConfig: !!roarfirekit.restConfig,
+      baseURLs: {
+        admin: roarfirekit.restConfig?.admin?.baseURL,
+        app: roarfirekit.restConfig?.app?.baseURL
+      }
+    });
 
     return roarfirekit;
   } catch (error) {
-    console.error('Error initializing Firekit:', error);
+    console.error('Error during Firekit initialization:', error);
     throw error;
   }
 };

@@ -111,7 +111,16 @@ export const useAuthStore = defineStore('authStore', {
       await this.roarfirekit.completeAssessment(adminId, taskId);
     },
     async initFirekit(): Promise<void> {
-      console.log('Auth store: Initializing Firekit');
+      console.log('Auth store: Starting Firekit initialization');
+      console.log('Auth store: Current roarfirekit state:', {
+        initialized: this.roarfirekit?.initialized,
+        hasRestConfig: !!this.roarfirekit?.restConfig,
+        baseURLs: {
+          admin: this.roarfirekit?.restConfig?.admin?.baseURL,
+          app: this.roarfirekit?.restConfig?.app?.baseURL
+        }
+      });
+      
       try {
         // Clear existing IndexedDB instances before initialization
         try {
@@ -124,16 +133,25 @@ export const useAuthStore = defineStore('authStore', {
 
         this.roarfirekit = await initNewFirekit();
         console.log('Auth store: Firekit initialized successfully');
+        console.log('Auth store: New roarfirekit state:', {
+          initialized: this.roarfirekit?.initialized,
+          hasRestConfig: !!this.roarfirekit?.restConfig,
+          baseURLs: {
+            admin: this.roarfirekit?.restConfig?.admin?.baseURL,
+            app: this.roarfirekit?.restConfig?.app?.baseURL
+          }
+        });
 
         // Verify that the restConfig is properly set
         if (!this.roarfirekit?.restConfig?.admin?.baseURL || !this.roarfirekit?.restConfig?.app?.baseURL) {
+          console.error('Auth store: Firekit initialization failed - restConfig not properly set');
           throw new Error('Firekit initialization failed: restConfig not properly set');
         }
 
         await this.setAuthStateListeners();
-        console.log('Auth store: Auth state listeners set');
+        console.log('Auth store: Auth state listeners set successfully');
       } catch (error) {
-        console.error('Auth store: Error initializing Firekit:', error);
+        console.error('Auth store: Error during Firekit initialization:', error);
         // Reset the roarfirekit state on error
         this.roarfirekit = null;
         throw error;

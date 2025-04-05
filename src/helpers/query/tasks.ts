@@ -2,8 +2,10 @@ import { toValue } from 'vue';
 import _mapValues from 'lodash/mapValues';
 import _uniq from 'lodash/uniq';
 import _without from 'lodash/without';
-import { convertValues, getAxiosInstance, mapFields, fetchDocsById } from './utils';
-import { FIRESTORE_DATABASES, FIRESTORE_COLLECTIONS } from '../../constants/firebase';
+import _groupBy from 'lodash/groupBy';
+import _get from 'lodash/get';
+import { convertValues, getAxiosInstance, mapFields, fetchDocsById, getProjectId, batchGetDocs } from './utils';
+import { FIRESTORE_DATABASES, FIRESTORE_COLLECTIONS, FirestoreDatabase } from '../../constants/firebase';
 
 interface TasksRequestBodyParams {
   registered?: boolean;
@@ -67,6 +69,13 @@ interface FetchedDoc {
   collection: string;
   name?: string;
   [key: string]: any;
+}
+
+interface QueryResponse {
+  document?: {
+    name: string;
+    fields: Record<string, any>;
+  };
 }
 
 export const getTasksRequestBody = ({
@@ -139,17 +148,36 @@ export const taskFetcher = async (
   allData = false,
   select = ['name', 'testData', 'demoData']
 ): Promise<TaskData[]> => {
-  const axiosInstance = getAxiosInstance('admin');
-  const requestBody = getTasksRequestBody({
-    registered,
-    allData,
-    aggregationQuery: false,
-    paginate: false,
-    select: allData ? [] : select,
-  });
+  console.log('Fetching tasks with params:', { registered, allData, select });
+  
+  try {
+    const axiosInstance = getAxiosInstance('admin');
+    console.log('Successfully got axios instance');
+    
+    const requestBody = getTasksRequestBody({
+      registered,
+      allData,
+      aggregationQuery: false,
+      paginate: false,
+      select: allData ? [] : select,
+    });
+    console.log('Generated request body:', JSON.stringify(requestBody, null, 2));
 
-  const { data } = await axiosInstance.post<TaskDocument[]>(':runQuery', requestBody);
-  return mapFields(data) as TaskData[];
+    const { data } = await axiosInstance.post<TaskDocument[]>(':runQuery', requestBody);
+    console.log('Successfully fetched tasks, count:', data?.length);
+    
+    return mapFields(data) as TaskData[];
+  } catch (error: any) {
+    console.error('Error fetching tasks:', error);
+    if (error.response) {
+      console.error('Error response:', {
+        status: error.response.status,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+    }
+    throw error;
+  }
 };
 
 export const fetchByTaskId = async (taskIds: string[]): Promise<TaskData[]> => {
@@ -225,68 +253,92 @@ export const getVariantsRequestBody = ({
   return requestBody;
 };
 
+/**
+ * Fetch task variants, including their parent task data.
+ *
+ * @param {Boolean} registered - Whether to fetch registered task variants only.
+ * @returns {Promise<VariantData[]>} The array of task variant data, with nested task info.
+ */
 export const variantsFetcher = async (registered = false): Promise<VariantData[]> => {
-  const axiosInstance = getAxiosInstance('admin');
+  console.log(`Fetching task variants with params: registered=${registered}`);
+  // @ts-ignore - Suppress persistent TS error
+  const axiosInstance = getAxiosInstance(FIRESTORE_DATABASES.APP);
+
   const requestBody = getVariantsRequestBody({
     registered,
     aggregationQuery: false,
     paginate: false,
   });
+  console.log('Generated request body for variants:', JSON.stringify(requestBody, null, 2));
 
-  const { data } = await axiosInstance.post<TaskDocument[]>(':runQuery', requestBody);
-  const variants = mapFields(data, true) as Array<{ id: string; parentDoc: string }>;
+  try {
+    const response = await axiosInstance.post(':runQuery', requestBody);
 
-  const taskDocPaths = _uniq(
-    _without(
-      data.map((taskDoc) => {
-        if (taskDoc.document?.name) {
-          return taskDoc.document.name.split('/variants/')[0];
-        }
-        return undefined;
-      }),
-      undefined
-    )
-  );
+    // Step 1: Process initial variant response
+    const rawVariants = response.data
+      .filter(({ document }: QueryResponse) => document)
+      .map(({ document }: QueryResponse) => {
+        if (!document) return null;
+        const pathParts = document.name.split('/'); // e.g., projects/.../databases/(default)/documents/tasks/TASK_ID/variants/VARIANT_ID
+        const variantId = pathParts.pop();
+        pathParts.pop(); // Remove 'variants' part
+        const taskId = pathParts.pop(); // Get the parent Task ID
 
-  const batchTaskDocs = await axiosInstance
-    .post<{ found?: { name: string; fields: Record<string, any> } }[]>(':batchGet', {
-      documents: taskDocPaths,
-    })
-    .then(({ data }) => {
-      return _without(
-        data.map(({ found }) => {
-          if (found) {
-            return {
-              name: found.name,
-              data: {
-                id: found.name.split('/tasks/')[1],
-                name: '', // Default name if not provided
-                ..._mapValues(found.fields, (value) => convertValues(value)),
-              },
-            };
-          }
-          return undefined;
-        }),
-        undefined
-      );
-    });
+        return {
+          id: variantId,
+          // Store taskId to fetch parent later
+          taskId: taskId,
+          // Process variant fields directly
+          variant: _mapValues(document.fields, convertValues),
+        };
+      })
+      // Add explicit type for 'doc'
+      .filter((doc: { id: string; taskId: string; variant: any } | null): doc is { id: string; taskId: string; variant: any } => doc !== null && !!doc.taskId);
 
-  const taskDocDict = batchTaskDocs.reduce<Record<string, { name: string; data: TaskData }>>((acc, task) => {
-    if (task && task.data) {
-      acc[task.data.id] = { name: task.name, data: task.data };
+    if (!rawVariants.length) {
+      console.log('No raw variants found.');
+      return [];
     }
-    return acc;
-  }, {});
 
-  return variants.map((variant) => {
-    const task = taskDocDict[variant.parentDoc];
-    if (!task) {
-      throw new Error(`Task not found for variant ${variant.id}`);
+    // Step 2: Get unique Task IDs and prepare paths for batchGetDocs
+    // Add explicit type for 'v'
+    const uniqueTaskIds = _uniq(rawVariants.map((v: { taskId: string }) => v.taskId));
+    const taskDocPaths = uniqueTaskIds.map(id => `tasks/${id}`);
+    console.log(`Fetching parent task data for IDs: ${uniqueTaskIds.join(', ')}`);
+
+    // Step 3: Fetch parent Task documents
+    // @ts-ignore - Suppress persistent TS error
+    const taskDocs = await batchGetDocs(taskDocPaths, [], FIRESTORE_DATABASES.APP);
+    const tasksById = _groupBy(taskDocs, 'id');
+
+    // Step 4: Combine variant data with parent task data
+    // Add explicit type for 'variant'
+    const finalVariants = rawVariants.map((variant: { id: string; taskId: string; variant: any }) => {
+      const parentTaskData = _get(tasksById, [variant.taskId, 0]); // groupBy creates an array, get the first element
+      if (!parentTaskData) {
+        console.warn(`Parent task data not found for task ID: ${variant.taskId}`);
+        return null; // Or handle as needed
+      }
+      return {
+        id: variant.id,
+        variant: variant.variant,
+        // Nest the fetched task data
+        task: parentTaskData,
+      };
+    }).filter((v: VariantData | null): v is VariantData => v !== null); // Filter out any nulls from missing tasks
+
+    console.log(`Processed ${finalVariants.length} final task variants.`);
+    return finalVariants;
+
+  } catch (error: any) {
+    console.error('Error fetching task variants:', error);
+    if (error.response) {
+      console.error('Error response details:', {
+        status: error.response.status,
+        data: JSON.stringify(error.response.data, null, 2),
+        headers: error.response.headers,
+      });
     }
-    return {
-      id: variant.id,
-      variant,
-      task: task.data,
-    };
-  });
+    throw error; // Re-throw the error
+  }
 }; 
