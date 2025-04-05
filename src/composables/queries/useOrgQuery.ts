@@ -1,53 +1,78 @@
-import { computed } from 'vue';
-import { UseQueryOptions } from '@tanstack/vue-query';
+import { computed, MaybeRef, ref, toValue } from 'vue';
+import { UseQueryReturnType } from '@tanstack/vue-query';
 import useDistrictsQuery from '@/composables/queries/useDistrictsQuery';
 import useSchoolsQuery from '@/composables/queries/useSchoolsQuery';
-import useClassesQuery from '@/composables/queries/useClassesQuery';
+import useClassesQuery from '@/composables/queries/useClassesQuery.ts';
 import useGroupsQuery from '@/composables/queries/useGroupsQuery';
-import useFamiliesQuery from '@/composables/queries/useFamiliesQuery';
-import { SINGULAR_ORG_TYPES, SingularOrgType } from '@/constants/orgTypes';
+import useFamiliesQuery from '@/composables/queries/useFamiliesQuery.js';
+import { ORG_TYPES } from '@/constants/orgTypes';
+import { DocumentData } from '@/helpers/query/utils';
 
-interface Organization {
-  id: string;
+interface QueryOptions {
+  enabled?: MaybeRef<boolean>;
   [key: string]: any;
 }
 
-type QueryOptions = {
-  enabled?: boolean;
+interface BaseOrgData extends DocumentData {
+  name?: string;
   [key: string]: any;
-} & Partial<UseQueryOptions<Organization[], Error>>;
+}
+
+type OrgData = BaseOrgData;
 
 /**
  * Org Query
  *
  * Query composable for fetching org data based on a dynamic org type.
  *
- * @param {SingularOrgType} orgType – The org type to query.
- * @param {string[]} orgIds – The array of org IDs to fetch.
+ * @param {MaybeRef<string>} orgType – The org type to query (e.g., 'district', 'school'). Case-insensitive.
+ * @param {MaybeRef<string[]>} orgIds – The array of org IDs to fetch.
  * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
- * @returns The TanStack query result.
+ * @returns {UseQueryReturnType<OrgData[], Error>} The TanStack query result.
  */
 export default function useOrgQuery(
-  orgType: SingularOrgType,
-  orgIds: string[],
-  queryOptions: QueryOptions | undefined = undefined
-) {
-  queryOptions = { enabled: true, ...queryOptions };
+  orgType: MaybeRef<string>,
+  orgIds: MaybeRef<string[]>,
+  queryOptions: QueryOptions = {}
+): UseQueryReturnType<OrgData[], Error> {
+
+  const resolvedOrgTypeUpper = computed(() => toValue(orgType)?.toUpperCase());
+  const resolvedOrgIds = computed(() => toValue(orgIds));
 
   const orgQuery = computed(() => {
-    switch (orgType) {
-      case 'district':
-        return useDistrictsQuery(orgIds, queryOptions);
-      case 'school':
-        return useSchoolsQuery(orgIds, queryOptions);
-      case 'class':
-        return useClassesQuery(orgIds, queryOptions);
-      case 'group':
-        return useGroupsQuery(orgIds, queryOptions);
-      case 'family':
-        return useFamiliesQuery(orgIds, queryOptions);
+    const resolvedEnabled = toValue(queryOptions?.enabled ?? true);
+    const currentOptions = { ...queryOptions, enabled: resolvedEnabled };
+    const currentOrgIds = resolvedOrgIds.value ?? [];
+
+    switch (resolvedOrgTypeUpper.value) {
+      case ORG_TYPES.DISTRICTS:
+        return useDistrictsQuery(currentOrgIds, currentOptions) as UseQueryReturnType<OrgData[], Error>;
+      case ORG_TYPES.SCHOOLS:
+        return useSchoolsQuery(currentOrgIds, currentOptions) as UseQueryReturnType<OrgData[], Error>;
+      case ORG_TYPES.CLASSES:
+        return useClassesQuery(currentOrgIds, currentOptions) as UseQueryReturnType<OrgData[], Error>;
+      case ORG_TYPES.GROUPS:
+        return useGroupsQuery(currentOrgIds, currentOptions) as UseQueryReturnType<OrgData[], Error>;
+      case ORG_TYPES.FAMILIES:
+        return useFamiliesQuery(currentOrgIds, currentOptions) as UseQueryReturnType<OrgData[], Error>;
       default:
-        throw new Error(`Unsupported org type: ${orgType}`);
+        console.error(`Unsupported org type: ${resolvedOrgTypeUpper.value}`);
+        const dummyError = new Error(`Unsupported org type: ${resolvedOrgTypeUpper.value}`);
+        return {
+          data: ref(undefined),
+          error: ref(dummyError),
+          isError: ref(true),
+          isLoading: ref(false),
+          isFetching: ref(false),
+          isSuccess: ref(false),
+          isPending: ref(false),
+          isLoadingError: ref(true),
+          isRefetchError: ref(false),
+          isPlaceholderData: ref(false),
+          status: ref('error'),
+          fetchStatus: ref('idle'),
+          refetch: (() => Promise.resolve(null)) as any,
+        } as unknown as UseQueryReturnType<OrgData[], Error>;
     }
   });
 

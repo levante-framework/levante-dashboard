@@ -1,14 +1,19 @@
 import _capitalize from 'lodash/capitalize';
 import { convertValues, getAxiosInstance } from './utils';
 
-interface LegalDocument {
+// Define and export the interface matching the actual data structure
+export interface LegalDocument {
   type: string;
-  fileName: string;
-  gitHubOrg: string;
-  gitHubRepository: string;
-  currentCommit: string;
+  fileName: any; // Use specific type if known (e.g., string)
+  gitHubOrg: any; // Use specific type if known
+  gitHubRepository: any; // Use specific type if known
+  currentCommit: any; // Use specific type if known
   lastUpdated: string;
   params: Record<string, any>;
+  // Add id, content, version IF they are actually present in the data
+  // id?: string; 
+  // content?: string;
+  // version?: string;
 }
 
 interface FirestoreDocument {

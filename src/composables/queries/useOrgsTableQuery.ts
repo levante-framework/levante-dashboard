@@ -1,81 +1,96 @@
-import { computed, ref, Ref } from 'vue';
-import { useQuery, UseQueryOptions } from '@tanstack/vue-query';
+import { computed, ref, MaybeRef, toValue, Ref, ComputedRef } from 'vue';
+import { useQuery, UseQueryReturnType, QueryKey } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
-import useUserType from '@/composables/useUserType';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
+import useUserType, { UserTypeInfo } from '@/composables/useUserType.ts';
+import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery.ts';
+import { computeQueryOverrides } from '@/helpers/computeQueryOverrides.ts';
 import { orgPageFetcher } from '@/helpers/query/orgs';
-import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
-import { SINGULAR_ORG_TYPES, SingularOrgType } from '@/constants/orgTypes';
+import { ORGS_TABLE_QUERY_KEY, USER_CLAIMS_QUERY_KEY } from '@/constants/queryKeys';
+import { DocumentData, OrderBy } from '@/helpers/query/utils';
 
-interface Organization {
-  id: string;
-  name: string;
-  type: SingularOrgType;
+// Define QueryOptions structure
+interface QueryOptions {
+  enabled?: MaybeRef<boolean>;
   [key: string]: any;
 }
 
-interface UserType {
-  isSuperAdmin: boolean;
-  [key: string]: any;
+// Define AdminOrgs structure
+interface AdminOrgs {
+  districts?: string[];
+  schools?: string[];
+  classes?: string[];
+  groups?: string[];
+  families?: string[];
 }
 
-type QueryOptions = {
-  enabled?: boolean;
+// Define OrgData structure (base type)
+interface OrgData extends DocumentData {
+  name?: string;
   [key: string]: any;
-} & Partial<UseQueryOptions<Organization[], Error>>;
+}
 
 /**
  * Orgs Table query.
  *
- * Fetches all orgs assigned to the current user account. This query is intended to be used by the List Orgs page that
- * contains a tabbed data table with orgs (districts, schools, etc.) assigned to the user.
+ * Fetches all orgs assigned to the current user account for a data table.
  *
- * @TODO: Explore the possibility of removing this query in favour of more granular queries for each org type.
- *
- * @param {SingularOrgType} activeOrgType – The active org type (district, school, etc.).
- * @param {string | undefined} selectedDistrict – The selected district ID.
- * @param {string | undefined} selectedSchool – The selected school ID.
- * @param {string} orderBy – The order by field.
+ * @param {MaybeRef<string>} activeOrgType – The active org type (district, school, etc.).
+ * @param {MaybeRef<string | undefined>} selectedDistrict – The selected district ID.
+ * @param {MaybeRef<string | undefined>} selectedSchool – The selected school ID.
+ * @param {MaybeRef<OrderBy[]>} orderBy – The order by field definition.
  * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
- * @returns The TanStack query result.
+ * @returns {UseQueryReturnType<OrgData[], Error>} The TanStack query result.
  */
 const useOrgsTableQuery = (
-  activeOrgType: SingularOrgType,
-  selectedDistrict: string | undefined,
-  selectedSchool: string | undefined,
-  orderBy: string,
-  queryOptions: QueryOptions | undefined = undefined
-) => {
+  activeOrgType: Ref<string>,
+  selectedDistrict: Ref<string | undefined>,
+  selectedSchool: Ref<string | undefined>,
+  orderBy: Ref<OrderBy[]>,
+  queryOptions: QueryOptions = {}
+): UseQueryReturnType<OrgData[], Error> => {
+
   const { data: userClaims } = useUserClaimsQuery({
-    queryKey: ['userClaims'],
-    enabled: queryOptions?.enabled ?? true,
+      queryKey: [USER_CLAIMS_QUERY_KEY],
+      enabled: computed(() => toValue(queryOptions?.enabled ?? true)),
   });
 
-  // Get the admin status and administation orgs.
-  const { isSuperAdmin } = useUserType(userClaims) as UserType;
-  const adminOrgs = computed(() => userClaims.value?.claims?.minimalAdminOrgs);
+  const userTypeInfo = useUserType(userClaims) as UserTypeInfo;
+  const isSuperAdmin: ComputedRef<boolean> = userTypeInfo.isSuperAdmin;
+  const adminOrgs: ComputedRef<AdminOrgs> = computed(() => userClaims.value?.claims?.minimalAdminOrgs || {});
 
-  // Ensure all necessary data is loaded before enabling the query.
   const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
   const queryConditions = [() => claimsLoaded.value];
   const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
 
-  return useQuery<Organization[], Error>({
-    queryKey: [ORGS_TABLE_QUERY_KEY, activeOrgType, selectedDistrict, selectedSchool, orderBy],
-    queryFn: async () => {
-      const orgs = await orgPageFetcher(
-        activeOrgType,
-        selectedDistrict,
-        selectedSchool,
-        orderBy,
-        ref(100000),
-        ref(0),
-        isSuperAdmin,
-        adminOrgs,
-      );
-      return orgs as Organization[];
-    },
+  const queryKey = computed(() => [
+      ORGS_TABLE_QUERY_KEY,
+      activeOrgType.value,
+      selectedDistrict.value,
+      selectedSchool.value,
+      orderBy.value
+  ] as const);
+
+  const queryFn = async (): Promise<OrgData[]> => {
+    // orgPageFetcher expects refs for pagination, hardcode for now
+    const pageLimit = ref(100000);
+    const page = ref(0);
+
+    const data = await orgPageFetcher(
+      activeOrgType,
+      selectedDistrict,
+      selectedSchool,
+      orderBy,
+      pageLimit,
+      page,
+      isSuperAdmin.value,
+      adminOrgs
+    );
+    return Array.isArray(data) ? (data as OrgData[]) : [];
+  };
+
+  return useQuery<OrgData[], Error>({
+    queryKey,
+    queryFn,
     enabled: isQueryEnabled,
     ...options,
   });

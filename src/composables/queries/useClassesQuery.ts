@@ -1,40 +1,57 @@
-import { useQuery, UseQueryOptions } from '@tanstack/vue-query';
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
-import { fetchDocumentsById } from '@/helpers/query/utils';
-import { hasArrayEntries } from '@/helpers/hasArrayEntries';
+import { useQuery, UseQueryReturnType, QueryKey } from '@tanstack/vue-query';
+import { computeQueryOverrides } from '@/helpers/computeQueryOverrides.ts';
+import { fetchDocumentsById, DocumentData } from '@/helpers/query/utils';
+import { hasArrayEntries } from '@/helpers/hasArrayEntries.ts';
 import { CLASSES_QUERY_KEY } from '@/constants/queryKeys';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { MaybeRef, toValue, computed } from 'vue';
 
-interface Class {
-  id: string;
+// Define QueryOptions structure
+interface QueryOptions {
+  enabled?: MaybeRef<boolean>;
   [key: string]: any;
 }
 
-type QueryOptions = {
-  enabled?: boolean;
+// Define ClassData structure (adjust based on actual data)
+interface ClassData extends DocumentData { // Extend DocumentData
+  name?: string;
+  // Add other known class properties
   [key: string]: any;
-} & Partial<UseQueryOptions<Class[], Error>>;
+}
 
 /**
  * Classes query.
  *
- * @param {string[]} classIds – The array of class IDs to fetch.
+ * @param {MaybeRef<string[]>} classIds – A Vue ref containing an array of class IDs to fetch.
  * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
- * @returns The TanStack query result.
+ * @returns {UseQueryReturnType<ClassData[], Error>} The TanStack query result.
  */
 const useClassesQuery = (
-  classIds: string[],
-  queryOptions: QueryOptions | undefined = undefined
-) => {
-  // Ensure all necessary data is loaded before enabling the query.
+  classIds: MaybeRef<string[]>,
+  queryOptions: QueryOptions = {}
+): UseQueryReturnType<ClassData[], Error> => {
+
+  // Ensure all necessary data is available before enabling the query.
   const conditions = [() => hasArrayEntries(classIds)];
   const { isQueryEnabled, options } = computeQueryOverrides(conditions, queryOptions);
 
-  return useQuery({
-    queryKey: [CLASSES_QUERY_KEY, classIds],
-    queryFn: () => fetchDocumentsById(FIRESTORE_COLLECTIONS.CLASSES, classIds),
+  const queryKey = computed(() => [CLASSES_QUERY_KEY, toValue(classIds)] as const);
+
+  const queryFn = async (): Promise<ClassData[]> => {
+    const ids = toValue(classIds);
+    if (!ids || ids.length === 0) {
+        return []; // Return empty if no IDs are provided
+    }
+    // fetchDocumentsById returns DocumentData[], needs casting
+    const data = await fetchDocumentsById(FIRESTORE_COLLECTIONS.CLASSES, ids);
+    return data as ClassData[]; // Cast result to ClassData[]
+  };
+
+  return useQuery<ClassData[], Error>({
+    queryKey,
+    queryFn,
     enabled: isQueryEnabled,
-    ...options,
+    ...options, // Spread the rest of the options
   });
 };
 

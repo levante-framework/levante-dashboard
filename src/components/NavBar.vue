@@ -42,19 +42,20 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvImage from 'primevue/image';
 import PvMenubar from 'primevue/menubar';
 import { useAuthStore } from '@/store/auth';
-import { getNavbarActions } from '@/router/navbarActions';
+import { getNavbarActions } from '@/router/navbarActions.ts';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { APP_ROUTES } from '@/constants/routes';
 import Badge from 'primevue/badge';
 import UserActions from './UserActions.vue';
-import useUserType from '@/composables/useUserType';
-
+import useUserType from '@/composables/useUserType.ts';
+import PvAvatar from 'primevue/avatar';
+import PvMenu from 'primevue/menu';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -90,9 +91,10 @@ const { isLoading: isLoadingClaims, data: userClaims } = useUserClaimsQuery({
   enabled: initialized,
 });
 
+const userTypeInfo = useUserType(userClaims);
+
 const computedItems = computed(() => {
   const items = [];
-  // TO DO: REMOVE USERS AFTER NAMING 3 TICKET IS COMPLETED
   const headers = ['Assignments', 'Users'];
   for (const header of headers) {
     const headerItems = rawActions.value
@@ -100,16 +102,15 @@ const computedItems = computed(() => {
       .map((action) => {
         if (action.title === 'Sync Passwords') {
           return {
-          label: action.title,
-          icon: action.icon,
-          badge: 'Temporary',
-          badgeClass: 'bg-yellow-300',
-          command: () => {
-            router.push(action.buttonLink);
-          },
-        };
+            label: action.title,
+            icon: action.icon,
+            badge: 'Temporary',
+            badgeClass: 'bg-yellow-300',
+            command: () => {
+              router.push(action.buttonLink);
+            },
+          };
         }
-
         return {
           label: action.title,
           icon: action.icon,
@@ -126,7 +127,6 @@ const computedItems = computed(() => {
       });
     }
   }
-  // Audience only has one associated page and therefore is not nested within items
   const audienceAction = rawActions.value.find((action) => action.category === 'Audience');
   if (audienceAction) {
     items.push({
@@ -157,13 +157,14 @@ const userDisplayName = computed(() => {
   }
 });
 
-const {isAdmin, isSuperAdmin} = useUserType(userClaims);
+const isAdmin = computed(() => userTypeInfo.isAdmin?.value);
+const isSuperAdmin = computed(() => userTypeInfo.isSuperAdmin?.value);
 
 const computedIsBasicView = computed(() => {
   if (!userClaims.value) {
-    return false; 
+    return false;
   }
-  return !isSuperAdmin.value && !isAdmin.value  
+  return !isSuperAdmin.value && !isAdmin.value;
 });
 
 const isAtHome = computed(() => {

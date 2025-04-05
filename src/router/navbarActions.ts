@@ -14,6 +14,7 @@ interface NavbarAction {
 interface GetNavbarActionsParams {
   isSuperAdmin?: boolean;
   isAdmin?: boolean;
+  includeHomeLink?: boolean;
 }
 
 const navbarActionOptions: NavbarAction[] = [
@@ -127,9 +128,11 @@ const navbarActionOptions: NavbarAction[] = [
 export const getNavbarActions = ({
   isSuperAdmin = false,
   isAdmin = false,
+  includeHomeLink = true,
 }: GetNavbarActionsParams): NavbarAction[] => {
+  let filteredActions = [];
   if (isLevante) {
-    return navbarActionOptions.filter((action) => {
+    filteredActions = navbarActionOptions.filter((action) => {
       if (action.project === 'LEVANTE' || action.project === 'ALL') {
         if (
           (action.requiresAdmin && isAdmin) ||
@@ -144,7 +147,7 @@ export const getNavbarActions = ({
       return false;
     });
   } else {
-    return navbarActionOptions.filter((action) => {
+    filteredActions = navbarActionOptions.filter((action) => {
       if (action.project === 'ROAR' || action.project === 'ALL') {
         if (action.requiresSuperAdmin === true && !isSuperAdmin) {
           return false;
@@ -157,4 +160,5 @@ export const getNavbarActions = ({
       return false;
     });
   }
+  return filteredActions;
 }; 
