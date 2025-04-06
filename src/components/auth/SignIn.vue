@@ -1,9 +1,14 @@
 <template>
   <div class="card">
+    <!-- Temporarily remove v-if for spinner -->
+    <!-- 
     <div v-if="!isFirekitInit" class="flex justify-content-center align-items-center" style="height: 200px">
       <PvProgressSpinner />
-    </div>
-    <form v-else class="p-fluid" @submit.prevent="handleFormSubmit(!v$.$invalid)">
+    </div> 
+    -->
+    
+    <!-- Always render the form for debugging -->
+    <form class="p-fluid" @submit.prevent="handleFormSubmit">
       <div class="field mt-2">
         <div class="p-input-icon-right">
           <PvInputText
@@ -168,6 +173,9 @@ import RoarModal from '../modals/RoarModal.vue';
 
 const authStore = useAuthStore();
 const { roarfirekit, isFirekitInit } = storeToRefs(authStore);
+watch(isFirekitInit, (newVal) => {
+    console.log('[SignIn.vue] isFirekitInit changed to:', newVal);
+}, { immediate: true });
 
 const emit = defineEmits(['submit', 'update:email']);
 // eslint-disable-next-line no-unused-vars
@@ -194,13 +202,20 @@ const capsLockEnabled = ref(false);
 const forgotPasswordModalOpen = ref(false);
 
 /**
- * @param {boolean} isFormValid - Whether the form is valid
+ * Handle form submission.
  */
-const handleFormSubmit = (isFormValid) => {
+const handleFormSubmit = (eventOrIsValid) => {
+  // Access Vuelidate properties via .value
+  const isFormValid = !v$.value.$error;
+  console.log('[SignIn.vue] handleFormSubmit called. isFormValid (checked internally):', isFormValid);
   submitted.value = true;
   if (!isFormValid) {
+    console.log('[SignIn.vue] Form is invalid, preventing submit.');
+    // Access Vuelidate methods via .value
+    v$.value.$touch();
     return;
   }
+  console.log('[SignIn.vue] Form is valid, emitting submit with state:', state);
   emit('submit', state);
 };
 

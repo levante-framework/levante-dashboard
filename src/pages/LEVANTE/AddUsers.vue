@@ -473,8 +473,12 @@ async function submitUsers() {
         return processedUser;
       });
 
-      // This is the most likely place for an error, due to 
-      // permissions, etc. If so, drop to Catch block
+      // Log the orgIds *and the content of the groups array*
+      if (processedUsers.length > 0) {
+        console.log('[AddUsers] Sending orgIds to createUsers:', processedUsers[0]?.orgIds);
+        console.log('[AddUsers] Group IDs being sent:', processedUsers[0]?.orgIds?.groups);
+      }
+
       const res = await authStore.createUsers(processedUsers);
       const currentRegisteredUsers = res.data.data;
       
@@ -614,18 +618,30 @@ const orgIds = {
  * If no organizations are found, it throws an error.
  */
 const getOrgId = async (orgType, orgName, parentDistrict, parentSchool) => {
-  if (orgIds[orgType][orgName]) return orgIds[orgType][orgName];
+  // Log input parameters
+  console.log(`[getOrgId] Called with: orgType=${orgType}, orgName=${orgName}`);
 
-  // Array of objects. Ex: [{abbreviation: 'LVT', id: 'lut54353jkler'}]
+  if (orgIds[orgType][orgName]) {
+    console.log(`[getOrgId] Returning cached ID: ${orgIds[orgType][orgName]} for ${orgName}`);
+    return orgIds[orgType][orgName];
+  }
+
+  console.log(`[getOrgId] Cache miss for ${orgName}. Calling fetchOrgByName...`);
   const orgs = await fetchOrgByName(orgType, orgName, parentDistrict, parentSchool);
+
+  // Log the result of fetchOrgByName
+  console.log(`[getOrgId] fetchOrgByName returned for ${orgName}:`, orgs);
 
   if (orgs.length === 0) {
     throw new Error(`No organizations found for ${orgType} '${orgName}'`);
   }
 
-  orgIds[orgType][orgName] = orgs[0].id;
+  // Log the ID being cached and returned
+  const foundId = orgs[0].id;
+  console.log(`[getOrgId] Caching and returning ID: ${foundId} for ${orgName}`);
+  orgIds[orgType][orgName] = foundId;
 
-  return orgs[0].id;
+  return foundId;
 };
 
 </script>

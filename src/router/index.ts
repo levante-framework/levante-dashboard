@@ -344,12 +344,16 @@ export const router = createRouter({
 });
 
 router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
+  console.log(`[RouterGuard] Navigating TO: ${String(to.name)} FROM: ${String(from.name)}`);
+
   if (!isLevante && to.meta?.project === 'LEVANTE') {
+    console.log('[RouterGuard] Non-Levante project accessing Levante route. Redirecting home.');
     next({ name: 'Home' });
     return;
   }
 
   const store = useAuthStore();
+  console.log(`[RouterGuard] Checking auth: isAuthenticated = ${store.isAuthenticated}`);
 
   const allowedUnauthenticatedRoutes = [
     'SignIn',
@@ -365,11 +369,13 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   const inMaintenanceMode = false;
 
   if (inMaintenanceMode && to.name !== 'Maintenance') {
+    console.log('[RouterGuard] Maintenance mode redirect.');
     next({ name: 'Maintenance' });
     return;
   } else if (!inMaintenanceMode && to.name === 'Maintenance') {
+    console.log('[RouterGuard] Trying to access Maintenance page while not in maintenance mode. Redirecting home.');
     next({ name: 'Home' });
-    return false;
+    return;
   }
 
   if (
@@ -377,38 +383,46 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
     !store.isAuthenticated &&
     !allowedUnauthenticatedRoutes.includes(to.name as string)
   ) {
+    console.log(`[RouterGuard] Not authenticated for restricted route ${String(to.name)}. Redirecting to SignIn.`);
     next({ name: 'SignIn' });
     return;
   }
 
   const requiresAdmin = _get(to, 'meta.requireAdmin', false);
   const requiresSuperAdmin = _get(to, 'meta.requireSuperAdmin', false);
+  console.log(`[RouterGuard] Route meta: requiresAdmin=${requiresAdmin}, requiresSuperAdmin=${requiresSuperAdmin}`);
 
-  const isUserAdmin = store.isUserAdmin;
-  const isUserSuperAdmin = store.isUserSuperAdmin;
+  if (requiresAdmin || requiresSuperAdmin) {
+    const isUserAdmin = store.isUserAdmin;
+    const isUserSuperAdmin = store.isUserSuperAdmin;
+    console.log(`[RouterGuard] User permissions: isAdmin=${isUserAdmin}, isSuperAdmin=${isUserSuperAdmin}`);
 
-  if (isUserSuperAdmin) {
-    next();
-    return;
-  } else if (isUserAdmin) {
-    if (isLevante && requiresAdmin) {
+    if (isUserSuperAdmin) {
+      console.log('[RouterGuard] Super Admin access confirmed. Allowing navigation.');
       next();
       return;
-    } else if (requiresSuperAdmin) {
-      next({ name: 'Home' });
+    } else if (isUserAdmin) {
+      if (isLevante && requiresAdmin) {
+        console.log('[RouterGuard] Levante Admin access confirmed. Allowing navigation.');
+        next();
+        return;
+      } else if (requiresSuperAdmin) {
+        console.log('[RouterGuard] Admin attempting Super Admin route. Redirecting home.');
+        next({ name: 'Home' });
+        return;
+      }
+      console.log('[RouterGuard] Admin access confirmed. Allowing navigation.');
+      next();
       return;
     }
-    next();
-    return;
-  }
 
-  if (requiresSuperAdmin || requiresAdmin) {
+    console.log('[RouterGuard] Insufficient permissions. Redirecting home.');
     next({ name: 'Home' });
     return;
   }
 
+  console.log('[RouterGuard] No specific permissions required or already handled. Allowing navigation.');
   next();
-  return;
 });
 
 export default router; 

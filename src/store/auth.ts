@@ -6,6 +6,7 @@ import _union from 'lodash/union';
 import { initNewFirekit } from '../firebaseInit';
 import { AUTH_SSO_PROVIDERS } from '../constants/auth';
 import { clearIndexedDB } from '../utils/indexedDBUtils';
+import { toRaw } from 'vue';
 
 interface FirebaseUser {
   adminFirebaseUser: User | null;
@@ -111,6 +112,7 @@ export const useAuthStore = defineStore('authStore', {
       await this.roarfirekit.completeAssessment(adminId, taskId);
     },
     async initFirekit(): Promise<void> {
+      console.log('[AuthStore] initFirekit START, setting spinner = ??? (depends on previous state)');
       console.log('Auth store: Starting Firekit initialization');
       console.log('Auth store: Current roarfirekit state:', {
         initialized: this.roarfirekit?.initialized,
@@ -155,6 +157,8 @@ export const useAuthStore = defineStore('authStore', {
         // Reset the roarfirekit state on error
         this.roarfirekit = null;
         throw error;
+      } finally {
+        console.log('[AuthStore] initFirekit END');
       }
     },
     async setAuthStateListeners(): Promise<void> {
@@ -213,15 +217,28 @@ export const useAuthStore = defineStore('authStore', {
     async registerWithEmailAndPassword({ email, password, userData }: UserData): Promise<any> {
       return this.roarfirekit.createStudentWithEmailPassword(email, password, userData);
     },
-    async logInWithEmailAndPassword({ email, password }: UserData): Promise<void> {
-      if (this.isFirekitInit) {
-        return this.roarfirekit
-          .logInWithEmailAndPassword({ email, password })
-          .then(() => {})
-          .catch((error: Error) => {
-            console.error('Error signing in:', error);
-            throw error;
-          });
+    async logInWithEmailAndPassword(creds: UserData): Promise<void> {
+      console.log('[AuthStore] logInWithEmailAndPassword START, setting spinner = true');
+      this.spinner = true;
+      try {
+        if (this.isFirekitInit) {
+          // Convert creds to plain object before passing to firekit
+          const plainCreds = toRaw(creds);
+          console.log('[AuthStore] Passing plainCreds to firekit:', plainCreds);
+          await this.roarfirekit.logInWithEmailAndPassword(plainCreds);
+          console.log('[AuthStore] logInWithEmailAndPassword SUCCESS');
+        } else {
+           throw new Error("Firekit not initialized before login attempt.");
+        }
+      } catch (error: any) {
+        console.error('[AuthStore] logInWithEmailAndPassword ERROR:', error);
+        // Reset spinner on error
+        this.spinner = false; 
+        throw error;
+      } finally {
+         // Resetting spinner on success should likely happen in the calling component
+         // or after successful navigation/state update triggered by auth listeners.
+         console.log('[AuthStore] logInWithEmailAndPassword FINALLY');
       }
     },
     async initiateLoginWithEmailLink({ email }: EmailLinkData): Promise<void> {
@@ -268,6 +285,7 @@ export const useAuthStore = defineStore('authStore', {
       return this.roarfirekit.initiateRedirect(AUTH_SSO_PROVIDERS.CLASSLINK);
     },
     async initStateFromRedirect(): Promise<void> {
+      console.log('[AuthStore] initStateFromRedirect START, setting spinner = true');
       this.spinner = true;
       const enableCookiesCallback = () => {
         const router = useRouter();
@@ -276,11 +294,15 @@ export const useAuthStore = defineStore('authStore', {
       if (this.isFirekitInit) {
         return await this.roarfirekit.signInFromRedirectResult(enableCookiesCallback).then((result: any) => {
           if (result !== null) {
-            this.spinner = true;
+            console.log('[AuthStore] initStateFromRedirect: RedirectResult received, spinner might remain true.')
           } else {
             this.spinner = false;
+            console.log('[AuthStore] initStateFromRedirect: No RedirectResult, setting spinner = false.');
           }
         });
+      } else {
+        this.spinner = false;
+        console.log('[AuthStore] initStateFromRedirect: Firekit not init, setting spinner = false.');
       }
     },
     async forceIdTokenRefresh(): Promise<void> {
@@ -302,6 +324,9 @@ export const useAuthStore = defineStore('authStore', {
     },
     async createUsers(userData: any): Promise<any> {
       return this.roarfirekit.createUsers(userData);
+    },
+    $reset() {
+      console.log('[AuthStore] $reset called, setting spinner = false (implicitly by state reset)');
     },
   },
   persist: {

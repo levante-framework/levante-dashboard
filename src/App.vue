@@ -87,8 +87,10 @@ const navbarBlacklist = ref([
 ]);
 
 onBeforeMount(async () => {
-  await authStore.initFirekit();
+  // Don't init firekit here
+  // await authStore.initFirekit(); 
 
+  // Keep initStateFromRedirect here as it might need to run early
   await authStore.initStateFromRedirect().then(async () => {
     // @TODO: Refactor this callback as we should ideally use the useUserClaimsQuery and useUserDataQuery composables.
     // @NOTE: Whilst the rest of the application relies on the user's ROAR UID, this callback requires the user's ID
@@ -103,10 +105,26 @@ onBeforeMount(async () => {
     }
   });
 
-  isAuthStoreReady.value = true;
+  // isAuthStoreReady might depend on initFirekit completing
+  // We might need to move this or adjust its dependency
+  // isAuthStoreReady.value = true; 
 });
 
-onMounted(() => {
+onMounted(async () => {
+  console.log('[App.vue] onMounted - Starting');
+  try {
+    console.log('[App.vue] onMounted - Calling initFirekit...');
+    await authStore.initFirekit();
+    console.log('[App.vue] onMounted - initFirekit FINISHED.');
+    // Set readiness after successful init
+    isAuthStoreReady.value = true;
+    console.log('[App.vue] onMounted - isAuthStoreReady set to true.');
+  } catch (error) {
+     console.error("Failed to initialize Firekit in onMounted:", error);
+     isAuthStoreReady.value = false; // Indicate not ready
+     console.log('[App.vue] onMounted - isAuthStoreReady set to false due to error.');
+  }
+
   const isLocal = import.meta.env.MODE === 'development';
   const isDevToolsEnabled = import.meta.env.VITE_QUERY_DEVTOOLS_ENABLED === 'true';
 

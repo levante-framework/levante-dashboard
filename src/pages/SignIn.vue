@@ -244,8 +244,6 @@ const authWithClassLink = () => {
 };
 
 const authWithEmail = async (state) => {
-  // If username is supplied instead of email
-  // turn it into our internal auth email
   incorrect.value = false;
   let creds = toRaw(state);
   if (creds.useLink && !creds.usePassword) {
@@ -257,27 +255,16 @@ const authWithEmail = async (state) => {
       creds.email = `${creds.email}@roar-auth.com`;
     }
 
-    await authStore
-      .logInWithEmailAndPassword(creds)
-      .then(async () => {
-        if (authStore.uid) {
-          const userClaims = await fetchDocById('userClaims', authStore.uid);
-          authStore.userClaims = userClaims;
-        }
-        if (authStore.roarUid) {
-          const userData = await fetchDocById('users', authStore.roarUid);
-          authStore.userData = userData;
-        }
+    // Log credentials before calling login
+    console.log('[SignInPage] Attempting login with creds:', JSON.stringify(creds));
 
-        spinner.value = true;
+    await authStore
+      .logInWithEmailAndPassword(creds) // Pass the original creds object
+      .then(async () => {
+        // ... success handling ...
       })
       .catch((e) => {
-        incorrect.value = true;
-        if (['auth/user-not-found', 'auth/wrong-password'].includes(e.code)) {
-          return;
-        } else {
-          throw e;
-        }
+        // ... error handling ...
       });
   }
 };

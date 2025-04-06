@@ -1,5 +1,7 @@
 import { RoarFirekit } from '@levante-framework/firekit';
 import { AuthPersistence } from '@levante-framework/firekit/lib/firestore/util';
+// Remove Firebase auth function imports for logging
+// import { getAuth, setLogLevel } from "firebase/auth";
 import levanteFirebaseConfig from './config/firebaseLevante';
 import { isLevante } from './helpers';
 
@@ -51,17 +53,36 @@ export const initNewFirekit = async () => {
       },
       dbPersistence: false,
       authPersistence: AuthPersistence.session,
+      // Remove markRawConfig for testing
+      /*
       markRawConfig: {
         auth: false,
         db: false,
         functions: false,
       },
-      verboseLogging: isLevante ? false : true,
+      */
+      verboseLogging: false,
     });
 
     // Initialize roarfirekit
     await roarfirekit.init();
     console.log('Roarfirekit initialized successfully');
+
+    // --- REMOVE Firebase Auth Debug Logging --- 
+    /*
+    try {
+      const adminAuth = roarfirekit.admin?.auth; 
+      if (adminAuth) {
+        setLogLevel('debug'); 
+        console.log('Firebase Auth debug logging enabled for admin instance.');
+      } else {
+         console.warn('Could not get admin auth instance from firekit to enable debug logging.');
+      }
+    } catch (logError) {
+      console.error('Error enabling Firebase Auth debug logging:', logError);
+    }
+    */
+    // ----------------------------------------- 
 
     // Verify that roarfirekit is properly initialized
     if (!roarfirekit.initialized) {
