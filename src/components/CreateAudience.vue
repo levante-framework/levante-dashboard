@@ -408,11 +408,25 @@ const submit = async () => {
 
     await roarfirekit.value
       .createOrg(orgType.value.firestoreCollection, orgData, isTestData.value, isDemoData.value)
-      .then(() => {
+      .then(async () => {
         queryClient.invalidateQueries({ queryKey: ['orgs'], exact: false });
         toast.add({ severity: 'success', summary: 'Success', detail: 'Audience created', life: 3000 });
         submitted.value = false;
         resetForm();
+
+        console.log('[CreateAudience] Forcing ID token refresh after org creation...');
+        try {
+          const adminAuth = authStore.roarfirekit?.admin?.auth;
+          const user = adminAuth?.currentUser;
+          if (user) {
+            await user.getIdToken(true);
+            console.log('[CreateAudience] ID token refreshed successfully.');
+          } else {
+            console.warn('[CreateAudience] No currentUser found on admin auth instance to refresh token.');
+          }
+        } catch (tokenError) {
+          console.error('[CreateAudience] Error refreshing ID token:', tokenError);
+        }
       })
       .catch((error) => {
         toast.add({ severity: 'error', summary: 'Error', detail: error.message, life: 3000 });

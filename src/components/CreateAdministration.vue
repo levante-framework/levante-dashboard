@@ -481,6 +481,9 @@ const submit = async () => {
     families: toRaw(state.families).map((org) => org.id),
   };
 
+  // Log the orgs object before sending
+  console.log('[CreateAdmin] Orgs being submitted:', JSON.stringify(orgs));
+
   const orgsValid = checkForRequiredOrgs(orgs);
   if (!orgsValid) {
     // @TODO: Add error handling, i.e. confirmation dialog like the one for non-unique tasks?

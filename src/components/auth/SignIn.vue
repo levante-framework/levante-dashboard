@@ -1,23 +1,21 @@
 <template>
   <div class="card">
-    <!-- Temporarily remove v-if for spinner -->
-    <!-- 
+    <!-- Reinstate v-if/v-else -->
     <div v-if="!isFirekitInit" class="flex justify-content-center align-items-center" style="height: 200px">
       <PvProgressSpinner />
-    </div> 
-    -->
-    
-    <!-- Always render the form for debugging -->
-    <form class="p-fluid" @submit.prevent="handleFormSubmit">
+    </div>
+    <form v-else class="p-fluid" @submit.prevent="handleFormSubmit">
       <div class="field mt-2">
         <div class="p-input-icon-right">
           <PvInputText
             :id="$t('authSignIn.emailId')"
-            v-model="v$.email.$model"
+            v-model="state.email"
             :class="{ 'w-full': true, 'p-invalid': invalid }"
             aria-describedby="email-error"
             :placeholder="$t('authSignIn.emailPlaceholder')"
             data-cy="input-username-email"
+            autocomplete="off"
+            @blur="v$.email.$touch()"
             @keyup="checkForCapsLock"
             @click="checkForCapsLock"
           />
@@ -42,6 +40,7 @@
               :feedback="false"
               :placeholder="$t('authSignIn.passwordPlaceholder')"
               data-cy="input-password"
+              autocomplete="current-password"
               @keyup="checkForCapsLock"
               @click="checkForCapsLock"
             />
@@ -70,6 +69,7 @@
             :feedback="true"
             :placeholder="$t('authSignIn.passwordPlaceholder')"
             data-cy="input-password"
+            autocomplete="current-password"
             @keyup="checkForCapsLock"
             @click="checkForCapsLock"
           >
@@ -120,6 +120,7 @@
         type="submit"
         class="mt-5 flex w-5 p-3 border-none border-round hover:bg-black-alpha-20"
         :label="$t('authSignIn.buttonLabel') + ' &rarr;'"
+        :disabled="!isFirekitInit || evaluatingEmail"
       />
       <hr class="opacity-20 mt-5" />
     </form>
@@ -157,7 +158,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch, computed } from 'vue';
+import { reactive, ref, watch, computed, toRaw } from 'vue';
 import { storeToRefs } from 'pinia';
 import { required, requiredUnless } from '@vuelidate/validators';
 import { useVuelidate } from '@vuelidate/core';
@@ -204,18 +205,18 @@ const forgotPasswordModalOpen = ref(false);
 /**
  * Handle form submission.
  */
-const handleFormSubmit = (eventOrIsValid) => {
-  // Access Vuelidate properties via .value
+const handleFormSubmit = (/* eventOrIsValid */) => {
+  // Log the state *just before* emitting
+  console.log('[SignInComponent] handleFormSubmit - Current state being emitted:', toRaw(state)); 
   const isFormValid = !v$.value.$error;
-  console.log('[SignIn.vue] handleFormSubmit called. isFormValid (checked internally):', isFormValid);
+  console.log('[SignInComponent] handleFormSubmit called. isFormValid (checked internally):', isFormValid);
   submitted.value = true;
   if (!isFormValid) {
-    console.log('[SignIn.vue] Form is invalid, preventing submit.');
-    // Access Vuelidate methods via .value
+    console.log('[SignInComponent] Form is invalid, preventing submit.');
     v$.value.$touch();
     return;
   }
-  console.log('[SignIn.vue] Form is valid, emitting submit with state:', state);
+  console.log('[SignInComponent] Form is valid, emitting submit with state:', state);
   emit('submit', state);
 };
 
@@ -301,16 +302,16 @@ function sendResetEmail() {
   closeForgotPasswordModal();
 }
 
-watch(
-  () => state.email,
-  async (email) => {
-    emit('update:email', email);
-    if (isValidEmail(email)) {
-      evaluatingEmail.value = true;
-      validateRoarEmail(email);
-    }
-  },
-);
+// Watch the email state directly
+watch(() => state.email, (newEmail) => {
+  console.log('[SignInComponent] state.email changed:', newEmail);
+  // Also trigger the existing watcher that emits update:email
+  emit('update:email', newEmail);
+  if (isValidEmail(newEmail)) {
+    evaluatingEmail.value = true;
+    validateRoarEmail(newEmail);
+  }
+});
 
 </script>
 <style scoped>
