@@ -3,7 +3,7 @@ import { storeToRefs } from 'pinia';
 import { useRouter, Router } from 'vue-router';
 import { useQueryClient, QueryClient } from '@tanstack/vue-query';
 import { StatusCodes } from 'http-status-codes';
-import { useAuthStore } from '@/store/auth.ts'; // Use .ts
+import { useAuthStore } from '@/store/auth.js';
 import useUserDataQuery from '@/composables/queries/useUserDataQuery'; // Assuming .ts
 import { AUTH_USER_TYPE } from '@/constants/auth';
 import { APP_ROUTES } from '@/constants/routes';

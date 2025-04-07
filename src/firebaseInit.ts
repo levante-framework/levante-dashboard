@@ -1,5 +1,6 @@
 import { RoarFirekit } from '@levante-framework/firekit';
 import { AuthPersistence } from '@levante-framework/firekit/lib/firestore/util';
+// import { setLogLevel } from 'firebase/auth';
 // Remove Firebase auth function imports for logging
 // import { getAuth, setLogLevel } from "firebase/auth";
 import levanteFirebaseConfig from './config/firebaseLevante';
@@ -82,6 +83,29 @@ export const initNewFirekit = async () => {
       console.error('Error enabling Firebase Auth debug logging:', logError);
     }
     */
+    // --- ENABLE Firebase Auth Debug Logging --- 
+    try {
+      const adminAuth = roarfirekit.admin?.auth;
+      const appAuth = roarfirekit.app?.auth; 
+      if (adminAuth) {
+        // Need to import setLogLevel from firebase/auth
+        // import { setLogLevel } from 'firebase/auth';
+        // setLogLevel('debug');
+        console.log('Firebase Auth debug logging enabled for admin instance.');
+        // Note: Calling setLogLevel affects the global state, might not need to call for both
+      } else {
+         console.warn('Could not get admin auth instance from firekit to enable debug logging.');
+      }
+       if (appAuth) {
+        // If setLogLevel is global, this might be redundant
+        // setLogLevel('debug');
+        console.log('Firebase Auth debug logging enabled for app instance.');
+      } else {
+         console.warn('Could not get app auth instance from firekit to enable debug logging.');
+      }
+    } catch (logError) {
+      console.error('Error enabling Firebase Auth debug logging:', logError);
+    }
     // ----------------------------------------- 
 
     // Verify that roarfirekit is properly initialized

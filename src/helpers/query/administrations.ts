@@ -4,7 +4,7 @@ import _last from 'lodash/last';
 import _mapValues from 'lodash/mapValues';
 import _without from 'lodash/without';
 import { storeToRefs } from 'pinia';
-import { useAuthStore } from '@/store/auth';
+import { useAuthStore } from '@/store/auth.js';
 import { convertValues, getAxiosInstance, orderByDefault } from './utils';
 import { filterAdminOrgs } from '@/helpers';
 import { Ref } from 'vue';

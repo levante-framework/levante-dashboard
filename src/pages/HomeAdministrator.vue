@@ -168,6 +168,7 @@ interface UserTypeInfo {
 }
 
 const initialized = ref(false);
+console.log('[HomeAdmin Setup] Initialized ref created:', initialized.value);
 const pageLimit = ref(10);
 const page = ref(0);
 
@@ -183,49 +184,63 @@ const fetchTestAdministrations = ref(false);
 
 const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
+console.log('[HomeAdmin Setup] roarfirekit ref from store:', roarfirekit.value);
 
 let unsubscribeInitializer: (() => void) | undefined;
 const init = () => {
-  console.log('HomeAdmin: init() called, setting initialized = true');
-  if (unsubscribeInitializer) unsubscribeInitializer();
+  console.log('[HomeAdmin] init() CALLED - Setting initialized = true');
+  if (unsubscribeInitializer) {
+    console.log('[HomeAdmin init] Unsubscribing from authStore');
+    unsubscribeInitializer();
+    unsubscribeInitializer = undefined; // Clear subscription
+  }
   initialized.value = true;
+  console.log('[HomeAdmin init] initialized ref is now:', initialized.value);
 };
 
+console.log('[HomeAdmin Setup] Setting up authStore subscription...');
 unsubscribeInitializer = authStore.$subscribe(async (mutation, state) => {
-  console.log('HomeAdmin: AuthStore subscription triggered');
-  if (state.roarfirekit.restConfig) {
-    console.log('HomeAdmin: AuthStore subscription - restConfig found, calling init()');
+  // Use state.roarfirekit directly from the subscription payload
+  console.log('[HomeAdmin Sub] AuthStore subscription triggered. Checking state.roarfirekit.restConfig...');
+  if (state.roarfirekit?.restConfig) { // Check state directly
+    console.log('[HomeAdmin Sub] restConfig FOUND in state, calling init()');
     init();
+  } else {
+    console.log('[HomeAdmin Sub] restConfig NOT found in state');
   }
 });
 
 onMounted(() => {
-  console.log('HomeAdmin: onMounted hook');
-  if (roarfirekit.value.restConfig) {
-    console.log('HomeAdmin: onMounted - restConfig found, calling init()');
+  console.log('[HomeAdmin onMounted] Hook executing...');
+  console.log('[HomeAdmin onMounted] Current roarfirekit.value:', roarfirekit.value);
+  // Check roarfirekit.value from storeToRefs
+  if (roarfirekit.value?.restConfig) {
+    console.log('[HomeAdmin onMounted] restConfig FOUND in roarfirekit.value, calling init()');
     init();
   } else {
-    console.log('HomeAdmin: onMounted - restConfig NOT found yet');
+    console.log('[HomeAdmin onMounted] restConfig NOT found in roarfirekit.value yet');
   }
-  // Log initial value of initialized ref
-  console.log('HomeAdmin: onMounted - initial value of initialized:', initialized.value);
+  console.log('[HomeAdmin onMounted] Hook finished. initialized ref:', initialized.value);
 });
 
-console.log('HomeAdmin: Running setup - initial value of initialized:', initialized.value);
+console.log('[HomeAdmin Setup] Setup script finished. Initialized ref:', initialized.value);
 
 const { data: userClaims, isFetching: isFetchingClaims, status: claimsStatus } = useUserClaimsQuery({
-  enabled: initialized,
+  enabled: initialized, // Query depends on initialized ref
   queryKey: ['userClaims'],
 });
 
 // Watch the userClaims data from this component's perspective
 watch(userClaims, (newClaims) => {
-  console.log('HomeAdmin: userClaims watcher triggered. New claims:', newClaims);
+  console.log('[HomeAdmin] userClaims watcher triggered. New claims:', newClaims);
 }, { immediate: true });
 
 // Watch the initialized ref
 watch(initialized, (newVal) => {
-  console.log('HomeAdmin: initialized ref changed to:', newVal);
+  console.log('[HomeAdmin] initialized ref CHANGED to:', newVal);
+  if(newVal) {
+    console.log('[HomeAdmin] initialized became true, queries should now be enabled.');
+  }
 });
 
 const userTypeInfo = useUserType(userClaims) as UserTypeInfo;
@@ -241,19 +256,18 @@ const generateAutoCompleteSearchTokens = () => {
   searchTokens.value = [...new Set(searchTokens.value)];
 };
 
-console.log('HomeAdmin: Calling useAdministrationsListQuery');
+console.log('[HomeAdmin Setup] Calling useAdministrationsListQuery. Initialized ref:', initialized.value);
 const {
   isLoading: isLoadingAdministrations,
   isFetching: isFetchingAdministrations,
   data: administrations,
 } = useAdministrationsListQuery(orderBy, fetchTestAdministrations.value, {
-  // @ts-ignore - Suppress persistent type error
-  enabled: initialized,
+  enabled: initialized, // Query depends on initialized ref
 });
 
 // Watch administrations data
 watch(administrations, (newAdmins) => {
-  console.log('HomeAdmin: administrations watcher triggered. New admins:', newAdmins);
+  console.log('[HomeAdmin] administrations watcher triggered. New admins:', newAdmins);
   if (!newAdmins) return;
 
   generateAutoCompleteSearchTokens();

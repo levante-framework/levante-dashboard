@@ -10,7 +10,7 @@ import _toPairs from 'lodash/toPairs';
 import _union from 'lodash/union';
 import _without from 'lodash/without';
 import { storeToRefs } from 'pinia';
-import { useAuthStore } from '@/store/auth';
+import { useAuthStore } from '@/store/auth.js';
 import { flattenObj } from '@/helpers';
 import { FIRESTORE_DATABASES, FirestoreDatabase } from '@/constants/firebase';
 import { Ref } from 'vue';
