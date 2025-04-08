@@ -1,6 +1,16 @@
-import { computed } from 'vue';
+import { computed, type Ref, type ComputedRef } from 'vue';
 import { AUTH_USER_TYPE } from '@/constants/auth';
 import _isEmpty from 'lodash/isEmpty';
+
+// Define the expected structure for the claims
+interface Claims {
+  super_admin?: boolean;
+  minimalAdminOrgs?: Record<string, string[]>;
+}
+
+interface UserClaimsData {
+  claims?: Claims;
+}
 
 /**
  * Get user type
@@ -9,13 +19,18 @@ import _isEmpty from 'lodash/isEmpty';
  * participant. The user type is determined based on the user claims, where a user is considered an admin if they have
  * the corresponding super_admin or miniamlAdminOrgs claims.
  *
- * @param {Object} userClaims - The user claims object.
- * @returns {Object} The user type and related computed properties.
+ * @param {Ref<UserClaimsData | null>} userClaims - The reactive user claims object.
+ * @returns {{ userType: ComputedRef<string | undefined>, isAdmin: ComputedRef<boolean>, isParticipant: ComputedRef<boolean>, isSuperAdmin: ComputedRef<boolean> }} The user type and related computed properties.
  */
-export default function useUserType(userClaims) {
-  const userType = computed(() => {
+export default function useUserType(userClaims: Ref<UserClaimsData | null>): {
+  userType: ComputedRef<string | undefined>;
+  isAdmin: ComputedRef<boolean>;
+  isParticipant: ComputedRef<boolean>;
+  isSuperAdmin: ComputedRef<boolean>;
+} {
+  const userType: ComputedRef<string | undefined> = computed(() => {
     // Abort the user type determination if the user claims are not available yet.
-    if (!userClaims.value) return;
+    if (!userClaims.value) return undefined; // Return undefined if claims are null/undefined
 
     const claims = userClaims.value.claims;
 
@@ -25,7 +40,7 @@ export default function useUserType(userClaims) {
     }
 
     // Check if the user has any minimal admin organizations.
-    const minimalAdminOrgs = claims?.minimalAdminOrgs || {};
+    const minimalAdminOrgs = claims?.minimalAdminOrgs ?? {}; // Use nullish coalescing
     const hasMinimalAdminOrgs = Object.values(minimalAdminOrgs).some((org) => !_isEmpty(org));
 
     if (hasMinimalAdminOrgs) {
@@ -36,9 +51,9 @@ export default function useUserType(userClaims) {
     return AUTH_USER_TYPE.PARTICIPANT;
   });
 
-  const isAdmin = computed(() => userType.value === AUTH_USER_TYPE.ADMIN);
-  const isParticipant = computed(() => userType.value === AUTH_USER_TYPE.PARTICIPANT);
-  const isSuperAdmin = computed(() => userType.value === AUTH_USER_TYPE.SUPER_ADMIN);
+  const isAdmin: ComputedRef<boolean> = computed(() => userType.value === AUTH_USER_TYPE.ADMIN);
+  const isParticipant: ComputedRef<boolean> = computed(() => userType.value === AUTH_USER_TYPE.PARTICIPANT);
+  const isSuperAdmin: ComputedRef<boolean> = computed(() => userType.value === AUTH_USER_TYPE.SUPER_ADMIN);
 
   return {
     userType,
