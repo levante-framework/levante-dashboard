@@ -16,7 +16,7 @@
   </Head>
   <div>
     <PvToast />
-    <NavBar v-if="!navbarBlacklist.includes($route.name) && isAuthStoreReady" />
+    <NavBar v-if="!navbarBlacklist.includes($route.name) && authStore.isReady" />
     <router-view :key="$route.fullPath" />
 
     <SessionTimer v-if="loadSessionTimeoutHandler" />
@@ -42,7 +42,6 @@ import { useAuthStore } from '@/store/auth.js';
 import { fetchDocById } from '@/helpers/query/utils';
 import { i18n } from '@/translations/i18n';
 
-const isAuthStoreReady = ref(false);
 const showDevtools = ref(false);
 
 const authStore = useAuthStore();
@@ -54,7 +53,7 @@ const pageTitle = computed(() => {
   return route.meta?.pageTitle?.[locale] || route.meta?.pageTitle?.[fallbackLocale] || route.meta?.pageTitle;
 });
 
-const loadSessionTimeoutHandler = computed(() => isAuthStoreReady.value && authStore.isAuthenticated);
+const loadSessionTimeoutHandler = computed(() => authStore.isReady && authStore.isAuthenticated);
 
 useRecaptchaProvider();
 
@@ -87,62 +86,42 @@ const navbarBlacklist = ref([
 ]);
 
 onBeforeMount(async () => {
-  // Don't init firekit here
-  // await authStore.initFirekit(); 
-
-  // Keep initStateFromRedirect here as it might need to run early
-  // BUT remove data fetching from here
+  // Keep initStateFromRedirect here 
   await authStore.initStateFromRedirect();
-  /* Remove data fetching from onBeforeMount
-  .then(async () => {
-    // @TODO: Refactor this callback as we should ideally use the useUserClaimsQuery and useUserDataQuery composables.
-    // @NOTE: Whilst the rest of the application relies on the user's ROAR UID, this callback requires the user's ID
-    // in order for SSO to work and cannot currently be changed without significant refactoring.
-    if (authStore.uid) {
-      const userClaims = await fetchDocById('userClaims', authStore.uid);
-      authStore.userClaims = userClaims;
-    }
-    if (authStore.roarUid) {
-      const userData = await fetchDocById('users', authStore.roarUid);
-      authStore.userData = userData;
-    }
-  });
-  */
-
-  // isAuthStoreReady might depend on initFirekit completing
-  // We might need to move this or adjust its dependency
-  // isAuthStoreReady.value = true; 
 });
 
 onMounted(async () => {
   console.log('[App.vue] onMounted - Starting');
   try {
     console.log('[App.vue] onMounted - Calling initFirekit...');
-    await authStore.initFirekit();
-    console.log('[App.vue] onMounted - initFirekit FINISHED.');
+    await authStore.initFirekit(); // This action now sets authStore.isReady
+    console.log('[App.vue] onMounted - initFirekit FINISHED. Store readiness:', authStore.isReady);
     
     // Fetch user data ONLY after successful init
-    console.log('[App.vue] onMounted - Fetching user claims/data after successful init...');
-    if (authStore.uid) {
-      console.log('[App.vue] onMounted - Fetching userClaims for uid:', authStore.uid);
-      const userClaims = await fetchDocById('userClaims', authStore.uid);
-      authStore.userClaims = userClaims;
-      console.log('[App.vue] onMounted - Fetched userClaims:', userClaims);
-    }
-    if (authStore.roarUid) {
-       console.log('[App.vue] onMounted - Fetching userData for roarUid:', authStore.roarUid);
-      const userData = await fetchDocById('users', authStore.roarUid);
-      authStore.userData = userData;
-       console.log('[App.vue] onMounted - Fetched userData:', userData);
+    // Check store readiness before fetching
+    if (authStore.isReady) {
+        console.log('[App.vue] onMounted - Fetching user claims/data after successful init...');
+        if (authStore.uid) {
+          console.log('[App.vue] onMounted - Fetching userClaims for uid:', authStore.uid);
+          const userClaims = await fetchDocById('userClaims', authStore.uid);
+          authStore.userClaims = userClaims;
+          console.log('[App.vue] onMounted - Fetched userClaims:', userClaims);
+        }
+        if (authStore.roarUid) {
+           console.log('[App.vue] onMounted - Fetching userData for roarUid:', authStore.roarUid);
+          const userData = await fetchDocById('users', authStore.roarUid);
+          authStore.userData = userData;
+           console.log('[App.vue] onMounted - Fetched userData:', userData);
+        }
+    } else {
+        console.warn('[App.vue] onMounted - Store not ready after initFirekit, skipping initial data fetch.');
     }
     
-    // Set readiness after successful init AND data fetch (optional, depends if UI needs this data)
-    isAuthStoreReady.value = true;
-    console.log('[App.vue] onMounted - isAuthStoreReady set to true.');
   } catch (error) {
      console.error("Failed to initialize Firekit or fetch initial data in onMounted:", error);
-     isAuthStoreReady.value = false; // Indicate not ready
-     console.log('[App.vue] onMounted - isAuthStoreReady set to false due to error.');
+     // Store already sets isReady to false on error
+     // isAuthStoreReady.value = false; 
+     // console.log('[App.vue] onMounted - isAuthStoreReady set to false due to error.');
   }
 
   const isLocal = import.meta.env.MODE === 'development';

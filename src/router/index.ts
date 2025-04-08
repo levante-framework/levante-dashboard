@@ -4,6 +4,10 @@ import _get from 'lodash/get';
 import { pageTitlesEN, pageTitlesUS, pageTitlesES, pageTitlesCO } from '@/translations/exports';
 import { isLevante } from '@/helpers';
 import { APP_ROUTES } from '@/constants/routes';
+import { storeToRefs } from 'pinia';
+import { watch } from 'vue';
+import _isEmpty from 'lodash/isEmpty';
+import _union from 'lodash/union';
 
 interface RouteMeta {
   pageTitle?: string | Record<string, string>;
@@ -343,86 +347,109 @@ export const router = createRouter({
   },
 });
 
-router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
-  console.log(`[RouterGuard] Navigating TO: ${String(to.name)} FROM: ${String(from.name)}`);
+// Centralized flag to prevent multiple concurrent waits
+let isWaitingForAuthReady = false;
 
-  if (!isLevante && to.meta?.project === 'LEVANTE') {
-    console.log('[RouterGuard] Non-Levante project accessing Levante route. Redirecting home.');
-    next({ name: 'Home' });
-    return;
-  }
+// Navigation Guard
+router.beforeEach(
+  async (
+    to: RouteLocationNormalized,
+    from: RouteLocationNormalized,
+    next: NavigationGuardNext,
+  ): Promise<void> => {
+    // Get store instance inside the guard
+    const authStore = useAuthStore(); 
+    // IMPORTANT: Access state directly here for the initial check, 
+    // refs might not be ready yet.
 
-  const store = useAuthStore();
-  console.log(`[RouterGuard] Checking auth: isAuthenticated = ${store.isAuthenticated}`);
+    console.log(`[RouterGuard] Navigating TO: ${to.name?.toString()} FROM: ${from.name?.toString()}`);
 
-  const allowedUnauthenticatedRoutes = [
-    'SignIn',
-    'SSO',
-    'Maintenance',
-    'AuthClever',
-    'AuthClassLink',
-    'AuthEmailLink',
-    'AuthEmailSent',
-    'Register',
-  ];
+    // --- Wait for Auth Store Readiness --- 
+    if (!authStore.isReady && !isWaitingForAuthReady && to.name !== 'SignIn' && to.name !== 'Register') { 
+        console.log('[RouterGuard] AuthStore not ready yet (direct check). Waiting using loop...');
+        isWaitingForAuthReady = true; 
+        
+        let waitCycles = 0;
+        const maxWaitCycles = 200; // Approx 10 seconds
+        // Check direct state in the loop
+        while (!authStore.isReady && waitCycles < maxWaitCycles) {
+          waitCycles++;
+          console.log(`[RouterGuard] Waiting... Cycle: ${waitCycles}. Store ready: ${authStore.isReady}`);
+          await new Promise(resolve => setTimeout(resolve, 50)); 
+        }
 
-  const inMaintenanceMode = false;
+        isWaitingForAuthReady = false; 
 
-  if (inMaintenanceMode && to.name !== 'Maintenance') {
-    console.log('[RouterGuard] Maintenance mode redirect.');
-    next({ name: 'Maintenance' });
-    return;
-  } else if (!inMaintenanceMode && to.name === 'Maintenance') {
-    console.log('[RouterGuard] Trying to access Maintenance page while not in maintenance mode. Redirecting home.');
-    next({ name: 'Home' });
-    return;
-  }
+        if (!authStore.isReady) {
+             console.error('[RouterGuard] Wait timed out. AuthStore never became ready.');
+             next({ name: 'SignIn' });
+             return;
+        } else {
+             console.log('[RouterGuard] AuthStore became ready after wait loop. Proceeding.');
+        }
+    } 
+    // --- End Wait --- 
 
-  if (
-    !to.path.includes('__/auth/handler') &&
-    !store.isAuthenticated &&
-    !allowedUnauthenticatedRoutes.includes(to.name as string)
-  ) {
-    console.log(`[RouterGuard] Not authenticated for restricted route ${String(to.name)}. Redirecting to SignIn.`);
-    next({ name: 'SignIn' });
-    return;
-  }
+    // Now that the store should be ready, get reactive refs
+    const { isAuthenticated, userClaims, adminOrgs } = storeToRefs(authStore);
 
-  const requiresAdmin = _get(to, 'meta.requireAdmin', false);
-  const requiresSuperAdmin = _get(to, 'meta.requireSuperAdmin', false);
-  console.log(`[RouterGuard] Route meta: requiresAdmin=${requiresAdmin}, requiresSuperAdmin=${requiresSuperAdmin}`);
-
-  if (requiresAdmin || requiresSuperAdmin) {
-    const isUserAdmin = store.isUserAdmin;
-    const isUserSuperAdmin = store.isUserSuperAdmin;
-    console.log(`[RouterGuard] User permissions: isAdmin=${isUserAdmin}, isSuperAdmin=${isUserSuperAdmin}`);
-
-    if (isUserSuperAdmin) {
-      console.log('[RouterGuard] Super Admin access confirmed. Allowing navigation.');
-      next();
-      return;
-    } else if (isUserAdmin) {
-      if (isLevante && requiresAdmin) {
-        console.log('[RouterGuard] Levante Admin access confirmed. Allowing navigation.');
-        next();
-        return;
-      } else if (requiresSuperAdmin) {
-        console.log('[RouterGuard] Admin attempting Super Admin route. Redirecting home.');
-        next({ name: 'Home' });
-        return;
-      }
-      console.log('[RouterGuard] Admin access confirmed. Allowing navigation.');
-      next();
-      return;
+    // --- Add check if store is STILL not ready (extra safety) ---
+    if (!authStore.isReady && to.name !== 'SignIn' && to.name !== 'Register') {
+      console.error('[RouterGuard] Double check failed: AuthStore not ready. Redirecting to SignIn.');
+      next({ name: 'SignIn' });
+      return; 
     }
+    // ---------------------------------------------------------------------
 
-    console.log('[RouterGuard] Insufficient permissions. Redirecting home.');
-    next({ name: 'Home' });
-    return;
-  }
+    console.log(`[RouterGuard] Checking auth: isAuthenticated = ${isAuthenticated.value}`);
 
-  console.log('[RouterGuard] No specific permissions required or already handled. Allowing navigation.');
-  next();
-});
+    const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+    const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin);
+    const requiresSuperAdmin = to.matched.some((record) => record.meta.requiresSuperAdmin);
+
+    // Permission checks - use .value for refs from storeToRefs
+    if (requiresAuth && !isAuthenticated.value) {
+        console.log(`[RouterGuard] Not authenticated for restricted route ${to.name?.toString()}. Redirecting to SignIn.`);
+        next({ name: 'SignIn' });
+    } else if (requiresSuperAdmin) {
+      console.log(`[RouterGuard] Route meta: requiresAdmin=${requiresAdmin}, requiresSuperAdmin=${requiresSuperAdmin}`);
+      const isSuperAdmin = userClaims.value?.claims?.super_admin ?? false;
+      console.log(`[RouterGuard] User permissions: isSuperAdmin=${isSuperAdmin}`);
+      if (!isSuperAdmin) {
+        console.log(`[RouterGuard] User lacks Super Admin permission for route ${to.name?.toString()}. Redirecting to Home.`);
+        next({ name: 'Home' }); 
+      } else {
+         console.log('[RouterGuard] Super Admin access confirmed. Allowing navigation.');
+        next(); 
+      }
+    } else if (requiresAdmin) {
+      console.log(`[RouterGuard] Route meta: requiresAdmin=${requiresAdmin}, requiresSuperAdmin=${requiresSuperAdmin}`);
+      const isSuper = userClaims.value?.claims?.super_admin ?? false;
+      const isAdmin = userClaims.value?.claims?.admin ?? false;
+      const hasMinAdminOrgs = !_isEmpty(_union(...Object.values(userClaims.value?.claims?.minimalAdminOrgs ?? {})));
+      const userIsAdmin = isSuper || isAdmin || hasMinAdminOrgs;
+      console.log(`[RouterGuard] User permissions: isAdmin=${userIsAdmin}, isSuperAdmin=${isSuper}`);
+      if (!userIsAdmin) {
+        console.log(`[RouterGuard] User lacks Admin permission for route ${to.name?.toString()}. Redirecting to Home.`);
+        next({ name: 'Home' }); 
+      } else if (isLevante && !isSuper) {
+          const userAdminOrgs = adminOrgs.value;
+          if (!userAdminOrgs || userAdminOrgs.length === 0) {
+              console.log(`[RouterGuard] Levante Admin has no assigned orgs. Redirecting to Profile.`);
+              next({ name: 'AdminProfile' });
+          } else {
+              console.log('[RouterGuard] Levante Admin access confirmed. Allowing navigation.');
+              next();
+          }
+      } else {
+        console.log('[RouterGuard] Admin access confirmed. Allowing navigation.');
+        next();
+      }
+    } else {
+      console.log('[RouterGuard] No specific permissions required or already handled. Allowing navigation.');
+      next(); 
+    }
+  },
+);
 
 export default router; 
