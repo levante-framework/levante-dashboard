@@ -553,7 +553,7 @@ watch([orgData, isLoading, activeOrgType], async ([newOrgData, newIsLoading, new
     console.error('Error mapping organization data:', error);
     tableData.value = [];
   }
-}, { immediate: true });
+}, );
 
 const showCode = async (selectedOrg) => {
   const orgInfo = await fetchDocById(activeOrgType.value, selectedOrg.id);

@@ -161,7 +161,7 @@ const mapAdministrations = async ({
     .filter((item) => item.name !== undefined)
     .map(({ name }) => `${name}/stats/total`);
 
-  const axiosInstance = getAxiosInstance();
+  const axiosInstance = await getAxiosInstance();
   const batchStatsDocs = await processBatchStats(axiosInstance, statsPaths);
 
   return administrationData.map((administration) => {
@@ -209,7 +209,7 @@ export const administrationPageFetcher = async (
       return [];
     }
 
-    const axiosInstance = getAxiosInstance();
+    const axiosInstance = await getAxiosInstance();
     const baseURL = axiosInstance.defaults.baseURL ?? '';
     const documentPrefix = baseURL.replace(
       'https://firestore.googleapis.com/v1/',

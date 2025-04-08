@@ -161,7 +161,7 @@ export const fetchUsersByOrg = async (
   orderBy: string,
   restrictToActiveUsers = false
 ): Promise<User[]> => {
-  const axiosInstance = getAxiosInstance();
+  const axiosInstance = await getAxiosInstance();
   const requestBody = getUsersRequestBody({
     orgType: toValue(orgType),
     orgId: toValue(orgId),
@@ -188,7 +188,7 @@ export const countUsersByOrg = async (
   orderBy: string,
   restrictToActiveUsers = false
 ): Promise<number> => {
-  const axiosInstance = getAxiosInstance();
+  const axiosInstance = await getAxiosInstance();
   const requestBody = getUsersRequestBody({
     orgType: toValue(orgType),
     orgId: toValue(orgId),

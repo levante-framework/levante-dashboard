@@ -14,6 +14,7 @@ import { useAuthStore } from '@/store/auth.js';
 import { flattenObj } from '@/helpers';
 import { FIRESTORE_DATABASES, FirestoreDatabase } from '@/constants/firebase';
 import { Ref } from 'vue';
+import { User, getIdToken } from 'firebase/auth';
 
 interface FirestoreValue {
   nullValue?: null;
@@ -133,34 +134,56 @@ export const getProjectId = (project: FirestoreDatabase): string | undefined => 
   return roarfirekit.value.roarConfig?.[project]?.projectId;
 };
 
-export const getAxiosInstance = (db: FirestoreDatabase = FIRESTORE_DATABASES.ADMIN, unauthenticated = false): AxiosInstance => {
+export const getAxiosInstance = async (db: FirestoreDatabase = FIRESTORE_DATABASES.ADMIN, unauthenticated = false): Promise<AxiosInstance> => {
   const authStore = useAuthStore();
-  const { roarfirekit } = storeToRefs(authStore);
+  const firekit = authStore.roarfirekit;
   
   console.log('Getting axios instance for database:', db);
   console.log('Roarfirekit state:', {
-    initialized: roarfirekit.value?.initialized,
-    hasRestConfig: !!roarfirekit.value?.restConfig,
+    initialized: firekit?.initialized,
+    hasRestConfig: !!firekit?.restConfig,
     baseURLs: {
-      admin: roarfirekit.value?.restConfig?.admin?.baseURL,
-      app: roarfirekit.value?.restConfig?.app?.baseURL
+      admin: firekit?.restConfig?.admin?.baseURL,
+      app: firekit?.restConfig?.app?.baseURL
     }
   });
   
-  if (!roarfirekit.value?.initialized) {
-    console.error('Roarfirekit is not initialized');
-    throw new Error('Roarfirekit is not initialized');
+  if (!authStore.isReady || !firekit) {
+    console.error('Roarfirekit is not initialized or store is not ready');
+    throw new Error('Roarfirekit is not initialized or store not ready');
   }
   
-  const axiosOptions = _get(roarfirekit.value.restConfig, db) ?? {};
+  const axiosOptions = JSON.parse(JSON.stringify(_get(firekit.restConfig, db) ?? {}));
+
+  axiosOptions.headers = axiosOptions.headers || {};
   
   if (unauthenticated) {
-    delete axiosOptions.headers;
+    delete axiosOptions.headers['Authorization'];
+    console.log('Creating unauthenticated Axios instance for:', db);
+  } else {
+    const currentUser: User | null = db === FIRESTORE_DATABASES.ADMIN 
+                                      ? firekit.admin?.auth?.currentUser 
+                                      : firekit.app?.auth?.currentUser;
+
+    if (currentUser) {
+      try {
+        console.log(`Attempting to get fresh ID token for user ${currentUser.uid} for DB ${db}...`);
+        const freshToken = await getIdToken(currentUser, true);
+        axiosOptions.headers['Authorization'] = `Bearer ${freshToken}`;
+        console.log(`Successfully added fresh token to Axios headers for DB ${db}.`);
+      } catch (error) {
+        console.error(`Failed to refresh ID token for DB ${db}:`, error);
+        throw new Error(`Failed to refresh authentication token: ${error}`);
+      }
+    } else {
+      console.warn(`No current user found for DB ${db}. Proceeding without Authorization header.`);
+      delete axiosOptions.headers['Authorization'];
+    }
   }
 
   if (!axiosOptions.baseURL) {
     console.error('Base URL is not set for database:', db);
-    console.error('Available restConfig:', roarfirekit.value?.restConfig);
+    console.error('Available restConfig:', firekit.restConfig);
     throw new Error('Base URL is not set.');
   }
 
@@ -201,7 +224,7 @@ export const fetchDocById = async (
   }
 
   const docPath = `/${collectionValue}/${docIdValue}`;
-  const axiosInstance = getAxiosInstance(db, unauthenticated);
+  const axiosInstance = await getAxiosInstance(db, unauthenticated);
   const queryParams = (select ?? []).map((field) => `mask.fieldPaths=${field}`);
   const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
 
@@ -220,7 +243,7 @@ export const fetchDocumentsById = async (
   select: string[] = [],
   db = FIRESTORE_DATABASES.ADMIN,
 ): Promise<DocumentData[]> => {
-  const axiosInstance = getAxiosInstance(db);
+  const axiosInstance = await getAxiosInstance(db);
   const baseURL = axiosInstance.defaults.baseURL?.split('googleapis.com/v1/')[1] ?? '';
   const documents = toValue(docIds).map((docId) => `${baseURL}/${collection}/${docId}`);
 
@@ -261,7 +284,7 @@ export const fetchDocsById = async (
     console.warn('FetchDocsById: No documents provided!');
     return [];
   }
-  const axiosInstance = getAxiosInstance(db);
+  const axiosInstance = await getAxiosInstance(db);
   const promises = [];
 
   for (const { collection, docId, select } of documents) {
@@ -290,7 +313,7 @@ export const batchGetDocs = async (
     return [];
   }
 
-  const axiosInstance = getAxiosInstance(db);
+  const axiosInstance = await getAxiosInstance(db);
   const baseURL = axiosInstance.defaults.baseURL?.split('googleapis.com/v1/')[1] ?? '';
   const documents = docPaths.map((docPath) => `${baseURL}/${docPath}`);
   const batchDocs = await axiosInstance
@@ -327,7 +350,7 @@ export const fetchSubcollection = async (
   select: string[] = [],
   db = FIRESTORE_DATABASES.ADMIN,
 ): Promise<DocumentData[]> => {
-  const axiosInstance = getAxiosInstance(db);
+  const axiosInstance = await getAxiosInstance(db);
   const structuredQuery: StructuredQuery = {
     from: [
       {

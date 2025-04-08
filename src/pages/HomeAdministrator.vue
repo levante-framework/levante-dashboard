@@ -66,7 +66,7 @@
           </div>
         </div>
 
-        <div v-if="!initialized || isLoadingAdministrations" class="loading-container">
+        <div v-if="!isAuthStoreReady || isLoadingAdministrations" class="loading-container">
           <AppSpinner class="mb-4" />
           <span class="uppercase font-light text-sm text-gray-600">
             <template v-if="fetchTestAdministrations">Fetching Test Administrations</template>
@@ -167,8 +167,6 @@ interface UserTypeInfo {
   isSuperAdmin: ComputedRef<boolean>;
 }
 
-const initialized = ref(false);
-console.log('[HomeAdmin Setup] Initialized ref created:', initialized.value);
 const pageLimit = ref(10);
 const page = ref(0);
 
@@ -183,50 +181,14 @@ const filteredAdministrations = ref<Administration[]>([]);
 const fetchTestAdministrations = ref(false);
 
 const authStore = useAuthStore();
-const { roarfirekit } = storeToRefs(authStore);
-console.log('[HomeAdmin Setup] roarfirekit ref from store:', roarfirekit.value);
+// Use store readiness directly
+const { roarfirekit, isReady: isAuthStoreReady } = storeToRefs(authStore);
 
-let unsubscribeInitializer: (() => void) | undefined;
-const init = () => {
-  console.log('[HomeAdmin] init() CALLED - Setting initialized = true');
-  if (unsubscribeInitializer) {
-    console.log('[HomeAdmin init] Unsubscribing from authStore');
-    unsubscribeInitializer();
-    unsubscribeInitializer = undefined; // Clear subscription
-  }
-  initialized.value = true;
-  console.log('[HomeAdmin init] initialized ref is now:', initialized.value);
-};
+console.log('[HomeAdmin Setup] Store isReady:', isAuthStoreReady.value);
 
-console.log('[HomeAdmin Setup] Setting up authStore subscription...');
-unsubscribeInitializer = authStore.$subscribe(async (mutation, state) => {
-  // Use state.roarfirekit directly from the subscription payload
-  console.log('[HomeAdmin Sub] AuthStore subscription triggered. Checking state.roarfirekit.restConfig...');
-  if (state.roarfirekit?.restConfig) { // Check state directly
-    console.log('[HomeAdmin Sub] restConfig FOUND in state, calling init()');
-    init();
-  } else {
-    console.log('[HomeAdmin Sub] restConfig NOT found in state');
-  }
-});
-
-onMounted(() => {
-  console.log('[HomeAdmin onMounted] Hook executing...');
-  console.log('[HomeAdmin onMounted] Current roarfirekit.value:', roarfirekit.value);
-  // Check roarfirekit.value from storeToRefs
-  if (roarfirekit.value?.restConfig) {
-    console.log('[HomeAdmin onMounted] restConfig FOUND in roarfirekit.value, calling init()');
-    init();
-  } else {
-    console.log('[HomeAdmin onMounted] restConfig NOT found in roarfirekit.value yet');
-  }
-  console.log('[HomeAdmin onMounted] Hook finished. initialized ref:', initialized.value);
-});
-
-console.log('[HomeAdmin Setup] Setup script finished. Initialized ref:', initialized.value);
-
+// Enable queries based on store readiness
 const { data: userClaims, isFetching: isFetchingClaims, status: claimsStatus } = useUserClaimsQuery({
-  enabled: initialized, // Query depends on initialized ref
+  enabled: isAuthStoreReady, 
   queryKey: ['userClaims'],
 });
 
@@ -234,14 +196,6 @@ const { data: userClaims, isFetching: isFetchingClaims, status: claimsStatus } =
 watch(userClaims, (newClaims) => {
   console.log('[HomeAdmin] userClaims watcher triggered. New claims:', newClaims);
 }, { immediate: true });
-
-// Watch the initialized ref
-watch(initialized, (newVal) => {
-  console.log('[HomeAdmin] initialized ref CHANGED to:', newVal);
-  if(newVal) {
-    console.log('[HomeAdmin] initialized became true, queries should now be enabled.');
-  }
-});
 
 const userTypeInfo = useUserType(userClaims) as UserTypeInfo;
 const isSuperAdmin = userTypeInfo.isSuperAdmin;
@@ -256,19 +210,20 @@ const generateAutoCompleteSearchTokens = () => {
   searchTokens.value = [...new Set(searchTokens.value)];
 };
 
-console.log('[HomeAdmin Setup] Calling useAdministrationsListQuery. Initialized ref:', initialized.value);
+// Enable query based on store readiness
+console.log('[HomeAdmin Setup] Calling useAdministrationsListQuery. Store isReady:', isAuthStoreReady.value);
 const {
   isLoading: isLoadingAdministrations,
   isFetching: isFetchingAdministrations,
   data: administrations,
 } = useAdministrationsListQuery(orderBy, fetchTestAdministrations.value, {
-  enabled: initialized, // Query depends on initialized ref
+  enabled: isAuthStoreReady, 
 });
 
-// Watch administrations data
+// Watch administrations data (keep immediate: true if needed for initial population)
 watch(administrations, (newAdmins) => {
-  console.log('[HomeAdmin] administrations watcher triggered. New admins:', newAdmins);
-  if (!newAdmins) return;
+  console.log('[HomeAdmin] administrations watcher triggered. Store ready:', isAuthStoreReady.value, 'New admins:', newAdmins);
+  if (!isAuthStoreReady.value || !newAdmins) return; // Ensure store is ready before processing
 
   generateAutoCompleteSearchTokens();
 
@@ -279,7 +234,7 @@ watch(administrations, (newAdmins) => {
       item.name.toLowerCase().includes(search.value.toLowerCase()),
     );
   }
-}, { immediate: true });
+}, { immediate: true }); // Keep immediate if needed, but guard with isAuthStoreReady
 
 const sortOptions = ref<SortOption[]>([
   {

@@ -234,6 +234,9 @@ export const useAuthStore: AuthStoreDefinition = defineStore('authStore', {
           // Use type assertion if RoarFirekit type is not precise
           const loginResult = await (this.roarfirekit as any)?.logInWithEmailAndPassword({ email, password });
           console.log('[AuthStore TS] logInWithEmailAndPassword - roarfirekit call successful. Result:', loginResult);
+          // Log detailed structure
+          console.log('[AuthStore TS] logInWithEmailAndPassword - Detailed Result:');
+          console.dir(loginResult); 
           // Return undefined as per previous successful fix
           return undefined;
         } catch (error: any) {
@@ -354,7 +357,7 @@ export const useAuthStore: AuthStoreDefinition = defineStore('authStore', {
     },
   },
 
-  // Use explicit paths for persistence
+  // Restore persistence config
   persist: {
     storage: sessionStorage,
     paths: [

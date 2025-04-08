@@ -46,7 +46,7 @@ const ConsentModal = defineAsyncComponent(() => import('@/components/ConsentModa
 const ResyncAccountsModal = defineAsyncComponent(() => import('@/components/ResyncAccountsModal.vue'));
 
 const authStore = useAuthStore();
-const { roarfirekit, ssoProvider } = storeToRefs(authStore);
+const { roarfirekit, ssoProvider, isReady: isAuthStoreReady } = storeToRefs(authStore);
 
 const router = useRouter();
 const i18n = useI18n();
@@ -61,33 +61,21 @@ if (ssoProvider.value) {
 const gameStore = useGameStore();
 const { requireRefresh } = storeToRefs(gameStore);
 
-const initialized = ref(false);
-let unsubscribe;
-const init = () => {
-  if (unsubscribe) unsubscribe();
-  initialized.value = true;
-};
-
-unsubscribe = authStore.$subscribe(async (mutation, state) => {
-  if (state.roarfirekit.restConfig) init();
-});
-
 const { isLoading: isLoadingUserData, data: userData } = useUserDataQuery(null, {
-  enabled: initialized,
+  enabled: isAuthStoreReady,
 });
 
 const { isLoading: isLoadingClaims, data: userClaims } = useUserClaimsQuery({
-  enabled: initialized,
+  enabled: isAuthStoreReady,
 });
 
 const { isAdmin, isSuperAdmin, isParticipant } = useUserType(userClaims);
 
 const isAdminUser = computed(() => isAdmin.value || isSuperAdmin.value);
+
 const isLoading = computed(() => {
-  // @NOTE: In addition to the loading states, we also check if user data and user claims are loaded as due to the
-  // current application initialization flow, the userData and userClaims queries initially reset. Once this is improved
-  // these additional checks can be removed.
-  return !initialized.value || isLoadingUserData.value || isLoadingClaims.value || !userData.value || !userClaims.value;
+  console.log(`[HomeSelector isLoading Simplified] isAuthStoreReady: ${isAuthStoreReady.value}`);
+  return !isAuthStoreReady.value;
 });
 
 const showConsent = ref(false);
@@ -157,7 +145,7 @@ function dismissResyncModal() {
 watch(
   [userData, isAdminUser],
   async ([updatedUserData, updatedAdminUserState]) => {
-    if (!_isEmpty(updatedUserData) && updatedAdminUserState) {
+    if (isAuthStoreReady.value && !_isEmpty(updatedUserData) && updatedAdminUserState) {
       await checkConsent();
       checkResyncModalStatus();
     }
@@ -166,10 +154,10 @@ watch(
 );
 
 onMounted(async () => {
+  console.log('[HomeSelector onMounted] - Store Ready Status:', authStore.isReady);
   if (requireRefresh.value) {
     requireRefresh.value = false;
     router.go(0);
   }
-  if (roarfirekit.value.restConfig) init();
 });
 </script>
