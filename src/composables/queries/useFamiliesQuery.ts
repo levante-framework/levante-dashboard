@@ -1,25 +1,50 @@
-import { useQuery } from '@tanstack/vue-query';
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
-import { hasArrayEntries } from '@/helpers/hasArrayEntries';
-import { fetchDocumentsById } from '@/helpers/query/utils';
+import { useQuery, type UseQueryReturnType, type UseQueryOptions } from '@tanstack/vue-query';
+import { type MaybeRef, unref } from 'vue';
+import { computeQueryOverrides, type Condition } from '@/helpers/computeQueryOverrides.ts';
+import { fetchDocumentsById } from '@/helpers/query/utils'; // Assume returns FamilyData[]
+import { hasArrayEntries } from '@/helpers/hasArrayEntries.ts';
 import { FAMILIES_QUERY_KEY } from '@/constants/queryKeys';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+
+// Placeholder type for family data
+interface FamilyData {
+  id: string;
+  // Add other expected family properties here
+  careTakerName?: string;
+  studentIds?: string[];
+  [key: string]: any;
+}
+
+// Define the specific query options type
+type FamiliesQueryOptions = Omit<
+  UseQueryOptions<FamilyData[], Error, FamilyData[], ReadonlyArray<unknown>>,
+  'queryKey' | 'queryFn' | 'enabled'
+>;
 
 /**
  * Families Query
  *
- * @param {Array} familyIds – The array of family IDs to fetch.
- * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
- * @returns {UseQueryResult} The TanStack query result.
+ * @param {MaybeRef<string[] | undefined>} familyIds – The array of family IDs to fetch (can be a ref).
+ * @param {FamiliesQueryOptions | undefined} queryOptions – Optional TanStack query options.
+ * @returns {UseQueryReturnType<FamilyData[], Error>} The TanStack query result.
  */
-const useFamiliesQuery = (familyIds, queryOptions = undefined) => {
-  // Ensure all necessary data is available before enabling the query.
-  const conditions = [() => hasArrayEntries(familyIds)];
-  const { isQueryEnabled, options } = computeQueryOverrides(conditions, queryOptions);
+const useFamiliesQuery = (
+  familyIds: MaybeRef<string[] | undefined>,
+  queryOptions: FamiliesQueryOptions = {},
+): UseQueryReturnType<FamilyData[], Error> => {
+  const queryConditions: Condition[] = [() => hasArrayEntries(familyIds)];
+  const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
 
-  return useQuery({
+  return useQuery<FamilyData[], Error, FamilyData[], ReadonlyArray<unknown>>({
     queryKey: [FAMILIES_QUERY_KEY, familyIds],
-    queryFn: () => fetchDocumentsById(FIRESTORE_COLLECTIONS.FAMILIES, familyIds),
+    queryFn: async (): Promise<FamilyData[]> => {
+      const currentFamilyIds = unref(familyIds);
+      if (!currentFamilyIds || currentFamilyIds.length === 0) {
+        return Promise.resolve([]);
+      }
+      const result = await fetchDocumentsById(FIRESTORE_COLLECTIONS.FAMILIES, currentFamilyIds);
+      return result as FamilyData[];
+    },
     enabled: isQueryEnabled,
     ...options,
   });
