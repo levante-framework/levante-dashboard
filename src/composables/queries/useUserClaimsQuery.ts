@@ -49,11 +49,14 @@ const useUserClaimsQuery = (
     queryFn: async (): Promise<UserClaimsData | null> => {
       const currentUid = uid.value;
       if (!currentUid) {
-        // Return null or handle as appropriate if uid is not available
+        // console.log('[useUserClaimsQuery] No UID available, skipping fetch.');
         return Promise.resolve(null);
       }
+      // console.log(`[useUserClaimsQuery] Fetching claims for UID: ${currentUid}`);
       // Ensure fetchDocById returns the correct type or cast
       const result = await fetchDocById(FIRESTORE_COLLECTIONS.USER_CLAIMS, currentUid);
+      // Log the raw result before casting/returning
+      // console.log('[useUserClaimsQuery] Raw result from fetchDocById:', result);
       return result as UserClaimsData | null;
     },
     enabled: isQueryEnabled,

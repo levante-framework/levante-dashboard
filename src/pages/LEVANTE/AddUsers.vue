@@ -367,98 +367,38 @@ function generateColumns(rawJson) {
 }
 
 async function submitUsers() {
-  // Reset error users
   activeSubmit.value = true;
+  registeredUsers.value = [];
   errorUsers.value = [];
-  errorUserColumns.value = [];
   showErrorTable.value = false;
-  errorMessage.value = '';
 
-  // Group needs to be an array of strings
-  const usersToBeRegistered = _cloneDeep(toRaw(rawUserFile.value));
-
-  // Check orgs exist
-  for (const user of usersToBeRegistered) {
-    // Find fields case-insensitively
-    const districtField = Object.keys(user).find(key => key.toLowerCase() === 'district');
-    const schoolField = Object.keys(user).find(key => key.toLowerCase() === 'school');
-    const classField = Object.keys(user).find(key => key.toLowerCase() === 'class');
-    const groupField = Object.keys(user).find(key => key.toLowerCase() === 'group');
-    
-    // Get values using the actual field names
-    const district = districtField ? user[districtField] : '';
-    const school = schoolField ? user[schoolField] : '';
-    const _class = classField ? user[classField] : '';
-    const groups = groupField ? user[groupField] : '';
-
-    const orgNameMap = {
-      district: district ?? '',
-      school: school ?? '',
-      class: _class ?? '',
-      group: groups?.split(',') ?? [],
-    };
-
-    // Pluralized because of a ROAR change to the createUsers function. 
-    // Only groups are allowed to be an array however, we've only been using one group per user.
-    // TODO: Figure out if we want to allow multiple orgs
-    let orgInfo = {
-          districts: '',
-          schools: '',
-          classes: '',
-          groups: [],
-    };
-
-    // If orgType is a given column, check if the name is
-    //   associated with a valid id. If so, add the id to
-    //   the sendObject. If not, reject user
-    for (const [orgType, orgName] of Object.entries(orgNameMap)) {
-      if (orgName) {
-        if (orgType === 'school') {
-            const districtId = await getOrgId('districts', district);
-            const schoolId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(districtId), ref(undefined))
-            // Need to Raw it because a large amount of users causes this to become a proxy object
-            orgInfo.schools = schoolId;
-        } else if (orgType === 'class') {
-            const districtId = await getOrgId('districts', district);
-            const schoolId = await getOrgId('schools', school);
-            const classId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(districtId), ref(schoolId));
-            orgInfo.classes = classId;
-        } else if (orgType === 'group') {
-          for (const group of orgNameMap.group) {
-            const groupId = await getOrgId(pluralizeFirestoreCollection(orgType), group, ref(undefined), ref(undefined));
-            orgInfo.groups.push(groupId);
-          }
-        } else {
-          const districtId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(undefined), ref(undefined));
-          orgInfo.districts = districtId;
-        }
-
-        if (!_isEmpty(orgInfo)) {
-          user.orgIds = orgInfo;
-        } else {
-          addErrorUser(user, `Error: ${orgType} '${orgName}' is invalid`);
-          activeSubmit.value = false;
-          return;
-        }
-      }
-    }
-
+  // console.log('[Claims Check] Current user claims BEFORE token refresh:', JSON.stringify(toRaw(authStore.userClaims), null, 2));
+  try {
+      await authStore.forceIdTokenRefresh();
+      // Use toRaw to get the underlying object from the proxy before stringifying
+      // console.log('[Claims Check] Current user claims AFTER token refresh:', JSON.stringify(toRaw(authStore.userClaims), null, 2));
+  } catch (refreshError) {
+      console.error('Failed to refresh auth token:', refreshError);
+      toast.add({
+          severity: 'error',
+          summary: 'Failed to refresh user permissions. Please try logging out and back in.',
+          life: 9000,
+      });
+      activeSubmit.value = false;
+      return; // Stop if token refresh fails
   }
 
-
-  // TODO: Figure out deadline-exceeded error with 700+ users. (Registration works fine, creates all documents but the client recieves the error)
-  // Spit users into chunks of 1000
-  const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 700);
-
-  console.log('chunkedUsersToBeRegistered', chunkedUsersToBeRegistered);
-
-  // Begin submit process
-  // Org must be created before users can be created
+  const chunkSize = 10; // Define the size of each chunk
+  const totalUsers = rawUserFile.value.length;
   let processedUserCount = 0;
-  for (const users of chunkedUsersToBeRegistered) {
+
+  for (let i = 0; i < totalUsers; i += chunkSize) {
+    const chunk = rawUserFile.value.slice(i, i + chunkSize);
+    console.log(`Processing chunk ${i / chunkSize + 1}`);
+
     try {
       // Ensure each user has the proper userType field name for the backend
-      const processedUsers = users.map(user => {
+      const processedUsers = chunk.map(user => {
         const processedUser = { ...user };
         
         // Find the userType field (case-insensitive)
@@ -472,6 +412,8 @@ async function submitUsers() {
         
         return processedUser;
       });
+
+      // console.log('[Data Check] Sending processedUsers to createUsers function:', JSON.stringify(processedUsers, null, 2));
 
       // This is the most likely place for an error, due to 
       // permissions, etc. If so, drop to Catch block
