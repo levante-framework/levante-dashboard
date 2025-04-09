@@ -1,37 +1,51 @@
-import { ref, watch, onMounted, onUnmounted } from 'vue';
-import { useIdle, useTimestamp } from '@vueuse/core';
+import { ref, watch, onMounted, onUnmounted, type Ref } from 'vue';
+import { useIdle, useTimestamp, type UseIdleOptions } from '@vueuse/core';
 import { useThrottleFn } from '@vueuse/core';
 
 /**
  * Inactivity timeout composable.
  *
- * @param {Object} options – The options object.
- * @param {Number} options.idleThreshold – The idle threshold in milliseconds.
- * @param {Number} options.countdownDuration – The countdown duration in milliseconds.
- * @param {Function} options.onIdle – The idle callback function.
- * @param {Function} options.onTimeout – The timeout callback function.
- * @returns {Object} Object containing the countdown timer and reset function.
+ * @param {InactivityTimeoutOptions} options – The options object.
+ * @returns {InactivityTimeoutReturn} Object containing the countdown timer and reset function.
  */
-export default function useInactivityTimeout({ idleThreshold, countdownDuration, onIdle, onTimeout }) {
-  const timeoutThreshold = Math.max(0, Math.floor(Number(idleThreshold) + Number(countdownDuration)));
+interface InactivityTimeoutOptions {
+  idleThreshold: number; // in milliseconds
+  countdownDuration: number; // in milliseconds
+  onIdle: () => void | Promise<void>; // Callback function
+  onTimeout: () => void | Promise<void>; // Callback function
+}
 
-  const isTabActive = ref(true);
-  const lastActiveInternal = ref(null);
+interface InactivityTimeoutReturn {
+  countdownTimer: Ref<number>; // in seconds
+  resetTimer: () => void;
+}
 
-  const countdownTimer = ref(Math.floor(countdownDuration / 1000));
-  const isCountdownTimerActive = ref(false);
+export default function useInactivityTimeout({
+  idleThreshold,
+  countdownDuration,
+  onIdle,
+  onTimeout,
+}: InactivityTimeoutOptions): InactivityTimeoutReturn {
+  const timeoutThreshold: number = Math.max(0, Math.floor(Number(idleThreshold) + Number(countdownDuration)));
 
-  const { idle, lastActive } = useIdle(idleThreshold, { listenForVisibilityChange: false });
-  const now = useTimestamp({ interval: 1000 });
+  const isTabActive: Ref<boolean> = ref(true);
+  const lastActiveInternal: Ref<number | null> = ref(null);
 
-  let countdownIntervalTimer = null;
+  const countdownTimer: Ref<number> = ref(Math.floor(countdownDuration / 1000));
+  const isCountdownTimerActive: Ref<boolean> = ref(false);
+
+  const idleOptions: UseIdleOptions = { listenForVisibilityChange: false };
+  const { idle, lastActive } = useIdle(idleThreshold, idleOptions);
+  const now: Ref<number> = useTimestamp({ interval: 1000 });
+
+  let countdownIntervalTimer: ReturnType<typeof setInterval> | null = null;
 
   /**
    * Timeout handler.
    *
    * @returns {Promise<void>}
    */
-  const timeout = async () => {
+  const timeout = async (): Promise<void> => {
     await onTimeout();
     resetTimer();
   };
@@ -51,7 +65,7 @@ export default function useInactivityTimeout({ idleThreshold, countdownDuration,
    *
    * @returns {void}
    */
-  const handleVisibilityChange = () => {
+  const handleVisibilityChange = (): void => {
     if (document.hidden) {
       isTabActive.value = false;
 
@@ -98,7 +112,7 @@ export default function useInactivityTimeout({ idleThreshold, countdownDuration,
    *
    * @returns {void}
    */
-  const startCountdown = () => {
+  const startCountdown = (): void => {
     if (isCountdownTimerActive.value || !isTabActive.value) return;
 
     isCountdownTimerActive.value = true;
@@ -121,11 +135,13 @@ export default function useInactivityTimeout({ idleThreshold, countdownDuration,
    * @param {Boolean} resetToOriginalValue – Whether to reset the countdown to the original value or not.
    * @returns {void}
    */
-  const resetCountdown = (resetToOriginalValue = true) => {
+  const resetCountdown = (resetToOriginalValue: boolean = true): void => {
     isCountdownTimerActive.value = false;
 
-    clearInterval(countdownIntervalTimer);
-    countdownIntervalTimer = null;
+    if (countdownIntervalTimer) {
+      clearInterval(countdownIntervalTimer);
+      countdownIntervalTimer = null;
+    }
 
     countdownTimer.value = resetToOriginalValue ? Math.floor(countdownDuration / 1000) : 0;
   };
@@ -137,7 +153,7 @@ export default function useInactivityTimeout({ idleThreshold, countdownDuration,
    *
    * @returns {void}
    */
-  const resetIdleState = () => {
+  const resetIdleState = (): void => {
     const nowTimestamp = now.value;
     lastActiveInternal.value = nowTimestamp;
     lastActive.value = nowTimestamp;
@@ -151,7 +167,7 @@ export default function useInactivityTimeout({ idleThreshold, countdownDuration,
    * unmounted to ensure the idle state is correctly set, as well as when the user manually resets the timer by i.e.
    * clicking a "stay logged in" button.
    */
-  const resetTimer = () => {
+  const resetTimer = (): void => {
     resetCountdown();
     resetIdleState();
   };
@@ -164,7 +180,7 @@ export default function useInactivityTimeout({ idleThreshold, countdownDuration,
    * @param {Boolean} idle - The idle state as provided by the useIdle composable.
    * @returns {void}
    */
-  watch(idle, (isIdle) => {
+  watch(idle, (isIdle: boolean): void => {
     if (isIdle) {
       startCountdown();
     }
