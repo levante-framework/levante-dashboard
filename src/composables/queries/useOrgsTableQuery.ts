@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed, ref, unref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
 import useUserType from '@/composables/useUserType';
@@ -6,6 +6,7 @@ import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { orgPageFetcher } from '@/helpers/query/orgs';
 import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
+
 /**
  * Orgs Table query.
  *
@@ -19,9 +20,10 @@ import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
  * @param {String} selectedSchool – The selected school ID.
  * @param {String} orderBy – The order by field.
  * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
+ * @param {boolean|undefined} enabled – Optional query enablement flag.
  * @returns {UseQueryResult} The TanStack query result.
  */
-const useOrgsTableQuery = (activeOrgType, selectedDistrict, selectedSchool, orderBy, queryOptions = undefined) => {
+const useOrgsTableQuery = (activeOrgType, selectedDistrict, selectedSchool, orderBy, queryOptions = undefined, enabled = undefined) => {
   const { data: userClaims } = useUserClaimsQuery({ enabled: queryOptions?.enabled ?? true });
 
   // Get the admin status and administation orgs.
@@ -29,8 +31,9 @@ const useOrgsTableQuery = (activeOrgType, selectedDistrict, selectedSchool, orde
   const adminOrgs = computed(() => userClaims.value?.claims?.minimalAdminOrgs);
 
   // Ensure all necessary data is loaded before enabling the query.
-  const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
-  const queryConditions = [() => claimsLoaded.value];
+  const claimsLoaded = computed(() => !_isEmpty(userClaims.value?.claims));
+  // Pass functions returning boolean to conditions array
+  const queryConditions: Condition[] = [() => claimsLoaded.value, () => unref(enabled) ?? true];
   const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
 
   return useQuery({
