@@ -1,16 +1,7 @@
 import { computed, type Ref, type ComputedRef } from 'vue';
 import { AUTH_USER_TYPE } from '@/constants/auth';
 import _isEmpty from 'lodash/isEmpty';
-
-// Define the expected structure for the claims
-interface Claims {
-  super_admin?: boolean;
-  minimalAdminOrgs?: Record<string, string[]>;
-}
-
-interface UserClaimsData {
-  claims?: Claims;
-}
+import { type UserClaimsData } from '@/composables/queries/useUserClaimsQuery'; // Import shared type
 
 /**
  * Get user type
@@ -19,18 +10,18 @@ interface UserClaimsData {
  * participant. The user type is determined based on the user claims, where a user is considered an admin if they have
  * the corresponding super_admin or miniamlAdminOrgs claims.
  *
- * @param {Ref<UserClaimsData | null>} userClaims - The reactive user claims object.
+ * @param {Ref<UserClaimsData | null | undefined>} userClaims - The reactive user claims object (can be null or undefined).
  * @returns {{ userType: ComputedRef<string | undefined>, isAdmin: ComputedRef<boolean>, isParticipant: ComputedRef<boolean>, isSuperAdmin: ComputedRef<boolean> }} The user type and related computed properties.
  */
-export default function useUserType(userClaims: Ref<UserClaimsData | null>): {
+export default function useUserType(userClaims: Ref<UserClaimsData | null | undefined>): {
   userType: ComputedRef<string | undefined>;
   isAdmin: ComputedRef<boolean>;
   isParticipant: ComputedRef<boolean>;
   isSuperAdmin: ComputedRef<boolean>;
 } {
   const userType: ComputedRef<string | undefined> = computed(() => {
-    // Abort the user type determination if the user claims are not available yet.
-    if (!userClaims.value) return undefined; // Return undefined if claims are null/undefined
+    // Check for null or undefined claims value
+    if (!userClaims.value) return undefined;
 
     const claims = userClaims.value.claims;
 
