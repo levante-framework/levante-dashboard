@@ -7,6 +7,20 @@ import App from '@/App.vue';
 import AppSpinner from '@/components/AppSpinner.vue';
 import plugins from './plugins';
 import './styles.css';
+import { Loader } from '@googlemaps/js-api-loader';
+
+// Load Google Maps API
+const loader = new Loader({
+  apiKey: 'AIzaSyA2Q2Wq5na79apugFwoTXKyj-RTDDR1U34',
+  version: 'beta',
+  libraries: ['places'],
+});
+
+loader.load().then(() => {
+  console.log('Google Maps API loaded successfully (beta, places)');
+}).catch(e => {
+  console.error('Error loading Google Maps API:', e);
+});
 
 /**
  * Create Vue App

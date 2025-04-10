@@ -68,11 +68,12 @@ const plugins = [
   [
     VueGoogleMaps,
     {
-      load: {
-        key: 'AIzaSyA2Q2Wq5na79apugFwoTXKyj-RTDDR1U34',
-        libraries: 'places',
-        v: 'beta',
-      },
+      // Remove the load configuration entirely
+      // load: {
+      //   key: 'AIzaSyA2Q2Wq5na79apugFwoTXKyj-RTDDR1U34',
+      //   libraries: 'places',
+      //   v: 'beta',
+      // },
     },
   ],
   ConfirmationService,
