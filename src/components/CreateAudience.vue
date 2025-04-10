@@ -106,16 +106,14 @@
                 <span class="p-inputgroup-addon">
                   <i class="pi pi-map"></i>
                 </span>
-                <GMapAutocomplete
-                  :options="{
-                    fields: ['address_components', 'formatted_address', 'place_id', 'url'],
-                  }"
+                <gmp-place-autocomplete
+                  place-fields="address_components,formatted_address,place_id,url"
                   class="p-inputtext p-component w-full"
                   style="height: 38px; display: flex; align-items: center;"
                   data-cy="input-address"
-                  @place_changed="setAddress"
+                  @gmp-placeselect="setAddress"
                 >
-                </GMapAutocomplete>
+                </gmp-place-autocomplete>
               </div>
             </div>
           </div>
@@ -343,12 +341,13 @@ const searchTags = (event) => {
   tagSuggestions.value = filteredOptions;
 };
 
-const setAddress = (place) => {
+const setAddress = (event) => {
+  const place = event.detail.place;
   state.address = {
-    addressComponents: place.address_components || [],
-    formattedAddress: place.formatted_address,
-    googlePlacesId: place.place_id,
-    googleMapsUrl: place.url,
+    addressComponents: place?.address_components || [],
+    formattedAddress: place?.formatted_address,
+    googlePlacesId: place?.place_id,
+    googleMapsUrl: place?.url,
   };
 };
 

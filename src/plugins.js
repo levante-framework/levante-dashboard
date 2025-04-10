@@ -71,6 +71,7 @@ const plugins = [
       load: {
         key: 'AIzaSyA2Q2Wq5na79apugFwoTXKyj-RTDDR1U34',
         libraries: 'places',
+        v: 'beta',
       },
     },
   ],

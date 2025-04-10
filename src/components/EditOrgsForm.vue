@@ -18,16 +18,14 @@
         <span class="p-inputgroup-addon">
           <i class="pi pi-map"></i>
         </span>
-        <GMapAutocomplete
+        <gmp-place-autocomplete
           :placeholder="localOrgData.address?.formattedAddress ?? 'Enter an address'"
-          :options="{
-            fields: ['address_components', 'formatted_address', 'place_id', 'url'],
-          }"
+          place-fields="address_components,formatted_address,place_id,url"
           class="p-inputtext p-component w-full"
           data-cy="input-address"
-          @place_changed="setAddress"
+          @gmp-placeselect="setAddress"
         >
-        </GMapAutocomplete>
+        </gmp-place-autocomplete>
       </div>
     </div>
     <div v-if="orgType === 'districts'" class="form-field">
@@ -111,12 +109,13 @@ const setupOrgData = (orgData) => {
   localOrgData.value = org;
 };
 
-const setAddress = (place) => {
+const setAddress = (event) => {
+  const place = event.detail.place;
   localOrgData.value.address = {
-    addressComponents: place.address_components || [],
-    formattedAddress: place.formatted_address,
-    googlePlacesId: place.place_id,
-    googleMapsUrl: place.url,
+    addressComponents: place?.address_components || [],
+    formattedAddress: place?.formatted_address,
+    googlePlacesId: place?.place_id,
+    googleMapsUrl: place?.url,
   };
 };
 

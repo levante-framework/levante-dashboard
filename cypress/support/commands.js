@@ -256,8 +256,10 @@ Cypress.Commands.add(
     }
 
     if (orgAddress) {
-      // cy.get('[data-cy="input-address"]').type(`${orgAddress}`).wait(1000).type('{downarrow}{enter}').wait(1000)
-      cy.get('input[placeholder="Enter a location"]')
+      // Target the web component, enter its shadow DOM, find the internal input, then type
+      cy.get('[data-cy="input-address"]')
+        .shadow()
+        .find('input#input') // Find the input element within the shadow DOM (assuming id='input')
         .type(`${orgAddress}`)
         .wait(1000)
         .type('{downarrow}{enter}')
