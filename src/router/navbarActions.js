@@ -30,7 +30,7 @@ const navbarActionOptions = [
   {
     title: 'Create Assignment',
     icon: 'pi pi-sliders-h',
-    buttonLink: { name: 'CreateAdministration' },
+    buttonLink: { name: 'CreateAssignment' },
     requiresSuperAdmin: true,
     requiresAdmin: true,
     project: 'ALL',
