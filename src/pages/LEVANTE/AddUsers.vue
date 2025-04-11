@@ -6,9 +6,8 @@
 
       <PvDivider />
 
-      <div v-if="!isFileUploaded" class="text-gray-500 mb-2 surface-100 border-round p-2">
+      <div class="text-gray-500 mb-2 surface-100 border-round p-2">
         <PvFileUpload
-          v-if="!isFileUploaded"
           name="massUploader[]"
           custom-upload
           accept=".csv"
@@ -61,7 +60,6 @@
               icon="pi pi-download"
               @click="downloadCSV"
             />
-
           </div>
           <PvButton
             v-else
@@ -75,8 +73,13 @@
         </div>
       </div>
 
-      <!-- Datatable of error students -->
+      <!-- Error messages section -->
       <div v-if="showErrorTable" class="error-container">
+        <div class="error-messages">
+          <p v-for="(error, index) in errorMessages" :key="index" class="error-message">
+            <i>{{ error }}</i>
+          </p>
+        </div>
         <div class="error-header">
           <h3>Rows with Errors</h3>
         </div>
@@ -186,6 +189,9 @@ const activeSubmit = ref(false);
 
 const router = useRouter();
 
+// Add errorMessages ref
+const errorMessages = ref([]);
+
 watch(
   errorUsers,
   () => {
@@ -201,7 +207,7 @@ watch(
 
 // Functions supporting the uploader
 const onFileUpload = async (event) => {
-  // Reset in case of previous error
+  // Reset all states
   rawUserFile.value = {};
   errorUsers.value = [];
   errorUserColumns.value = [];
@@ -209,6 +215,9 @@ const onFileUpload = async (event) => {
   errorMessage.value = '';
   errorTable.value = null;
   errorMissingColumns.value = false;
+  errorMessages.value = [];
+  registeredUsers.value = [];
+  isFileUploaded.value = false;
 
   // Read the file
   const file = event.files[0];
@@ -375,143 +384,178 @@ async function submitUsers() {
   showErrorTable.value = false;
   errorMessage.value = '';
 
-  // Group needs to be an array of strings
-  const usersToBeRegistered = _cloneDeep(toRaw(rawUserFile.value));
+  try {
+    // Group needs to be an array of strings
+    const usersToBeRegistered = _cloneDeep(toRaw(rawUserFile.value));
 
-  // Check orgs exist
-  for (const user of usersToBeRegistered) {
-    // Find fields case-insensitively
-    const districtField = Object.keys(user).find(key => key.toLowerCase() === 'district');
-    const schoolField = Object.keys(user).find(key => key.toLowerCase() === 'school');
-    const classField = Object.keys(user).find(key => key.toLowerCase() === 'class');
-    const groupField = Object.keys(user).find(key => key.toLowerCase() === 'group');
-    
-    // Get values using the actual field names
-    const district = districtField ? user[districtField] : '';
-    const school = schoolField ? user[schoolField] : '';
-    const _class = classField ? user[classField] : '';
-    const groups = groupField ? user[groupField] : '';
+    // Check orgs exist
+    for (const user of usersToBeRegistered) {
+      try {
+        // Find fields case-insensitively
+        const districtField = Object.keys(user).find(key => key.toLowerCase() === 'district');
+        const schoolField = Object.keys(user).find(key => key.toLowerCase() === 'school');
+        const classField = Object.keys(user).find(key => key.toLowerCase() === 'class');
+        const groupField = Object.keys(user).find(key => key.toLowerCase() === 'group');
+        
+        // Get values using the actual field names
+        const district = districtField ? user[districtField] : '';
+        const school = schoolField ? user[schoolField] : '';
+        const _class = classField ? user[classField] : '';
+        const groups = groupField ? user[groupField] : '';
 
-    const orgNameMap = {
-      district: district ?? '',
-      school: school ?? '',
-      class: _class ?? '',
-      group: groups?.split(',') ?? [],
-    };
+        const orgNameMap = {
+          district: district ?? '',
+          school: school ?? '',
+          class: _class ?? '',
+          group: groups?.split(',') ?? [],
+        };
 
-    // Pluralized because of a ROAR change to the createUsers function. 
-    // Only groups are allowed to be an array however, we've only been using one group per user.
-    // TODO: Figure out if we want to allow multiple orgs
-    let orgInfo = {
+        let orgInfo = {
           districts: '',
           schools: '',
           classes: '',
           groups: [],
-    };
+        };
 
-    // If orgType is a given column, check if the name is
-    //   associated with a valid id. If so, add the id to
-    //   the sendObject. If not, reject user
-    for (const [orgType, orgName] of Object.entries(orgNameMap)) {
-      if (orgName) {
-        if (orgType === 'school') {
-            const districtId = await getOrgId('districts', district);
-            const schoolId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(districtId), ref(undefined))
-            // Need to Raw it because a large amount of users causes this to become a proxy object
-            orgInfo.schools = schoolId;
-        } else if (orgType === 'class') {
-            const districtId = await getOrgId('districts', district);
-            const schoolId = await getOrgId('schools', school);
-            const classId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(districtId), ref(schoolId));
-            orgInfo.classes = classId;
-        } else if (orgType === 'group') {
-          for (const group of orgNameMap.group) {
-            const groupId = await getOrgId(pluralizeFirestoreCollection(orgType), group, ref(undefined), ref(undefined));
-            orgInfo.groups.push(groupId);
+        for (const [orgType, orgName] of Object.entries(orgNameMap)) {
+          if (orgName) {
+            try {
+              if (orgType === 'school') {
+                const districtId = await getOrgId('districts', district);
+                const schoolId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(districtId), ref(undefined));
+                orgInfo.schools = schoolId;
+              } else if (orgType === 'class') {
+                const districtId = await getOrgId('districts', district);
+                const schoolId = await getOrgId('schools', school);
+                const classId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(districtId), ref(schoolId));
+                orgInfo.classes = classId;
+              } else if (orgType === 'group') {
+                for (const group of orgNameMap.group) {
+                  const groupId = await getOrgId(pluralizeFirestoreCollection(orgType), group, ref(undefined), ref(undefined));
+                  orgInfo.groups.push(groupId);
+                }
+              } else {
+                const districtId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(undefined), ref(undefined));
+                orgInfo.districts = districtId;
+              }
+            } catch (error) {
+              addErrorUser(user, `Error: ${orgType} '${orgName}' is invalid - ${error.message}`);
+              throw error; // Re-throw to skip this user
+            }
           }
-        } else {
-          const districtId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(undefined), ref(undefined));
-          orgInfo.districts = districtId;
         }
 
         if (!_isEmpty(orgInfo)) {
           user.orgIds = orgInfo;
-        } else {
-          addErrorUser(user, `Error: ${orgType} '${orgName}' is invalid`);
-          activeSubmit.value = false;
-          return;
         }
+      } catch (error) {
+        // Skip this user and continue with others
+        continue;
       }
     }
 
-  }
+    // Filter out users that had errors during org validation
+    const validUsers = usersToBeRegistered.filter(user => user.orgIds);
 
-
-  // TODO: Figure out deadline-exceeded error with 700+ users. (Registration works fine, creates all documents but the client recieves the error)
-  // Spit users into chunks of 1000
-  const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 700);
-
-  console.log('chunkedUsersToBeRegistered', chunkedUsersToBeRegistered);
-
-  // Begin submit process
-  // Org must be created before users can be created
-  let processedUserCount = 0;
-  for (const users of chunkedUsersToBeRegistered) {
-    try {
-      // Ensure each user has the proper userType field name for the backend
-      const processedUsers = users.map(user => {
-        const processedUser = { ...user };
-        
-        // Find the userType field (case-insensitive)
-        const userTypeField = Object.keys(user).find(key => key.toLowerCase() === 'usertype');
-        
-        // If userType field exists but is not named exactly 'userType', rename it
-        if (userTypeField && userTypeField !== 'userType') {
-          processedUser.userType = user[userTypeField];
-          delete processedUser[userTypeField];
-        }
-        
-        return processedUser;
-      });
-
-      // This is the most likely place for an error, due to 
-      // permissions, etc. If so, drop to Catch block
-      const res = await authStore.createUsers(processedUsers);
-      const currentRegisteredUsers = res.data.data;
-      
-      // Update only the newly registered users
-      currentRegisteredUsers.forEach((registeredUser, index) => {
-        const rawUserIndex = processedUserCount + index;
-        if (rawUserIndex < rawUserFile.value.length) {
-          rawUserFile.value[rawUserIndex].email = registeredUser.email;
-          rawUserFile.value[rawUserIndex].password = registeredUser.password;
-          rawUserFile.value[rawUserIndex].uid = registeredUser.uid;
-        }
-      });
-
-      registeredUsers.value.push(...currentRegisteredUsers);
-      
-      // Update the count of processed users
-      processedUserCount += currentRegisteredUsers.length;
-      toast.add({
-        severity: 'success',
-        summary: 'User Creation Successful',
-        life: 9000})
-      convertUsersToCSV();
-    } catch (error) {
-      // TODO: Show users that failed to register
-      console.error(error);
-  
+    if (validUsers.length === 0) {
       toast.add({
         severity: 'error',
-        summary: 'Error registering users: ' + error.message,
+        summary: 'No valid users to register',
+        detail: 'All users had errors during organization validation',
+        life: 5000,
+      });
+      activeSubmit.value = false;
+      return;
+    }
+
+    // Split users into chunks of 700
+    const chunkedUsersToBeRegistered = _chunk(validUsers, 700);
+
+    let processedUserCount = 0;
+    let failedUsers = [];
+
+    for (const users of chunkedUsersToBeRegistered) {
+      try {
+        const processedUsers = users.map(user => {
+          const processedUser = { ...user };
+          const userTypeField = Object.keys(user).find(key => key.toLowerCase() === 'usertype');
+          
+          if (userTypeField && userTypeField !== 'userType') {
+            processedUser.userType = user[userTypeField];
+            delete processedUser[userTypeField];
+          }
+          
+          return processedUser;
+        });
+
+        const res = await authStore.createUsers(processedUsers);
+        
+        if (!res.data || !res.data.data) {
+          throw new Error('Invalid response from server');
+        }
+
+        const currentRegisteredUsers = res.data.data;
+        
+        currentRegisteredUsers.forEach((registeredUser, index) => {
+          const rawUserIndex = processedUserCount + index;
+          if (rawUserIndex < rawUserFile.value.length) {
+            rawUserFile.value[rawUserIndex].email = registeredUser.email;
+            rawUserFile.value[rawUserIndex].password = registeredUser.password;
+            rawUserFile.value[rawUserIndex].uid = registeredUser.uid;
+          }
+        });
+
+        registeredUsers.value.push(...currentRegisteredUsers);
+        processedUserCount += currentRegisteredUsers.length;
+
+        toast.add({
+          severity: 'success',
+          summary: 'User Creation Successful',
+          detail: `Successfully registered ${currentRegisteredUsers.length} users`,
+          life: 9000
+        });
+
+      } catch (error) {
+        // Add failed users to error table
+        users.forEach(user => {
+          addErrorUser(user, `Registration failed: ${error.message}`);
+          failedUsers.push(user);
+        });
+
+        toast.add({
+          severity: 'error',
+          summary: 'Error registering users',
+          detail: `Failed to register ${users.length} users: ${error.message}`,
+          life: 9000,
+        });
+      }
+    }
+
+    // If we have any registered users, convert to CSV
+    if (registeredUsers.value.length > 0) {
+      convertUsersToCSV();
+    }
+
+    // Show summary of results
+    if (failedUsers.length > 0) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Registration Summary',
+        detail: `Successfully registered ${registeredUsers.value.length} users. ${failedUsers.length} users failed. See error table for details.`,
         life: 9000,
       });
     }
-  }
 
-  /* We want to clear this flag whether we got an error or not */
-  activeSubmit.value = false;
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Unexpected Error',
+      detail: `An unexpected error occurred: ${error.message}`,
+      life: 9000,
+    });
+  } finally {
+    activeSubmit.value = false;
+  }
 }
 
 
@@ -565,22 +609,17 @@ function downloadCSV() {
 }
 
 function addErrorUser(user, error) {
-  // If there are no error users yet, generate the
-  //  columns before displaying the table.
+  // If there are no error users yet, generate the columns before displaying the table
   if (_isEmpty(errorUserColumns.value)) {
     errorUserColumns.value = generateColumns(user);
-    errorUserColumns.value.unshift({
-      dataType: 'string',
-      field: 'error',
-      header: 'Cause of Error',
-    });
     showErrorTable.value = true;
   }
-  // Concat the userObject with the error reason.
-  errorUsers.value.push({
-    ...user,
-    error,
-  });
+  
+  // Add error message to the list
+  errorMessages.value.push(error);
+  
+  // Add user to error table
+  errorUsers.value.push(user);
 }
 
 // TODO: Refactor this to be a single call
@@ -728,5 +767,20 @@ const getOrgId = async (orgType, orgName, parentDistrict, parentSchool) => {
 .org-dropdown {
   margin-right: 3rem;
   margin-top: 2rem;
+}
+
+.error-messages {
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background-color: var(--surface-100);
+  border-radius: 5px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.error-message {
+  color: var(--red-600);
+  margin: 0.5rem 0;
+  font-style: italic;
 }
 </style>
