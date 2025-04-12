@@ -62,8 +62,11 @@ import PvDialog from 'primevue/dialog';
 import { useAuthStore } from '@/store/auth';
 import router from '../router';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import Register from '../components/auth/RegisterParent.vue';
+import Register from '../components/auth/RegisterCaregiver.vue';
 import RegisterStudent from '../components/auth/RegisterStudent.vue';
+import { useRoute } from 'vue-router';
+import PvDivider from 'primevue/divider';
+import _get from 'lodash/get';
 
 const authStore = useAuthStore();
 const initialized = ref(false);
@@ -83,7 +86,7 @@ const isSuperAdmin = computed(() => Boolean(userClaims.value?.claims?.super_admi
 const activeIndex = ref(0); // Current active step
 const isTestData = ref(false);
 
-const parentInfo = ref(null);
+const caregiverInfo = ref(null);
 const studentInfo = ref(null);
 const dialogHeader = ref('');
 const dialogMessage = ref('');
@@ -99,9 +102,9 @@ const closeDialog = () => {
   router.push({ name: 'SignIn' });
 };
 
-async function handleParentSubmit(data) {
+async function handleCaregiverSubmit(data) {
   try {
-    parentInfo.value = data;
+    caregiverInfo.value = data;
     activeIndex.value = 1;
   } catch (error) {
     dialogHeader.value = 'Error!';
@@ -124,7 +127,7 @@ async function handleSubmit(event) {
   if (activeComp() == RegisterStudent) {
     handleStudentSubmit(event);
   } else {
-    handleParentSubmit(event);
+    handleCaregiverSubmit(event);
     activeIndex.value = 1;
     activeComp();
   }
@@ -142,15 +145,15 @@ function activeComp() {
   }
 }
 
-watch([parentInfo, studentInfo], ([newParentInfo, newStudentInfo]) => {
-  if (newParentInfo && newStudentInfo) {
+watch([caregiverInfo, studentInfo], ([newCaregiverInfo, newStudentInfo]) => {
+  if (newCaregiverInfo && newStudentInfo) {
     spinner.value = true;
-    const rawParentInfo = toRaw(newParentInfo);
+    const rawCaregiverInfo = toRaw(newCaregiverInfo);
     const rawStudentInfo = toRaw(newStudentInfo);
-    const parentUserData = {
+    const caregiverUserData = {
       name: {
-        first: rawParentInfo.firstName,
-        last: rawParentInfo.lastName,
+        first: rawCaregiverInfo.firstName,
+        last: rawCaregiverInfo.lastName,
       },
     };
     const studentSendObject = rawStudentInfo.map((student) => {
@@ -178,9 +181,9 @@ watch([parentInfo, studentInfo], ([newParentInfo, newStudentInfo]) => {
     });
     authStore
       .createNewFamily(
-        rawParentInfo.ParentEmail,
-        rawParentInfo.password,
-        parentUserData,
+        rawCaregiverInfo.caregiverEmail,
+        rawCaregiverInfo.password,
+        caregiverUserData,
         studentSendObject,
         isTestData.value,
       )

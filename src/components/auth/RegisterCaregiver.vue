@@ -39,22 +39,28 @@
       </section>
       <!--Username / Email-->
       <section class="form-section flex lg:flex-row">
-        <div class="p-input-icon-right">
-          <label for="ParentEmail">Email <span class="required p-1">*</span></label>
-          <PvInputText
-            v-model="v$.ParentEmail.$model"
-            name="ParentEmail"
-            type="email"
-            :class="{ 'p-invalid': v$.ParentEmail.$invalid && submitted }"
-            aria-describedby="username-or-email-error"
-          />
+        <div class="field my-5">
+          <span class="p-float-label">
+            <label for="caregiverEmail">Email <span class="required p-1">*</span></label>
+            <PvInputText
+              id="caregiverEmail"
+              v-model="v$.caregiverEmail.$model"
+              name="caregiverEmail"
+              type="email"
+              aria-describedby="email-help"
+              :class="{ 'p-invalid': v$.caregiverEmail.$invalid && submitted }"
+              class="w-full"
+            />
+          </span>
+          <span v-if="v$.caregiverEmail.$error && submitted">
+            <span v-for="(error, index) of v$.caregiverEmail.$errors" :key="index" class="p-error">
+              {{ error.$message }}
+            </span>
+          </span>
+          <small v-else-if="(v$.caregiverEmail.$invalid && submitted) || v$.caregiverEmail.$pending.$response" class="p-error">
+            {{ v$.caregiverEmail.required.$message.replace('Value', 'Email') }}
+          </small>
         </div>
-        <span v-if="v$.ParentEmail.$error && submitted">
-          <small class="p-error">Please enter a valid email address.</small>
-        </span>
-        <small v-else-if="(v$.ParentEmail.$invalid && submitted) || v$.ParentEmail.$pending.$response" class="p-error">
-          {{ v$.ParentEmail.required.$message.replace('Value', 'Email') }}
-        </small>
       </section>
       <!--Password-->
       <section class="form-section flex lg:flex-row">
@@ -174,10 +180,9 @@ defineProps({
 const emit = defineEmits(['submit']);
 
 const state = reactive({
-  // activationCode: "",
   firstName: '',
   lastName: '',
-  ParentEmail: '',
+  caregiverEmail: '',
   password: '',
   confirmPassword: '',
   accept: false,
@@ -185,11 +190,16 @@ const state = reactive({
 const passwordRef = computed(() => state.password);
 
 const rules = {
-  // activationCode: { required },
   firstName: { required },
   lastName: { required },
-  ParentEmail: {
+  caregiverEmail: {
     required,
+    email,
+    asyncValidator: helpers.withAsync(async (email) => {
+      if (!email) return true;
+      const validEmail = await roarfirekit.value.isEmailAvailable(email);
+      return !!validEmail;
+    }, state.caregiverEmail),
   },
   password: {
     required,
@@ -226,7 +236,7 @@ const handleFormSubmit = (isFormValid) => {
 };
 
 const validateRoarEmail = async () => {
-  const validEmail = await roarfirekit.value.isEmailAvailable(state.ParentEmail);
+  const validEmail = await roarfirekit.value.isEmailAvailable(state.caregiverEmail);
   if (!validEmail) {
     dialogMessage.value = 'This email address is already in use.';
     showErrorDialog();

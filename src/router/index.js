@@ -114,12 +114,23 @@ const routes = [
       {
         name: 'registerParent',
         path: '',
-        component: () => import('../components/auth/RegisterParent.vue'),
+        component: () => import('../components/auth/RegisterCaregiver.vue'),
       },
       {
         name: 'registerStudent',
         path: 'student',
         component: () => import('../components/auth/RegisterStudent.vue'),
+      },
+      {
+        path: 'family-users',
+        name: 'familyUsers',
+        component: () => import('../pages/RegisterFamilyUsers.vue'),
+      },
+      {
+        path: 'register-caregiver',
+        name: 'registerCaregiver',
+        meta: { requiresAuth: false },
+        component: () => import('../components/auth/RegisterCaregiver.vue'),
       },
     ],
     meta: { requiresGuest: true },
