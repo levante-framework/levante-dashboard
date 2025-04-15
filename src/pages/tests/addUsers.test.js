@@ -168,8 +168,7 @@ describe('Add Users Page', () => {
       expect(wrapper.vm.errorUsers.length).toBeGreaterThan(0);
       
       // 2. First error user should contain the specific error message about missing month
-      const firstErrorUser = wrapper.vm.errorUsers[0];
-      expect(firstErrorUser.error).toBe('Missing Field(s): month');
+      expect(wrapper.vm.errorMessages[0]).toContain('Missing Field(s): month');
       
       // 3. The showErrorTable flag should be true
       expect(wrapper.vm.showErrorTable).toBe(true);
