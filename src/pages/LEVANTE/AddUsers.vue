@@ -205,7 +205,75 @@ watch(
   { deep: true },
 );
 
-// Functions supporting the uploader
+// Validation helper functions
+const validateFile = (file) => {
+  if (!file) {
+    throw new Error('No file selected');
+  }
+  return file;
+};
+
+const validateColumns = (columns, userType) => {
+  const missingColumns = [];
+  
+  // Check required columns
+  if (!columns.includes('usertype')) {
+    missingColumns.push('userType');
+  }
+
+  // Check conditional columns for child users
+  if (userType === 'child') {
+    if (!columns.includes('month')) missingColumns.push('Month');
+    if (!columns.includes('year')) missingColumns.push('Year');
+  }
+
+  // Check group or district+school
+  const hasGroup = columns.includes('group');
+  const hasDistrict = columns.includes('district');
+  const hasSchool = columns.includes('school');
+  
+  if (!hasGroup && (!hasDistrict || !hasSchool)) {
+    missingColumns.push('Group OR District and School');
+  }
+
+  return missingColumns;
+};
+
+const validateUserData = (user) => {
+  const errors = [];
+  const userTypeField = Object.keys(user).find(key => key.toLowerCase() === 'usertype');
+  
+  if (!userTypeField) {
+    errors.push('Missing userType');
+    return errors;
+  }
+
+  const userType = user[userTypeField].toLowerCase();
+  
+  // Validate based on user type
+  if (userType === 'child') {
+    const monthField = Object.keys(user).find(key => key.toLowerCase() === 'month');
+    const yearField = Object.keys(user).find(key => key.toLowerCase() === 'year');
+    
+    if (!monthField || !user[monthField]) errors.push('month');
+    if (!yearField || !user[yearField]) errors.push('year');
+  }
+
+  // Check for group or district and school
+  const groupField = Object.keys(user).find(key => key.toLowerCase() === 'group');
+  const districtField = Object.keys(user).find(key => key.toLowerCase() === 'district');
+  const schoolField = Object.keys(user).find(key => key.toLowerCase() === 'school');
+  
+  if (!groupField || !user[groupField]) {
+    if (!districtField || !user[districtField] || !schoolField || !user[schoolField]) {
+      errors.push('group OR district and school');
+    }
+  }
+
+  return errors;
+};
+
+// Main upload handler
 const onFileUpload = async (event) => {
   // Reset all states
   rawUserFile.value = {};
@@ -219,143 +287,69 @@ const onFileUpload = async (event) => {
   registeredUsers.value = [];
   isFileUploaded.value = false;
 
-  // Read the file
-  const file = event.files[0];
-  
-  // Parse the file directly with csvFileToJson
-  const parsedData = await csvFileToJson(file);
-  
-  // Check if there's any data
-  if (!parsedData || parsedData.length === 0) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Empty File',
-      detail: 'The uploaded file contains no data',
-      life: 5000,
+  try {
+    // 1. Validate and parse file
+    const file = validateFile(event.files[0]);
+    const parsedData = await csvFileToJson(file);
+    
+    if (!parsedData || parsedData.length === 0) {
+      throw new Error('The uploaded file contains no data');
+    }
+
+    // 2. Store parsed data
+    rawUserFile.value = parsedData;
+    const firstRow = toRaw(parsedData[0]);
+    const allColumns = Object.keys(firstRow).map(col => col.toLowerCase());
+
+    // 3. Check for child users
+    const hasChild = parsedData.some(user => {
+      const userType = Object.keys(user).find(key => key.toLowerCase() === 'usertype');
+      return userType && user[userType].toLowerCase() === 'child';
     });
-    return;
-  }
-  
-  // Store the parsed data
-  rawUserFile.value = parsedData;
 
-  // REGISTRATION
-  // Required: userType 
-  // Conditional (child): Month, Year 
-  // Conditional (Either): Group OR District + School 
+    // 4. Validate columns
+    const missingColumns = validateColumns(allColumns, hasChild ? 'child' : 'other');
+    if (missingColumns.length > 0) {
+      errorMissingColumns.value = true;
+      throw new Error(`Missing required column(s): ${missingColumns.join(', ')}`);
+    }
 
-  // Get all column names from the first row, case-insensitive check for userType
-  const firstRow = toRaw(rawUserFile.value[0]);
-  const allColumns = Object.keys(firstRow).map(col => col.toLowerCase());
-
-  // Check if userType column exists (case-insensitive)
-  const hasUserType = allColumns.includes('usertype');
-  if (!hasUserType) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Missing Column',
-      detail: 'Missing required column(s): userType',
-      life: 5000,
+    // 5. Validate each user's data
+    parsedData.forEach((user, index) => {
+      const errors = validateUserData(user, index);
+      if (errors.length > 0) {
+        addErrorUser(user, `Missing Field(s): ${errors.join(', ')}`);
+      }
     });
-    errorMissingColumns.value = true;
-    return;
-  }
 
-  // Check conditional columns are present
-  const hasChild = rawUserFile.value.some((user) => {
-    const userTypeValue = Object.keys(user).find(key => key.toLowerCase() === 'usertype');
-    return userTypeValue && user[userTypeValue].toLowerCase() === 'child';
-  });
-
-  if (hasChild) {
-    const hasMonth = allColumns.includes('month');
-    const hasYear = allColumns.includes('year');
-    if (!hasMonth || !hasYear) {
+    // 6. Handle validation results
+    if (errorUsers.value.length > 0) {
+      showErrorTable.value = true;
       toast.add({
         severity: 'error',
-        summary: 'Error: Missing Column',
-        detail: 'Missing required column(s): Month or Year',
+        summary: 'Validation Errors',
+        detail: 'Some rows contain errors. Please check the error table below.',
         life: 5000,
       });
-      errorMissingColumns.value = true;
-      return;
-    }
-  }
-
-  // Conditional (Either): Group OR District + School
-  const hasGroup = allColumns.includes('group');
-  const hasDistrict = allColumns.includes('district');
-  const hasSchool = allColumns.includes('school');
-  if (!hasGroup && (!hasDistrict || !hasSchool)) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Missing Column',
-      detail: 'Missing required column(s): Group OR District and School',
-      life: 5000,
-    });
-  }
-
-  // Check required fields are not empty
-  const childRequiredInfo = ['usertype', 'month', 'year'];
-  const careGiverRequiredInfo = ['usertype'];
-
-  rawUserFile.value.forEach((user) => {
-    const missingFields = [];
-    
-    // Get the actual userType field name (preserving original case)
-    const userTypeField = Object.keys(user).find(key => key.toLowerCase() === 'usertype');
-    
-    if (!userTypeField) {
-      missingFields.push('userType');
-    } else if (user[userTypeField].toLowerCase() === 'child') {
-      childRequiredInfo.forEach((requiredField) => {
-        // Find the actual field name in the user object (case-insensitive)
-        const actualField = Object.keys(user).find(key => key.toLowerCase() === requiredField);
-        if (!actualField || !user[actualField]) {
-          missingFields.push(requiredField === 'usertype' ? 'userType' : requiredField);
-        }
-      });
-    } else if (user[userTypeField].toLowerCase() === 'parent' || user[userTypeField].toLowerCase() === 'teacher') {
-      careGiverRequiredInfo.forEach((requiredField) => {
-        // Find the actual field name in the user object (case-insensitive)
-        const actualField = Object.keys(user).find(key => key.toLowerCase() === requiredField);
-        if (!actualField || !user[actualField]) {
-          missingFields.push(requiredField === 'usertype' ? 'userType' : requiredField);
-        }
+    } else {
+      isFileUploaded.value = true;
+      errorMissingColumns.value = false;
+      showErrorTable.value = false;
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'File Successfully Uploaded',
+        life: 3000,
       });
     }
-    
-    // Check for group or district and school (case-insensitive)
-    const groupField = Object.keys(user).find(key => key.toLowerCase() === 'group');
-    const districtField = Object.keys(user).find(key => key.toLowerCase() === 'district');
-    const schoolField = Object.keys(user).find(key => key.toLowerCase() === 'school');
-    
-    if (!groupField || !user[groupField]) {
-      if (!districtField || !user[districtField] || !schoolField || !user[schoolField]) {
-        missingFields.push('group OR district and school');
-      }
-    }
 
-    // Add error if any required fields are missing
-    if (missingFields.length > 0) {
-      addErrorUser(user, `Missing Field(s): ${missingFields.join(', ')}`);
-    }
-  });
-
-  if (errorUsers.value.length) {
+  } catch (error) {
     toast.add({
       severity: 'error',
-      summary: 'Missing Fields. See below for details.',
+      summary: 'Error',
+      detail: error.message,
       life: 5000,
     });
-  }
-
-
-  if (!errorUsers.value.length) {
-    isFileUploaded.value = true;
-    errorMissingColumns.value = false;
-    showErrorTable.value = false;
-    toast.add({ severity: 'success', summary: 'Success', detail: 'File Successfully Uploaded', life: 3000 });
   }
 };
 
