@@ -6,7 +6,7 @@
 
       <PvDivider />
 
-      <div class="text-gray-500 mb-2 surface-100 border-round p-2">
+      <div v-if="!isFileUploaded || errorUsers.length" class="text-gray-500 mb-2 surface-100 border-round p-2">
         <PvFileUpload
           name="massUploader[]"
           custom-upload
