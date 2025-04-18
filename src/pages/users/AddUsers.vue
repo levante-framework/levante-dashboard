@@ -426,8 +426,14 @@ async function submitUsers() {
             orgInfo.classes = classId;
         } else if (orgType === 'group') {
           for (const group of orgNameMap.group) {
-            const groupId = await getOrgId(pluralizeFirestoreCollection(orgType), group, ref(undefined), ref(undefined));
-            orgInfo.groups.push(groupId);
+            try {
+              const groupId = await getOrgId(pluralizeFirestoreCollection(orgType), group, ref(undefined), ref(undefined));
+              orgInfo.groups.push(groupId);
+            } catch (error) {
+              addErrorUser(user, `Error: Group '${group}' does not exist`);
+              activeSubmit.value = false;
+              return;
+            }
           }
         } else {
           const districtId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(undefined), ref(undefined));
@@ -614,7 +620,7 @@ const orgIds = {
  * The fetched data is then cached for future use.
  * If no organizations are found, it throws an error.
  */
-const getOrgId = async (orgType, orgName, parentDistrict, parentSchool) => {
+const getOrgId = async (orgType, orgName, parentDistrict, parentSchool) => {  
   if (orgIds[orgType][orgName]) return orgIds[orgType][orgName];
 
   // Array of objects. Ex: [{abbreviation: 'LVT', id: 'lut54353jkler'}]
