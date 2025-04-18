@@ -1,27 +1,32 @@
-import { acceptHMRUpdate, defineStore } from 'pinia';
-import { parse, stringify } from 'zipson'; // Assuming types are available or handle as 'any' if not
+import { defineStore } from 'pinia';
+import { parse, stringify } from 'zipson';
 
-// Define the state interface
+// Define an interface for the structure of selectedAdmin
+// Assuming it has at least an 'id', adjust as needed
+interface SelectedAdmin {
+  id: string | number; // Use string or number depending on the actual ID type
+  // Add other relevant properties if known
+}
+
+// Define the state structure with types
 interface GameState {
-  selectedAdmin: any | undefined; // Use a more specific type if known (e.g., string, object)
+  selectedAdmin: SelectedAdmin | null; // Allow null if it can be unselected
   requireRefresh: boolean;
 }
 
-// Define the serializer type (basic structure)
-interface Serializer {
-    deserialize: (value: string) => any;
-    serialize: (value: any) => string;
-}
-
-export const useGameStore = defineStore('gameStore', { // Changed ID to 'gameStore' as in original JS
+export const useGameStore = defineStore('gameStore', {
   state: (): GameState => ({
-    selectedAdmin: undefined,
+    selectedAdmin: null, // Initialize as null
     requireRefresh: false,
   }),
   actions: {
-    requireHomeRefresh(): void { // Added void return type
+    requireHomeRefresh() {
       this.requireRefresh = true;
     },
+    // Add types for any action parameters if they exist
+    // Example: setSelectedAdmin(admin: SelectedAdmin | null) {
+    //   this.selectedAdmin = admin;
+    // }
   },
   persist: {
     storage: sessionStorage,
@@ -29,11 +34,6 @@ export const useGameStore = defineStore('gameStore', { // Changed ID to 'gameSto
     serializer: {
       deserialize: parse,
       serialize: stringify,
-    } as Serializer, // Cast to Serializer interface
+    },
   },
 });
-
-// HMR (Hot Module Replacement)
-if (import.meta.hot) {
-  import.meta.hot.accept(acceptHMRUpdate(useGameStore, import.meta.hot));
-} 

@@ -51,14 +51,14 @@
             :badge="selectedRows?.length?.toString()"
             :disabled="selectedRows.length === 0"
             class="m-1 m-1 h-3rem bg-primary text-white border-none border-round h-2rem text-sm hover:bg-red-900"
-            @click="exportCSV(true, $event)"
+            @click="exportCSV(true)"
           />
           <PvButton
             v-if="allowExport"
             v-tooltip.bottom="'Export all scores for all students to a CSV file for spreadsheet import.'"
             label="Export Whole Table"
             class="m-1 h-3rem bg-primary text-white border-none border-round h-2rem text-sm hover:bg-red-900"
-            @click="exportCSV(false, $event)"
+            @click="exportCSV(false)"
           />
         </span>
       </div>
@@ -141,18 +141,18 @@
               <div v-else-if="col.dataType == 'progress'">
                 <PvTag
                   v-if="_get(colData, col.field)"
-                  :severity="_get(colData, col.severityField)"
+                  :severity="_get(colData, col.severityField || '')"
                   :value="_get(colData, col.field)"
-                  :icon="_get(colData, col.iconField)"
+                  :icon="_get(colData, col.iconField || '')"
                   class="progress-tag"
                   rounded
                 />
               </div>
               <div
-                v-else-if="col.tagOutlined && _get(colData, col.tagColor)"
+                v-else-if="col.tagOutlined && _get(colData, col.tagColor || '')"
                 class="circle"
-                :style="`border: 1px solid black; background-color: ${_get(colData, col.tagColor)}; color: ${
-                  _get(colData, col.tagColor) === 'white' ? 'black' : 'white'
+                :style="`border: 1px solid black; background-color: ${_get(colData, col.tagColor || '')}; color: ${
+                  _get(colData, col.tagColor || '') === 'white' ? 'black' : 'white'
                 }; outline: 1px dotted #0000CD; outline-offset: 3px`"
               />
               <div v-else-if="col.chip && col.dataType === 'array' && _get(colData, col.field) !== undefined">
@@ -188,7 +188,7 @@
                   style="color: black !important"
                   data-cy="event-button"
                   size="small"
-                  @click="$emit(col.eventName, colData)"
+                  @click="col.eventName && $emit(col.eventName, colData)"
                 />
               </div>
               <div v-else-if="col.dataType === 'date'">
@@ -246,15 +246,17 @@
                 >
                   <template #option="{ option }">
                     <div class="flex align-items-center p-0">
-                      <div v-if="supportLevelColors[option]" class="flex gap-2 p-0">
-                        <div class="small-circle tooltip" :style="`background-color: ${supportLevelColors[option]};`" />
+                      <!-- Assert type for indexing -->
+                      <div v-if="typedSupportLevelColors[option as SupportLevelColorKeys]" class="flex gap-2 p-0">
+                        <div class="small-circle tooltip" :style="`background-color: ${typedSupportLevelColors[option as SupportLevelColorKeys]};`" />
                         <span class="tooltiptext">{{ option }}</span>
                       </div>
-                      <div v-else-if="progressTags[option]">
+                      <!-- Assert type for indexing -->
+                      <div v-else-if="typedProgressTags[option as ProgressTagKeys]">
                         <PvTag
-                          :severity="progressTags[option]?.severity"
-                          :value="progressTags[option]?.value"
-                          :icon="progressTags[option]?.icon"
+                          :severity="typedProgressTags[option as ProgressTagKeys]?.severity"
+                          :value="typedProgressTags[option as ProgressTagKeys]?.value"
+                          :icon="typedProgressTags[option as ProgressTagKeys]?.icon"
                           class="p-0.5 m-0 font-bold"
                         />
                       </div>
@@ -264,15 +266,17 @@
                     </div>
                   </template>
                   <template #value="{ value }">
-                    <div v-if="supportLevelColors[value]" class="flex gap-2">
-                      <div class="small-circle tooltip" :style="`background-color: ${supportLevelColors[value]};`" />
+                     <!-- Assert type for indexing -->
+                    <div v-if="typedSupportLevelColors[value as SupportLevelColorKeys]" class="flex gap-2">
+                      <div class="small-circle tooltip" :style="`background-color: ${typedSupportLevelColors[value as SupportLevelColorKeys]};`" />
                       <span class="tooltiptext">{{ value }}</span>
                     </div>
-                    <div v-else-if="progressTags[value]">
+                     <!-- Assert type for indexing -->
+                    <div v-else-if="typedProgressTags[value as ProgressTagKeys]">
                       <PvTag
-                        :severity="progressTags[value]?.severity"
-                        :value="progressTags[value]?.value"
-                        :icon="progressTags[value]?.icon"
+                        :severity="typedProgressTags[value as ProgressTagKeys]?.severity"
+                        :value="typedProgressTags[value as ProgressTagKeys]?.value"
+                        :icon="typedProgressTags[value as ProgressTagKeys]?.icon"
                         class="p-0.5 m-0 font-bold"
                       />
                     </div>
@@ -290,22 +294,24 @@
                   data-cy="progress-filter-dropdown"
                 >
                   <template #option="{ option }">
-                    <div v-if="progressTags[option]" class="flex align-items-center">
+                     <!-- Assert type for indexing -->
+                    <div v-if="typedProgressTags[option as ProgressTagKeys]" class="flex align-items-center">
                       <PvTag
-                        :severity="progressTags[option]?.severity"
-                        :value="progressTags[option]?.value"
-                        :icon="progressTags[option]?.icon"
+                        :severity="typedProgressTags[option as ProgressTagKeys]?.severity"
+                        :value="typedProgressTags[option as ProgressTagKeys]?.value"
+                        :icon="typedProgressTags[option as ProgressTagKeys]?.icon"
                         class="progress-tag"
                         rounded
                       />
                     </div>
                   </template>
                   <template #value="{ value }">
+                    <!-- Assert type for indexing -->
                     <PvTag
-                      v-if="progressTags[value]"
-                      :severity="progressTags[value]?.severity"
-                      :value="progressTags[value]?.value"
-                      :icon="progressTags[value]?.icon"
+                      v-if="typedProgressTags[value as ProgressTagKeys]"
+                      :severity="typedProgressTags[value as ProgressTagKeys]?.severity"
+                      :value="typedProgressTags[value as ProgressTagKeys]?.value"
+                      :icon="typedProgressTags[value as ProgressTagKeys]?.icon"
                       class="progress-tag"
                       rounded
                     />
@@ -355,14 +361,17 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue';
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue';
+import type { Ref, ComputedRef } from 'vue';
 import { useToast } from 'primevue/usetoast';
+import type { ToastServiceMethods } from 'primevue/toastservice';
 import PvButton from 'primevue/button';
 import PvDatePicker from 'primevue/datepicker';
 import PvChip from 'primevue/chip';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
+import type { DataTableFilterMeta, DataTableFilterMetaData, DataTableSortMeta } from 'primevue/datatable';
 import PvFloatLabel from 'primevue/floatlabel';
 import PvSelect from 'primevue/select';
 import PvInputNumber from 'primevue/inputnumber';
@@ -376,73 +385,156 @@ import _forEach from 'lodash/forEach';
 import _find from 'lodash/find';
 import _toUpper from 'lodash/toUpper';
 import _startCase from 'lodash/startCase';
+import _uniq from 'lodash/uniq';
 import { supportLevelColors, progressTags } from '@/helpers/reports';
+// @ts-ignore - TS struggles with inferring types from Vue SFC imports here
 import SkeletonTable from '@/components/SkeletonTable.vue';
+// @ts-ignore - TS struggles with inferring types from Vue SFC imports here
 import TableScoreTag from '@/components/reports/TableScoreTag.vue';
 
-/*
-Using the DataTable
-Required Props: columns, data
-Optional Props: allowExport (default: true), exportFilename (default: 'datatable-export')
+// --- Interfaces & Types ---
 
-Columns:
-Array of objects consisting of a field and header at minimum.
-- Field must match the key of the entry in the data object.
-- Header is an optional string that is displayed at the top of
-      the column.
-- dataType is a string that defines the data type of the column.
-      options are TEXT, NUMERIC, or DATE
-- Sort (optional) is a boolean field that determines whether sorting
-      is to be allowed on the field. If it is not present, defaults to true.
-- allowMultipleFilters (optional) is a boolean field that determines whether
-      users have the option of apply multiple filters.
-- useMultiSelect is an optional boolean field that determines whether the
-      filter will be a multi-select dropdown. options are generated by the
-      given data.
-- Pinned (optional) is a boolean field allowing the column to persist when
-      scrolled left-to-right. It is suggested that this only be used on
-      the leftmost column.
-*/
-const showControls = ref(false);
-const toggleControls = () => {
-  showControls.value = !showControls.value;
-};
+// Type for supportLevelColors (assuming keys are strings)
+// Add specific keys if they are known and fixed
+type SupportLevelColorKeys = 'Green' | 'Yellow' | 'Pink' | string; // Example keys
+const typedSupportLevelColors: Record<SupportLevelColorKeys, string> = supportLevelColors;
 
-const props = defineProps({
-  columns: { type: Array, required: true },
-  data: { type: Array, required: true },
-  allowExport: { type: Boolean, default: true },
-  exportFilename: { type: String, default: 'datatable-export' },
-  pageLimit: { type: Number, default: 15 },
-  totalRecords: { type: Number, required: false, default: 0 },
-  loading: { type: Boolean, default: false },
-  lazy: { type: Boolean, default: false },
-  lazyPreSorting: { type: Array, required: false, default: () => [] },
-  isInsideListOrgs: {
-    type: Boolean,
-    default: false,
-  },
-  groupheaders: { type: Boolean, default: false },
-  allowFiltering: { type: Boolean, default: true },
-  allowColumnSelection: { type: Boolean, default: true },
+// Type for progressTags (assuming keys are strings)
+// Add specific keys if they are known and fixed
+interface ProgressTagData {
+    value: string;
+    icon: string;
+    severity: string; // Or specific severity strings like 'info', 'success' etc.
+}
+type ProgressTagKeys = 'Optional' | 'Completed' | 'Started' | 'Assigned' | string; // Example keys
+const typedProgressTags: Record<ProgressTagKeys, ProgressTagData> = progressTags;
+
+// Represents a single row of data in the table
+// Use a generic Record or define specific properties if known
+interface TableRowData {
+  id?: string | number; // Assuming an ID exists for selection
+  [key: string]: any; // Allow any other properties
+}
+
+// Define the structure for a column definition
+interface ColumnDefinition {
+  field: string;
+  header?: string;
+  dataType?: 'text' | 'number' | 'date' | 'boolean' | 'score' | 'progress' | 'array' | string; // Extend string for flexibility
+  sort?: boolean;
+  allowMultipleFilters?: boolean;
+  useMultiSelect?: boolean;
+  pinned?: boolean;
+  style?: string | Record<string, string>;
+  filterField?: string;
+  tagOutlined?: boolean;
+  tagColor?: string; // Used with tagOutlined
+  chip?: boolean; // Used with dataType array
+  link?: boolean;
+  routeName?: string;
+  routeParams?: Record<string, any>; // Define more specifically if possible
+  routeTooltip?: string;
+  routeIcon?: string;
+  button?: boolean;
+  buttonLabel?: string;
+  buttonTooltip?: string;
+  buttonIcon?: string;
+  eventName?: string;
+  severityField?: string; // Used with progress dataType
+  iconField?: string; // Used with progress dataType
+  emptyTag?: boolean; // Used in TableScoreTag
+}
+
+// Type for task filter options structure
+interface TaskFilterItem {
+    label: string;
+    value: string;
+}
+
+interface TaskFilterGroup {
+    label: string;
+    code: string;
+    items: string[]; // Or TaskFilterItem[] if values differ from labels
+}
+
+// Type for computedFilters return value
+interface ComputedFiltersResult {
+    computedOptions: Record<string, any[]>; // Options for MultiSelect filters
+    computedFilters: DataTableFilterMeta;
+}
+
+interface Props {
+  columns: ColumnDefinition[];
+  data: TableRowData[];
+  allowExport?: boolean;
+  exportFilename?: string;
+  pageLimit?: number;
+  totalRecords?: number;
+  loading?: boolean;
+  lazy?: boolean; // Currently unused, consider removing if not needed
+  lazyPreSorting?: DataTableSortMeta[];
+  isInsideListOrgs?: boolean; // Currently unused, consider removing if not needed
+  groupheaders?: boolean; // Currently unused, consider removing if not needed
+  allowFiltering?: boolean;
+  allowColumnSelection?: boolean;
+}
+
+interface Emits {
+    (e: 'export-all'): void;
+    (e: 'selection', selectedData: TableRowData[]): void;
+    (e: 'reset-filters'): void; // Seems unused currently
+    (e: 'export-selected', selectedData: TableRowData[]): void;
+    (e: 'export-org-users', data: any): void; // Define type for event data if known
+    (e: string, data: any): void; // Generic emit for button events
+}
+
+// --- Props, Emits, Refs ---
+
+const props = withDefaults(defineProps<Props>(), {
+  allowExport: true,
+  exportFilename: 'datatable-export',
+  pageLimit: 25, // Changed default to 25 based on options
+  totalRecords: 0,
+  loading: false,
+  lazy: false,
+  lazyPreSorting: () => [],
+  isInsideListOrgs: false,
+  groupheaders: false,
+  allowFiltering: true,
+  allowColumnSelection: true,
 });
 
-const inputColumns = ref(props.columns);
-const selectedColumns = ref(props.columns);
-// Filter the live data (props.columns) with the selections of selectedColumns
-const computedColumns = computed(() => {
-  return _map(selectedColumns.value, (col) => {
-    return _find(props.columns, (pcol) => pcol.header === col.header);
-  });
-});
-const currentSort = ref([]);
-const selectedRows = ref([]);
+const emit = defineEmits<Emits>();
 
-const taskFilterOptions = ref([
+const showControls: Ref<boolean> = ref(false);
+const dataTable: Ref<InstanceType<typeof PvDataTable> | null> = ref(null);
+const inputColumns: Ref<ColumnDefinition[]> = ref(props.columns);
+const selectedColumns: Ref<ColumnDefinition[]> = ref([...props.columns]); // Use spread to create a copy
+const frozenColumns: Ref<ColumnDefinition[]> = ref(inputColumns.value.filter((col) => col.pinned));
+const currentSort: Ref<DataTableSortMeta[]> = ref(props.lazyPreSorting); // Initialize with prop
+const selectedRows: Ref<TableRowData[]> = ref([]);
+const selectAll: Ref<boolean> = ref(false);
+const compressedRows: Ref<boolean> = ref(false); // This ref seems unused?
+const toast: ToastServiceMethods = useToast();
+
+// --- Computed Properties ---
+
+// Filters visible columns based on user selection
+const computedColumns: ComputedRef<ColumnDefinition[]> = computed(() => {
+    // Ensure selectedColumns is always an array
+    const currentSelected = Array.isArray(selectedColumns.value) ? selectedColumns.value : [];
+    // Map based on selected headers, finding the full definition from inputColumns
+    return currentSelected
+        .map(selectedCol => inputColumns.value.find(inputCol => inputCol.header === selectedCol.header))
+        .filter((col): col is ColumnDefinition => !!col); // Filter out undefined results
+});
+
+// Task filter options for the score column dropdown
+const taskFilterOptions: Ref<TaskFilterGroup[]> = ref([
   {
     label: 'Support Categories',
     code: 'SupportCategories',
-    items: ['Green', 'Yellow', 'Pink'],
+    items: ['Green', 'Yellow', 'Pink'], // Assuming these are the values
   },
   {
     label: 'Progress Status',
@@ -456,45 +548,8 @@ const taskFilterOptions = ref([
   },
 ]);
 
-const toast = useToast();
-const selectAll = ref(false);
-const onSelectAll = () => {
-  selectAll.value = !selectAll.value;
-  if (selectAll.value) {
-    selectedRows.value = props.data;
-    toast.add({
-      severity: 'info',
-      summary: 'Rows selected',
-      detail: `You selected ${selectedRows.value.length} rows but there are
-        ${props.totalRecords} total rows in all of this table's pages. If you
-        would like to export all rows, please click the "Export Whole Table"
-        button.`,
-      life: 5000,
-    });
-  } else {
-    selectedRows.value = [];
-  }
-  emit('selection', selectedRows.value);
-};
-
-const onSelectionChange = () => {
-  emit('selection', selectedRows.value);
-};
-
-const dataTable = ref();
-
-const exportCSV = (exportSelected) => {
-  if (exportSelected) {
-    emit('export-selected', selectedRows.value);
-    return;
-  }
-  emit('export-all');
-};
-
-const compressedRows = ref(false);
-
-// Generate filters and options objects
-const dataTypesToFilterMatchMode = {
+// Mapping from dataType to PrimeVue FilterMatchMode
+const dataTypesToFilterMatchMode: Record<string, string> = {
   NUMERIC: FilterMatchMode.EQUALS,
   NUMBER: FilterMatchMode.EQUALS,
   TEXT: FilterMatchMode.CONTAINS,
@@ -505,50 +560,57 @@ const dataTypesToFilterMatchMode = {
   PROGRESS: FilterMatchMode.CONTAINS,
 };
 
-const computedFilters = computed(() => {
-  let filters = {};
-  let options = {};
-  _forEach(computedColumns.value, (column) => {
-    // Check if header text is supplied; if not, generate.
-    if (!_get(column, 'header')) {
-      column['header'] = _startCase(_get(column, 'field'));
-    }
-    // Choose whether to default to field or a custom filterField (e.g. tag based filters)
-    const fieldOrFilterField = column?.filterField ? column.filterField : column.field;
-    const dataType = _toUpper(_get(column, 'dataType'));
-    let returnMatchMode = null;
+// Generates the filter configuration object for PrimeVue DataTable
+const computedFiltersResult: ComputedRef<ComputedFiltersResult> = computed(() => {
+  let filters: DataTableFilterMeta = {};
+  let options: Record<string, any[]> = {};
 
-    // generate return matchmode
-    if (dataTypesToFilterMatchMode[dataType]) {
-      returnMatchMode = { value: null, matchMode: dataTypesToFilterMatchMode[dataType] };
-    }
+  computedColumns.value.forEach((column) => {
+    if (!column.dataType || !props.allowFiltering) return; // Skip if no dataType or filtering disabled
 
-    // case for where multiselect ( can affect any type of data type)
-    if (_get(column, 'useMultiSelect')) {
-      returnMatchMode = { value: null, matchMode: FilterMatchMode.IN };
+    const fieldOrFilterField = column.filterField ?? column.field;
+    const dataTypeUpper = _toUpper(column.dataType);
+    let matchMode = dataTypesToFilterMatchMode[dataTypeUpper] ?? FilterMatchMode.CONTAINS;
+    let value: any = null;
+
+    if (column.useMultiSelect) {
+      matchMode = FilterMatchMode.IN;
       options[column.field] = getUniqueOptions(column);
+      value = null; // MultiSelect handles its own value array
+    } else if (column.dataType === 'boolean'){
+        // Primevue boolean filter often expects true/false not strings 'True'/'False'
+        matchMode = FilterMatchMode.EQUALS; 
+        value = null; // Let the select component handle 'True'/'False' mapping if needed
     }
 
-    if (returnMatchMode) {
-      filters[fieldOrFilterField] = {
-        operator: FilterOperator.AND,
-        constraints: [returnMatchMode],
-      };
-    }
+    filters[fieldOrFilterField] = {
+      operator: FilterOperator.AND,
+      constraints: [{ value, matchMode }],
+    };
   });
+
   return { computedOptions: options, computedFilters: filters };
 });
 
-const refOptions = ref(computedFilters.value.computedOptions);
-const refFilters = ref(computedFilters.value.computedFilters);
+// Refs to hold the generated filters and options
+const refOptions: Ref<Record<string, any[]>> = ref(computedFiltersResult.value.computedOptions);
+const refFilters: Ref<DataTableFilterMeta> = ref(computedFiltersResult.value.computedFilters);
 
-const resetFilters = () => {
-  refFilters.value = computedFilters.value.computedFilters;
-  // emit('reset-filters');
-};
+// Watch for changes in computed filters/options (e.g., when columns change)
+watch(computedFiltersResult, (newVal) => {
+    refOptions.value = newVal.computedOptions;
+    refFilters.value = newVal.computedFilters;
+});
 
-let toolTipByHeader = (header) => {
-  const headerToTooltipMap = {
+// --- Functions ---
+
+function toggleControls(): void {
+  showControls.value = !showControls.value;
+}
+
+function toolTipByHeader(header: string | undefined): string {
+  if (!header) return '';
+  const headerToTooltipMap: Record<string, string> = {
     Word: 'Assesses decoding skills at the word level. \n\n  Percentile ranges from 0-99 \n Raw Score ranges from 100-900',
     Letter:
       'Assesses decoding skills at the word level. \n\n Percentile ranges from 0-99 \n Raw Score ranges from 0-90',
@@ -559,59 +621,132 @@ let toolTipByHeader = (header) => {
     Palabra:
       'Assesses decoding skills at the word level in Spanish. This test is still in the research phase. \n\n  Percentile ranges from 0-99 \n Raw Score ranges from 100-900',
   };
-
   return headerToTooltipMap[header] || '';
-};
-
-// Generate list of options given a column
-function getUniqueOptions(column) {
-  const field = _get(column, 'field');
-  let options = [];
-  _forEach(props.data, (entry) => {
-    if (!options.includes(_get(entry, field))) {
-      options.push(_get(entry, field));
-    }
-  });
-  return options;
 }
 
-function getFormattedDate(date) {
-  if (date instanceof Date) {
-    return date.toLocaleDateString('en-us', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
-  } else if (typeof date === 'string') {
+// Gets unique values for a column's MultiSelect filter
+function getUniqueOptions(column: ColumnDefinition): any[] {
+  const field = column.field;
+  // Use Set for efficient unique value collection
+  const uniqueValues = new Set<any>(); 
+  props.data.forEach((entry) => {
+      const value = _get(entry, field);
+      if (value !== undefined && value !== null) { // Exclude null/undefined
+        if (Array.isArray(value)) {
+            value.forEach(item => uniqueValues.add(item));
+        } else {
+            uniqueValues.add(value);
+        }
+      }
+  });
+  // Convert Set back to array and sort if needed
+  return Array.from(uniqueValues).sort(); 
+}
+
+// Formats a date value
+function getFormattedDate(date: string | Date | undefined | null): string {
+    if (!date) return '';
+    let dateObj: Date;
     try {
-      const dateObj = new Date(date);
-      return dateObj.toLocaleDateString('en-us', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
+        dateObj = date instanceof Date ? date : new Date(date);
+        // Check if date is valid
+        if (isNaN(dateObj.getTime())) return ''; 
+        return dateObj.toLocaleDateString('en-us', { 
+            // weekday: 'long', // Keep it shorter for tables?
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
     } catch (error) {
-      return '';
+        console.warn("Error formatting date:", date, error);
+        return '';
     }
-  }
-  return '';
 }
 
-const onColumnToggle = (selected) => {
-  selectedColumns.value = inputColumns.value.filter((col) => selected.includes(col));
-};
+// Updates the visible columns
+function onColumnToggle(selected: ColumnDefinition[]): void {
+  selectedColumns.value = selected;
+}
 
-const frozenColumns = ref(inputColumns.value.filter((col) => col.pinned));
-const onFreezeToggle = (selected) => {
-  frozenColumns.value = inputColumns.value.filter((col) => selected.includes(col));
-  selectedColumns.value = selectedColumns.value.map((col) => {
-    col.pinned = selected.includes(col);
-    return col;
-  });
-};
+// Updates the frozen columns
+function onFreezeToggle(selected: ColumnDefinition[]): void {
+  frozenColumns.value = selected;
+  // Update the pinned status in the main selectedColumns ref
+  const frozenFields = new Set(selected.map(col => col.field));
+  selectedColumns.value = selectedColumns.value.map((col) => ({
+      ...col,
+      pinned: frozenFields.has(col.field),
+  }));
+}
 
-// Pass through data table events
-const emit = defineEmits(['export-all', 'selection', 'reset-filters', 'export-selected', 'export-org-users']);
+// Handles the select all checkbox change
+function onSelectAll(event: { checked: boolean }): void {
+  selectAll.value = event.checked;
+  if (selectAll.value) {
+    selectedRows.value = [...props.data]; // Create a copy
+    toast.add({
+      severity: 'info',
+      summary: 'Rows selected',
+      detail: `You selected ${selectedRows.value.length} rows on this page. To export all ${props.totalRecords} records, use "Export Whole Table".`,
+      life: 5000,
+    });
+  } else {
+    selectedRows.value = [];
+  }
+  emit('selection', selectedRows.value);
+}
+
+// Handles individual row selection changes
+function onSelectionChange(): void {
+  // When individual rows are selected/deselected, selectAll should be false
+  selectAll.value = false; 
+  emit('selection', selectedRows.value);
+}
+
+// Resets table filters
+function resetFilters(): void {
+  refFilters.value = computedFiltersResult.value.computedFilters;
+  // Optionally clear sort state as well?
+  // currentSort.value = []; 
+  // if (dataTable.value) {
+  //   dataTable.value.resetPage(); 
+  //   dataTable.value.resetScroll();
+  // }
+}
+
+// Triggers the CSV export
+function exportCSV(exportSelected: boolean): void {
+  if (exportSelected) {
+    if (selectedRows.value.length > 0) {
+        emit('export-selected', selectedRows.value);
+    } else {
+        toast.add({ severity: 'warn', summary: 'No Rows Selected', detail: 'Please select rows to export.', life: 3000 });
+    }
+  } else {
+    emit('export-all');
+  }
+}
+
+// Watch for external changes to columns prop (less common, but good practice)
+watch(() => props.columns, (newColumns) => {
+    inputColumns.value = newColumns;
+    // Reset selections if the base columns change significantly?
+    // This depends on desired behavior.
+    selectedColumns.value = [...newColumns]; 
+    frozenColumns.value = newColumns.filter(col => col.pinned);
+}, { deep: true });
+
+// Watch for external changes to data prop
+watch(() => props.data, () => {
+    // Reset selection and selectAll status when data changes
+    selectedRows.value = [];
+    selectAll.value = false;
+    // Maybe reset filters/page? Depends on use case.
+}, { deep: true });
+
 </script>
-<style>
 
+<style>
 .options-container {
   .button-container {
     position: relative;

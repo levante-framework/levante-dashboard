@@ -5,14 +5,16 @@
     <AppSpinner />
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { onMounted, onBeforeUnmount, watch, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import _get from 'lodash/get';
 import { useAuthStore } from '@/store/auth';
 import { useGameStore } from '@/store/game';
+// @ts-ignore - Missing type declarations
 import useUserStudentDataQuery from '@/composables/queries/useUserStudentDataQuery';
+// @ts-ignore - Missing type declarations
 import useCompleteAssessmentMutation from '@/composables/mutations/useCompleteAssessmentMutation';
 import packageLockJson from '../../../package-lock.json';
 
@@ -21,7 +23,7 @@ const props = defineProps({
   language: { type: String, required: true, default: 'en' },
 });
 
-let TaskLauncher;
+let TaskLauncher: any; // Explicitly type as any for now
 
 const taskId = props.taskId;
 const { version } = packageLockJson.packages['node_modules/@bdelab/roar-swr'];
@@ -35,7 +37,7 @@ const { isFirekitInit, roarfirekit } = storeToRefs(authStore);
 const { mutateAsync: completeAssessmentMutate } = useCompleteAssessmentMutation();
 
 const initialized = ref(false);
-let unsubscribe;
+let unsubscribe: Function | undefined; // Type as Function or undefined
 const init = () => {
   if (unsubscribe) unsubscribe();
   initialized.value = true;
@@ -64,6 +66,7 @@ window.addEventListener(
 
 onMounted(async () => {
   try {
+    // @ts-ignore - Missing type declarations for module
     TaskLauncher = (await import('@bdelab/roar-swr')).default;
   } catch (error) {
     console.error('An error occurred while importing the game module.', error);
@@ -88,7 +91,7 @@ watch(
   { immediate: true },
 );
 
-async function startTask(selectedAdmin) {
+async function startTask(selectedAdmin: any) { // Explicitly type as any for now
   try {
     let checkGameStarted = setInterval(function () {
       // Poll for the preload trials progress bar to exist and then begin the game
