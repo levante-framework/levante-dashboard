@@ -165,6 +165,7 @@ const userDisplayName = computed<string>(() => {
   }
 });
 
+// console.log('NavBar - userClaims before useUserType:', userClaims.value); // Removed debug log
 const { isAdmin, isSuperAdmin } = useUserType(userClaims);
 
 const computedIsBasicView = computed<boolean>(() => {
