@@ -1,0 +1,132 @@
+import { ref, type Ref, nextTick } from 'vue';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { withSetup } from '@/test-support/withSetup';
+import {
+  QueryClient,
+  VueQueryPlugin,
+  useQuery,
+  type UseQueryOptions,
+} from '@tanstack/vue-query';
+import { nanoid } from 'nanoid';
+import { fetchUsersByOrg, type UserData, type OrderBy } from '@/helpers/query/users';
+import useOrgUsersQuery from './useOrgUsersQuery';
+
+// --- Mocks ---
+const mockFetchUsersByOrg = vi.fn().mockResolvedValue([{ name: 'mock-user' }]);
+const mockUseQuery = vi.fn();
+
+vi.mock('@/helpers/query/users', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/helpers/query/users')>();
+  return {
+    ...original,
+    fetchUsersByOrg: mockFetchUsersByOrg,
+  };
+});
+
+vi.mock('@tanstack/vue-query', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@tanstack/vue-query')>();
+  mockUseQuery.mockImplementation(original.useQuery);
+  return {
+    ...original,
+    useQuery: mockUseQuery,
+  };
+});
+
+// --- Tests ---
+describe('useOrgUsersQuery', () => {
+  let queryClient: QueryClient;
+
+  beforeEach(async () => {
+    queryClient = new QueryClient();
+    vi.clearAllMocks();
+    const originalVueQuery = await vi.importActual<typeof import('@tanstack/vue-query')>('@tanstack/vue-query');
+    mockUseQuery.mockImplementation(originalVueQuery.useQuery);
+  });
+
+  afterEach(() => {
+    queryClient?.clear();
+  });
+
+  it('should call query with correct parameters', () => {
+    const mockOrgType: Ref<string> = ref('districts');
+    const mockOrgId: Ref<string> = ref(nanoid());
+    const mockPageNumber: Ref<number> = ref(1);
+    const mockOrderBy: Ref<OrderBy[] | undefined> = ref([{ field: { fieldPath: 'name' }, direction: 'ASCENDING' }]);
+    const queryOptions = { enabled: true } as any;
+
+    withSetup(() => useOrgUsersQuery(mockOrgType, mockOrgId, mockPageNumber, mockOrderBy, queryOptions), {
+      plugins: [[VueQueryPlugin, { queryClient }]],
+    });
+
+    expect(mockUseQuery).toHaveBeenCalled();
+    const queryArgs = mockUseQuery.mock.calls[0][0];
+
+    expect(queryArgs.queryKey).toEqual(['org-users', mockOrgType.value, mockOrgId.value, mockPageNumber.value, mockOrderBy.value]);
+    expect(queryArgs.queryFn).toEqual(expect.any(Function));
+    expect(queryArgs.enabled).toBe(true);
+
+    queryArgs.queryFn();
+
+    expect(mockFetchUsersByOrg).toHaveBeenCalledWith(
+      mockOrgType.value,
+      mockOrgId.value,
+      expect.any(Number),
+      mockPageNumber.value,
+      mockOrderBy.value,
+    );
+  });
+
+  it('should allow the query to be disabled via the passed query options', () => {
+    const mockOrgType: Ref<string> = ref('schools');
+    const mockOrgId: Ref<string> = ref(nanoid());
+    const mockPageNumber: Ref<number> = ref(1);
+    const mockOrderBy: Ref<OrderBy[] | undefined> = ref([{ field: { fieldPath: 'name' }, direction: 'DESCENDING' }]);
+    const queryOptions = { enabled: false } as any;
+
+    withSetup(() => useOrgUsersQuery(mockOrgType, mockOrgId, mockPageNumber, mockOrderBy, queryOptions), {
+      plugins: [[VueQueryPlugin, { queryClient }]],
+    });
+
+    expect(mockUseQuery).toHaveBeenCalled();
+    const queryArgs = mockUseQuery.mock.calls[0][0];
+
+    expect(queryArgs.queryKey).toEqual(['org-users', mockOrgType.value, mockOrgId.value, mockPageNumber.value, mockOrderBy.value]);
+    expect(queryArgs.queryFn).toEqual(expect.any(Function));
+    expect(queryArgs.enabled).toBe(false);
+
+    expect(mockFetchUsersByOrg).not.toHaveBeenCalled();
+  });
+
+  it('should become enabled when orgId is provided', async () => {
+    const mockOrgType: Ref<string> = ref('classes');
+    const mockOrgId: Ref<string | null> = ref(null);
+    const mockPageNumber: Ref<number> = ref(1);
+    const mockOrderBy: Ref<OrderBy[] | undefined> = ref([{ field: { fieldPath: 'name' }, direction: 'ASCENDING' }]);
+
+    withSetup(() => useOrgUsersQuery(mockOrgType, mockOrgId, mockPageNumber, mockOrderBy), {
+      plugins: [[VueQueryPlugin, { queryClient }]],
+    });
+
+    expect(mockUseQuery).toHaveBeenCalled();
+    const queryArgs = mockUseQuery.mock.calls[0][0];
+
+    expect(queryArgs.enabled).toBe(false);
+    expect(mockFetchUsersByOrg).not.toHaveBeenCalled();
+
+    const newOrgId = nanoid();
+    mockOrgId.value = newOrgId;
+    await nextTick();
+
+    expect(queryArgs.enabled).toBe(true);
+
+    queryArgs.queryFn();
+
+    expect(mockFetchUsersByOrg).toHaveBeenCalledWith(
+      mockOrgType.value,
+      newOrgId,
+      expect.any(Number),
+      mockPageNumber.value,
+      mockOrderBy.value,
+    );
+  });
+}); 

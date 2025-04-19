@@ -1,0 +1,160 @@
+import { vi } from 'vitest';
+
+// Set up mocks before any other imports
+vi.mock('@/helpers/query/utils');
+vi.mock('@/store/auth');
+vi.mock('@/helpers/computeQueryOverrides');
+vi.mock('@tanstack/vue-query');
+
+// Now import other dependencies 
+import { describe, it, expect, beforeEach } from 'vitest';
+import { ref } from 'vue';
+import { fetchDocById } from '@/helpers/query/utils';
+import { useAuthStore } from '@/store/auth';
+import { useQuery } from '@tanstack/vue-query';
+import useUserDataQuery from './useUserDataQuery';
+import { USER_DATA_QUERY_KEY } from '@/constants/queryKeys';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+
+// Create global mocks that will be restored in beforeEach
+const mockFetchDocById = vi.mocked(fetchDocById);
+const mockUseAuthStore = vi.mocked(useAuthStore);
+const mockUseQuery = vi.mocked(useQuery);
+
+describe('useUserDataQuery', () => {
+  // Setup for each test
+  beforeEach(() => {
+    vi.resetAllMocks();
+    
+    // Mock auth store
+    mockUseAuthStore.mockReturnValue({
+      roarUid: 'mock-auth-user-id'
+    } as any);
+    
+    // Mock fetchDocById
+    mockFetchDocById.mockResolvedValue(null);
+    
+    // Create a mock result for useQuery
+    const mockQueryResult = {
+      data: ref(null),
+      isLoading: ref(false),
+      isError: ref(false),
+      error: ref(null),
+      isPending: ref(false),
+      isSuccess: ref(false)
+    };
+    
+    // Set the mock return value
+    mockUseQuery.mockReturnValue(mockQueryResult as any);
+  });
+
+  it('should use auth store ID when no specific ID is provided', () => {
+    // Call the composable
+    useUserDataQuery();
+    
+    // Check useQuery was called with correct parameters
+    expect(mockUseQuery).toHaveBeenCalledTimes(1);
+    
+    // Get the arguments passed to useQuery
+    const queryConfig = mockUseQuery.mock.calls[0][0];
+    
+    // Check query key
+    expect(queryConfig.queryKey.value).toEqual([USER_DATA_QUERY_KEY, 'mock-auth-user-id']);
+    
+    // Check enabled condition
+    expect(queryConfig.enabled.value).toBe(true);
+    
+    // Execute the queryFn to verify fetchDocById call
+    queryConfig.queryFn();
+    expect(mockFetchDocById).toHaveBeenCalledWith(
+      FIRESTORE_COLLECTIONS.USERS, 
+      'mock-auth-user-id'
+    );
+  });
+
+  it('should use the manually provided user ID when available', () => {
+    const manualUserId = 'manual-user-id';
+    
+    // Call the composable with manual ID
+    useUserDataQuery(manualUserId);
+    
+    // Check useQuery was called with correct parameters
+    expect(mockUseQuery).toHaveBeenCalledTimes(1);
+    
+    // Get the arguments passed to useQuery
+    const queryConfig = mockUseQuery.mock.calls[0][0];
+    
+    // Check query key
+    expect(queryConfig.queryKey.value).toEqual([USER_DATA_QUERY_KEY, manualUserId]);
+    
+    // Check enabled condition
+    expect(queryConfig.enabled.value).toBe(true);
+    
+    // Execute the queryFn to verify fetchDocById call
+    queryConfig.queryFn();
+    expect(mockFetchDocById).toHaveBeenCalledWith(
+      FIRESTORE_COLLECTIONS.USERS, 
+      manualUserId
+    );
+  });
+
+  it('should be disabled if no ID is available', () => {
+    // Override the auth store mock for this test
+    mockUseAuthStore.mockReturnValueOnce({
+      roarUid: null
+    } as any);
+    
+    // Call the composable with null ID (cast to any to bypass type check)
+    useUserDataQuery(null as any);
+    
+    // Check useQuery was called with correct parameters
+    expect(mockUseQuery).toHaveBeenCalledTimes(1);
+    
+    // Get the arguments passed to useQuery
+    const queryConfig = mockUseQuery.mock.calls[0][0];
+    
+    // Check query key
+    expect(queryConfig.queryKey.value).toEqual([USER_DATA_QUERY_KEY, null]);
+    
+    // Check enabled condition is false when no ID is available
+    expect(queryConfig.enabled.value).toBe(false);
+    
+    // No need to execute queryFn as it shouldn't be called when disabled
+  });
+
+  it('should handle query options correctly', () => {
+    const customOptions = { 
+      staleTime: 5000,
+      cacheTime: 10000
+    };
+    
+    // Call the composable with options
+    useUserDataQuery(undefined, customOptions);
+    
+    // Check useQuery was called with correct parameters
+    expect(mockUseQuery).toHaveBeenCalledTimes(1);
+    
+    // Get the arguments passed to useQuery
+    const queryConfig = mockUseQuery.mock.calls[0][0];
+    
+    // Verify options were passed through
+    expect(queryConfig.staleTime).toBe(5000);
+    expect(queryConfig.cacheTime).toBe(10000);
+  });
+
+  it('should handle successful data fetch', async () => {
+    // Mock a successful fetch
+    const mockUserData = { id: 'user-123', firstName: 'Test', lastName: 'User' };
+    mockFetchDocById.mockResolvedValueOnce(mockUserData);
+    
+    // Call the composable
+    useUserDataQuery('user-123');
+    
+    // Get the query function
+    const queryConfig = mockUseQuery.mock.calls[0][0];
+    
+    // Execute the query function and verify result
+    const result = await queryConfig.queryFn();
+    expect(result).toEqual(mockUserData);
+  });
+}); 
