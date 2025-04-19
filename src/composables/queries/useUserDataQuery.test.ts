@@ -15,14 +15,18 @@ import { fetchDocById } from '@/helpers/query/utils';
 import useUserDataQuery from './useUserDataQuery';
 
 // --- Mocks ---
+// Define ALL mock variables BEFORE vi.mock calls
 const mockFetchDocById = vi.fn().mockResolvedValue(null);
+const mockUseQuery = vi.fn();
+
+// Now define the mocks using the variables
 vi.mock('@/helpers/query/utils', () => ({
   fetchDocById: mockFetchDocById,
 }));
 
-const mockUseQuery = vi.fn();
 vi.mock('@tanstack/vue-query', async (importOriginal) => {
   const original = await importOriginal<typeof import('@tanstack/vue-query')>();
+  // This should now work as mockUseQuery is initialized
   mockUseQuery.mockImplementation(original.useQuery);
   return {
     ...original,
@@ -68,7 +72,7 @@ describe('useUserDataQuery', () => {
     piniaInstance.state.value.auth = { roarUid: mockAuthUserId }; // Set auth user ID
 
     withSetup(() => useUserDataQuery(), { // Call without arguments
-        plugins: [piniaInstance, [VueQueryPlugin, { queryClient }]] // Correct plugin setup
+        plugins: [[VueQueryPlugin, { queryClient }]] // Remove piniaInstance
     });
 
     expect(mockUseQuery).toHaveBeenCalledWith(
@@ -87,7 +91,7 @@ describe('useUserDataQuery', () => {
     piniaInstance.state.value.auth = { roarUid: mockAuthUserId }; // Set auth user ID (should be ignored)
 
     withSetup(() => useUserDataQuery(manualUserId), { // Pass manual ID
-        plugins: [piniaInstance, [VueQueryPlugin, { queryClient }]]
+        plugins: [[VueQueryPlugin, { queryClient }]] // Remove piniaInstance
     });
 
     expect(mockUseQuery).toHaveBeenCalledWith({
@@ -106,7 +110,7 @@ describe('useUserDataQuery', () => {
 
     // Test with default user ID (from auth store)
     withSetup(() => useUserDataQuery(undefined, queryOptions), { 
-        plugins: [piniaInstance, [VueQueryPlugin, { queryClient }]]
+        plugins: [[VueQueryPlugin, { queryClient }]] // Remove piniaInstance
     });
 
     expect(mockUseQuery).toHaveBeenCalledWith({
@@ -122,35 +126,47 @@ describe('useUserDataQuery', () => {
     expect(mockFetchDocById).toHaveBeenCalledWith('users', mockAuthUserId);
   });
 
-  it('should only fetch data once the relevant user ID (auth or manual) is available', async () => {
-    // Start with no auth user ID and no manual ID
+  it('should be disabled if no auth user ID and no manual user ID is provided', () => {
+    // Arrange: Ensure auth store has no user ID
     piniaInstance.state.value.auth = { roarUid: null };
-    let manualUserId: string | null = null; // Use plain variable
+    const manualUserId: string | null = null; // Explicitly null
+    const queryOptions = { enabled: true }; // Attempt to enable
 
-    const queryOptions = { enabled: true }; // Untyped
-
-    // Initial setup - uses auth ID if manual is null/undefined
-    const { rerender } = withSetup(() => useUserDataQuery(manualUserId, queryOptions), { 
-        plugins: [piniaInstance, [VueQueryPlugin, { queryClient }]]
+    // Act
+    withSetup(() => useUserDataQuery(manualUserId, queryOptions), {
+      plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryKey: ['user', null], // Initially uses auth ID (null)
-      queryFn: expect.any(Function),
-      enabled: expect.objectContaining({ value: false }), // False because ID is null
-    });
+    // Assert: Query should be disabled because effective ID is null
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryFn: expect.any(Function),
+        enabled: expect.objectContaining({ value: false }),
+      })
+    );
     expect(mockFetchDocById).not.toHaveBeenCalled();
+  });
 
-    // Set manual ID - should now use this and enable query
-    manualUserId = nanoid();
-    await rerender({ userId: manualUserId }); // Rerender might be needed if composable doesn't watch ref deeply
-    await nextTick(); 
-    
-    // Query key should update, enabled should be true, fetch should be called
-    // Check fetch call first
+  it('should be enabled and use manual ID when provided (even if auth ID exists)', () => {
+    // Arrange: Auth store has an ID, but we provide a manual one
+    piniaInstance.state.value.auth = { roarUid: nanoid() }; 
+    const manualUserId: string = nanoid(); // Provide a manual ID
+    const queryOptions = { enabled: true }; 
+
+    // Act
+    withSetup(() => useUserDataQuery(manualUserId, queryOptions), {
+      plugins: [[VueQueryPlugin, { queryClient }]],
+    });
+
+    // Assert: Query should be enabled and use the manual ID
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['user', manualUserId], // Uses manual ID
+        queryFn: expect.any(Function),
+        enabled: expect.objectContaining({ value: true }),
+      })
+    );
     expect(mockFetchDocById).toHaveBeenCalledWith('users', manualUserId);
-    // Optionally check updated queryKey
-    // expect(mockUseQuery).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['user', manualUserId] }));
   });
 
   it('should not let queryOptions override the internally computed value (missing ID)', async () => {
@@ -159,7 +175,7 @@ describe('useUserDataQuery', () => {
     const queryOptions = { enabled: true }; // Untyped
 
     withSetup(() => useUserDataQuery(manualUserId, queryOptions), {
-        plugins: [piniaInstance, [VueQueryPlugin, { queryClient }]]
+        plugins: [[VueQueryPlugin, { queryClient }]] // Remove piniaInstance
     });
 
     expect(mockUseQuery).toHaveBeenCalledWith({

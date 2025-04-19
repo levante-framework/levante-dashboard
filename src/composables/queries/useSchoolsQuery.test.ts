@@ -4,8 +4,7 @@ import {
   QueryClient,
   VueQueryPlugin,
   useQuery,
-  // Keep UseQueryOptions commented out
-  // type UseQueryOptions,
+  type UseQueryOptions,
 } from '@tanstack/vue-query';
 import { nanoid } from 'nanoid';
 import { withSetup } from '@/test-support/withSetup';
@@ -14,26 +13,30 @@ import useSchoolsQuery from './useSchoolsQuery';
 
 // --- Mocks ---
 const mockFetchDocumentsById = vi.fn().mockResolvedValue([]);
+const mockUseQuery = vi.fn();
+
 vi.mock('@/helpers/query/utils', () => ({
   fetchDocumentsById: mockFetchDocumentsById,
 }));
 
-const mockUseQuery = vi.fn();
 vi.mock('@tanstack/vue-query', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@tanstack/vue-query')>();
-  mockUseQuery.mockImplementation(original.useQuery);
+  mockUseQuery.mockImplementation(() => ({ 
+    data: ref(null), 
+    isLoading: ref(false), 
+    isError: ref(false), 
+    error: ref(null) 
+  })); 
   return {
-    ...original,
     useQuery: mockUseQuery,
+    QueryClient: (await importOriginal<typeof import('@tanstack/vue-query')>()).QueryClient,
+    VueQueryPlugin: (await importOriginal<typeof import('@tanstack/vue-query')>()).VueQueryPlugin,
   };
 });
 
 // --- Types ---
-// Placeholder type for the data returned by the query
-interface School {
+interface SchoolData { 
   id: string;
   name?: string;
-  // Add other relevant properties if known
 }
 
 // --- Tests ---
@@ -49,75 +52,61 @@ describe('useSchoolsQuery', () => {
     queryClient?.clear();
   });
 
-  it('should call query with correct parameters when school IDs are provided', () => {
-    const mockSchoolIds: Ref<string[]> = ref([nanoid(), nanoid()]);
+  it('should call query with correct parameters', () => {
+    const schoolIds: Ref<string[]> = ref([nanoid(), nanoid()]); 
 
-    withSetup(() => useSchoolsQuery(mockSchoolIds), {
+    withSetup(() => useSchoolsQuery(schoolIds), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryKey: ['schools', mockSchoolIds],
-      queryFn: expect.any(Function),
-      enabled: expect.objectContaining({ value: true }), // Enabled because IDs are present
-    });
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['schools', schoolIds],
+        enabled: expect.objectContaining({ value: true }), 
+      })
+    );
 
-    expect(mockFetchDocumentsById).toHaveBeenCalledWith('schools', mockSchoolIds.value);
+    expect(mockFetchDocumentsById).toHaveBeenCalledWith('schools', schoolIds.value);
   });
 
   it('should allow the query to be disabled via the passed query options', () => {
-    const mockSchoolIds: Ref<string[]> = ref([nanoid()]);
-    const queryOptions = { enabled: false }; // Untyped
+    const schoolIds: Ref<string[]> = ref([nanoid()]);
+    const queryOptions: UseQueryOptions<SchoolData[], Error> = { 
+      queryKey: ['schools', schoolIds],
+      enabled: false 
+    }; 
 
-    withSetup(() => useSchoolsQuery(mockSchoolIds, queryOptions), {
+    withSetup(() => useSchoolsQuery(schoolIds, queryOptions), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryKey: ['schools', mockSchoolIds],
-      queryFn: expect.any(Function),
-      enabled: expect.objectContaining({ value: false }), // Disabled by queryOptions
-    });
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['schools', schoolIds],
+        enabled: expect.objectContaining({ value: false }),
+      })
+    );
 
     expect(mockFetchDocumentsById).not.toHaveBeenCalled();
   });
 
-  it('should only fetch data once the school IDs are available (non-empty array)', async () => {
-    const mockSchoolIds: Ref<string[]> = ref([]); // Start empty
-    const queryOptions = { enabled: true }; // Untyped
+  it('should keep the query disabled if no school IDs are specified (empty array)', () => {
+    const schoolIds: Ref<string[]> = ref([]); 
+    const queryOptions: UseQueryOptions<SchoolData[], Error> = { 
+      queryKey: ['schools', schoolIds],
+      enabled: true 
+    }; 
 
-    withSetup(() => useSchoolsQuery(mockSchoolIds, queryOptions), {
+    withSetup(() => useSchoolsQuery(schoolIds, queryOptions), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryKey: ['schools', mockSchoolIds],
-      queryFn: expect.any(Function),
-      enabled: expect.objectContaining({ value: false }), // Initially disabled
-    });
-    expect(mockFetchDocumentsById).not.toHaveBeenCalled();
-
-    // Set IDs
-    mockSchoolIds.value = [nanoid(), nanoid()];
-    await nextTick();
-
-    // Expect fetch to be called now
-    expect(mockFetchDocumentsById).toHaveBeenCalledWith('schools', mockSchoolIds.value);
-  });
-
-  it('should not let queryOptions override the internally computed value when IDs are missing', async () => {
-    const mockSchoolIds: Ref<string[]> = ref([]); // Start empty
-    const queryOptions = { enabled: true }; // Untyped
-
-    withSetup(() => useSchoolsQuery(mockSchoolIds, queryOptions), {
-      plugins: [[VueQueryPlugin, { queryClient }]],
-    });
-
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryKey: ['schools', mockSchoolIds],
-      queryFn: expect.any(Function),
-      enabled: expect.objectContaining({ value: false }), // Stays false
-    });
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['schools', schoolIds],
+        enabled: expect.objectContaining({ value: false }),
+      })
+    );
 
     expect(mockFetchDocumentsById).not.toHaveBeenCalled();
   });

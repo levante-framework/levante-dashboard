@@ -4,8 +4,7 @@ import {
   QueryClient,
   VueQueryPlugin,
   useQuery,
-  // Keep UseQueryOptions commented out
-  // type UseQueryOptions,
+  type UseQueryOptions,
 } from '@tanstack/vue-query';
 import { nanoid } from 'nanoid';
 import { withSetup } from '@/test-support/withSetup';
@@ -18,13 +17,21 @@ vi.mock('@/helpers/query/utils', () => ({
   fetchDocumentsById: mockFetchDocumentsById,
 }));
 
+// Declare mockUseQuery BEFORE the vi.mock that uses it
 const mockUseQuery = vi.fn();
+
 vi.mock('@tanstack/vue-query', async (importOriginal) => {
   const original = await importOriginal<typeof import('@tanstack/vue-query')>();
-  mockUseQuery.mockImplementation(original.useQuery);
+  mockUseQuery.mockImplementation(() => ({ 
+    data: ref(null), 
+    isLoading: ref(false), 
+    isError: ref(false), 
+    error: ref(null) 
+  })); 
   return {
-    ...original,
     useQuery: mockUseQuery,
+    QueryClient: original.QueryClient,
+    VueQueryPlugin: original.VueQueryPlugin,
   };
 });
 
@@ -57,11 +64,13 @@ describe('useClassesQuery', () => {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryKey: ['classes', classIds],
-      queryFn: expect.any(Function),
-      enabled: expect.objectContaining({ value: true }), 
-    });
+    // Check useQuery call
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['classes', classIds],
+        enabled: expect.objectContaining({ value: true }), 
+      })
+    );
     // Pass the value of the ref to the fetch mock check
     expect(mockFetchDocumentsById).toHaveBeenCalledWith('classes', classIds.value);
   });
@@ -69,34 +78,48 @@ describe('useClassesQuery', () => {
   it('should allow the query to be disabled via the passed query options', () => {
     // Pass classIds as a Ref
     const classIds: Ref<string[]> = ref([nanoid()]);
-    const queryOptions = { enabled: false };
+    // Define full options object
+    const queryOptions: UseQueryOptions<ClassData[], Error> = { 
+      queryKey: ['classes', classIds], // Add key
+      enabled: false 
+    }; 
 
+    // Pass full options
     withSetup(() => useClassesQuery(classIds, queryOptions), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryKey: ['classes', classIds],
-      queryFn: expect.any(Function),
-      enabled: expect.objectContaining({ value: false }),
-    });
+    // Check useQuery call
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['classes', classIds],
+        enabled: expect.objectContaining({ value: false }),
+      })
+    );
     expect(mockFetchDocumentsById).not.toHaveBeenCalled();
   });
 
   it('should keep the query disabled if no class IDs are specified (empty array)', () => {
     // Pass classIds as a Ref (starting empty)
     const classIds: Ref<string[]> = ref([]); 
-    const queryOptions = { enabled: true };
+    // Define full options object
+    const queryOptions: UseQueryOptions<ClassData[], Error> = { 
+      queryKey: ['classes', classIds], // Add key
+      enabled: true // Attempt to enable
+    }; 
 
+    // Pass full options
     withSetup(() => useClassesQuery(classIds, queryOptions), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryKey: ['classes', classIds],
-      queryFn: expect.any(Function),
-      enabled: expect.objectContaining({ value: false }),
-    });
+    // Check useQuery call
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['classes', classIds],
+        enabled: expect.objectContaining({ value: false }),
+      })
+    );
     expect(mockFetchDocumentsById).not.toHaveBeenCalled();
   });
 }); 

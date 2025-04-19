@@ -1,75 +1,83 @@
 import { ref, type Ref } from 'vue';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { nanoid } from 'nanoid';
 import useOrgQuery from './useOrgQuery';
-import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { type UseQueryReturnType } from '@tanstack/vue-query';
 
 // --- Mocks ---
 // Mock the actual query composables this factory function delegates to
-vi.mock('@/composables/queries/useDistrictsQuery', () => ({
-  default: vi.fn(() => 'useDistrictsQuery'), // Return string for easy assertion
-}));
-vi.mock('@/composables/queries/useSchoolsQuery', () => ({
-  default: vi.fn(() => 'useSchoolsQuery'),
-}));
-vi.mock('@/composables/queries/useClassesQuery', () => ({
-  default: vi.fn(() => 'useClassesQuery'),
-}));
-vi.mock('@/composables/queries/useGroupsQuery', () => ({
-  default: vi.fn(() => 'useGroupsQuery'),
-}));
-vi.mock('@/composables/queries/useFamiliesQuery', () => ({
-  default: vi.fn(() => 'useFamiliesQuery'),
-}));
+const mockUseDistrictsQuery = vi.fn(() => ({ mockResult: 'useDistrictsQuery' } as unknown as UseQueryReturnType<any, Error>));
+const mockUseSchoolsQuery = vi.fn(() => ({ mockResult: 'useSchoolsQuery' } as unknown as UseQueryReturnType<any, Error>));
+const mockUseClassesQuery = vi.fn(() => ({ mockResult: 'useClassesQuery' } as unknown as UseQueryReturnType<any, Error>));
+const mockUseGroupsQuery = vi.fn(() => ({ mockResult: 'useGroupsQuery' } as unknown as UseQueryReturnType<any, Error>));
+const mockUseFamiliesQuery = vi.fn(() => ({ mockResult: 'useFamiliesQuery' } as unknown as UseQueryReturnType<any, Error>));
+
+// No need to mock vue-query here, just the delegates
+vi.mock('@/composables/queries/useDistrictsQuery', () => ({ default: mockUseDistrictsQuery }));
+vi.mock('@/composables/queries/useSchoolsQuery', () => ({ default: mockUseSchoolsQuery }));
+vi.mock('@/composables/queries/useClassesQuery', () => ({ default: mockUseClassesQuery }));
+vi.mock('@/composables/queries/useGroupsQuery', () => ({ default: mockUseGroupsQuery }));
+vi.mock('@/composables/queries/useFamiliesQuery', () => ({ default: mockUseFamiliesQuery }));
 
 // --- Types ---
-// Define OrgType based on SINGULAR_ORG_TYPES constant if possible,
-// or use string if the constant's type isn't easily accessible/defined
-type OrgType = keyof typeof SINGULAR_ORG_TYPES | string; // Allow any string for error case
+// Adjusted type based on composable implementation
+type OrgTypeKey = typeof FIRESTORE_COLLECTIONS[keyof Pick<
+    typeof FIRESTORE_COLLECTIONS, 
+    'DISTRICTS' | 'SCHOOLS' | 'CLASSES' | 'GROUPS' | 'FAMILIES'
+>];
 
 // --- Tests ---
 describe('useOrgQuery', () => {
-  // No QueryClient needed as we are not testing vue-query integration here
 
-  it('should return useDistrictsQuery for districts as org type', () => {
-    const mockOrgType: OrgType = SINGULAR_ORG_TYPES.DISTRICTS;
-    const mockOrgIds: Ref<string[]> = ref([nanoid(), nanoid()]);
-    const result = useOrgQuery(mockOrgType, mockOrgIds);
-    expect(result).toBe('useDistrictsQuery');
+  beforeEach(() => {
+      vi.clearAllMocks(); // Clear mocks before each test
   });
 
-  it('should return useSchoolsQuery for schools as org type', () => {
-    const mockOrgType: OrgType = SINGULAR_ORG_TYPES.SCHOOLS;
+  it('should call useDistrictsQuery for districts org type', () => {
+    const mockOrgType: OrgTypeKey = FIRESTORE_COLLECTIONS.DISTRICTS;
     const mockOrgIds: Ref<string[]> = ref([nanoid(), nanoid()]);
     const result = useOrgQuery(mockOrgType, mockOrgIds);
-    expect(result).toBe('useSchoolsQuery');
+    expect(mockUseDistrictsQuery).toHaveBeenCalled();
+    // Assert based on the structure returned by the mock
+    expect((result as any).mockResult).toBe('useDistrictsQuery');
   });
 
-  it('should return useClassesQuery for classes as org type', () => {
-    const mockOrgType: OrgType = SINGULAR_ORG_TYPES.CLASSES;
+  it('should call useSchoolsQuery for schools org type', () => {
+    const mockOrgType: OrgTypeKey = FIRESTORE_COLLECTIONS.SCHOOLS;
     const mockOrgIds: Ref<string[]> = ref([nanoid(), nanoid()]);
     const result = useOrgQuery(mockOrgType, mockOrgIds);
-    expect(result).toBe('useClassesQuery');
+    expect(mockUseSchoolsQuery).toHaveBeenCalled();
+    expect((result as any).mockResult).toBe('useSchoolsQuery');
   });
 
-  it('should return useGroupsQuery for groups as org type', () => {
-    const mockOrgType: OrgType = SINGULAR_ORG_TYPES.GROUPS;
+  it('should call useClassesQuery for classes org type', () => {
+    const mockOrgType: OrgTypeKey = FIRESTORE_COLLECTIONS.CLASSES;
     const mockOrgIds: Ref<string[]> = ref([nanoid(), nanoid()]);
     const result = useOrgQuery(mockOrgType, mockOrgIds);
-    expect(result).toBe('useGroupsQuery');
+    expect(mockUseClassesQuery).toHaveBeenCalled();
+    expect((result as any).mockResult).toBe('useClassesQuery');
   });
 
-  it('should return useFamiliesQuery for families as org type', () => {
-    const mockOrgType: OrgType = SINGULAR_ORG_TYPES.FAMILIES;
+  it('should call useGroupsQuery for groups org type', () => {
+    const mockOrgType: OrgTypeKey = FIRESTORE_COLLECTIONS.GROUPS;
     const mockOrgIds: Ref<string[]> = ref([nanoid(), nanoid()]);
     const result = useOrgQuery(mockOrgType, mockOrgIds);
-    expect(result).toBe('useFamiliesQuery');
+    expect(mockUseGroupsQuery).toHaveBeenCalled();
+    expect((result as any).mockResult).toBe('useGroupsQuery');
+  });
+
+  it('should call useFamiliesQuery for families org type', () => {
+    const mockOrgType: OrgTypeKey = FIRESTORE_COLLECTIONS.FAMILIES;
+    const mockOrgIds: Ref<string[]> = ref([nanoid(), nanoid()]);
+    const result = useOrgQuery(mockOrgType, mockOrgIds);
+    expect(mockUseFamiliesQuery).toHaveBeenCalled();
+    expect((result as any).mockResult).toBe('useFamiliesQuery');
   });
 
   it('should throw an error for unsupported org type', () => {
-    const mockOrgType: OrgType = 'UNSUPPORTED';
+    const mockOrgType = 'UNSUPPORTED' as any; 
     const mockOrgIds: Ref<string[]> = ref([nanoid(), nanoid()]);
-    // Assert that calling the function throws the expected error
     expect(() => useOrgQuery(mockOrgType, mockOrgIds)).toThrow('Unsupported org type: UNSUPPORTED');
   });
 }); 

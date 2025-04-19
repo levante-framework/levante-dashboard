@@ -110,7 +110,7 @@ interface VariantData {
 }
 
 // Structure for the combined variant + task object
-interface VariantWithTask {
+export interface VariantWithTask {
     id: string;
     variant: VariantData;
     task: TaskData;

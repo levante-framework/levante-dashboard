@@ -1,79 +1,123 @@
-import { ref, type Ref } from 'vue';
+import { ref, nextTick, type Ref } from 'vue';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createTestingPinia } from '@pinia/testing';
+import { QueryClient, VueQueryPlugin, useQuery, type UseQueryOptions, type QueryKey } from '@tanstack/vue-query';
+import { nanoid } from 'nanoid';
 import { withSetup } from '@/test-support/withSetup';
-import {
-  QueryClient,
-  VueQueryPlugin,
-  useQuery,
-  // Keep UseQueryOptions commented out
-  // type UseQueryOptions,
-} from '@tanstack/vue-query';
-import { variantsFetcher } from '@/helpers/query/tasks';
+import { variantsFetcher, type VariantWithTask } from '@/helpers/query/tasks';
 import useTaskVariantsQuery from './useTaskVariantsQuery';
+import { TASK_VARIANTS_QUERY_KEY } from '@/constants/queryKeys';
 
 // --- Mocks ---
 const mockVariantsFetcher = vi.fn().mockResolvedValue([]);
-vi.mock('@/helpers/query/tasks', () => ({
-  variantsFetcher: mockVariantsFetcher,
+vi.mock('@/helpers/query/tasks', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/helpers/query/tasks')>();
+  return {
+      ...original,
+      variantsFetcher: mockVariantsFetcher,
+  };
+});
+
+const mockFetchDocsWhere = vi.fn().mockResolvedValue([]);
+const mockFetchDocById = vi.fn().mockResolvedValue(null);
+
+vi.mock('@/helpers/query/utils', () => ({
+  fetchDocsWhere: mockFetchDocsWhere,
+  fetchDocById: mockFetchDocById,
 }));
 
 const mockUseQuery = vi.fn();
+
 vi.mock('@tanstack/vue-query', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@tanstack/vue-query')>();
-  mockUseQuery.mockImplementation(original.useQuery);
+  mockUseQuery.mockImplementation(() => ({ 
+    data: ref(null), 
+    isLoading: ref(false), 
+    isError: ref(false), 
+    error: ref(null) 
+  })); 
   return {
-    ...original,
     useQuery: mockUseQuery,
+    QueryClient: (await importOriginal<typeof import('@tanstack/vue-query')>()).QueryClient,
+    VueQueryPlugin: (await importOriginal<typeof import('@tanstack/vue-query')>()).VueQueryPlugin,
   };
 });
 
 // --- Types ---
-// Placeholder type for the data returned by the query
-interface TaskVariant {
-  id: string;
-  name?: string;
-  // Add other relevant properties if known
-}
 
 // --- Tests ---
-describe('useTaskVariantsQuery', () => { // Corrected describe block name
+describe('useTaskVariantsQuery', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
     queryClient = new QueryClient();
     vi.clearAllMocks();
+    mockUseQuery.mockImplementation(() => ({ 
+        data: ref([]), isLoading: ref(false), isError: ref(false), error: ref(null) 
+    }));
   });
 
   afterEach(() => {
     queryClient?.clear();
   });
 
-  it('should call query with default key when not fetching registered only', () => {
-    const fetchRegisteredVariants: Ref<boolean> = ref(false);
-    withSetup(() => useTaskVariantsQuery(fetchRegisteredVariants), {
+  it('should call query with default key when registeredOnly is false (default)', () => {
+    withSetup(() => useTaskVariantsQuery(), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalled();
-    const queryArgs = mockUseQuery.mock.calls[0][0];
-    expect(queryArgs.queryKey).toHaveLength(1);
-    expect(queryArgs.queryKey[0]).toEqual('task-variants');
-
-    expect(mockVariantsFetcher).toHaveBeenCalledWith(fetchRegisteredVariants.value);
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: [TASK_VARIANTS_QUERY_KEY],
+      })
+    );
   });
 
-  it("should set the 'registered' query key segment if fetching registered variants only", () => {
-    const fetchRegisteredVariants: Ref<boolean> = ref(true);
-    withSetup(() => useTaskVariantsQuery(fetchRegisteredVariants), {
+  it('should call query with registered key when registeredOnly is true', () => {
+    const registeredOnly = ref(true);
+    withSetup(() => useTaskVariantsQuery(registeredOnly), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalled();
-    const queryArgs = mockUseQuery.mock.calls[0][0];
-    expect(queryArgs.queryKey).toHaveLength(2);
-    expect(queryArgs.queryKey[0]).toEqual('task-variants');
-    expect(queryArgs.queryKey[1]).toEqual('registered');
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: [TASK_VARIANTS_QUERY_KEY, 'registered'],
+      })
+    );
+  });
 
-    expect(mockVariantsFetcher).toHaveBeenCalledWith(fetchRegisteredVariants.value);
+  it('should allow the query to be disabled via queryOptions (registeredOnly=false)', () => {
+    const registeredOnly = ref(false);
+    const queryOptions: any = { 
+      enabled: false 
+    };
+
+    withSetup(() => useTaskVariantsQuery(registeredOnly, queryOptions), {
+      plugins: [[VueQueryPlugin, { queryClient }]],
+    });
+
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: [TASK_VARIANTS_QUERY_KEY],
+        enabled: expect.objectContaining({ value: false }),
+      })
+    );
+  });
+
+  it('should allow the query to be disabled via queryOptions (registeredOnly=true)', () => {
+    const registeredOnly = ref(true);
+    const queryOptions: any = { 
+      enabled: false 
+    };
+
+    withSetup(() => useTaskVariantsQuery(registeredOnly, queryOptions), {
+      plugins: [[VueQueryPlugin, { queryClient }]],
+    });
+
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: [TASK_VARIANTS_QUERY_KEY, 'registered'],
+        enabled: expect.objectContaining({ value: false }),
+      })
+    );
   });
 }); 

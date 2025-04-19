@@ -10,6 +10,7 @@ import viteConfig from './vite.config';
 
 const isCI = process.env.CI === 'true';
 
+// Restore mergeConfig
 export default mergeConfig(
   viteConfig,
   defineConfig({

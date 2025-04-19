@@ -4,7 +4,7 @@ import {
   QueryClient,
   VueQueryPlugin,
   useQuery,
-  type UseQueryOptions, // Import UseQueryOptions
+  type UseQueryOptions,
 } from '@tanstack/vue-query';
 import { nanoid } from 'nanoid';
 import { withSetup } from '@/test-support/withSetup';
@@ -13,22 +13,27 @@ import useDistrictsQuery from './useDistrictsQuery'; // Assuming this is the cor
 
 // --- Mocks ---
 const mockFetchDocumentsById = vi.fn().mockResolvedValue([]);
+const mockUseQuery = vi.fn();
+
 vi.mock('@/helpers/query/utils', () => ({
   fetchDocumentsById: mockFetchDocumentsById,
 }));
 
-const mockUseQuery = vi.fn();
 vi.mock('@tanstack/vue-query', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@tanstack/vue-query')>();
-  mockUseQuery.mockImplementation(original.useQuery);
+  mockUseQuery.mockImplementation(() => ({ 
+    data: ref(null), 
+    isLoading: ref(false), 
+    isError: ref(false), 
+    error: ref(null) 
+  })); 
   return {
-    ...original,
     useQuery: mockUseQuery,
+    QueryClient: (await importOriginal<typeof import('@tanstack/vue-query')>()).QueryClient,
+    VueQueryPlugin: (await importOriginal<typeof import('@tanstack/vue-query')>()).VueQueryPlugin,
   };
 });
 
 // --- Types ---
-// Placeholder type for the data returned by the query
 interface District {
   id: string;
   name?: string;
@@ -55,78 +60,80 @@ describe('useDistrictsQuery', () => {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryKey: ['districts', districtIds],
-      queryFn: expect.any(Function),
-      enabled: expect.objectContaining({
-        value: true, // Enabled because IDs are present
-      }),
-    });
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['districts', districtIds],
+        enabled: expect.objectContaining({ value: true }),
+      })
+    );
 
     expect(mockFetchDocumentsById).toHaveBeenCalledWith('districts', districtIds.value);
   });
 
   it('should allow the query to be disabled via the passed query options', () => {
     const districtIds: Ref<string[]> = ref([nanoid()]);
-    // Explicitly type queryOptions
-    const queryOptions: Partial<UseQueryOptions<District[], Error>> = { enabled: false };
+    const queryOptions: UseQueryOptions<District[], Error> = { 
+      queryKey: ['districts', districtIds],
+      enabled: false 
+    };
 
     withSetup(() => useDistrictsQuery(districtIds, queryOptions), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryKey: ['districts', districtIds],
-      queryFn: expect.any(Function),
-      enabled: expect.objectContaining({
-        value: false, // Disabled by queryOptions
-      }),
-    });
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['districts', districtIds],
+        enabled: expect.objectContaining({ value: false }),
+      })
+    );
 
     expect(mockFetchDocumentsById).not.toHaveBeenCalled();
   });
 
   it('should only fetch data if district IDs are available (non-empty array)', async () => {
-    const districtIds: Ref<string[]> = ref([]); // Start with empty array
-    const queryOptions: Partial<UseQueryOptions<District[], Error>> = { enabled: true };
+    const districtIds: Ref<string[]> = ref([]);
+    const queryOptions: UseQueryOptions<District[], Error> = { 
+      queryKey: ['districts', districtIds],
+      enabled: true 
+    };
 
     withSetup(() => useDistrictsQuery(districtIds, queryOptions), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryKey: ['districts', districtIds],
-      queryFn: expect.any(Function),
-      enabled: expect.objectContaining({
-        value: false, // Initially disabled because array is empty
-      }),
-    });
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['districts', districtIds],
+        enabled: expect.objectContaining({ value: false }),
+      })
+    );
 
     expect(mockFetchDocumentsById).not.toHaveBeenCalled();
 
-    districtIds.value = [nanoid()]; // Provide an ID
-    await nextTick(); // Wait for reactivity
+    districtIds.value = [nanoid()];
+    await nextTick();
 
-    // Expect fetch to be called after IDs are provided
     expect(mockFetchDocumentsById).toHaveBeenCalledWith('districts', districtIds.value);
   });
 
   it('should not let queryOptions override the internally computed enabled value when IDs are missing (empty array)', async () => {
-    const districtIds: Ref<string[]> = ref([]); // Start with empty array
-    // User tries to enable, but internal logic should keep it disabled
-    const queryOptions: Partial<UseQueryOptions<District[], Error>> = { enabled: true }; 
+    const districtIds: Ref<string[]> = ref([]);
+    const queryOptions: UseQueryOptions<District[], Error> = { 
+      queryKey: ['districts', districtIds],
+      enabled: true 
+    };
 
     withSetup(() => useDistrictsQuery(districtIds, queryOptions), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryKey: ['districts', districtIds],
-      queryFn: expect.any(Function),
-      enabled: expect.objectContaining({
-        value: false, // Should remain false due to empty IDs array
-      }),
-    });
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['districts', districtIds],
+        enabled: expect.objectContaining({ value: false }),
+      })
+    );
 
     expect(mockFetchDocumentsById).not.toHaveBeenCalled();
   });

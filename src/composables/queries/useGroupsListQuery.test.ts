@@ -4,8 +4,7 @@ import {
   QueryClient,
   VueQueryPlugin,
   useQuery,
-  // Keep UseQueryOptions commented out unless needed and confirmed working
-  // type UseQueryOptions, 
+  type UseQueryOptions, 
 } from '@tanstack/vue-query';
 import { withSetup } from '@/test-support/withSetup';
 import { orgFetcher } from '@/helpers/query/orgs';
@@ -25,11 +24,22 @@ vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
 
 const mockUseQuery = vi.fn();
 vi.mock('@tanstack/vue-query', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@tanstack/vue-query')>();
-  mockUseQuery.mockImplementation(original.useQuery);
+  // Simplify the mock: Only return the useQuery mock
+  // This assumes other exports from vue-query aren't strictly needed by the composable/test setup
+  // We might need to add back specific exports like QueryClient if they are used directly.
+  mockUseQuery.mockImplementation(() => ({ 
+    // Provide a default mock return structure for useQuery if needed by tests
+    data: ref(null), 
+    isLoading: ref(false), 
+    isError: ref(false), 
+    error: ref(null) 
+  })); 
   return {
-    ...original,
+    // ...original, // Remove spreading original module
     useQuery: mockUseQuery,
+    // Explicitly re-export anything else needed, e.g.:
+    QueryClient: (await importOriginal<typeof import('@tanstack/vue-query')>()).QueryClient,
+    VueQueryPlugin: (await importOriginal<typeof import('@tanstack/vue-query')>()).VueQueryPlugin,
   };
 });
 
@@ -130,8 +140,11 @@ describe('useGroupsListQuery', () => {
   });
 
   it('should allow the query to be disabled via passed query options, overriding claims', () => {
-    // Remove explicit type, hoping TS infers correctly or composable handles simple object
-    const queryOptions = { enabled: false }; 
+    // Define the full options object including queryKey
+    const options: UseQueryOptions<Group[], Error> = { 
+      queryKey: ['groups-list'], // Add queryKey
+      enabled: false 
+    }; 
     
     // Provide loaded claims, but options should override
     mockUseUserClaimsQuery.mockReturnValue({ 
@@ -139,7 +152,8 @@ describe('useGroupsListQuery', () => {
         isLoading: ref(false) 
     } as UseUserClaimsQueryReturn);
 
-    withSetup(() => useGroupsListQuery(queryOptions), {
+    // Pass the full options object
+    withSetup(() => useGroupsListQuery(options), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 

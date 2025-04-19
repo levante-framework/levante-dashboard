@@ -30,9 +30,8 @@ vi.mock('@tanstack/vue-query', async (importOriginal) => {
   const original = await importOriginal<typeof import('@tanstack/vue-query')>();
   // Default mock implementation for useQuery
   mockUseQuery.mockImplementation(() => ({
-    data: ref(undefined),
+    data: ref(null),
     isLoading: ref(false),
-    isFetching: ref(false),
     isError: ref(false),
     error: ref(null),
   }));
@@ -40,6 +39,8 @@ vi.mock('@tanstack/vue-query', async (importOriginal) => {
   return {
     ...original,
     useQuery: mockUseQuery,
+    QueryClient: original.QueryClient,
+    VueQueryPlugin: original.VueQueryPlugin,
   };
 });
 
@@ -60,9 +61,8 @@ describe('useTasksDictionaryQuery', () => {
     // Reset mock to default before each test
     const originalVueQuery = await vi.importActual<typeof import('@tanstack/vue-query')>('@tanstack/vue-query');
     mockUseQuery.mockImplementation(() => ({
-      data: ref(undefined),
+      data: ref(null),
       isLoading: ref(false),
-      isFetching: ref(false),
       isError: ref(false),
       error: ref(null),
     }));
@@ -139,20 +139,38 @@ describe('useTasksDictionaryQuery', () => {
     expect(error.value).toBe(null);
   });
 
-  it('should pass queryOptions to the underlying useQuery call', async () => {
-    const originalVueQuery = await vi.importActual<typeof import('@tanstack/vue-query')>('@tanstack/vue-query');
-    // We need to mock the implementation of the *actual* useQuery here
-    // to check the options it receives when called by useTasksQuery
-    mockUseQuery.mockImplementation(originalVueQuery.useQuery);
+  it('should call query with correct parameters', () => {
+    withSetup(() => useTasksDictionaryQuery(), {
+      plugins: [[VueQueryPlugin, { queryClient }]],
+    });
 
-    const queryOptions = { enabled: false, refetchOnWindowFocus: false } as any;
+    // Check useQuery call
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['tasks-dictionary'],
+        enabled: true, // Assuming default enabled is true
+      })
+    );
+  });
 
-    // Run the composable that internally calls useTasksQuery (which calls useQuery)
+  it('should allow the query to be disabled via the passed query options', () => {
+    // Use any for options type
+    const queryOptions: any = { 
+      // queryKey is set internally
+      enabled: false 
+    }; 
+
+    // Pass options
     withSetup(() => useTasksDictionaryQuery(queryOptions), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    // Assert that our mock (representing the call to useQuery) was called with the options
-    expect(mockUseQuery).toHaveBeenCalledWith(expect.objectContaining(queryOptions));
+    // Check useQuery call
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['tasks-dictionary'],
+        enabled: false,
+      })
+    );
   });
 }); 

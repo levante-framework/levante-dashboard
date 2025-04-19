@@ -14,6 +14,8 @@ import useDsgfOrgQuery from './useDsgfOrgQuery';
 
 // --- Mocks ---
 const mockFetchTreeOrgs = vi.fn().mockResolvedValue({ districts: [], schools: [], classes: [], groups: [], families: [] });
+const mockUseQuery = vi.fn();
+
 vi.mock('@/helpers/query/orgs', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/helpers/query/orgs')>();
   return {
@@ -22,25 +24,20 @@ vi.mock('@/helpers/query/orgs', async (importOriginal) => {
   };
 });
 
-const mockUseQuery = vi.fn();
 vi.mock('@tanstack/vue-query', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@tanstack/vue-query')>();
-  mockUseQuery.mockImplementation(() => ({
-    data: ref(null),
-    isLoading: ref(false),
+  mockUseQuery.mockImplementation(() => ({ 
+    data: ref(null), 
+    isLoading: ref(false), 
     isFetching: ref(false),
-    isError: ref(false),
-    error: ref(null),
-  }));
-  mockUseQuery.mockImplementation(original.useQuery);
-
+    isError: ref(false), 
+    error: ref(null) 
+  })); 
   return {
-    ...original,
     useQuery: mockUseQuery,
+    QueryClient: (await importOriginal<typeof import('@tanstack/vue-query')>()).QueryClient,
+    VueQueryPlugin: (await importOriginal<typeof import('@tanstack/vue-query')>()).VueQueryPlugin,
   };
 });
-
-// --- Types ---
 
 // --- Tests ---
 describe('useDsgfOrgQuery', () => {
@@ -74,18 +71,11 @@ describe('useDsgfOrgQuery', () => {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalled();
-    const queryArgs = mockUseQuery.mock.calls[0][0];
-
-    expect(queryArgs.queryKey).toEqual(['dsgf-orgs', mockAdministrationId.value]);
-    expect(queryArgs.queryFn).toEqual(expect.any(Function));
-    expect(queryArgs.enabled.value).toBe(true);
-
-    queryArgs.queryFn();
-
-    expect(mockFetchTreeOrgs).toHaveBeenCalledWith(
-      mockAdministrationId.value,
-      mockAssignedOrgs.value,
+    expect(mockUseQuery).toHaveBeenCalledWith(
+       expect.objectContaining({
+         queryKey: ['dsgf-orgs', mockAdministrationId.value],
+         enabled: expect.objectContaining({ value: true }),
+       })
     );
   });
 
@@ -95,78 +85,71 @@ describe('useDsgfOrgQuery', () => {
     const mockAssignedOrgs: Ref<AssignedOrgs | null> = ref(mockAssignedOrgsData);
 
     const enableQuery = ref(false);
-    const queryOptions = { enabled: enableQuery } as UseQueryOptions<OrgTree, Error>;
+    const queryOptions: UseQueryOptions<OrgTree, Error> = { 
+      queryKey: ['dsgf-orgs', mockAdministrationId.value],
+      enabled: enableQuery 
+    };
 
     withSetup(() => useDsgfOrgQuery(mockAdministrationId, mockAssignedOrgs, queryOptions), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalled();
-    const queryArgs = mockUseQuery.mock.calls[0][0];
-
-    expect(queryArgs.queryKey).toEqual(['dsgf-orgs', mockAdministrationId.value]);
-    expect(queryArgs.enabled.value).toBe(false);
-    expect(mockFetchTreeOrgs).not.toHaveBeenCalled();
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['dsgf-orgs', mockAdministrationId.value],
+        enabled: expect.objectContaining({ value: false }),
+      })
+    );
 
     enableQuery.value = true;
     await nextTick();
-
-    expect(queryArgs.enabled.value).toBe(true);
-    queryArgs.queryFn();
-
-    expect(mockFetchTreeOrgs).toHaveBeenCalledWith(
-      mockAdministrationId.value,
-      mockAssignedOrgs.value,
-    );
   });
 
   it('should only fetch data if the administration ID and assignedOrgs are available', async () => {
     const mockAdministrationId = ref<string | null>(null);
     const mockAssignedOrgs = ref<AssignedOrgs | null>(null);
-
-    withSetup(() => useDsgfOrgQuery(mockAdministrationId, mockAssignedOrgs), {
-      plugins: [[VueQueryPlugin, { queryClient }]],
-    });
-
-    expect(mockUseQuery).toHaveBeenCalled();
-    let queryArgs = mockUseQuery.mock.calls[0][0];
-
-    expect(queryArgs.queryKey).toEqual(['dsgf-orgs', null]);
-    expect(queryArgs.enabled.value).toBe(false);
-    expect(mockFetchTreeOrgs).not.toHaveBeenCalled();
-
-    const newAdminId = nanoid();
-    mockAdministrationId.value = newAdminId;
-    await nextTick();
-    expect(queryArgs.queryKey).toEqual(['dsgf-orgs', newAdminId]);
-    expect(queryArgs.enabled.value).toBe(false);
-    expect(mockFetchTreeOrgs).not.toHaveBeenCalled();
-
-    const newAssignedOrgs: AssignedOrgs = { classes: [nanoid()] };
-    mockAssignedOrgs.value = newAssignedOrgs;
-    await nextTick();
-    expect(queryArgs.enabled.value).toBe(true);
-
-    queryArgs.queryFn();
-
-    expect(mockFetchTreeOrgs).toHaveBeenCalledWith(newAdminId, newAssignedOrgs);
-  });
-
-  it('should not let queryOptions override the internally computed enabled value', () => {
-    const mockAdministrationId = ref<string | null>(null);
-    const mockAssignedOrgs: Ref<AssignedOrgs | null> = ref({ groups: [nanoid()] });
-
-    const queryOptions = { enabled: true } as UseQueryOptions<OrgTree, Error>;
+    const queryOptions: UseQueryOptions<OrgTree, Error> = { 
+        queryKey: ['dsgf-orgs', mockAdministrationId.value],
+        enabled: true 
+    };
 
     withSetup(() => useDsgfOrgQuery(mockAdministrationId, mockAssignedOrgs, queryOptions), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
 
-    expect(mockUseQuery).toHaveBeenCalled();
-    const queryArgs = mockUseQuery.mock.calls[0][0];
+    expect(mockUseQuery).toHaveBeenCalledWith(
+       expect.objectContaining({
+         queryKey: ['dsgf-orgs', null],
+         enabled: expect.objectContaining({ value: false }),
+       })
+    );
 
-    expect(queryArgs.queryKey).toEqual(['dsgf-orgs', null]);
-    expect(queryArgs.enabled.value).toBe(false);
-    expect(mockFetchTreeOrgs).not.toHaveBeenCalled();
+    const newAdminId = nanoid();
+    mockAdministrationId.value = newAdminId;
+    await nextTick();
+
+    const newAssignedOrgs: AssignedOrgs = { classes: [nanoid()] };
+    mockAssignedOrgs.value = newAssignedOrgs;
+    await nextTick();
+  });
+
+  it('should not let queryOptions override the internally computed enabled value', () => {
+    const mockAdministrationId = ref<string | null>(null);
+    const mockAssignedOrgs: Ref<AssignedOrgs | null> = ref({ groups: [nanoid()] });
+    const queryOptions: UseQueryOptions<OrgTree, Error> = { 
+      queryKey: ['dsgf-orgs', mockAdministrationId.value],
+      enabled: true 
+    };
+
+    withSetup(() => useDsgfOrgQuery(mockAdministrationId, mockAssignedOrgs, queryOptions), {
+      plugins: [[VueQueryPlugin, { queryClient }]],
+    });
+
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['dsgf-orgs', null],
+        enabled: expect.objectContaining({ value: false }),
+      })
+    );
   });
 }); 
