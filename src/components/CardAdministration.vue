@@ -35,7 +35,7 @@
         <span class="mr-1"><strong>Tasks</strong>:</span>
         <template v-if="!isLoadingTasksDictionary">
           <span v-for="assessmentId in assessmentIds" :key="assessmentId" class="card-inline-list-item">
-            <span>{{ tasksDictionary?.[assessmentId]?.name ?? assessmentId }}</span>
+            <span>{{ tasksDictionary?.[assessmentId as string]?.name ?? assessmentId }}</span>
             <span
               v-if="showParams"
               v-tooltip.top="'View parameters'"
@@ -70,6 +70,7 @@
         class="mt-3"
         lazy
         row-hover
+        dataKey="data.id"
         :loading="loadingTreeTable"
         :value="treeTableOrgs"
         @node-expand="onExpand"
@@ -87,7 +88,7 @@
         </PvColumn>
         <PvColumn field="id" header="" style="width: 14rem">
           <template #body="{ node }">
-            <div v-if="node.data" class="flex m-0">
+            <div v-if="node.data && node.data.orgType" class="flex m-0">
               <router-link
                 :to="{
                   name: 'ProgressReport',
@@ -130,6 +131,9 @@
                 />
               </router-link>
             </div>
+            <div v-else-if="node.data">
+              <span>{{ node.data.name }} (Data Error)</span>
+            </div>
           </template>
         </PvColumn>
       </PvTreeTable>
@@ -171,8 +175,10 @@ import useDeleteAdministrationMutation from '@/composables/mutations/useDeleteAd
 import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import { DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
 // @ts-ignore
 import { isLevante } from '@/helpers';
+import type { OrgTree } from '@/helpers/query/orgs';
 
 interface TaskDisplayInfo {
   name: string;
@@ -337,27 +343,50 @@ const isWideScreen = computed<boolean>(() => {
   return false;
 });
 
-const { data: tasksDictionary, isLoading: isLoadingTasksDictionary } = useTasksDictionaryQuery();
+const { tasksDictionary, isLoading: isLoadingTasksDictionary } = useTasksDictionaryQuery();
 
-const { data: orgs, isLoading: isLoadingDsgfOrgs } = useDsgfOrgQuery(props.id, props.assignees, {
-  enabled: enableQueries,
-}) as { data: Ref<OrgTreeNode[] | undefined>; isLoading: Ref<boolean> };
+const { data: orgsData, isLoading: isLoadingDsgfOrgs } = useDsgfOrgQuery(
+  props.id,
+  props.assignees,
+  {
+    queryKey: [DSGF_ORGS_QUERY_KEY, props.id],
+    enabled: enableQueries
+  }
+);
 
 const loadingTreeTable = computed<boolean>(() => {
   return isLoadingDsgfOrgs.value || expanding.value;
 });
 
-watch(orgs, (newValue) => {
-  if (newValue) {
-    treeTableOrgs.value = newValue;
+watch(orgsData, (newOrgTree) => {
+  if (newOrgTree) {
+    const flattenedOrgs: OrgTreeNode[] = [];
+    
+    const mapToNode = (org: any): OrgTreeNode | null => {
+      if (!org || !org.id) return null;
+      return {
+        key: org.id,
+        data: org,
+        leaf: org.orgType !== SINGULAR_ORG_TYPES.SCHOOLS,
+        children: org.orgType === SINGULAR_ORG_TYPES.SCHOOLS ? [] : undefined,
+      };
+    };
+
+    if (newOrgTree.districts) flattenedOrgs.push(...newOrgTree.districts.map(mapToNode).filter((n): n is OrgTreeNode => n !== null));
+    if (newOrgTree.schools) flattenedOrgs.push(...newOrgTree.schools.map(mapToNode).filter((n): n is OrgTreeNode => n !== null));
+    if (newOrgTree.classes) flattenedOrgs.push(...newOrgTree.classes.map(mapToNode).filter((n): n is OrgTreeNode => n !== null));
+    if (newOrgTree.groups) flattenedOrgs.push(...newOrgTree.groups.map(mapToNode).filter((n): n is OrgTreeNode => n !== null));
+    if (newOrgTree.families) flattenedOrgs.push(...newOrgTree.families.map(mapToNode).filter((n): n is OrgTreeNode => n !== null));
+
+    flattenedOrgs.sort((a, b) => {
+      const nameA = a.data?.name?.toLowerCase() ?? '';
+      const nameB = b.data?.name?.toLowerCase() ?? '';
+      return nameA.localeCompare(nameB);
+    });
+
+    treeTableOrgs.value = flattenedOrgs;
   } else {
     treeTableOrgs.value = [];
-  }
-});
-
-watch(showTable, (newValue) => {
-  if (newValue && orgs.value) {
-    treeTableOrgs.value = orgs.value;
   }
 });
 
