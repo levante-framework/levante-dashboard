@@ -6,7 +6,7 @@
                     text
                     data-cy="button-sign-out"
                     class="no-underline h-2 p-1 m-0 text-primary border-none border-round h-2rem text-sm hover:bg-red-900 hover:text-white"
-                    @click="signOut">
+                    @click="() => signOut()">
                     {{ $t('navBar.signOut') }}
                 </PvButton>
             </div>
