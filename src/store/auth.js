@@ -18,6 +18,7 @@ export const useAuthStore = () => {
         },
         adminOrgs: null,
         roarfirekit: null,
+        performanceInstance: null,
         userData: null,
         userClaims: null,
         cleverOAuthRequested: false,
@@ -61,7 +62,9 @@ export const useAuthStore = () => {
     actions: {
       async initFirekit() {
         try {
-          this.roarfirekit = await initNewFirekit();
+          const { firekit, perf } = await initNewFirekit();
+          this.roarfirekit = firekit;
+          this.performanceInstance = perf;
           this.setAuthStateListeners();
         } catch (error) {
           // @TODO: Improve error handling as this is a critical error.
@@ -69,6 +72,7 @@ export const useAuthStore = () => {
         }
       },
       setAuthStateListeners() {
+        if (!this.roarfirekit) return;
         this.adminAuthStateListener = onAuthStateChanged(this.roarfirekit?.admin.auth, async (user) => {
           if (user) {
             this.localFirekitInit = true;

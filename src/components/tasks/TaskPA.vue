@@ -17,6 +17,7 @@ import useUserStudentDataQuery from '@/composables/queries/useUserStudentDataQue
 // @ts-ignore - Missing type declarations
 import useCompleteAssessmentMutation from '@/composables/mutations/useCompleteAssessmentMutation';
 import packageLockJson from '../../../package-lock.json';
+import { TaskLauncher } from '@levante-framework/core-tasks';
 
 const props = defineProps({
   taskId: { type: String, default: 'pa' },
@@ -32,7 +33,7 @@ const taskStarted = ref(false);
 const gameStarted = ref(false);
 const authStore = useAuthStore();
 const gameStore = useGameStore();
-const { isFirekitInit, roarfirekit } = storeToRefs(authStore);
+const { isFirekitInit, roarfirekit, performanceInstance } = storeToRefs(authStore);
 
 const { mutateAsync: completeAssessmentMutate } = useCompleteAssessmentMutation();
 
@@ -116,7 +117,13 @@ async function startTask(selectedAdmin: any) { // Explicitly type as any for now
 
     const gameParams = { ...appKit._taskInfo.variantParams };
 
-    const roarApp = new TaskLauncher(appKit, gameParams, userParams, 'jspsych-target');
+    const roarApp = new TaskLauncher(
+      appKit,
+      gameParams,
+      userParams,
+      performanceInstance.value,
+      'jspsych-target'
+    );
 
     await roarApp.run().then(async () => {
       // Handle any post-game actions.

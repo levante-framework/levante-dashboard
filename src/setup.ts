@@ -6,6 +6,8 @@ import App from '@/App.vue';
 import AppSpinner from '@/components/AppSpinner.vue';
 import plugins from './plugins';
 import './styles.css';
+import { initializeApp } from 'firebase/app';
+import levanteFirebaseConfig from '@/config/firebaseLevante';
 
 /**
  * Create Vue App
@@ -49,6 +51,13 @@ export const createAppInstance = (): VueApp<Element> => {
  * @returns {void}
  */
 export const mountApp = (): void => {
+  try {
+    initializeApp(levanteFirebaseConfig.app);
+    console.log('Default Firebase App Initialized in setup.ts');
+  } catch (error) {
+    console.error('Error initializing default Firebase App in setup.ts:', error);
+  }
+
   const app = createAppInstance();
   app.mount('#app');
 };

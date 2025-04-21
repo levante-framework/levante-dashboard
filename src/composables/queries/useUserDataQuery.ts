@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/vue-query';
 import type { UseQueryReturnType, QueryKey, QueryOptions } from '@tanstack/vue-query';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
+import { getPerformance, trace } from 'firebase/performance'; // Import Performance SDK
 // @ts-ignore - JS Helper
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 // @ts-ignore - JS Helper
@@ -56,6 +57,9 @@ const useUserDataQuery = (
       uid.value // Include the determined UID in the key
   ]);
 
+  // Get performance instance
+  const perf = getPerformance();
+
   return useQuery<UserData | null, Error>({
     queryKey,
     // Adjust queryFn return type handling
@@ -64,24 +68,35 @@ const useUserDataQuery = (
         if (!currentUid) {
             return Promise.resolve(null);
         }
-        const doc = await fetchDocById(
-            FIRESTORE_COLLECTIONS.USERS, 
-            currentUid
-        );
 
-        // Check if the fetched doc is valid and has an ID
-        if (doc && typeof doc === 'object' && 'id' in doc && doc.id) {
-           // Assume doc has at least id, spread other props
-           // Cast to UserData if confident about the structure
-           return doc as UserData; 
-        } else if (doc && typeof doc === 'object' && !Object.keys(doc).length) {
-            // Handle case where an empty object might be returned
-            console.warn(`fetchDocById returned empty object for UID: ${currentUid}`);
-            return null;
-        } else {
-            // Handle other unexpected return types or null/undefined
-            console.warn(`fetchDocById returned unexpected data for UID: ${currentUid}`, doc);
-            return null;
+        const queryTrace = trace(perf, 'fetch-user-data');
+        queryTrace.start();
+        queryTrace.putAttribute('user_id', currentUid); // Add user ID as attribute
+
+        try {
+            const doc = await fetchDocById(
+                FIRESTORE_COLLECTIONS.USERS, 
+                currentUid
+            );
+
+            // Check if the fetched doc is valid and has an ID
+            if (doc && typeof doc === 'object' && 'id' in doc && doc.id) {
+               return doc as UserData; 
+            } else if (doc && typeof doc === 'object' && !Object.keys(doc).length) {
+                console.warn(`fetchDocById returned empty object for UID: ${currentUid}`);
+                queryTrace.putAttribute('result', 'empty_object');
+                return null;
+            } else {
+                console.warn(`fetchDocById returned unexpected data for UID: ${currentUid}`, doc);
+                queryTrace.putAttribute('result', 'unexpected_data');
+                return null;
+            }
+        } catch (error) {
+            console.error('Error fetching user data:', error);
+            queryTrace.putAttribute('error', 'true');
+            throw error;
+        } finally {
+            queryTrace.stop();
         }
     },
     enabled: isQueryEnabled,
