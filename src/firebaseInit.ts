@@ -3,7 +3,7 @@ import type { RoarConfig } from '@levante-framework/firekit/lib/interfaces';
 import { AuthPersistence } from '@levante-framework/firekit/lib/firestore/util';
 import levanteFirebaseConfig from './config/firebaseLevante';
 import { isLevante } from './helpers';
-import { getPerformance } from 'firebase/performance';
+import { getPerformance, trace } from 'firebase/performance';
 import { initializeApp, FirebaseApp } from 'firebase/app';
 
 // Cast the config for RoarFirekit
@@ -25,6 +25,15 @@ try {
 export async function initNewFirekit(): Promise<RoarFirekit> {
   const persistence = AuthPersistence.session;
 
+  // Get performance instance (if initialized)
+  const perf = appInstance ? getPerformance(appInstance) : null;
+  let firekitInitTrace: ReturnType<typeof trace> | null = null;
+
+  if (perf) {
+    firekitInitTrace = trace(perf, 'init-firekit');
+    firekitInitTrace.start();
+  }
+
   // Initialize RoarFirekit using its own config logic
   const firekit = new RoarFirekit({
     roarConfig: roarConfigForFirekit,
@@ -38,17 +47,24 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
     verboseLogging: isLevante ? false : true,
   });
 
-  await firekit.init();
+  try {
+    await firekit.init();
+    // Stop trace after successful init
+    if (firekitInitTrace) {
+      firekitInitTrace.stop();
+    }
+  } catch (error) {
+    console.error('Error during firekit.init():', error);
+    // Stop trace even if init fails to record the duration until failure
+    if (firekitInitTrace) {
+      firekitInitTrace.putMetric('init_failed', 1);
+      firekitInitTrace.stop();
+    }
+    throw error; // Re-throw error after stopping trace
+  }
 
   // Initialize Firebase Performance Monitoring using the separately initialized app
-  if (appInstance) {
-    try {
-      getPerformance(appInstance);
-      console.log('Firebase Performance Monitoring initialized.');
-    } catch (error) {
-      console.error('Error initializing Firebase Performance Monitoring:', error);
-    }
-  } else {
+  if (!perf) {
     console.warn('Skipping Firebase Performance Monitoring initialization due to core app init failure.');
   }
 

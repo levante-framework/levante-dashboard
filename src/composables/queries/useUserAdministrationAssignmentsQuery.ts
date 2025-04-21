@@ -1,5 +1,6 @@
 import { computed, type MaybeRef, toValue, type Ref, type ComputedRef } from 'vue';
 import { useQuery, type UseQueryOptions, type UseQueryReturnType, type QueryKey } from '@tanstack/vue-query';
+import { getPerformance, trace } from 'firebase/performance'; // Import Performance SDK
 // @ts-ignore - computeQueryOverrides needs conversion
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 // @ts-ignore - fetchDocById likely needs type refinement
@@ -48,17 +49,31 @@ function useUserAdministrationAssignmentsQuery(
     computedAdminId.value,
   ]);
 
+  // Get performance instance - assumes Firebase is initialized elsewhere
+  const perf = getPerformance();
+
   return useQuery<AssignmentData | null, Error>({
     queryKey,
     queryFn: async () => {
       const docPath = `${computedUserId.value}/assignments/${computedAdminId.value}`;
-      // fetchDocById returns ProcessedDocument | {}
-      const result = await fetchDocById(
-        FIRESTORE_COLLECTIONS.USERS,
-        docPath
-      );
-      // Return null if fetch failed (empty object), otherwise cast to AssignmentData
-      return Object.keys(result).length === 0 ? null : result as AssignmentData;
+      const queryTrace = trace(perf, 'fetch-user-assignment');
+      queryTrace.start();
+
+      let result: ProcessedDocument | {} = {};
+      try {
+        result = await fetchDocById(
+          FIRESTORE_COLLECTIONS.USERS,
+          docPath
+        );
+        // Return null if fetch failed (empty object), otherwise cast to AssignmentData
+        return Object.keys(result).length === 0 ? null : result as AssignmentData;
+      } catch (error) {
+        console.error('Error fetching user assignment:', error);
+        queryTrace.putAttribute('error', 'true'); // Add attribute to trace on error
+        throw error; // Re-throw error for useQuery to handle
+      } finally {
+        queryTrace.stop(); // Ensure trace stops even if error occurs
+      }
     },
     enabled: isQueryEnabled, // Use computed enabled state
     // Cast spread options to any due to computeQueryOverrides interaction
