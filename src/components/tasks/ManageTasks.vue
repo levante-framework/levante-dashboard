@@ -10,7 +10,7 @@
     <div v-if="!created" class="card px-3">
       <h1 class="text-center font-bold">Create a New Task</h1>
       <!-- <p class="login-title" align="left">Register for ROAR</p> -->
-      <form class="p-fluid" @submit.prevent="handleNewTaskSubmit(!v$.$invalid)">
+      <form class="p-fluid" @submit.prevent="handleNewTaskSubmit(!v$.value.$invalid)">
         <!-- Task name -->
         <div class="flex flex-column row-gap-3">
           <section class="form-section">
@@ -20,20 +20,20 @@
                 <span class="required">*</span></label
               >
               <PvInputText
-                v-model="v$.taskName.$model"
+                v-model="v$.value.taskName.$model"
                 name="taskName"
-                :class="{ 'p-invalid': v$.taskName.$invalid && submitted }"
+                :class="{ 'p-invalid': v$.value.taskName.$invalid && submitted }"
                 aria-describedby="activation-code-error"
               />
             </div>
-            <span v-if="v$.taskName.$error && submitted">
-              <span v-for="(error, index) of v$.taskName.$errors" :key="index">
+            <span v-if="v$.value.taskName.$error && submitted">
+              <span v-for="(error, index) of v$.value.taskName.$errors" :key="index">
                 <small class="p-error">{{ error.$message }}</small>
               </span>
             </span>
             <small
-              v-else-if="(v$.taskName.$invalid && submitted) || v$.taskName.$pending" class="p-error">
-              {{ v$.taskName.required?.$message.replace('Value', 'Task Name') }}
+              v-else-if="(v$.value.taskName.$invalid && submitted) || v$.value.taskName.$pending" class="p-error">
+              {{ v$.value.taskName.required?.$message.replace('Value', 'Task Name') }}
             </small>
           </section>
           <!-- Task ID -->
@@ -44,20 +44,20 @@
                 <span class="required">*</span></label
               >
               <PvInputText
-                v-model="v$.taskId.$model"
+                v-model="v$.value.taskId.$model"
                 name="taskId"
-                :class="{ 'p-invalid': v$.taskId.$invalid && submitted }"
+                :class="{ 'p-invalid': v$.value.taskId.$invalid && submitted }"
                 aria-describedby="activation-code-error"
               />
             </div>
-            <span v-if="v$.taskId.$error && submitted">
-              <span v-for="(error, index) of v$.taskId.$errors" :key="index">
+            <span v-if="v$.value.taskId.$error && submitted">
+              <span v-for="(error, index) of v$.value.taskId.$errors" :key="index">
                 <small class="p-error">{{ error.$message }}</small>
               </span>
             </span>
             <small
-              v-else-if="(v$.taskId.$invalid && submitted) || v$.taskId.$pending" class="p-error">
-              {{ v$.taskId.required?.$message.replace('Value', 'Task ID') }}
+              v-else-if="(v$.value.taskId.$invalid && submitted) || v$.value.taskId.$pending" class="p-error">
+              {{ v$.value.taskId.required?.$message.replace('Value', 'Task ID') }}
             </small>
           </section>
           <!-- Cover Image -->
@@ -86,19 +86,19 @@
                 <span class="required">*</span></label
               >
               <PvInputText
-                v-model="v$.taskURL.$model"
+                v-model="v$.value.taskURL.$model"
                 name="taskURL"
-                :class="{ 'p-invalid': v$.taskURL.$invalid && submitted }"
+                :class="{ 'p-invalid': v$.value.taskURL.$invalid && submitted }"
                 aria-describedby="first-name-error"
               />
-              <span v-if="v$.taskURL.$error && submitted">
-                <span v-for="(error, index) of v$.taskURL.$errors" :key="index">
+              <span v-if="v$.value.taskURL.$error && submitted">
+                <span v-for="(error, index) of v$.value.taskURL.$errors" :key="index">
                   <small class="p-error">{{ error.$message }}</small>
                 </span>
               </span>
               <small
-                v-else-if="(v$.taskURL.$invalid && submitted) || v$.taskURL.$pending" class="p-error">
-                {{ v$.taskURL.required?.$message.replace('Value', 'Task URL') }}
+                v-else-if="(v$.value.taskURL.$invalid && submitted) || v$.value.taskURL.$pending" class="p-error">
+                {{ v$.value.taskURL.required?.$message.replace('Value', 'Task URL') }}
               </small>
             </div>
           </section>
@@ -281,7 +281,7 @@
                   icon="pi pi-trash"
                   class="bg-primary text-white border-none border-round p-2 hover:bg-red-900"
                   text
-                  @click="deleteParam(key)"
+                  @click="deleteParam(key as string)"
                 />
               </div>
             </div>
@@ -436,11 +436,12 @@
 import { computed, onMounted, reactive, ref, watch, type Ref } from 'vue';
 import { required, requiredIf, url } from '@vuelidate/validators';
 import { useVuelidate } from '@vuelidate/core';
+import type { Validation } from '@vuelidate/core'; // Import Vuelidate type
 import { storeToRefs } from 'pinia';
 import { useToast } from 'primevue/usetoast';
 import PvButton from 'primevue/button';
 import PvCheckbox from 'primevue/checkbox';
-import PvDropdown from 'primevue/dropdown';
+import PvSelect from 'primevue/select'; // Updated import
 import PvInputNumber from 'primevue/inputnumber';
 import PvInputText from 'primevue/inputtext';
 import PvSelectButton from 'primevue/selectbutton';
@@ -453,6 +454,7 @@ import useTasksQuery from '@/composables/queries/useTasksQuery';
 import useAddTaskMutation from '@/composables/mutations/useAddTaskMutation';
 // @ts-ignore - Missing type declarations
 import useUpdateTaskMutation from '@/composables/mutations/useUpdateTaskMutation';
+import PvDropdown from 'primevue/dropdown'; // Reverted import
 
 // --- Interfaces & Types ---
 
@@ -488,23 +490,20 @@ interface BooleanDropdownOption {
 // Type for MODEL_VIEWS values
 type ModelView = 'Create Task' | 'Update Task';
 
-// Add types for Vuelidate validation state if needed
-interface ValidationState {
+// Define Vuelidate state type (adjust based on actual state structure)
+interface VuelidateState {
+  taskName: { $invalid: boolean; $error: boolean; $pending: boolean; $errors: { $message: string }[]; required?: { $message: string }; };
+  taskId: { $invalid: boolean; $error: boolean; $pending: boolean; $errors: { $message: string }[]; required?: { $message: string }; };
+  taskURL: { $invalid: boolean; $error: boolean; $pending: boolean; $errors: { $message: string }[]; required?: { $message: string }; url?: { $message: string }; };
   $invalid: boolean;
-  $error: boolean;
-  $pending: boolean; // Assuming $pending exists based on usage
-  $errors: { $message: string }[];
-  required?: { $message: string }; // Add specific validator types if known
-  url?: { $message: string };
-  // Add other potential properties from Vuelidate state
 }
 
 // --- Component Logic ---
 
 const toast = useToast();
-const initialized = ref(false);
-const registeredTasksOnly = ref(true);
-const taskCheckboxData = ref<string[]>();
+const initialized: Ref<boolean> = ref(false);
+const registeredTasksOnly: Ref<boolean> = ref(true);
+const taskCheckboxData: Ref<string[] | undefined> = ref(); // Allow undefined initially
 const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
 
@@ -514,7 +513,7 @@ const { mutate: addTask } = useAddTaskMutation();
 const { mutate: updateTask } = useUpdateTaskMutation();
 
 const isExternalTask = computed(() => !!taskCheckboxData.value?.includes('isExternalTask'));
-const selectedTask = ref<string | null>(null);
+const selectedTask: Ref<string | null> = ref(null);
 
 // @ts-ignore - useTasksQuery is JS
 const { data: tasks } = useTasksQuery(registeredTasksOnly, null, {
@@ -561,11 +560,11 @@ const booleanDropDownOptions: BooleanDropdownOption[] = [
   { label: 'false', value: false },
 ];
 
-const submitted = ref(false);
-const created = ref(false);
+const submitted: Ref<boolean> = ref(false);
+const created: Ref<boolean> = ref(false);
 
 let unsubscribe: Function | undefined;
-const init = () => {
+const init = (): void => {
   if (unsubscribe) unsubscribe();
   initialized.value = true;
 };
@@ -588,8 +587,7 @@ const formattedTasks = computed(() => {
 });
 
 // For modeling a task to submit to the DB
-// Use a more specific type or cast for Vuelidate if Partial<Task> causes issues
-const taskFields = reactive<{
+interface TaskFields {
   taskName: string;
   taskURL: string;
   taskId: string;
@@ -597,7 +595,9 @@ const taskFields = reactive<{
   description: string;
   gameConfig: Record<string, any>;
   external: boolean;
-}>({ // Define the exact structure Vuelidate expects
+}
+
+const taskFields = reactive<TaskFields>({ 
   taskName: '',
   taskURL: '',
   taskId: '',
@@ -616,7 +616,7 @@ const taskRules = {
 
 const v$ = useVuelidate(taskRules, taskFields);
 
-const gameConfig = ref<ParamField[]>([
+const gameConfig: Ref<ParamField[]> = ref<ParamField[]>([
   {
     name: '',
     value: '',       // Initial value depends on type, maybe null?
@@ -624,7 +624,7 @@ const gameConfig = ref<ParamField[]>([
   },
 ]);
 
-const taskParams = ref<ParamField[]>([
+const taskParams: Ref<ParamField[]> = ref<ParamField[]>([
   {
     name: '',
     value: '',
@@ -632,7 +632,7 @@ const taskParams = ref<ParamField[]>([
   },
 ]);
 
-function addField(type: ParamField[]) {
+function addField(type: ParamField[]): void {
   type.push({
     name: '',
     value: null, // Use null or type-specific default
@@ -640,22 +640,22 @@ function addField(type: ParamField[]) {
   });
 }
 
-function removeField(type: ParamField[], index: number) {
+function removeField(type: ParamField[], index: number): void {
   type.splice(index, 1);
 }
 
-const newField = () => {
+const newField = (): void => {
   newFields.push({ name: '', value: null, type: 'string' });
 };
 
-const removeNewField = (fieldName: string, array: ParamField[]) => {
+const removeNewField = (fieldName: string, array: ParamField[]): void => {
   const index = array.findIndex(item => item.name === fieldName);
   if (index > -1) {
     array.splice(index, 1);
   }
 };
 
-const deleteParam = (paramName: string) => {
+const deleteParam = (paramName: string): void => {
   // Delete from gameConfig within updatedTaskData if it exists
   if (updatedTaskData.gameConfig && updatedTaskData.gameConfig[paramName] !== undefined) {
     delete updatedTaskData.gameConfig[paramName];
@@ -666,7 +666,7 @@ const deleteParam = (paramName: string) => {
   }
 };
 
-const addGameConfig = () => {
+const addGameConfig = (): void => {
   addedGameConfig.push({ name: '', value: null, type: 'string' });
 };
 
@@ -708,7 +708,7 @@ const checkForErrors = (): boolean => {
   return false;
 };
 
-const handleUpdateTask = async () => {
+const handleUpdateTask = async (): Promise<void> => {
   if (checkForErrors()) return;
 
   const convertedFields = convertParamsToObj(newFields);
@@ -731,12 +731,19 @@ const handleUpdateTask = async () => {
     delete finalData.gameConfig;
   }
 
+  if (!selectedTask.value) {
+      console.error("No task selected for update.");
+      toast.add({ severity: 'error', summary: 'Error', detail: 'No task selected.', life: 3000 });
+      return;
+  }
+
   const updatePayload = {
     taskId: selectedTask.value, // Keep taskId separate
     data: finalData,
   };
 
-  await updateTask(updatePayload, {
+  // Add type assertion for updateTask if needed (assuming it expects specific payload type)
+  await (updateTask as any)(updatePayload, {
     onSuccess: () => {
       toast.add({ severity: 'success', summary: 'Hoorah!', detail: 'Task successfully updated.', life: 3000 });
       resetUpdateTaskForm();
@@ -748,7 +755,7 @@ const handleUpdateTask = async () => {
   });
 };
 
-const handleNewTaskSubmit = async (isFormValid: boolean) => {
+const handleNewTaskSubmit = async (isFormValid: boolean): Promise<void> => {
   submitted.value = true;
   if (!isFormValid) {
     return;
@@ -780,7 +787,7 @@ const handleNewTaskSubmit = async (isFormValid: boolean) => {
     newTaskObject.taskURL = buildTaskURL(taskFields.taskURL, taskParams); // Pass Ref taskParams
   }
 
-  await addTask(newTaskObject, {
+  await (addTask as any)(newTaskObject, { // Add type assertion if needed
     onSuccess: () => {
       created.value = true;
       // Reset form fields here
@@ -820,7 +827,7 @@ function buildTaskURL(baseURL: string, paramsRef: Ref<ParamField[]>): string {
   });
 
   // Avoid adding trailing '?' or '&' if no params were added
-  if (queryParams.length === 1) {
+  if (queryParams.length <= 1) { // Check if only '?' or '&' was added
       return baseURL;
   }
 
@@ -828,14 +835,14 @@ function buildTaskURL(baseURL: string, paramsRef: Ref<ParamField[]>): string {
   return baseURL + queryParams;
 }
 
-const resetUpdateTaskForm = () => {
+const resetUpdateTaskForm = (): void => {
   selectedTask.value = null;
   // Reset updatedTaskData to empty or initial state
   Object.keys(updatedTaskData).forEach(key => delete updatedTaskData[key]);
   clearFieldConfigArrays();
 };
 
-const clearFieldConfigArrays = () => {
+const clearFieldConfigArrays = (): void => {
   newFields.splice(0, newFields.length); // Clear reactive array properly
   addedGameConfig.splice(0, addedGameConfig.length); // Clear reactive array properly
 };

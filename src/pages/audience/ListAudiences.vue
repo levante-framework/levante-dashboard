@@ -235,23 +235,25 @@ const orgHeaders = computed(() => {
 
   if (isSuperAdmin.value) return headers;
 
+  if (!adminOrgs.value) return {};
+
   const result = {};
-  if ((adminOrgs.value?.districts ?? []).length > 0) {
+  if ((adminOrgs.value.districts ?? []).length > 0) {
     result.districts = { header: 'Districts', id: 'districts' };
     result.schools = { header: 'Schools', id: 'schools' };
     result.classes = { header: 'Classes', id: 'classes' };
   }
-  if ((adminOrgs.value?.schools ?? []).length > 0) {
+  if ((adminOrgs.value.schools ?? []).length > 0) {
     result.schools = { header: 'Schools', id: 'schools' };
     result.classes = { header: 'Classes', id: 'classes' };
   }
-  if ((adminOrgs.value?.classes ?? []).length > 0) {
+  if ((adminOrgs.value.classes ?? []).length > 0) {
     result.classes = { header: 'Classes', id: 'classes' };
   }
-  if ((adminOrgs.value?.groups ?? []).length > 0) {
+  if ((adminOrgs.value.groups ?? []).length > 0) {
     result.groups = { header: 'Groups', id: 'groups' };
   }
-  if ((adminOrgs.value?.families ?? []).length > 0) {
+  if ((adminOrgs.value.families ?? []).length > 0) {
     result.families = { header: 'Families', id: 'families' };
   }
   return result;
@@ -259,7 +261,8 @@ const orgHeaders = computed(() => {
 
 const activeIndex = ref(0);
 const activeOrgType = computed(() => {
-  return Object.keys(orgHeaders.value)[activeIndex.value];
+  const keys = Object.keys(orgHeaders.value);
+  return keys.length > activeIndex.value ? keys[activeIndex.value] : undefined;
 });
 
 const claimsLoaded = computed(() => !!userClaims?.value?.claims);
