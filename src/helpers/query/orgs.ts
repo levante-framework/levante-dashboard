@@ -696,9 +696,15 @@ export const orgFetchAll = async (
 
         if (accessibleIds.length === 0) return [];
 
-        const fetchSpecs: FetchSpec[] = accessibleIds.map(id => ({ collection: currentOrgType, docId: id }));
-        // @ts-ignore - batchGetDocs likely expects FetchSpec[], but utils.ts might be untyped
-        const orgDocs = await batchGetDocs(fetchSpecs, undefined, selectFields) as OrgData[];
+        // Prepare the full document paths for batchGetDocs
+        const docPaths = accessibleIds.map(id => `${currentOrgType}/${id}`);
+
+        // Call batchGetDocs with correct parameters: (docPaths, select)
+        // The db parameter defaults to FIRESTORE_DATABASES.ADMIN
+        const orgDocsResults = await batchGetDocs(docPaths, selectFields) as (OrgData | undefined)[];
+
+        // Filter out undefined results (documents not found or inaccessible)
+        const orgDocs = orgDocsResults.filter(doc => doc !== undefined) as OrgData[];
 
         return orgDocs.sort((a, b) => a.name?.localeCompare(b.name ?? '') ?? 0);
     }

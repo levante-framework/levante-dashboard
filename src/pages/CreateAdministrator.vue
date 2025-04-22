@@ -53,7 +53,7 @@
             </div>
           </div>
 
-          <OrgPicker @selection="selection($event)" />
+          <OrgPicker :showAllOrgs="true" @selection="selection($event)" />
           <div class="flex flex-row align-items-center justify-content-center gap-2 flex-order-0 my-3">
             <div class="flex flex-row align-items-center">
               <PvCheckbox v-model="isTestData" input-id="chbx-externalTask" :binary="true" />

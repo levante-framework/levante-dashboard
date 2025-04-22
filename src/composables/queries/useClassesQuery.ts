@@ -1,12 +1,7 @@
-import { computed } from 'vue';
-import type { Ref, ComputedRef } from 'vue';
+import { computed, type Ref, type ComputedRef, toValue } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import type { UseQueryReturnType, QueryKey, QueryOptions } from '@tanstack/vue-query';
-// @ts-ignore - JS Helper
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
-// @ts-ignore - JS Helper
 import { hasArrayEntries } from '@/helpers/hasArrayEntries';
-// @ts-ignore - JS Helper
 import { fetchDocumentsById } from '@/helpers/query/utils';
 import { CLASSES_QUERY_KEY } from '@/constants/queryKeys';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
@@ -31,29 +26,35 @@ export interface Class {
 const useClassesQuery = (
     // classIds must be a Ref containing string[]
     classIds: Ref<string[]>,
-    queryOptions: any = undefined // Use any due to helper complexity
+    queryOptions?: QueryOptions<Class[], Error>
 ): UseQueryReturnType<Class[], Error> => {
 
-  // Ensure all necessary data is available before enabling the query.
-  const conditions = [(): boolean => hasArrayEntries(classIds)]; 
-  const { isQueryEnabled, options } = computeQueryOverrides(conditions, queryOptions ?? {});
+  // Directly compute enabled state using hasArrayEntries
+  const isQueryEnabled: ComputedRef<boolean> = computed(() => {
+      return hasArrayEntries(classIds);
+  });
 
-  // Compute query key dynamically, dependent on classIds ref
-  const queryKey: ComputedRef<QueryKey> = computed(() => [
-      CLASSES_QUERY_KEY, 
-      classIds.value // Use .value which is string[]
-  ]);
+  const queryKey: ComputedRef<QueryKey> = computed(() => {
+      // Filter for valid string IDs before spreading and sorting
+      const validIds = classIds.value?.filter(id => typeof id === 'string' && id.length > 0) ?? [];
+      return [
+          CLASSES_QUERY_KEY,
+          // Sort only the valid string IDs
+          [...validIds].sort()
+      ];
+  });
 
   return useQuery<Class[], Error>({
-    queryKey, // Use computed key
-    // Assuming fetchDocumentsById returns Promise<Class[]>
-    queryFn: (): Promise<Class[]> => 
+    // Spread original options first
+    ...(queryOptions ?? {}),
+    // Override queryKey and enabled
+    queryKey,
+    queryFn: (): Promise<Class[]> =>
         fetchDocumentsById(
-            FIRESTORE_COLLECTIONS.CLASSES, 
-            classIds.value // Pass the string[] array value
+            FIRESTORE_COLLECTIONS.CLASSES,
+            classIds.value // Pass the array value directly
         ),
-    enabled: isQueryEnabled, // Use enabled status from helper
-    ...options,
+    enabled: isQueryEnabled, // Use the directly computed enabled state
   });
 };
 

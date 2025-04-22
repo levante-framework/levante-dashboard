@@ -128,13 +128,6 @@ window.addEventListener(
 );
 
 onMounted(async () => {
-  try {
-    // @ts-ignore - Missing type declarations for module
-    TaskLauncher = (await import('@bdelab/roar-sre')).default;
-  } catch (error) {
-    console.error('An error occurred while importing the game module.', error);
-  }
-
   if (roarfirekit.value.restConfig) init();
 });
 

@@ -61,14 +61,24 @@ export const useAuthStore = () => {
     },
     actions: {
       async initFirekit() {
+        console.log('Attempting to initialize Firekit...');
         try {
-          const { firekit, perf } = await initNewFirekit();
-          this.roarfirekit = firekit;
-          this.performanceInstance = perf;
+          const initResult = await initNewFirekit();
+          console.log('initNewFirekit returned:', initResult);
+
+          console.log('Assigning firekit:', initResult.firekit);
+          console.log('Assigning perf:', initResult.perf);
+
+          this.roarfirekit = initResult.firekit;
+          this.performanceInstance = initResult.perf;
+
+          console.log('authStore roarfirekit set:', this.roarfirekit);
+          console.log('authStore performanceInstance set:', this.performanceInstance);
+
           this.setAuthStateListeners();
+          console.log('Firekit initialization complete in store.');
         } catch (error) {
-          // @TODO: Improve error handling as this is a critical error.
-          console.error('Error initializing Firekit:', error);
+          console.error('Error during initFirekit action:', error);
         }
       },
       setAuthStateListeners() {
@@ -160,7 +170,6 @@ export const useAuthStore = () => {
         };
         if (this.isFirekitInit) {
           return await this.roarfirekit.signInFromRedirectResult(enableCookiesCallback).then((result) => {
-            // If the result is null, then no redirect operation was called.
             if (result !== null) {
               this.spinner = true;
             } else {

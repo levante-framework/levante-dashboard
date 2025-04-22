@@ -3,7 +3,7 @@
     <div class="col-12 md:col-8">
       <PvPanel class="m-0 p-0 h-full" :header="`Select ${forParentOrg ? 'Parent Audience' : 'Audience'}`">
         <PvTabView v-if="claimsLoaded" v-model:activeIndex="activeIndex" class="m-0 p-0 org-tabs" lazy>
-          <PvTabPanel v-for="orgType in orgHeaders" :key="orgType.id" :header="orgType.header">
+          <PvTabPanel v-for="orgHeader in Object.values(orgHeaders)" :key="orgHeader.id" :header="orgHeader.header">
             <div class="grid column-gap-3">
               <div
                 v-if="activeOrgType === 'schools' || activeOrgType === 'classes'"
@@ -24,7 +24,7 @@
                   <label for="district">Select from district</label>
                 </PvFloatLabel>
               </div>
-              <div v-if="orgType.id === 'classes'" class="col-6 md:col-5 lg:col-5 xl:col-5 mt-3">
+              <div v-if="activeOrgType === 'classes'" class="col-6 md:col-5 lg:col-5 xl:col-5 mt-3">
                 <PvFloatLabel>
                   <PvSelect
                     id="school"
@@ -63,16 +63,16 @@
     <div v-if="!forParentOrg" class="col-12 md:col-4">
       <PvPanel class="h-full" header="Selected audience">
         <PvScrollPanel style="width: 100%; height: 26rem">
-          <div v-for="orgKey in Object.keys(selectedOrgs)" :key="orgKey">
-            <div v-if="selectedOrgs[orgKey as OrgType]?.length > 0">
+          <div v-for="orgKey in Object.keys(selectedOrgs) as OrgType[]" :key="orgKey">
+            <div v-if="selectedOrgs[orgKey]?.length > 0">
               <b>{{ _capitalize(orgKey) }}:</b>
               <PvChip
-                v-for="org in selectedOrgs[orgKey as OrgType]"
+                v-for="org in selectedOrgs[orgKey]"
                 :key="org.id"
                 class="m-1 surface-200 p-2 text-black border-round"
                 removable
                 :label="org.name"
-                @remove="remove(org, orgKey as OrgType)"
+                @remove="remove(org, orgKey)"
               />
             </div>
           </div>
@@ -83,10 +83,10 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted, watch, toRaw } from 'vue';
+import { reactive, ref, computed, onMounted, watch, toRaw, defineEmits } from 'vue';
 import type { Ref, ComputedRef, Reactive } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import type { UseQueryReturnType } from '@tanstack/vue-query';
+import type { UseQueryReturnType, QueryObserverOptions } from '@tanstack/vue-query';
 import { storeToRefs } from 'pinia';
 import _capitalize from 'lodash/capitalize';
 import _get from 'lodash/get';
@@ -100,29 +100,22 @@ import PvTabPanel from 'primevue/tabpanel';
 import PvTabView from 'primevue/tabview';
 import { useAuthStore } from '@/store/auth';
 import { orgFetcher, orgFetchAll } from '@/helpers/query/orgs';
+import type { OrgData } from '@/helpers/query/orgs';
 import { orderByDefault } from '@/helpers/query/utils';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 import PvFloatLabel from 'primevue/floatlabel';
 
-// Interfaces
-interface Org {
-  id: string;
-  name: string;
-  districtId?: string;
-  schoolId?: string;
-  // Add other potential fields if needed
-}
-
 type OrgType = 'districts' | 'schools' | 'classes' | 'groups' | 'families';
 
 type SelectedOrgs = {
-  [key in OrgType]?: Org[]; // Make org arrays optional initially
+  [key in OrgType]: OrgData[];
 };
 
 interface Props {
-  orgs?: Partial<SelectedOrgs>; // Make orgs structure partial
+  orgs?: Partial<SelectedOrgs>;
   forParentOrg?: boolean;
+  showAllOrgs?: boolean;
 }
 
 interface OrgHeader {
@@ -135,6 +128,7 @@ interface MinimalAdminOrgs {
   schools?: string[];
   classes?: string[];
   groups?: string[];
+  families?: string[];
 }
 
 interface UserClaimsData {
@@ -145,243 +139,210 @@ interface UserClaimsData {
 }
 
 const initialized: Ref<boolean> = ref(false);
-const authStore = useAuthStore(); // Needs assertion if store is not typed
-const { roarfirekit } = storeToRefs(authStore); // Needs assertion if store is not typed
+const authStore = useAuthStore();
+const { roarfirekit } = storeToRefs(authStore);
 
 const selectedDistrict: Ref<string | undefined> = ref(undefined);
 const selectedSchool: Ref<string | undefined> = ref(undefined);
 
-// Define Props with defaults
 const props = withDefaults(defineProps<Props>(), {
-  orgs: () => ({}), // Default to empty object
+  orgs: () => ({}),
   forParentOrg: false,
+  showAllOrgs: false,
 });
 
-// Define Emits
-const emit = defineEmits<{ (e: 'update:selectedOrgs', orgs: SelectedOrgs): void }>();
+const emit = defineEmits<{ (e: 'selection', orgs: SelectedOrgs): void }>();
 
-// Ensure all keys exist in reactive state, even if initially undefined
 const selectedOrgs: Reactive<SelectedOrgs> = reactive({
-  districts: undefined,
-  schools: undefined,
-  classes: undefined,
-  groups: undefined,
-  families: undefined,
+  districts: [], 
+  schools: [],
+  classes: [],
+  groups: [],
+  families: [],
 });
 
-// Computed property watching props.orgs
 const computedOrgsProp: ComputedRef<Partial<SelectedOrgs>> = computed(() => {
   return props.orgs ?? {};
 });
 
-// Watch for changes in computedOrgsProp and update selectedOrgs
 watch(
   computedOrgsProp,
-  (orgs) => {
+  (newOrgsFromProp) => {
     (Object.keys(selectedOrgs) as OrgType[]).forEach((key) => {
-      selectedOrgs[key] = orgs[key] ?? []; // Default to empty array if undefined
+      selectedOrgs[key] = Array.isArray(newOrgsFromProp[key]) ? newOrgsFromProp[key]! : [];
     });
   },
   { immediate: true, deep: true },
 );
 
-// User Claims Query - Use type assertion for the hook
-const { isLoading: isLoadingClaims, data: userClaims }: UseQueryReturnType<UserClaimsData, Error> = (useUserClaimsQuery as any)({
-  enabled: initialized,
-});
+watch(
+  selectedOrgs,
+  (newValue) => {
+    emit('selection', toRaw(newValue));
+  },
+  { deep: true } 
+);
+
+const userClaimsOptions: QueryObserverOptions<UserClaimsData | null, Error> = {
+  enabled: initialized.value,
+  queryKey: ['userClaims'],
+};
+const { isLoading: isLoadingClaims, data: userClaims }: UseQueryReturnType<UserClaimsData | null, Error> = useUserClaimsQuery(userClaimsOptions);
 
 const isSuperAdmin: ComputedRef<boolean> = computed(() => Boolean(userClaims.value?.claims?.super_admin));
 const adminOrgs: ComputedRef<MinimalAdminOrgs | undefined> = computed(() => userClaims.value?.claims?.minimalAdminOrgs);
 
-// Org Headers Computed
-const orgHeaders: ComputedRef<{ [key: string]: OrgHeader }> = computed(() => {
-  const headers: { [key: string]: OrgHeader } = {
-    districts: { header: 'Sites', id: 'districts' },
-    schools: { header: 'Schools', id: 'schools' },
-    classes: { header: 'Classes', id: 'classes' },
-    groups: { header: 'Groups', id: 'groups' },
+const orgHeaders: ComputedRef<Record<OrgType, OrgHeader>> = computed(() => {
+  const headers: Partial<Record<OrgType, OrgHeader>> = {};
+  const adminOrgData = adminOrgs.value ?? {};
+  const canShow = (orgType: keyof MinimalAdminOrgs) => (adminOrgData[orgType]?.length ?? 0) > 0;
+
+  const allPossibleHeaders: Record<OrgType, OrgHeader> = { 
+      districts: { header: 'Sites', id: 'districts' },
+      schools: { header: 'Schools', id: 'schools' },
+      classes: { header: 'Classes', id: 'classes' },
+      groups: { header: 'Groups', id: 'groups' },
+      families: { header: 'Families', id: 'families' },
   };
 
-  if (isSuperAdmin.value) return headers; // Return all if super admin
-
-  const result: { [key: string]: OrgHeader } = {};
+  if (props.showAllOrgs) {
+    return allPossibleHeaders;
+  }
 
   if (props.forParentOrg) {
-    result.districts = { header: 'Districts', id: 'districts' };
-    result.groups = { header: 'Groups', id: 'groups' };
-    return result;
+    headers.districts = allPossibleHeaders.districts;
+    headers.groups = allPossibleHeaders.groups;
+  } else if (isSuperAdmin.value) {
+    return allPossibleHeaders;
+  } else {
+    if (canShow('districts')) {
+        headers.districts = allPossibleHeaders.districts;
+        headers.schools = allPossibleHeaders.schools;
+        headers.classes = allPossibleHeaders.classes;
+    }
+    if (canShow('schools') && !headers.schools) {
+        headers.schools = allPossibleHeaders.schools;
+        headers.classes = allPossibleHeaders.classes;
+    }
+    if (canShow('classes') && !headers.classes) {
+        headers.classes = allPossibleHeaders.classes;
+    }
+    if (canShow('groups')) {
+        headers.groups = allPossibleHeaders.groups;
+    }
+    if (canShow('families')) {
+       headers.families = allPossibleHeaders.families;
+    } 
   }
-
-  const adminOrgData = adminOrgs.value ?? {};
-  if ((adminOrgData.districts ?? []).length > 0) {
-    result.districts = { header: 'Districts', id: 'districts' };
-    result.schools = { header: 'Schools', id: 'schools' };
-    result.classes = { header: 'Classes', id: 'classes' };
-  }
-  if ((adminOrgData.schools ?? []).length > 0) {
-    // Only add if not already added by district admin
-    if (!result.schools) result.schools = { header: 'Schools', id: 'schools' };
-    if (!result.classes) result.classes = { header: 'Classes', id: 'classes' };
-  }
-  if ((adminOrgData.classes ?? []).length > 0) {
-    if (!result.classes) result.classes = { header: 'Classes', id: 'classes' };
-  }
-  if ((adminOrgData.groups ?? []).length > 0) {
-    result.groups = { header: 'Groups', id: 'groups' };
-  }
-  return result;
+  return headers as Record<OrgType, OrgHeader>;
 });
 
 const activeIndex: Ref<number> = ref(0);
 const activeOrgType: ComputedRef<OrgType | undefined> = computed(() => {
   const keys = Object.keys(orgHeaders.value) as OrgType[];
-  return keys[activeIndex.value];
+  return keys.length > activeIndex.value ? keys[activeIndex.value] : undefined;
 });
 
 const claimsLoaded: ComputedRef<boolean> = computed(() => initialized.value && !isLoadingClaims.value);
 
-// Districts Query - Use type assertion for the hook
-const { isLoading: isLoadingDistricts, data: allDistricts }: UseQueryReturnType<Org[], Error> = (useDistrictsListQuery as any)({
-  enabled: claimsLoaded,
-});
+const districtOptions: QueryObserverOptions<OrgData[], Error> = {
+    enabled: claimsLoaded.value,
+    queryKey: ['districtsList'],
+};
+const { isLoading: isLoadingDistricts, data: allDistricts }: UseQueryReturnType<OrgData[], Error> = useDistrictsListQuery(districtOptions);
 
-// Schools Query
 const schoolQueryEnabled: ComputedRef<boolean> = computed(() => {
   return claimsLoaded.value && selectedDistrict.value !== undefined;
 });
 
-// Replace keepPreviousData with placeholderData
-const { isLoading: isLoadingSchools, data: allSchools }: UseQueryReturnType<Org[], Error> = useQuery({
-  queryKey: ['schools', selectedDistrict],
-  queryFn: () => (orgFetcher as any)('schools', selectedDistrict, isSuperAdmin, adminOrgs), // Use 'as any' for JS helper
-  placeholderData: (previousData) => previousData, // Use placeholderData
-  enabled: schoolQueryEnabled,
-  staleTime: 5 * 60 * 1000,
-});
-
-// Main Org Data Query
-// Replace keepPreviousData with placeholderData
-const { data: orgData }: UseQueryReturnType<Org[], Error> = useQuery({
-  queryKey: ['orgs', activeOrgType, selectedDistrict, selectedSchool],
-  queryFn: () => {
-    if (!activeOrgType.value) return Promise.resolve([]);
-    // Use 'as any' for JS helper
-    return (orgFetchAll as any)(
-        activeOrgType.value, // Pass value directly
-        selectedDistrict,
-        selectedSchool,
-        ref(orderByDefault), // Assuming orderByDefault is compatible
-        isSuperAdmin,
-        adminOrgs, // Pass computed ref directly if function expects it
-        ['id', 'name', 'districtId', 'schoolId', 'schools', 'classes']
-    );
-  },
-  placeholderData: (previousData) => previousData, // Use placeholderData
-  enabled: claimsLoaded,
-  staleTime: 5 * 60 * 1000,
-});
-
-// Watch activeOrgType to reset selections if forParentOrg
-watch(activeOrgType, (newActiveType) => {
-  if (props.forParentOrg && newActiveType) {
-    (Object.keys(selectedOrgs) as OrgType[]).forEach((key) => {
-      selectedOrgs[key] = []; // Reset to empty array
-    });
-  }
-});
-
-// Function to remove a selected org
-const remove = (orgToRemove: Org, orgKey: OrgType): void => {
-  // Ensure the array exists before filtering
-  if (selectedOrgs[orgKey]) {
-      selectedOrgs[orgKey] = selectedOrgs[orgKey]?.filter((org) => org.id !== orgToRemove.id);
-  }
+const schoolQueryOptions: QueryObserverOptions<OrgData[], Error> = {
+    queryKey: ['schoolsForDistrict', selectedDistrict], 
+    queryFn: () => orgFetcher(
+        'schools',
+        selectedDistrict.value ?? null, 
+        isSuperAdmin.value,
+        adminOrgs.value,
+        ['name', 'id']
+    ),
+    enabled: schoolQueryEnabled.value,
 };
+const { isLoading: isLoadingSchools, data: allSchools }: UseQueryReturnType<OrgData[], Error> = useQuery(schoolQueryOptions);
 
-// Emit updates when selectedOrgs changes
-watch(
-  selectedOrgs,
-  (newSelectedOrgs) => {
-    // Filter out undefined values before emitting if necessary
-    const validOrgs: SelectedOrgs = {};
-    for (const key in newSelectedOrgs) {
-        if (newSelectedOrgs[key as OrgType] !== undefined) {
-            validOrgs[key as OrgType] = newSelectedOrgs[key as OrgType];
-        }
+const orgDataOptions: QueryObserverOptions<OrgData[], Error> = {
+  queryKey: ['orgData', activeOrgType, selectedDistrict, selectedSchool, isSuperAdmin, adminOrgs],
+  queryFn: async () => {
+    const currentOrgType = activeOrgType.value;
+    if (!currentOrgType) return [];
+
+    if (currentOrgType === 'districts') {
+      return allDistricts.value ?? [];
     }
-    emit('update:selectedOrgs', toRaw(validOrgs));
+    if (currentOrgType === 'schools') {
+      if (!selectedDistrict.value) return [];
+      return await orgFetcher(currentOrgType, selectedDistrict.value, isSuperAdmin.value, adminOrgs.value, ['name', 'id']);
+    }
+    if (currentOrgType === 'classes') {
+      if (!selectedSchool.value) return [];
+      return await orgFetcher(currentOrgType, selectedSchool.value, isSuperAdmin.value, adminOrgs.value, ['name', 'id']);
+    }
+    if (currentOrgType === 'groups' || currentOrgType === 'families') {
+        return await orgFetchAll(ref(currentOrgType), ref(null), ref(null), ref(orderByDefault), isSuperAdmin, adminOrgs, ref(['name', 'id']));
+    }
+    return [];
   },
-  { deep: true },
-);
+  enabled: claimsLoaded.value,
+};
+const { isLoading: isLoadingOrgData, data: orgData }: UseQueryReturnType<OrgData[], Error> = useQuery(orgDataOptions);
 
-// Initialization Logic
+function remove(org: OrgData, orgKey: OrgType): void {
+  const currentSelection = selectedOrgs[orgKey];
+  if (currentSelection) {
+    const index = currentSelection.findIndex((o) => o.id === org.id);
+    if (index > -1) {
+      currentSelection.splice(index, 1);
+    }
+  }
+}
+
 let unsubscribe: (() => void) | undefined;
-const init = (): void => {
+const init = () => {
   if (unsubscribe) unsubscribe();
   initialized.value = true;
 };
 
-// Use type assertion for potentially untyped store state
-unsubscribe = (authStore as any).$subscribe((mutation: any, state: any) => {
+unsubscribe = authStore.$subscribe((_mutation, state) => {
   if (state.roarfirekit?.restConfig) init();
 });
 
 onMounted(() => {
-  // Use type assertion for potentially untyped ref value
-  if ((roarfirekit.value as any)?.restConfig) {
-      init();
-  }
-  // Initialize selectedOrgs from props on mount, defaulting to empty arrays
-  (Object.keys(selectedOrgs) as OrgType[]).forEach((key) => {
-      selectedOrgs[key] = props.orgs?.[key] ?? [];
-  });
+  if (roarfirekit.value?.restConfig) init();
 });
 
-// Watch for changes in 'allSchools' and update selectedSchool
-watch(allSchools, (newValue) => {
-    // Handle potential undefined from _head
-    const firstSchool = _head(newValue);
-    if (firstSchool) {
-        selectedSchool.value = _get(firstSchool, 'id');
-    } else {
-        selectedSchool.value = undefined; // Reset if no schools
+watch(
+  [allDistricts, allSchools],
+  ([districts, schools]) => {
+    if (!selectedDistrict.value && (districts?.length ?? 0) > 0) {
+      selectedDistrict.value = _head(districts)?.id;
     }
-});
-
-// Watch for changes in 'allDistricts' and update selectedDistrict
-watch(allDistricts, (newValue) => {
-    // Handle potential undefined from _head
-    const firstDistrict = _head(newValue);
-    if (firstDistrict) {
-        selectedDistrict.value = _get(firstDistrict, 'id');
-    } else {
-        selectedDistrict.value = undefined; // Reset if no districts
+    if (!selectedSchool.value && (schools?.length ?? 0) > 0) {
+      selectedSchool.value = _head(schools)?.id;
     }
-});
+  },
+  { immediate: true }
+);
 </script>
 
-<style>
-.p-checkbox-box.p-highlight {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-  color: white;
-}
-
-g {
-  color: black;
-}
-.p-icon.p-chip-remove-icon {
-  margin-left: 0.5rem;
-}
-
+<style lang="scss">
 .org-tabs .p-tabview-nav {
-  display: flex;
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  @apply justify-start;
 }
 
-.org-tabs .p-tabview-nav li {
-  flex: 0 0 auto;
-  min-width: fit-content;
+.p-tabview-panel {
+  @apply m-0 p-0;
+}
+
+.p-listbox .p-listbox-list .p-listbox-item.p-highlight {
+    background-color: var(--primary-100);
+    color: var(--primary-color);
 }
 </style>

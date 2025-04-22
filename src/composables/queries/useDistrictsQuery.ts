@@ -1,12 +1,7 @@
-import { computed } from 'vue';
-import type { Ref, ComputedRef } from 'vue';
+import { computed, type Ref, type ComputedRef, toValue } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import type { UseQueryReturnType, QueryKey, QueryOptions } from '@tanstack/vue-query';
-// @ts-ignore - JS Helper
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
-// @ts-ignore - JS Helper
 import { hasArrayEntries } from '@/helpers/hasArrayEntries';
-// @ts-ignore - JS Helper
 import { fetchDocumentsById } from '@/helpers/query/utils';
 import { DISTRICTS_QUERY_KEY } from '@/constants/queryKeys';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
@@ -14,7 +9,7 @@ import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 // --- Interfaces & Types ---
 
 // Basic structure for a district document
-interface District {
+export interface District {
     id: string;
     name?: string;
     // Add other known district fields
@@ -22,40 +17,43 @@ interface District {
 }
 
 /**
- * Districts query.
+ * Districts Query
  *
  * @param districtIds – A Vue ref containing the array of district IDs to fetch.
  * @param queryOptions – Optional TanStack query options.
  * @returns The TanStack query result.
  */
 const useDistrictsQuery = (
-    // Make districtIds Ref mandatory - must contain string[]
     districtIds: Ref<string[]>,
-    queryOptions: any = undefined
+    queryOptions?: QueryOptions<District[], Error>
 ): UseQueryReturnType<District[], Error> => {
 
-  // hasArrayEntries should now work correctly with Ref<string[]>
-  const conditions = [(): boolean => hasArrayEntries(districtIds)]; 
-  const { isQueryEnabled, options } = computeQueryOverrides(conditions, queryOptions ?? {});
+  // Directly compute enabled state using hasArrayEntries
+  const isQueryEnabled: ComputedRef<boolean> = computed(() => {
+      return hasArrayEntries(districtIds);
+  });
 
-  const queryKey: ComputedRef<QueryKey> = computed(() => [
-      DISTRICTS_QUERY_KEY, 
-      districtIds.value // Now guaranteed to be string[]
-  ]);
+  const queryKey: ComputedRef<QueryKey> = computed(() => {
+      // Filter for valid string IDs before spreading and sorting
+      const validIds = districtIds.value?.filter(id => typeof id === 'string' && id.length > 0) ?? [];
+      return [
+          DISTRICTS_QUERY_KEY,
+          // Sort only the valid string IDs
+          [...validIds].sort()
+      ];
+  });
 
   return useQuery<District[], Error>({
+    // Spread original options first
+    ...(queryOptions ?? {}),
+    // Override queryKey and enabled
     queryKey,
-    queryFn: (): Promise<District[]> => {
-        const ids = districtIds.value;
-        // Fetch directly, enabled check handles empty array case
-        return fetchDocumentsById(
-            FIRESTORE_COLLECTIONS.DISTRICTS, 
-            ids
-        );
-    },
-    // enabled logic can rely on isQueryEnabled and the array check from hasArrayEntries
-    enabled: isQueryEnabled, 
-    ...options,
+    queryFn: (): Promise<District[]> =>
+        fetchDocumentsById(
+            FIRESTORE_COLLECTIONS.DISTRICTS,
+            districtIds.value // Pass the array value directly
+        ),
+    enabled: isQueryEnabled, // Use the directly computed enabled state
   });
 };
 

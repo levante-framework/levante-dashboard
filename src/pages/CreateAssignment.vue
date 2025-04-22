@@ -74,7 +74,7 @@
           </div>
         </div>
 
-        <OrgPicker :orgs="orgsList" @selection="selection($event)" />
+        <OrgPicker :orgs="orgsList" :showAllOrgs="true" @selection="selection($event)" />
 
         <PvConfirmDialog group="errors" class="confirm" :draggable="false">
           <template #message>
@@ -407,9 +407,14 @@ const getNonUniqueTasks = (assignments) => {
   nonUniqueTasks.value = filtered.map((taskIdArray) => taskIdArray[0].taskId);
 };
 
-const checkForRequiredOrgs = (orgs) => {
-  const filtered = _filter(orgs, (org) => !_isEmpty(org));
-  return Boolean(filtered.length);
+const checkForRequiredOrgs = (orgsObject) => {
+  console.log('Inside checkForRequiredOrgs, input object:', orgsObject);
+  const orgArrays = Object.values(orgsObject);
+  console.log('Inside checkForRequiredOrgs, object values (arrays):', orgArrays);
+  // Check if ANY of the org type arrays within the object are not empty
+  const isValid = orgArrays.some(orgArray => Array.isArray(orgArray) && orgArray.length > 0);
+  console.log('Inside checkForRequiredOrgs, validation result:', isValid);
+  return isValid;
 };
 
 // +------------------------------------------------------------------------------------------------------------------+

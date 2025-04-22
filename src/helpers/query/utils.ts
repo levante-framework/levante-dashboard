@@ -174,8 +174,8 @@ export const orderByDefault: OrderBy[] = [
  */
 export function getProjectId(project: string = 'admin'): string | undefined {
   const authStore = useAuthStore();
-  const { roarfirekit } = storeToRefs(authStore) as { roarfirekit: Ref<any> }; // Use 'any' if roarfirekit type is complex
-  return roarfirekit.value?.roarConfig?.[project]?.projectId;
+  // Ensure roarfirekit and its properties are accessed safely
+  return authStore.roarfirekit?.roarConfig?.[project]?.projectId;
 }
 
 /**
@@ -183,28 +183,59 @@ export function getProjectId(project: string = 'admin'): string | undefined {
  * @param db - The Firestore database identifier.
  * @param unauthenticated - Whether the request should be unauthenticated.
  * @returns Configured Axios instance.
- * @throws Error if the baseURL is not set in the config.
+ * @throws Error if the baseURL is not set or projectId cannot be determined.
  */
 export function getAxiosInstance(db: string = FIRESTORE_DATABASES.ADMIN, unauthenticated: boolean = false): AxiosInstance {
   const authStore = useAuthStore();
-  const { roarfirekit } = storeToRefs(authStore) as { roarfirekit: Ref<any> };
-  const baseConfig: InternalAxiosRequestConfig = _get(roarfirekit.value?.restConfig, db, {}); 
+  // Use storeToRefs carefully, ensure roarfirekit exists before accessing nested props
+  const baseConfig = authStore.roarfirekit?.restConfig?.[db];
+
+  if (!baseConfig) {
+    console.error(`Axios base config not found for database: ${db}. Firekit might not be initialized.`);
+    throw new Error(`Base config is not available for database: ${db}.`);
+  }
 
   // Create a new config object to avoid modifying the original store ref
-  const axiosOptions: InternalAxiosRequestConfig = { ...baseConfig }; 
+  const axiosOptions: InternalAxiosRequestConfig = { ...baseConfig };
 
   if (unauthenticated && axiosOptions.headers) {
-    // Create a new headers object excluding Authorization
-    const currentHeaders = axiosOptions.headers as Record<string, any>; 
+    const currentHeaders = axiosOptions.headers as Record<string, any>;
     const newHeaders: Record<string, any> = {};
     for (const key in currentHeaders) {
-        if (key.toLowerCase() !== 'authorization') {
-            newHeaders[key] = currentHeaders[key];
-        }
+      if (key.toLowerCase() !== 'authorization') {
+        newHeaders[key] = currentHeaders[key];
+      }
     }
-    // Use type assertion as the structure is compatible but type is complex
-    axiosOptions.headers = newHeaders as any; 
+    axiosOptions.headers = newHeaders as any;
   }
+
+  // --- Start Workaround for duplicated path ---
+  const projectId = getProjectId(db); // Get project ID for the current db context
+  if (!projectId) {
+      console.error(`Cannot determine Project ID for database: ${db} to check baseURL.`);
+      throw new Error(`Project ID is missing for database: ${db}.`);
+  }
+
+  if (axiosOptions.baseURL) {
+      const expectedPrefix = `projects/${projectId}/databases/(default)/documents`;
+      const parts = axiosOptions.baseURL.split(expectedPrefix);
+      
+      // Check if the prefix appears more than once (i.e., parts.length > 2)
+      // or if the prefix is immediately repeated (parts[1] starts with it, ignoring leading slashes)
+      if (parts.length > 2 || (parts.length === 2 && parts[1]?.replace(/^\/+/, '').startsWith(expectedPrefix))) {
+          console.warn(`Detected potentially duplicated project path in baseURL for ${db}: ${axiosOptions.baseURL}. Attempting to fix.`);
+          // Find the *last* occurrence of the expected prefix and keep everything before it plus the prefix itself once.
+          const lastIndex = axiosOptions.baseURL.lastIndexOf(expectedPrefix);
+          if (lastIndex !== -1) {
+              axiosOptions.baseURL = axiosOptions.baseURL.substring(0, lastIndex + expectedPrefix.length);
+              console.log(`Corrected baseURL for ${db}: ${axiosOptions.baseURL}`);
+          } else {
+              console.error(`Could not reliably fix duplicated path in baseURL for ${db}.`);
+              // Proceed with the potentially broken URL, or throw an error
+          }
+      }
+  }
+  // --- End Workaround ---
 
   if (!axiosOptions.baseURL) {
     console.error(`Axios baseURL not configured for database: ${db}`);

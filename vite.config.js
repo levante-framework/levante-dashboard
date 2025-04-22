@@ -49,6 +49,10 @@ export default defineConfig({
     cssCodeSplit: true,
     sourcemap: true,
     rollupOptions: {
+      external: [
+        'vite-plugin-node-polyfills/shims/global',
+        'vite-plugin-node-polyfills/shims/process'
+      ],
       output: {
         manualChunks: {
           lodash: ['lodash'],
