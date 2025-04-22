@@ -17,13 +17,13 @@ import * as VueQuery from '@tanstack/vue-query';
 import { type QueryClient } from '@tanstack/vue-query';
 import { useRouter, type Router, type RouteLocationRaw, type NavigationFailure } from 'vue-router';
 import { nanoid } from 'nanoid';
-// @ts-ignore - Test support file is JS
-import { withSetup } from '@/test-support/withSetup.js';
+import { withSetup } from '@/test-support/withSetup';
 // @ts-ignore - Store file is JS
 import { useAuthStore } from '@/store/auth';
 // @ts-ignore - Query composable file is JS (though mocked)
 import useUserDataQuery from '@/composables/queries/useUserDataQuery';
 import useSSOAccountReadinessVerification from './useSSOAccountReadinessVerification';
+import { provideAppId } from '@/constants/symbols';
 
 // Type the mock
 vi.mock('vue-router', () => ({

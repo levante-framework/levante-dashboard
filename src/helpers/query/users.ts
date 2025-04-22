@@ -17,7 +17,7 @@ interface ArrayValue { arrayValue: { values?: Value[] }; }
 type Value = StringValue | BooleanValue | IntegerValue | DoubleValue | NullValue | ArrayValue | { [key: string]: any }; // Add other types as needed (mapValue, etc.)
 
 // OrderBy clause structure
-interface OrderBy {
+export interface OrderBy {
     field: { fieldPath: string };
     direction: 'ASCENDING' | 'DESCENDING';
 }
@@ -107,7 +107,7 @@ interface AggregationResult {
 }
 
 // Expected structure for mapped user data (refine based on actual mapFields output)
-interface UserData {
+export interface UserData {
     id: string;
     // Add other fields returned by mapFields (username, name, studentData, userType, archived)
     [key: string]: any;
