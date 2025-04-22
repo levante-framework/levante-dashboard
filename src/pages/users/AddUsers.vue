@@ -431,7 +431,6 @@ async function submitUsers() {
               orgInfo.groups.push(groupId);
             } catch (error) {
               addErrorUser(user, `Error: Group '${group}' does not exist`);
-              activeSubmit.value = false;
               return;
             }
           }
