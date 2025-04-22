@@ -6,14 +6,16 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { onMounted, watch, ref, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import _get from 'lodash/get';
 import { useAuthStore } from '@/store/auth';
 import { useGameStore } from '@/store/game';
+// @ts-ignore - Missing type declarations
 import useUserStudentDataQuery from '@/composables/queries/useUserStudentDataQuery';
+// @ts-ignore - Missing type declarations
 import useCompleteAssessmentMutation from '@/composables/mutations/useCompleteAssessmentMutation';
 import packageLockJson from '../../../package-lock.json';
 
@@ -21,7 +23,7 @@ const props = defineProps({
   taskId: { type: String, default: 'egma-math' },
 });
 
-let levanteTaskLauncher;
+let levanteTaskLauncher: any; // Explicitly type as any for now
 
 const taskId = props.taskId;
 const { version } = packageLockJson.packages['node_modules/@levante-framework/core-tasks'];
@@ -35,7 +37,7 @@ const { isFirekitInit, roarfirekit } = storeToRefs(authStore);
 const { mutateAsync: completeAssessmentMutate } = useCompleteAssessmentMutation();
 
 const initialized = ref(false);
-let unsubscribe;
+let unsubscribe: Function | undefined;
 const init = () => {
   if (unsubscribe) unsubscribe();
   initialized.value = true;
@@ -64,6 +66,7 @@ window.addEventListener(
 
 onMounted(async () => {
   try {
+    // @ts-ignore - Missing type declarations for module
     let module = await import('@levante-framework/core-tasks');
     levanteTaskLauncher = module.TaskLauncher;
   } catch (error) {
@@ -89,7 +92,7 @@ watch(
   { immediate: true },
 );
 
-async function startTask(selectedAdmin) {
+async function startTask(selectedAdmin: any) { // Explicitly type as any for now
   try {
     let checkGameStarted = setInterval(function () {
       // Poll for the preload trials progress bar to exist and then begin the game
