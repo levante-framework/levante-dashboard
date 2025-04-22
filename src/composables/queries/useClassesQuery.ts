@@ -14,7 +14,7 @@ import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 // --- Interfaces & Types ---
 
 // Basic structure for a class document
-interface Class {
+export interface Class {
     id: string;
     name?: string;
     // Add other known class fields (e.g., schoolId, teacherId)

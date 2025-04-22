@@ -87,7 +87,7 @@
         </PvColumn>
         <PvColumn field="id" header="" style="width: 14rem">
           <template #body="{ node }">
-            <div v-if="node.data.id" class="flex m-0">
+            <div v-if="node.data" class="flex m-0">
               <router-link
                 :to="{
                   name: 'ProgressReport',
@@ -412,9 +412,12 @@ const onExpand = async (event: any) => {
 
       const childNodes: OrgTreeNode[] = _without(
         zippedData.map(([orgDoc, stats], index): OrgTreeNode | undefined => {
-          const { collection = FIRESTORE_COLLECTIONS.CLASSES, ...nodeData } = orgDoc ?? {};
+          if (!orgDoc || !orgDoc.id) {
+            // console.warn(`Skipping child node creation at index ${index} due to missing orgDoc or orgDoc.id`, { orgDoc, stats }); // Commented out debug log
+            return undefined; // Skip this entry if orgDoc or its id is missing
+          }
 
-          if (_isEmpty(nodeData) || !nodeData.id) return undefined;
+          const { collection = FIRESTORE_COLLECTIONS.CLASSES, ...nodeData } = orgDoc;
 
           const orgTypeKey = String(collection).toUpperCase() as keyof typeof SINGULAR_ORG_TYPES;
           const childData: OrgNodeData = {
@@ -426,7 +429,7 @@ const onExpand = async (event: any) => {
           };
 
           return {
-            key: `${String(node.key)}-${index}`,
+            key: childData.id,
             data: childData,
           };
         }),
