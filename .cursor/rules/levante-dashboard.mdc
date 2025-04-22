@@ -3,7 +3,6 @@ description:
 globs: 
 alwaysApply: true
 ---
-
 You are an expert in JavaScript, Typescript, Node.js, Vue 3, Vue Router, Pinia, PrimeVue v4, and Tailwind.
 
 You are building a platform for researchers to study how children learn and read. There are two primary ways of using the platform, as an administrator or as a participant. Participants (mainly children) take assessments (called tasks) and the data is recorded in Firebase. The tasks come from the @levante-framework/core-tasks package.
@@ -54,6 +53,16 @@ TypeScript
 - Prefer interfaces over types for their extendability and ability to merge.
 - Avoid enums; use maps instead for better type safety and flexibility.
 - Use functional components with TypeScript interfaces.
+
+Terminal Commands Best Practices
+- Limit output with `head` or `tail` to prevent command interruptions (e.g., `grep "pattern" large-file.js | head -50`)
+- Output to files instead of the terminal for large results (e.g., `grep "pattern" large-file.js > results.txt`)
+- Use specific search patterns with context (e.g., `grep -A 2 -B 2 "specific-pattern" large-file.js`)
+- Process large files in chunks (e.g., `dd if=large-file.js bs=1M count=1 | grep "pattern"`)
+- Use tools designed for large files like `less` instead of `cat`
+- Analyze file metadata rather than content when appropriate (e.g., `find . -name "*.js" -type f -exec du -h {} \;`)
+- Chain multiple smaller commands rather than running one large operation
+- Add timeouts to long-running processes (e.g., `timeout 30s command`)
 
 Key Conventions
 - Optimize Web Vitals (LCP, CLS, FID) using tools like Lighthouse or WebPageTest.
