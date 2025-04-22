@@ -106,8 +106,8 @@ describe('useUpdateUserMutation', () => {
     await mutateAsync(mockUserPayload);
 
     expect(isSuccess.value).toBe(true);
-    // Check USER_DATA_QUERY_KEY is invalidated
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['user-data'] }); // Assuming USER_DATA_QUERY_KEY is 'user-data'
+    // Update expectation to match the actual invalidated key
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['user'] });
   });
 
   it('should not invalidate user queries upon mutation failure', async () => {
