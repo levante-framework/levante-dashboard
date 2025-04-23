@@ -35,7 +35,6 @@ interface UseUserTypeReturn {
 export default function useUserType(userClaims: Ref<UserClaimsValue | null | undefined>): UseUserTypeReturn {
   const userType: ComputedRef<string | undefined> = computed(() => {
 
-    console.log('userClaims: ', userClaims.value);
     if (!userClaims.value) return undefined;
 
     const claims = userClaims.value.claims;
@@ -53,7 +52,6 @@ export default function useUserType(userClaims: Ref<UserClaimsValue | null | und
     }
 
     // Otherwise, default to participant user type.
-    console.log('defaulting to participant');
     return AUTH_USER_TYPE.PARTICIPANT;
   });
 

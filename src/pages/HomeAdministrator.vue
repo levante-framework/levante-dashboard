@@ -69,8 +69,7 @@
         <div v-if="!initialized || isLoadingAdministrations" class="loading-container">
           <AppSpinner class="mb-4" />
           <span class="uppercase font-light text-sm text-gray-600">
-            <template v-if="fetchTestAdministrations">Fetching Test Assignments</template>
-            <template v-else>Fetching Assignments</template>
+            Fetching Assignments
           </span>
         </div>
         <div v-else>
@@ -89,7 +88,7 @@
             >
               <template #list="slotProps">
                 <div class="mb-2 w-full">
-                  <CardAdministration
+                  <CardAssignment
                     v-for="item in slotProps.items"
                     :id="item.id"
                     :key="item.id"
@@ -139,7 +138,7 @@ import { getTitle } from '@/helpers/query/administrations';
 import useUserType from '@/composables/useUserType';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
-import CardAdministration from '@/components/CardAdministration.vue';
+import CardAssignment from '@/components/CardAssignment.vue';
 import { isLevante } from '@/helpers';
 
 const initialized = ref(false);

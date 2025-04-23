@@ -142,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch, Ref } from 'vue';
+import { computed, onMounted, ref, watch, Ref, watchEffect } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
@@ -244,6 +244,7 @@ interface CardAdministrationProps {
 }
 
 const props = defineProps<CardAdministrationProps>();
+// console.log('props: ', props);
 
 const router = useRouter();
 const confirm = useConfirm();
@@ -335,6 +336,7 @@ const params = computed<Record<string, Record<string, any>>>(() =>
 
 const isWideScreen = computed<boolean>(() => {
   if (typeof window !== 'undefined') {
+    console.log('window.innerWidth: ', window.innerWidth);
     return window.innerWidth > 768;
   }
   return false;
@@ -350,6 +352,11 @@ const { data: orgsData, isLoading: isLoadingDsgfOrgs } = useDsgfOrgQuery(
     enabled: enableQueries
   }
 );
+
+watchEffect(() => {
+  console.log('orgsData: ', orgsData.value);
+});
+
 
 const loadingTreeTable = computed<boolean>(() => {
   return isLoadingDsgfOrgs.value || expanding.value;
@@ -380,7 +387,7 @@ watch(orgsData, (newOrgTree) => {
       const nameB = b.data?.name?.toLowerCase() ?? '';
       return nameA.localeCompare(nameB);
     });
-
+    console.log('flattenedOrgs: ', flattenedOrgs);
     treeTableOrgs.value = flattenedOrgs;
   } else {
     treeTableOrgs.value = [];
