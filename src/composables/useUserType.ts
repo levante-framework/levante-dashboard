@@ -34,12 +34,12 @@ interface UseUserTypeReturn {
  */
 export default function useUserType(userClaims: Ref<UserClaimsValue | null | undefined>): UseUserTypeReturn {
   const userType: ComputedRef<string | undefined> = computed(() => {
-    // Abort the user type determination if the user claims are not available yet.
+
+    console.log('userClaims: ', userClaims.value);
     if (!userClaims.value) return undefined;
 
     const claims = userClaims.value.claims;
 
-    // Check if the user is a super admin.
     if (claims?.super_admin) {
       return AUTH_USER_TYPE.SUPER_ADMIN;
     }
@@ -53,6 +53,7 @@ export default function useUserType(userClaims: Ref<UserClaimsValue | null | und
     }
 
     // Otherwise, default to participant user type.
+    console.log('defaulting to participant');
     return AUTH_USER_TYPE.PARTICIPANT;
   });
 

@@ -163,11 +163,8 @@ import PvTreeTable from 'primevue/treetable';
 import type { TreeNode } from 'primevue/treenode';
 import type { MenuItem } from 'primevue/menuitem';
 import type { ChartData, ChartOptions } from 'chart.js';
-// @ts-ignore
 import { batchGetDocs } from '@/helpers/query/utils';
-// @ts-ignore
 import { taskDisplayNames } from '@/helpers/reports';
-// @ts-ignore
 import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
 import useDsgfOrgQuery from '@/composables/queries/useDsgfOrgQuery';
 import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';

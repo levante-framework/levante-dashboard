@@ -2,6 +2,7 @@ import { toValue } from 'vue';
 import type { Ref } from 'vue';
 import axios from 'axios';
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+// @ts-ignore
 import Papa from 'papaparse';
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
@@ -276,6 +277,7 @@ export async function fetchDocById(
   }
 
   const docPath = `/${collectionValue}/${docIdValue}`;
+  // console.log('docPath: ', docPath);
   try {
       const axiosInstance = getAxiosInstance(db, unauthenticated);
       const queryParams = (select ?? []).map((field) => `mask.fieldPaths=${field}`);

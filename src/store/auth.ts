@@ -324,7 +324,7 @@ export const useAuthStore = defineStore('authStore', {
       'cleverOAuthRequested',
       'classLinkOAuthRequested',
     ],
-    debug: false,
+    debug: true,
   },
 });
 

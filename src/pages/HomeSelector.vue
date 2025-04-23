@@ -1,15 +1,6 @@
 <template>
-  <div v-if="isLoading">
-    <div class="text-center col-full">
-      <AppSpinner />
-      <p class="text-center">{{ $t('homeSelector.loading') }}</p>
-    </div>
-  </div>
-
-  <div v-else>
-    <HomeParticipant v-if="isParticipant" />
-    <HomeAdministrator v-else-if="isAdminUser" />
-  </div>
+  <HomeParticipant v-if="isParticipant" />
+  <HomeAdministrator v-else-if="isAdminUser" />
 
   <ConsentModal
     v-if="!isLoading && showConsent && isAdminUser"
@@ -81,6 +72,7 @@ const { isLoading: isLoadingClaims, data: userClaims } = useUserClaimsQuery({
 });
 
 const { isAdmin, isSuperAdmin, isParticipant } = useUserType(userClaims);
+
 
 const isAdminUser = computed(() => isAdmin.value || isSuperAdmin.value);
 const isLoading = computed(() => {

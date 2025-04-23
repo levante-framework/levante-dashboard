@@ -36,6 +36,7 @@ const useUserClaimsQuery = (
   const authStore = useAuthStore();
   // Assuming uid from store is Ref<string | undefined | null>
   const { uid } = storeToRefs(authStore);
+  console.log('uid in useUserClaimsQuery: ', uid.value);
 
   // Query is enabled only if uid has a value
   const queryConditions = [(): boolean => !!uid.value];
@@ -54,6 +55,7 @@ const useUserClaimsQuery = (
              // Should not happen if enabled is working, but return null for safety
             return Promise.resolve(null);
         }
+        console.log('fetching user claims for uid: ', uid.value);
         // Assuming fetchDocById returns Promise<UserClaimsData | null>
         return fetchDocById(
             FIRESTORE_COLLECTIONS.USER_CLAIMS,

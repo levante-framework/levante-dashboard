@@ -16,8 +16,13 @@
   </Head>
   <div>
     <PvToast />
-    <NavBar v-if="typeof $route.name === 'string' && !navbarBlacklist.includes($route.name) && isAuthStoreReady" />
-    <router-view :key="$route.fullPath" />
+    <div v-if="isAuthStoreReady">
+      <NavBar v-if="!navbarBlacklist.includes($route.name)" />
+      <router-view :key="$route.fullPath" />
+    </div>
+    <div v-else class="spinner-container">
+      <AppSpinner />
+    </div>
 
     <SessionTimer v-if="loadSessionTimeoutHandler" />
   </div>
@@ -101,12 +106,15 @@ onBeforeMount(async () => {
     // @TODO: Refactor this callback as we should ideally use the useUserClaimsQuery and useUserDataQuery composables.
     // @NOTE: Whilst the rest of the application relies on the user's ROAR UID, this callback requires the user's ID
     // in order for SSO to work and cannot currently be changed without significant refactoring.
+    console.log('authStore.uid: ', authStore.uid);
     if (authStore.uid) {
       const userClaims = await fetchDocById('userClaims', authStore.uid);
+      console.log('fetched userClaims successfully: ', userClaims);
       authStore.userClaims = userClaims;
     }
     if (authStore.roarUid) {
       const userData = await fetchDocById('users', authStore.roarUid);
+      console.log('fetched userData successfully: ', userData);
       authStore.userData = userData;
     }
   });
@@ -127,3 +135,12 @@ onMounted(() => {
   }
 });
 </script>
+
+<style scoped>
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh; /* Ensure the container takes full viewport height */
+}
+</style>
