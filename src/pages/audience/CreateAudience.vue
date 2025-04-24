@@ -171,6 +171,7 @@ import useGroupsListQuery from '@/composables/queries/useGroupsListQuery';
 import { isLevante } from '@/helpers';
 import OrgPicker from '@/components/OrgPicker.vue';
 import _toPairs from 'lodash/toPairs';
+import { useRouter } from 'vue-router';
 
 const initialized = ref(false);
 const isTestData = ref(false);
@@ -180,6 +181,7 @@ const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
 const queryClient = useQueryClient();
 const groupHasParentOrg = ref(false);
+const router = useRouter();
 
 watch(groupHasParentOrg, () => {
   console.log('groupHasParentOrg: ', groupHasParentOrg.value);
@@ -307,6 +309,21 @@ const searchTags = (event) => {
   tagSuggestions.value = filteredOptions;
 };
 
+/**
+ * Refreshes the user claims to ensure newly created groups are available
+ * in the user's claims for subsequent operations
+ */
+const refreshUserClaims = async () => {
+  try {
+    await authStore.forceIdTokenRefresh();
+    console.log('User claims refreshed successfully');
+    return true;
+  } catch (error) {
+    console.error('Error refreshing user claims:', error);
+    return false;
+  }
+};
+
 const submit = async () => {
   submitted.value = true;
   const isFormValid = await v$.value.$validate();
@@ -358,8 +375,15 @@ const submit = async () => {
 
     await roarfirekit.value
       .upsertOrg({type: orgType.value.firestoreCollection, ...orgData})
-      .then(() => {
+      .then(async () => {
         queryClient.invalidateQueries({ queryKey: ['orgs'], exact: false });
+        
+        // If we're creating a group, refresh the user claims to ensure it's available immediately
+        if (orgType.value?.singular === 'group') {
+          toast.add({ severity: 'info', summary: 'Refreshing', detail: 'Updating user permissions...', life: 3000 });
+          await refreshUserClaims();
+        }
+        
         toast.add({ severity: 'success', summary: 'Success', detail: 'Audience created', life: 3000 });
         submitted.value = false;
         resetForm();

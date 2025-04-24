@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { useAuthStore } from '@/store/auth';
-import { ADMINISTRATION_UPSERT_MUTATION_KEY } from '@/constants/mutationKeys';
+import { ADMINISTRATION_CREATE_MUTATION_KEY } from '@/constants/mutationKeys';
 import {
   ADMINISTRATIONS_QUERY_KEY,
   ADMINISTRATIONS_LIST_QUERY_KEY,
@@ -9,20 +9,20 @@ import {
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 /**
- * Upsert Administration mutation.
+ * Create Administration mutation.
  *
- * TanStack mutation to update or insert an administration and automatically invalidate the corresponding queries.
+ * TanStack mutation to create an administration and automatically invalidate the corresponding queries.
  * Uses Firebase Functions directly instead of the roarfirekit wrapper.
  *
  * @returns {Object} The mutation object returned by `useMutation`.
  */
-const useUpsertAdministrationMutation = () => {
+const useCreateAdministrationMutation = () => {
   const authStore = useAuthStore();
   const queryClient = useQueryClient();
   const functions = getFunctions();
 
   return useMutation({
-    mutationKey: ADMINISTRATION_UPSERT_MUTATION_KEY,
+    mutationKey: ADMINISTRATION_CREATE_MUTATION_KEY,
     mutationFn: async (data) => {
       const createAdministrationFn = httpsCallable(functions, 'createAdministration');
       const result = await createAdministrationFn(data);
@@ -30,10 +30,6 @@ const useUpsertAdministrationMutation = () => {
     },
     onSuccess: () => {
       // Invalidate the queries to refetch the administration data.
-      // @NOTE: Usually we would apply a more granular invalidation strategy including updating the specific
-      // adminitration record in the cache. However, unfortunately, given the nature of the data model and the data that
-      // is updated in the application, we would have to manually map the updated data, which could cause issues when
-      // the data model changes. Therefore, we invalidate the entire query to ensure the data is up-to-date.
       queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_LIST_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: [ADMINISTRATION_ASSIGNMENTS_QUERY_KEY] });
@@ -41,4 +37,4 @@ const useUpsertAdministrationMutation = () => {
   });
 };
 
-export default useUpsertAdministrationMutation;
+export default useCreateAdministrationMutation; 
