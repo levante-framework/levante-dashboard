@@ -437,6 +437,7 @@ async function submitUsers() {
           }
         } catch (error) {
           addErrorUser(user, `Error: ${orgType === 'site' ? 'Site' : orgType} '${orgName}' does not exist`);
+          activeSubmit.value = false;
           return;
         }
 
