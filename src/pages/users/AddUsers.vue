@@ -414,37 +414,34 @@ async function submitUsers() {
     //   the sendObject. If not, reject user
     for (const [orgType, orgName] of Object.entries(orgNameMap)) {
       if (orgName) {
-        if (orgType === 'school') {
+        try {
+          if (orgType === 'school') {
             const districtId = await getOrgId('districts', district);
             const schoolId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(districtId), ref(undefined))
-            // Need to Raw it because a large amount of users causes this to become a proxy object
             orgInfo.schools = schoolId;
-        } else if (orgType === 'class') {
+          } else if (orgType === 'class') {
             const districtId = await getOrgId('districts', district);
             const schoolId = await getOrgId('schools', school);
             const classId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(districtId), ref(schoolId));
             orgInfo.classes = classId;
-        } else if (orgType === 'group') {
-          for (const group of orgNameMap.group) {
-            try {
+          } else if (orgType === 'group') {
+            for (const group of orgNameMap.group) {
               const groupId = await getOrgId(pluralizeFirestoreCollection(orgType), group, ref(undefined), ref(undefined));
               orgInfo.groups.push(groupId);
-            } catch (error) {
-              addErrorUser(user, `Error: Group '${group}' does not exist`);
-              return;
             }
+          } else {
+            // Handle both 'district' and 'site' as input, but always use 'district' for backend
+            const backendOrgType = orgType === 'site' ? 'districts' : pluralizeFirestoreCollection(orgType);
+            const districtId = await getOrgId(backendOrgType, orgName, ref(undefined), ref(undefined));
+            orgInfo.districts = districtId;
           }
-        } else {
-          const districtId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(undefined), ref(undefined));
-          orgInfo.districts = districtId;
+        } catch (error) {
+          addErrorUser(user, `Error: ${orgType === 'site' ? 'Site' : orgType} '${orgName}' does not exist`);
+          return;
         }
 
         if (!_isEmpty(orgInfo)) {
           user.orgIds = orgInfo;
-        } else {
-          addErrorUser(user, `Error: ${orgType} '${orgName}' is invalid`);
-          activeSubmit.value = false;
-          return;
         }
       }
     }
