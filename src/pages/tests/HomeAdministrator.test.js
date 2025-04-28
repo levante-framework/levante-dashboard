@@ -9,7 +9,7 @@ import PrimeVue from 'primevue/config';
 // Mock the module before individual tests since vi.mock is hoisted to the top of the file
 // closer to how code is actually executed
 vi.mock('@/composables/queries/useAdministrationsListQuery', () => ({
-  useAdministrationsListQuery: vi.fn(() => ({
+  default: vi.fn(() => ({
     data: ref([]),
     isLoading: ref(true),
     isFetching: ref(true),
@@ -17,9 +17,21 @@ vi.mock('@/composables/queries/useAdministrationsListQuery', () => ({
   })),
 }));
 
-import {useAdministrationsListQuery} from '@/composables/queries/useAdministrationsListQuery'; 
+// Mock auth store
+vi.mock('@/store/auth', () => ({
+    useAuthStore: vi.fn(() => ({
+      $subscribe: vi.fn(),
+      // Ensure roarfirekit is provided as a ref, like in the real store
+      roarfirekit: ref({
+        restConfig: true
+      })
+    })),
+}));
 
-// check if it's the orginal query or the mocked one
+import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery'; 
+import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
+
+// Check if it's the original query or the mocked one
 console.log('useAdministrationsListQuery in test file:', useAdministrationsListQuery);
 
 
@@ -65,17 +77,6 @@ describe('HomeAdministrator', () => {
         };
       });
 
-      vi.mock('@/store/auth', () => ({
-          useAuthStore: vi.fn(() => ({
-            $subscribe: vi.fn(),
-            roarfirekit: {
-              value: {
-                restConfig: true
-              }
-            }
-          })),
-      }));
-      
       vi.mock('@/helpers/query/utils', () => ({
         orderByDefault: [
           {
@@ -86,17 +87,18 @@ describe('HomeAdministrator', () => {
       }));
       
       vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
-        useUserClaimsQuery: vi.fn(() => ({
+        default: vi.fn(() => ({
           data: {value: { user: 'mockedUser' }},
           error: null,
         })),
       }));
 
-      vi.mocked(useAdministrationsListQuery).mockClear()
+      vi.mocked(useAdministrationsListQuery).mockClear();
+      vi.mocked(useUserClaimsQuery).mockClear();
     });
 
     afterEach(() => {
-        vi.resetAllMocks();
+        vi.restoreAllMocks(); // Use restoreAllMocks when mocks are defined outside describe
     });
 
 
@@ -162,10 +164,10 @@ describe('HomeAdministrator', () => {
       const mockedUseAdministrationsListQuery = vi.mocked(useAdministrationsListQuery);
 
       mockedUseAdministrationsListQuery.mockReturnValue({
-        data: { value: [] },
-        isLoading: true,
-        isFetching: false,
-        isError: false,
+        data: ref([]),
+        isLoading: ref(true),
+        isFetching: ref(false),
+        isError: ref(false),
       });
 
       const wrapper = mount(HomeAdministrator, { 
@@ -182,35 +184,6 @@ describe('HomeAdministrator', () => {
             PvInputGroup: { template: '<div class="mocked-input" />' },
           }
         },
-        setup() {
-          return {
-            sortOptions: ref([
-              {
-                label: 'Name (ascending)',
-                value: [
-                  {
-                    field: { fieldPath: 'name' },
-                    direction: 'ASCENDING',
-                  },
-                ],
-              }
-            ]),
-            sortKey: ref({ value: [{ field: { fieldPath: 'name' }, direction: 'ASCENDING' }] }),
-            sortOrder: ref(1),
-            sortField: ref('name'),
-            dataViewKey: ref(0),
-            search: ref(''),
-            searchInput: ref(''),
-            filteredAdministrations: ref([mockAdministration]),
-            initialized: ref(true),
-            pageLimit: ref(10),
-            page: ref(0),
-            orderBy: ref([{ field: { fieldPath: 'name' }, direction: 'ASCENDING' }]),
-            searchSuggestions: ref([]),
-            searchTokens: ref([]),
-            fetchTestAdministrations: ref(false)
-          };
-        }
       });
 
       // Log the values to debug
