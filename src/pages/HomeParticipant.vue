@@ -178,7 +178,12 @@ const sortedUserAdministrations = computed(() => {
   return [...(userAssignments.value ?? [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 });
 
-const taskIds = computed(() => (selectedAdmin.value?.assessments ?? []).map((assessment) => assessment.taskId));
+const taskIds = computed(() => {
+  if (selectedAdmin.value && Array.isArray(selectedAdmin.value.assessments)) {
+    return selectedAdmin.value.assessments.map((assessment) => assessment.taskId);
+  }
+  return [];
+});
 const tasksQueryEnabled = computed(() => !isLoadingAssignments.value && !_isEmpty(taskIds.value));
 
 const {
@@ -334,7 +339,7 @@ const userType = computed(() => {
 // Assessments to populate the game tabs.
 // Generated based on the current selected administration Id
 const assessments = computed(() => {
-  if (!isFetching.value && selectedAdmin.value && (userTasks.value ?? []).length > 0) {
+  if (!isFetching.value && selectedAdmin.value && Array.isArray(selectedAdmin.value.assessments) && (userTasks.value ?? []).length > 0) {
     const fetchedAssessments = _without(
       selectedAdmin.value.assessments.map((assessment) => {
         // Get the matching assessment from userAssignments
@@ -520,7 +525,8 @@ function setupMarkdownConverter(surveyInstance) {
 
 
 watch(surveyDependenciesLoaded, async (isLoaded) => {
-  const isAssessment = selectedAdmin.value?.assessments.some((task) => task.taskId === 'survey');
+  const hasAssessmentsArray = selectedAdmin.value && Array.isArray(selectedAdmin.value.assessments);
+  const isAssessment = hasAssessmentsArray ? selectedAdmin.value.assessments.some((task) => task.taskId === 'survey') : false;
   if (!isLoaded || !isAssessment || surveyStore.survey) return;
 
   const surveyResponseDoc = (surveyResponsesData.value || []).find((doc) => doc?.administrationId === selectedAdmin.value.id);

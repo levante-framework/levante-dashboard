@@ -2,12 +2,19 @@ import { RoarFirekit } from '@levante-framework/firekit';
 import levanteFirebaseConfig from './config/firebaseLevante';
 import { isLevante } from './helpers';
 
+// Define a local enum/object matching firekit's expected values
+enum AuthPersistence {
+  session = 'session',
+  // Add other persistence types if needed (e.g., local, none)
+}
+
 const roarConfig = levanteFirebaseConfig;
 
 export async function initNewFirekit(): Promise<RoarFirekit> {
   const firekit = new RoarFirekit({
     roarConfig,
-    authPersistence: 'session',
+    authPersistence: AuthPersistence.session, // Use local enum
+    dbPersistence: true, // Add required property
     markRawConfig: {
       auth: false,
       db: false,
@@ -15,10 +22,9 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
     },
     verboseLogging: isLevante ? false : true,
 
-    // The site key is used for app check token verification
-    // The debug token is used to bypass app check for local development
-    siteKey: roarConfig?.siteKey,
-    debugToken: roarConfig?.debugToken,
+    // siteKey and debugToken seem unsupported by the current RoarFirekit constructor type
+    // siteKey: roarConfig?.siteKey,
+    // debugToken: roarConfig?.debugToken,
   });
   return await firekit.init();
 }
