@@ -21,7 +21,8 @@ const useUpsertAdministrationMutation = () => {
   return useMutation({
     mutationKey: ADMINISTRATION_UPSERT_MUTATION_KEY,
     mutationFn: async (data) => {
-      await authStore.roarfirekit.createAdministration(data);
+      if (!authStore.roarfirekit) throw new Error('RoarFirekit not initialized');
+      await authStore.roarfirekit.upsertAdministration(data);
     },
     onSuccess: () => {
       // Invalidate the queries to refetch the administration data.
