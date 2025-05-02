@@ -470,8 +470,10 @@ async function submitUsers() {
             const classId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(siteId), ref(schoolId));
             orgInfo.classes = classId;
           } else if (orgType === 'cohort') {
-            const cohortId = await getOrgId(pluralizeFirestoreCollection('groups'), cohorts, ref(undefined), ref(undefined));
-            orgInfo.cohorts.push(cohortId);
+            for (const cohorts of orgNameMap.cohort) {
+              const cohortId = await getOrgId(pluralizeFirestoreCollection('groups'), cohorts, ref(undefined), ref(undefined));
+              orgInfo.cohorts.push(cohortId);
+            }
           } else {
             const siteId = await getOrgId(pluralizeFirestoreCollection('districts'), orgName, ref(undefined), ref(undefined));
             orgInfo.sites = siteId;
