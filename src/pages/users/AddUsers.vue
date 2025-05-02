@@ -6,9 +6,8 @@
 
       <PvDivider />
 
-      <div v-if="!isFileUploaded" class="text-gray-500 mb-2 surface-100 border-round p-2">
+      <div class="text-gray-500 mb-2 surface-100 border-round p-2">
         <PvFileUpload
-          v-if="!isFileUploaded"
           name="massUploader[]"
           custom-upload
           accept=".csv"
@@ -215,6 +214,8 @@ const onFileUpload = async (event) => {
   errorMessage.value = '';
   errorTable.value = null;
   errorMissingColumns.value = false;
+  isFileUploaded.value = false;
+  activeSubmit.value = false;
 
   // Read the file
   const file = event.files[0];
@@ -446,9 +447,6 @@ async function submitUsers() {
       cohort: cohort ?? '',
     };
 
-    // Pluralized because of a ROAR change to the createUsers function. 
-    // Only groups are allowed to be an array however, we've only been using one group per user.
-    // TODO: Figure out if we want to allow multiple orgs
     const orgInfo = {
       sites: '',
       schools: '',
@@ -461,39 +459,39 @@ async function submitUsers() {
     //   the sendObject. If not, reject user
     for (const [orgType, orgName] of Object.entries(orgNameMap)) {
       if (orgName) {
-        if (orgType === 'school') {
+        try {
+          if (orgType === 'school') {
             const siteId = await getOrgId('districts', site);
             const schoolId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(siteId), ref(undefined))
-            // Need to Raw it because a large amount of users causes this to become a proxy object
             orgInfo.schools = schoolId;
-        } else if (orgType === 'class') {
+          } else if (orgType === 'class') {
             const siteId = await getOrgId('districts', site);
             const schoolId = await getOrgId('schools', school);
             const classId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(siteId), ref(schoolId));
             orgInfo.classes = classId;
-        } else if (orgType === 'cohort') {
-          for (const cohort of orgNameMap.cohort) {
+          } else if (orgType === 'cohort') {
             const cohortId = await getOrgId(pluralizeFirestoreCollection('groups'), cohort, ref(undefined), ref(undefined));
             orgInfo.cohorts.push(cohortId);
+          } else {
+            const siteId = await getOrgId(pluralizeFirestoreCollection('districts'), orgName, ref(undefined), ref(undefined));
+            orgInfo.sites = siteId;
           }
-        } else {
-          const siteId = await getOrgId(pluralizeFirestoreCollection('districts'), orgName, ref(undefined), ref(undefined));
-          orgInfo.sites = siteId;
-        }
-
-        if (!_isEmpty(orgInfo)) {
-          // The backend expects districts and groups for site and cohort respectively
-          orgInfo.districts = orgInfo.sites;
-          delete orgInfo.sites;
-          orgInfo.groups = orgInfo.cohorts;
-          delete orgInfo.cohorts;
-          user.orgIds = orgInfo;
+        } catch (error) {
+          addErrorUser(user, `Error: ${orgType === 'site' ? 'Site' : orgType} '${orgName}' does not exist`);
+          break;
         }
       }
     }
 
+    if (!_isEmpty(orgInfo)) {
+      // The backend expects districts and groups for site and cohort respectively
+      orgInfo.districts = orgInfo.sites;
+      delete orgInfo.sites;
+      orgInfo.groups = orgInfo.cohorts;
+      delete orgInfo.cohorts;
+      user.orgIds = orgInfo;
+    }
   }
-
 
   // TODO: Figure out deadline-exceeded error with 700+ users. (Registration works fine, creates all documents but the client recieves the error)
   // Spit users into chunks of 1000
