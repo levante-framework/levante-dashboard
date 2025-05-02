@@ -483,15 +483,18 @@ async function submitUsers() {
           break;
         }
       }
-    }
-
-    if (!_isEmpty(orgInfo)) {
-      // The backend expects districts and groups for site and cohort respectively
-      orgInfo.districts = orgInfo.sites;
-      delete orgInfo.sites;
-      orgInfo.groups = orgInfo.cohorts;
-      delete orgInfo.cohorts;
-      user.orgIds = orgInfo;
+      if (!_isEmpty(orgInfo)) {
+        // The backend expects districts and groups for site and cohort respectively
+        orgInfo.districts = orgInfo.sites;
+        delete orgInfo.sites;
+        orgInfo.groups = orgInfo.cohorts;
+        delete orgInfo.cohorts;
+        user.orgIds = orgInfo;
+      } else {
+        addErrorUser(user, `Error: ${orgType} '${orgName}' is invalid`);
+        activeSubmit.value = false;
+        return;
+      }
     }
   }
 
