@@ -452,9 +452,6 @@ async function submitUsers() {
       cohort: cohorts.split(',') ?? [],
     };
 
-    // Pluralized because of a ROAR change to the createUsers function. 
-    // Only groups are allowed to be an array however, we've only been using one group per user.
-    // TODO: Figure out if we want to allow multiple orgs
     const orgInfo = {
       sites: '',
       schools: '',
@@ -478,13 +475,8 @@ async function submitUsers() {
             const classId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(siteId), ref(schoolId));
             orgInfo.classes = classId;
           } else if (orgType === 'cohort') {
-            // Validate each cohort exists before proceeding
             for (const cohort of orgNameMap.cohort) {
-              if (!cohort) continue; // Skip empty cohort names
               const cohortId = await getOrgId(pluralizeFirestoreCollection('groups'), cohort, ref(undefined), ref(undefined));
-              if (!cohortId) {
-                throw new Error(`Cohort '${cohort}' does not exist`);
-              }
               orgInfo.cohorts.push(cohortId);
             }
           } else {
@@ -510,19 +502,9 @@ async function submitUsers() {
     }
   }
 
-  // Filter out users with errors
-  const validUsers = usersToBeRegistered.filter(user => 
-    !errorUsers.value.some(errorUser => errorUser === user)
-  );
-
-  if (validUsers.length === 0) {
-    activeSubmit.value = false;
-    return;
-  }
-
   // TODO: Figure out deadline-exceeded error with 700+ users. (Registration works fine, creates all documents but the client recieves the error)
   // Spit users into chunks of 1000
-  const chunkedUsersToBeRegistered = _chunk(validUsers, 700);
+  const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 700);
 
   console.log('chunkedUsersToBeRegistered', chunkedUsersToBeRegistered);
 
