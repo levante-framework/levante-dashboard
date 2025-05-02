@@ -447,6 +447,9 @@ async function submitUsers() {
       cohort: cohorts.split(',') ?? [],
     };
 
+    // Pluralized because of a ROAR change to the createUsers function. 
+    // Only groups are allowed to be an array however, we've only been using one group per user.
+    // TODO: Figure out if we want to allow multiple orgs
     const orgInfo = {
       sites: '',
       schools: '',
