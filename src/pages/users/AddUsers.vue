@@ -8,6 +8,7 @@
 
       <div class="text-gray-500 mb-2 surface-100 border-round p-2">
         <PvFileUpload
+          v-if="!isFileUploaded || errorUsers.length > 0"
           name="massUploader[]"
           custom-upload
           accept=".csv"
@@ -216,6 +217,7 @@ const onFileUpload = async (event) => {
   errorMissingColumns.value = false;
   isFileUploaded.value = false;
   activeSubmit.value = false;
+  registeredUsers.value = []; // Reset registered users
 
   // Read the file
   const file = event.files[0];
