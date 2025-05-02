@@ -8,7 +8,7 @@
 
       <div class="text-gray-500 mb-2 surface-100 border-round p-2">
         <PvFileUpload
-          v-if="!isFileUploaded || errorUsers.length > 0"
+          v-if="!isFileUploaded || !registeredUsers.length"
           name="massUploader[]"
           custom-upload
           accept=".csv"
@@ -511,10 +511,9 @@ async function submitUsers() {
   }
 
   // Filter out users with errors
-  const validUsers = usersToBeRegistered.filter(user => !errorUsers.value.some(errorUser => 
-    errorUser.email === user.email || 
-    (errorUser.userType && user.userType && errorUser.userType.toLowerCase() === user.userType.toLowerCase())
-  ));
+  const validUsers = usersToBeRegistered.filter(user => 
+    !errorUsers.value.some(errorUser => errorUser === user)
+  );
 
   if (validUsers.length === 0) {
     activeSubmit.value = false;
