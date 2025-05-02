@@ -8,6 +8,7 @@
 
       <div v-if="!isFileUploaded" class="text-gray-500 mb-2 surface-100 border-round p-2">
         <PvFileUpload
+          v-if="!isFileUploaded"
           name="massUploader[]"
           custom-upload
           accept=".csv"
