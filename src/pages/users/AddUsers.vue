@@ -470,8 +470,8 @@ async function submitUsers() {
             const classId = await getOrgId(pluralizeFirestoreCollection(orgType), orgName, ref(siteId), ref(schoolId));
             orgInfo.classes = classId;
           } else if (orgType === 'cohort') {
-            for (const cohorts of orgNameMap.cohort) {
-              const cohortId = await getOrgId(pluralizeFirestoreCollection('groups'), cohorts, ref(undefined), ref(undefined));
+            for (const cohort of orgNameMap.cohort) {
+              const cohortId = await getOrgId(pluralizeFirestoreCollection('groups'), cohort, ref(undefined), ref(undefined));
               orgInfo.cohorts.push(cohortId);
             }
           } else {
@@ -491,8 +491,7 @@ async function submitUsers() {
         delete orgInfo.cohorts;
         user.orgIds = orgInfo;
       } else {
-        addErrorUser(user, `Error: ${orgType} '${orgName}' is invalid`);
-        activeSubmit.value = false;
+        // The orgs could not be found
         return;
       }
     }
