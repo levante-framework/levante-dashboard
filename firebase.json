@@ -1,88 +1,13 @@
 {
   "firestore": {
-    "rules": "firebase/admin/firestore.rules",
-    "indexes": "firebase/admin/firestore.indexes.json"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
-  "hosting": [
-    {
-      "public": "dist",
-      "target": "production",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "rewrites": [
-        {
-          "source": "**",
-          "destination": "/index.html",
-          "headers": [
-            {
-              "key": "Cross-Origin-Opener-Policy",
-              "value": "same-origin-allow-popups"
-            }
-          ]
-        }
-      ],
-      "headers": [
-        {
-          "source": "**",
-          "headers": [
-            {
-              "key": "Cross-Origin-Opener-Policy",
-              "value": "same-origin-allow-popups"
-            },
-            {
-              "key": "Content-Security-Policy",
-              "value": "script-src 'self'"
-            },
-            {
-              "key": "Content-Security-Policy",
-              "value": "frame-ancestors 'self'"
-            },
-            {
-              "key": "X-Content-Type-Options",
-              "value": "nosniff"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "public": "dist",
-      "target": "staging",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "rewrites": [
-        {
-          "source": "**",
-          "destination": "/index.html",
-          "headers": [
-            {
-              "key": "Cross-Origin-Opener-Policy",
-              "value": "same-origin-allow-popups"
-            }
-          ]
-        }
-      ],
-      "headers": [
-        {
-          "source": "**",
-          "headers": [
-            {
-              "key": "Cross-Origin-Opener-Policy",
-              "value": "same-origin-allow-popups"
-            },
-            {
-              "key": "Content-Security-Policy",
-              "value": "script-src 'self'"
-            },
-            {
-              "key": "Content-Security-Policy",
-              "value": "frame-ancestors 'self'"
-            },
-            {
-              "key": "X-Content-Type-Options",
-              "value": "nosniff"
-            }
-          ]
-        }
-      ]
-    }
-  ]
+  "functions": {
+    "predeploy": [
+      "npm --prefix \"$RESOURCE_DIR\" run build"
+    ],
+    "source": "firebase",
+    "runtime": "nodejs20"
+  }
 }

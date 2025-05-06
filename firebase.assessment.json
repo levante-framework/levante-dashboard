@@ -1,0 +1,28 @@
+{
+  "firestore": {
+    "rules": "firebase/assessment/firestore.rules",
+    "indexes": "firebase/assessment/firestore.indexes.json"
+  },
+  "emulators": {
+    "auth": {
+      "port": 9098,
+      "host": "localhost"
+    },
+    "functions": {
+      "port": 5000,
+      "host": "localhost"
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4001,
+      "host": "localhost"
+    },
+    "firestore": {
+      "port": 8082,
+      "host": "localhost"
+    }
+  },
+  "functions": {
+    "source": "../firebase-functions/packages/levante-assessment"
+  }
+} 

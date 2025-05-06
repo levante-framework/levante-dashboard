@@ -1,0 +1,10 @@
+[
+  {
+    "localId": "testuser123",
+    "email": "test@test.com",
+    "passwordHash": "JDJhJDEwJDVjN2M3ZjFjMGNiM2JiYzFmNmY4NmIuZjVjN2M3ZjFjMGNiM2JiYzFmNmY4NmIuZg==",
+    "salt": "5c7c7f1c0cb3bbc1f6f86b",
+    "displayName": "Test User",
+    "emailVerified": true
+  }
+] 

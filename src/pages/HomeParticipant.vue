@@ -120,7 +120,7 @@ import { useQueryClient, useQuery } from '@tanstack/vue-query';
 import { initializeSurvey, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
 import { useSurveyStore } from '@/store/survey';
 import { fetchDocsById } from '@/helpers/query/utils';
-
+import { Object } from 'core-js';
 
 const showConsent = ref(false);
 const consentVersion = ref('');
@@ -520,7 +520,12 @@ function setupMarkdownConverter(surveyInstance) {
 
 
 watch(surveyDependenciesLoaded, async (isLoaded) => {
-  const isAssessment = selectedAdmin.value?.assessments.some((task) => task.taskId === 'survey');
+  // Convert assessments object to array if needed before using .some()
+  const assessmentsArray = Array.isArray(selectedAdmin.value?.assessments)
+    ? selectedAdmin.value.assessments
+    : Object.values(selectedAdmin.value?.assessments || {});
+
+  const isAssessment = assessmentsArray.some((task) => task.taskId === 'survey');
   if (!isLoaded || !isAssessment || surveyStore.survey) return;
 
   const surveyResponseDoc = (surveyResponsesData.value || []).find((doc) => doc?.administrationId === selectedAdmin.value.id);
@@ -621,6 +626,36 @@ watch(surveyDependenciesLoaded, async (isLoaded) => {
 
   surveyStore.setSurvey(surveyInstance);
 }, { immediate: true });
+
+const filteredAssignments = computed(() => {
+  if (!selectedAdmin.value) return [];
+
+  // Convert assessments object to array if needed before mapping
+  const assessmentsObject = selectedAdmin.value.assessments || {}; // Default to empty object
+  const assessmentsArray = Array.isArray(assessmentsObject)
+    ? assessmentsObject
+    : Object.values(assessmentsObject);
+
+  return assessmentsArray.map((assignment) => {
+    const taskInfo = {
+      ...getTaskData(assignment.taskId),
+      ...(assignment.options ? assignment.options : {}),
+    };
+
+    return {
+      id: assignment.id,
+      taskId: assignment.taskId,
+      title: getTaskTitle(assignment.taskId),
+      info: taskInfo,
+      status: assignment.status,
+      order: assignment.order,
+      completedOn: assignment.completedOn,
+      skipped: assignment.skipped,
+      administrationId: selectedAdmin.value.id,
+      taskConfig: assignment.taskConfig,
+    };
+  });
+});
 </script>
 <style scoped>
 .tabs-container {
