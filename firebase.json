@@ -7,7 +7,26 @@
     "predeploy": [
       "npm --prefix \"$RESOURCE_DIR\" run build"
     ],
-    "source": "firebase",
+    "source": "roar-firebase-functions",
     "runtime": "nodejs20"
+  },
+  "emulators": {
+    "auth": {
+      "port": 9199,
+      "host": "127.0.0.1"
+    },
+    "firestore": {
+      "port": 8180,
+      "host": "127.0.0.1"
+    },
+    "functions": {
+      "port": 5102,
+      "host": "127.0.0.1"
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000,
+      "host": "127.0.0.1"
+    }
   }
 }

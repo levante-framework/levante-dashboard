@@ -6,6 +6,9 @@
 import { Auth, UserCredential, signInWithEmailAndPassword } from 'firebase/auth';
 import { TEST_USER_EMAIL, setTestUserId } from './mockDataProvider';
 
+// Test user credentials - use these to login during development
+export const TEST_USER_PASSWORD = 'password123';
+
 /**
  * Check if the current environment is development mode
  * @returns {boolean} True if in development mode
@@ -41,7 +44,7 @@ export const initTestUserFromEmulator = async (auth: Auth): Promise<string | nul
       const userCredential: UserCredential = await signInWithEmailAndPassword(
         auth,
         TEST_USER_EMAIL,
-        'test123'
+        TEST_USER_PASSWORD
       );
       
       if (userCredential && userCredential.user) {
@@ -60,7 +63,7 @@ export const initTestUserFromEmulator = async (auth: Auth): Promise<string | nul
         console.error('Test user not found in emulator. Please run the setup-test-user-preserve.js script.');
         console.error('Command: cd /home/david/levante/firebase-functions && node setup-test-user-preserve.js');
       } else if (signInError.code === 'auth/wrong-password') {
-        console.error('Wrong password for test user. The correct password should be "test123".');
+        console.error('Wrong password for test user. The correct password should be "password123".');
       } else if (signInError.code.includes('network')) {
         console.error('Network error connecting to emulator. Make sure the emulators are running on:');
         console.error('- Auth: 127.0.0.1:9199');
