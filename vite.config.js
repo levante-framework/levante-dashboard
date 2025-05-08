@@ -6,6 +6,7 @@ import mkcert from 'vite-plugin-mkcert';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import UnheadVite from '@unhead/addons/vite';
 import * as child from 'child_process';
+import nodePolyfillsRollup from 'rollup-plugin-node-polyfills';
 
 const commitHash = child.execSync("git rev-parse --short HEAD").toString();
 
@@ -20,12 +21,7 @@ export default defineConfig({
       globals: {
         process: true,
       },
-      include: ['process', 'buffer', 'util'],
-      overrides: {
-        process: true,
-        buffer: true,
-        util: true
-      },
+      include: ['process'],
       protocolImports: true,
     }),
     UnheadVite(),
@@ -43,6 +39,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      path: 'path-browserify',
+      fs: false,
     },
   },
 
@@ -56,8 +54,8 @@ export default defineConfig({
     cssCodeSplit: true,
     sourcemap: true,
     rollupOptions: {
-      external: [
-        'vite-plugin-node-polyfills/shims/process'
+      plugins: [
+        nodePolyfillsRollup()
       ],
       output: {
         manualChunks: {
@@ -78,8 +76,11 @@ export default defineConfig({
       '@levante-framework/firekit',
     ],
     esbuildOptions: {
-      mainFields: ['module', 'main'],
+      mainFields: ['browser', 'module', 'main'],
       resolveExtensions: ['.js', '.mjs', '.cjs'],
+      define: {
+        global: 'globalThis',
+      },
     }
   },
 });
