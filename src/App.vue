@@ -17,6 +17,10 @@
   <div>
     <PvToast position="bottom-center" />
     <NavBar v-if="typeof $route.name === 'string' && !navbarBlacklist.includes($route.name) && isAuthStoreReady" />
+    
+    <!-- Add EmulatorToggle in development mode only -->
+    <EmulatorToggle v-if="isDevelopmentMode" class="emulator-toggle-container" />
+    
     <router-view :key="$route.fullPath" />
 
     <SessionTimer v-if="loadSessionTimeoutHandler" />
@@ -31,6 +35,7 @@ import { useRoute } from 'vue-router';
 import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
 import NavBar from '@/components/NavBar.vue';
+import EmulatorToggle from '@/components/EmulatorToggle.vue';
 
 const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>
@@ -43,6 +48,7 @@ import { i18n } from '@/translations/i18n';
 
 const isAuthStoreReady = ref(false);
 const showDevtools = ref(false);
+const isDevelopmentMode = ref(import.meta.env.DEV);
 
 const authStore = useAuthStore();
 const route = useRoute();
@@ -127,3 +133,13 @@ onMounted(() => {
   }
 });
 </script>
+
+<style>
+.emulator-toggle-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  width: 300px;
+}
+</style>

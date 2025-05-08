@@ -1,30 +1,71 @@
 // Set important emulator environment variables at the top of the file - before imports
 if (typeof window !== 'undefined' && typeof process === 'undefined' && import.meta.env.DEV) {
-  // Force Firebase Auth to use the emulator at the global level
-  window.FIREBASE_EMULATOR_MODE = true;
-  window.FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9199";
-  window.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8180";
-  window.FUNCTIONS_EMULATOR_HOST = "127.0.0.1:5102";
+  // Check if user has toggled emulators in localStorage
+  const useEmulators = localStorage.getItem('useEmulators');
   
-  // Add dedicated console messages to confirm emulator variables are set
-  console.log('%c DEVELOPMENT MODE: Using Firebase Emulators ', 'background: #FFA000; color: #fff; font-weight: bold;');
-  console.log('FIREBASE_EMULATOR_MODE:', window.FIREBASE_EMULATOR_MODE);
-  console.log('FIREBASE_AUTH_EMULATOR_HOST:', window.FIREBASE_AUTH_EMULATOR_HOST);
-  console.log('FIRESTORE_EMULATOR_HOST:', window.FIRESTORE_EMULATOR_HOST);
-  console.log('FUNCTIONS_EMULATOR_HOST:', window.FUNCTIONS_EMULATOR_HOST);
+  // If explicitly set to false, don't use emulators, otherwise use them in dev mode
+  if (useEmulators !== 'false') {
+    // Read custom ports from localStorage if available
+    const firestorePort = localStorage.getItem('firestorePort') || '8180';
+    const authPort = localStorage.getItem('authPort') || '9199';
+    const functionsPort = localStorage.getItem('functionsPort') || '5102';
+    const emulatorHost = localStorage.getItem('emulatorHost') || '127.0.0.1';
+    
+    // Force Firebase Auth to use the emulator at the global level
+    window.FIREBASE_EMULATOR_MODE = true;
+    window.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost}:${authPort}`;
+    window.FIRESTORE_EMULATOR_HOST = `${emulatorHost}:${firestorePort}`;
+    window.FUNCTIONS_EMULATOR_HOST = `${emulatorHost}:${functionsPort}`;
+    
+    // Add dedicated console messages to confirm emulator variables are set
+    console.log('%c DEVELOPMENT MODE: Using Firebase Emulators ', 'background: #FFA000; color: #fff; font-weight: bold;');
+    console.log('FIREBASE_EMULATOR_MODE:', window.FIREBASE_EMULATOR_MODE);
+    console.log('FIREBASE_AUTH_EMULATOR_HOST:', window.FIREBASE_AUTH_EMULATOR_HOST);
+    console.log('FIRESTORE_EMULATOR_HOST:', window.FIRESTORE_EMULATOR_HOST);
+    console.log('FUNCTIONS_EMULATOR_HOST:', window.FUNCTIONS_EMULATOR_HOST);
+  } else {
+    console.log('%c DEVELOPMENT MODE: Emulators disabled by user setting ', 'background: #FFA000; color: #fff; font-weight: bold;');
+  }
 } else if (typeof process !== 'undefined' && import.meta.env.DEV) {
-  // For Node.js environment
-  process.env.FIREBASE_EMULATOR_MODE = 'true';
-  process.env.FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9199";
-  process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8180";
-  process.env.FUNCTIONS_EMULATOR_HOST = "127.0.0.1:5102";
+  // For Node.js environment, also check localStorage if available
+  let useEmulators = true; // Default to true in dev mode
   
-  // Add dedicated console messages to confirm emulator variables are set
-  console.log('NODE DEVELOPMENT MODE: Setting emulator environment variables');
-  console.log('FIREBASE_EMULATOR_MODE:', process.env.FIREBASE_EMULATOR_MODE);
-  console.log('FIREBASE_AUTH_EMULATOR_HOST:', process.env.FIREBASE_AUTH_EMULATOR_HOST);
-  console.log('FIRESTORE_EMULATOR_HOST:', process.env.FIRESTORE_EMULATOR_HOST);
-  console.log('FUNCTIONS_EMULATOR_HOST:', process.env.FUNCTIONS_EMULATOR_HOST);
+  // Check if we can access localStorage via globalThis
+  if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
+    const stored = globalThis.localStorage.getItem('useEmulators');
+    if (stored === 'false') {
+      useEmulators = false;
+    }
+  }
+  
+  if (useEmulators) {
+    // Read custom ports if available
+    let firestorePort = '8180';
+    let authPort = '9199';
+    let functionsPort = '5102';
+    let emulatorHost = '127.0.0.1';
+    
+    if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
+      firestorePort = globalThis.localStorage.getItem('firestorePort') || firestorePort;
+      authPort = globalThis.localStorage.getItem('authPort') || authPort;
+      functionsPort = globalThis.localStorage.getItem('functionsPort') || functionsPort;
+      emulatorHost = globalThis.localStorage.getItem('emulatorHost') || emulatorHost;
+    }
+    
+    process.env.FIREBASE_EMULATOR_MODE = 'true';
+    process.env.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost}:${authPort}`;
+    process.env.FIRESTORE_EMULATOR_HOST = `${emulatorHost}:${firestorePort}`;
+    process.env.FUNCTIONS_EMULATOR_HOST = `${emulatorHost}:${functionsPort}`;
+    
+    // Add dedicated console messages to confirm emulator variables are set
+    console.log('NODE DEVELOPMENT MODE: Setting emulator environment variables');
+    console.log('FIREBASE_EMULATOR_MODE:', process.env.FIREBASE_EMULATOR_MODE);
+    console.log('FIREBASE_AUTH_EMULATOR_HOST:', process.env.FIREBASE_AUTH_EMULATOR_HOST);
+    console.log('FIRESTORE_EMULATOR_HOST:', process.env.FIRESTORE_EMULATOR_HOST);
+    console.log('FUNCTIONS_EMULATOR_HOST:', process.env.FUNCTIONS_EMULATOR_HOST);
+  } else {
+    console.log('NODE DEVELOPMENT MODE: Emulators disabled by user setting');
+  }
 }
 
 import { RoarFirekit } from '@levante-framework/firekit';
@@ -65,17 +106,27 @@ declare global {
 
 export async function initNewFirekit(): Promise<RoarFirekit> {
   let configToUse: { app: FirebaseConfig; admin: FirebaseConfig };
+  
+  // Check if emulators should be used
+  const useEmulators = import.meta.env.DEV && 
+                      (localStorage.getItem('useEmulators') !== 'false');
 
-  // If in development mode (using vite dev server), use emulator config
-  if (import.meta.env.DEV) {
+  // If in development mode and emulators are enabled, use emulator config
+  if (import.meta.env.DEV && useEmulators) {
     console.log('%c INITIALIZING FIREKIT WITH EMULATORS ', 'background: #4CAF50; color: #fff; font-weight: bold;');
     
-    // Set environment variables for emulators first - redundant but safe
+    // Read emulator settings from localStorage or use defaults
+    const firestorePort = localStorage.getItem('firestorePort') || '8180';
+    const authPort = localStorage.getItem('authPort') || '9199';
+    const functionsPort = localStorage.getItem('functionsPort') || '5102';
+    const emulatorHost = localStorage.getItem('emulatorHost') || '127.0.0.1';
+    
+    // Set environment variables for emulators
     if (typeof window !== 'undefined') {
       window.FIREBASE_EMULATOR_MODE = true;
-      window.FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9199";
-      window.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8180";
-      window.FUNCTIONS_EMULATOR_HOST = "127.0.0.1:5102";
+      window.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost}:${authPort}`;
+      window.FIRESTORE_EMULATOR_HOST = `${emulatorHost}:${firestorePort}`;
+      window.FUNCTIONS_EMULATOR_HOST = `${emulatorHost}:${functionsPort}`;
     }
     
     const appBaseConfig = baseConfig.app as unknown as ActualFirebaseConfig;
@@ -119,12 +170,13 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
         functions: false,
       },
       verboseLogging: true, // Enable verbose logging in dev mode
-      // THIS IS IMPORTANT - properly configure emulator use
+      // THIS IS IMPORTANT - properly configure emulator use with the custom settings
       useEmulators: true,
-      emulatorHosts: {
-        auth: "http://127.0.0.1:9199",
-        firestore: "127.0.0.1:8180",
-        functions: "127.0.0.1:5102"
+      emulatorHost,
+      emulatorPorts: {
+        db: parseInt(firestorePort),
+        auth: parseInt(authPort),
+        functions: parseInt(functionsPort)
       }
     };
 
