@@ -85,26 +85,75 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Install dependencies
+        run: npm ci
+      
       - name: Build (ROAR)
         if: ${{ contains(github.repository, 'roar') }}
-        run: npm ci && npm run build
+        run: npm run build
 
       - name: Build (LEVANTE)
         if: ${{ contains(github.repository, 'levante') }}
-        run: npm ci && npm run build:dev
+        run: npm run build:dev
 
       - name: Deploy to Firebase Hosting Channel
         id: firebase-deploy
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          firebaseToolsVersion: v13.3.1 # <- Locking version because the newest (13.13.0) does not add the deploy URL to auth whitelist
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV_ADMIN }}'
-          projectId: '${{ secrets.FIREBASE_PROJECT }}'
-          target: ${{ contains(github.repository, 'levante') && 'production' || 'staging' }}
+        run: |
+          FIREBASE_PROJECT="${{ secrets.FIREBASE_PROJECT }}"
+          TARGET="${{ contains(github.repository, 'levante') && 'production' || 'staging' }}"
+          
+          echo "Deploying to project: $FIREBASE_PROJECT, target: $TARGET"
+          
+          if [[ -z "$FIREBASE_PROJECT" ]]; then
+            echo "Error: FIREBASE_PROJECT secret is not set"
+            exit 1
+          fi
+          
+          # Get a preview channel
+          PREVIEW_CHANNEL="pr-${{ github.event.number || github.run_id }}"
+          echo "Using preview channel: $PREVIEW_CHANNEL"
+          
+          # Run the deployment
+          DEPLOY_OUTPUT=$(firebase deploy --only hosting:$TARGET --project $FIREBASE_PROJECT --token "${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV_ADMIN }}" --json 2>&1)
+          
+          # Check if deployment was successful
+          if [ $? -ne 0 ]; then
+            echo "Firebase deployment failed:"
+            echo "$DEPLOY_OUTPUT"
+            exit 1
+          fi
+          
+          # Extract URL from the output
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -o 'https://[^"]*' | head -1)
+          
+          if [[ -z "$DEPLOY_URL" ]]; then
+            echo "Warning: Could not extract deployment URL from output"
+            echo "Raw output: $DEPLOY_OUTPUT"
+            # Set a fallback URL for testing
+            DEPLOY_URL="https://$FIREBASE_PROJECT--$TARGET.web.app"
+          fi
+          
+          echo "Deploy URL: $DEPLOY_URL"
+          echo "deploy_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
 
-      - name: Output Deploy URL
-        run: echo ${{ fromJson(steps.firebase-deploy.outputs.urls)[0] }}
+      - name: Comment on PR with preview URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const deployUrl = `${{ steps.firebase-deploy.outputs.deploy_url }}`;
+            const comment = `🚀 Preview deployed to: [${deployUrl}](${deployUrl})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
 
     outputs:
-      deployUrl: ${{ fromJson(steps.firebase-deploy.outputs.urls)[0] }}
+      deployUrl: ${{ steps.firebase-deploy.outputs.deploy_url }}
