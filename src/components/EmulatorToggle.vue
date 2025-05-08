@@ -315,17 +315,42 @@ export default {
       statusClass.value = 'status-checking';
       
       try {
-        // Ensure Firebase is initialized with emulators first
-        if (!auth) {
-          const { auth: authInstance } = await initializeFirebaseEmulators();
-          auth = authInstance;
-        }
+        // Always create a fresh Firebase instance for login to avoid any conflicts
+        const appName = `login-app-${Date.now()}`;
+        console.log(`Creating fresh Firebase app "${appName}" for login...`);
+        
+        // Get base config
+        const appBaseConfig = baseConfig.app;
+        
+        // Initialize minimal Firebase app just for login
+        const loginApp = initializeApp({
+          apiKey: appBaseConfig.apiKey,
+          projectId: appBaseConfig.projectId
+        }, appName);
+        
+        // Get Auth instance
+        const loginAuth = getAuth(loginApp);
+        
+        // Connect to Auth emulator explicitly
+        console.log(`Connecting to Auth emulator at http://${emulatorHost.value}:${authPort.value}`);
+        
+        // Suppress console spam
+        const originalInfo = console.info;
+        console.info = () => {};
+        
+        // Connect to Auth emulator with disableWarnings
+        connectAuthEmulator(loginAuth, `http://${emulatorHost.value}:${authPort.value}`, { disableWarnings: true });
+        
+        // Restore console
+        console.info = originalInfo;
+        
+        console.log('Successfully connected login app to Auth emulator');
         
         // Attempt to sign in with test credentials
         try {
           console.log(`Signing in with ${TEST_USER_EMAIL} and ${TEST_USER_PASSWORD}`);
           const userCredential = await signInWithEmailAndPassword(
-            auth,
+            loginAuth,
             TEST_USER_EMAIL,
             TEST_USER_PASSWORD
           );
@@ -339,14 +364,65 @@ export default {
             verificationStatus.value = `Logged in as ${userCredential.user.email}`;
             statusClass.value = 'status-success';
             
-            // Verify that we can now read from Firestore
-            await verifyEmulatorConnection();
+            // Store the successful auth instance so it can be used by the application
+            auth = loginAuth;
+            
+            // Initialize Firekit with the successful auth
+            console.log('Initializing Firekit with successful auth...');
+            try {
+              const firekit = await initNewFirekit();
+              console.log('Firekit initialized successfully with emulators');
+            } catch (firekitError) {
+              console.error('Error initializing Firekit after successful login:', firekitError);
+            }
+            
+            // Reload the page to ensure the app uses the successful auth
+            console.log('Reloading page to apply successful login...');
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
           }
         } catch (error) {
           console.error('Error signing in test user:', error);
           
+          // Enhanced error handling with more specific messages
           if (error.code === 'auth/user-not-found') {
-            verificationStatus.value = 'Test user not found. Add a user to the emulator.';
+            verificationStatus.value = 'Test user not found in emulator. Please run setup script.';
+          } else if (error.code === 'auth/wrong-password') {
+            verificationStatus.value = 'Wrong password for test user. Should be "password123"';
+          } else if (error.code === 'auth/emulator-config-failed') {
+            verificationStatus.value = 'Emulator connection failed. Check emulator is running on port ' + authPort.value;
+            
+            // Try one more attempt with manual environment variable setting
+            try {
+              console.log('Attempting emergency connection with environment variable...');
+              // Force environment variable
+              if (typeof window !== 'undefined') {
+                window.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost.value}:${authPort.value}`;
+              }
+              
+              // Create yet another fresh app
+              const emergencyApp = initializeApp({
+                apiKey: "demo-key-emergency",
+                projectId: "demo-project-emergency"
+              }, `emergency-${Date.now()}`);
+              
+              const emergencyAuth = getAuth(emergencyApp);
+              connectAuthEmulator(emergencyAuth, `http://${emulatorHost.value}:${authPort.value}`, { disableWarnings: true });
+              
+              console.log('Attempting emergency sign in...');
+              const result = await signInWithEmailAndPassword(emergencyAuth, TEST_USER_EMAIL, TEST_USER_PASSWORD);
+              
+              console.log('Emergency sign in successful!', result.user.uid);
+              verificationStatus.value = 'Emergency login successful: ' + result.user.email;
+              statusClass.value = 'status-success';
+              
+              // Store the successful auth instance
+              auth = emergencyAuth;
+            } catch (emergencyError) {
+              console.error('Emergency login failed:', emergencyError);
+              verificationStatus.value = 'Emergency login also failed. Try restarting emulator.';
+            }
           } else {
             verificationStatus.value = `Login error: ${error.message}`;
           }
