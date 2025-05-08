@@ -2,7 +2,7 @@
 if (typeof window !== 'undefined' && typeof process === 'undefined' && import.meta.env.DEV) {
   // Check if user has toggled emulators in localStorage
   const useEmulators = localStorage.getItem('useEmulators');
-  
+
   // If explicitly set to false, don't use emulators, otherwise use them in dev mode
   if (useEmulators !== 'false') {
     // Read custom ports from localStorage if available
@@ -10,26 +10,35 @@ if (typeof window !== 'undefined' && typeof process === 'undefined' && import.me
     const authPort = localStorage.getItem('authPort') || '9199';
     const functionsPort = localStorage.getItem('functionsPort') || '5102';
     const emulatorHost = localStorage.getItem('emulatorHost') || '127.0.0.1';
-    
+
     // Force Firebase Auth to use the emulator at the global level
     window.FIREBASE_EMULATOR_MODE = true;
     window.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost}:${authPort}`;
     window.FIRESTORE_EMULATOR_HOST = `${emulatorHost}:${firestorePort}`;
     window.FUNCTIONS_EMULATOR_HOST = `${emulatorHost}:${functionsPort}`;
-    
+
     // Add dedicated console messages to confirm emulator variables are set
-    console.log('%c DEVELOPMENT MODE: Using Firebase Emulators ', 'background: #FFA000; color: #fff; font-weight: bold;');
-    console.log('FIREBASE_EMULATOR_MODE:', window.FIREBASE_EMULATOR_MODE);
-    console.log('FIREBASE_AUTH_EMULATOR_HOST:', window.FIREBASE_AUTH_EMULATOR_HOST);
-    console.log('FIRESTORE_EMULATOR_HOST:', window.FIRESTORE_EMULATOR_HOST);
-    console.log('FUNCTIONS_EMULATOR_HOST:', window.FUNCTIONS_EMULATOR_HOST);
+    console.log(
+      "%c DEVELOPMENT MODE: Using Firebase Emulators ",
+      "background: #FFA000; color: #fff; font-weight: bold;",
+    );
+    console.log("FIREBASE_EMULATOR_MODE:", window.FIREBASE_EMULATOR_MODE);
+    console.log(
+      "FIREBASE_AUTH_EMULATOR_HOST:",
+      window.FIREBASE_AUTH_EMULATOR_HOST,
+    );
+    console.log("FIRESTORE_EMULATOR_HOST:", window.FIRESTORE_EMULATOR_HOST);
+    console.log("FUNCTIONS_EMULATOR_HOST:", window.FUNCTIONS_EMULATOR_HOST);
   } else {
-    console.log('%c DEVELOPMENT MODE: Emulators disabled by user setting ', 'background: #FFA000; color: #fff; font-weight: bold;');
+    console.log(
+      "%c DEVELOPMENT MODE: Emulators disabled by user setting ",
+      "background: #FFA000; color: #fff; font-weight: bold;",
+    );
   }
 } else if (typeof process !== 'undefined' && import.meta.env.DEV) {
   // For Node.js environment, also check localStorage if available
   let useEmulators = true; // Default to true in dev mode
-  
+
   // Check if we can access localStorage via globalThis
   if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
     const stored = globalThis.localStorage.getItem('useEmulators');
@@ -37,26 +46,26 @@ if (typeof window !== 'undefined' && typeof process === 'undefined' && import.me
       useEmulators = false;
     }
   }
-  
+
   if (useEmulators) {
     // Read custom ports if available
     let firestorePort = '8180';
     let authPort = '9199';
     let functionsPort = '5102';
     let emulatorHost = '127.0.0.1';
-    
+
     if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
       firestorePort = globalThis.localStorage.getItem('firestorePort') || firestorePort;
       authPort = globalThis.localStorage.getItem('authPort') || authPort;
       functionsPort = globalThis.localStorage.getItem('functionsPort') || functionsPort;
       emulatorHost = globalThis.localStorage.getItem('emulatorHost') || emulatorHost;
     }
-    
+
     process.env.FIREBASE_EMULATOR_MODE = 'true';
     process.env.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost}:${authPort}`;
     process.env.FIRESTORE_EMULATOR_HOST = `${emulatorHost}:${firestorePort}`;
     process.env.FUNCTIONS_EMULATOR_HOST = `${emulatorHost}:${functionsPort}`;
-    
+
     // Add dedicated console messages to confirm emulator variables are set
     console.log('NODE DEVELOPMENT MODE: Setting emulator environment variables');
     console.log('FIREBASE_EMULATOR_MODE:', process.env.FIREBASE_EMULATOR_MODE);
@@ -68,6 +77,7 @@ if (typeof window !== 'undefined' && typeof process === 'undefined' && import.me
   }
 }
 
+// Import the RoarFirekit class directly
 import { RoarFirekit } from '@levante-framework/firekit';
 import baseConfig from './config/firebaseLevante';
 import { isLevante } from './helpers';
@@ -111,6 +121,9 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
   const useEmulators = import.meta.env.DEV && 
                       (localStorage.getItem('useEmulators') !== 'false');
 
+  console.log('%c ===== FIREKIT INITIALIZATION START ===== ', 'background: #3f51b5; color: #fff; font-size: 14px; padding: 4px; border-radius: 4px; font-weight: bold;');
+  console.log('%c Emulators enabled:', 'font-weight: bold;', useEmulators);
+  
   // If in development mode and emulators are enabled, use emulator config
   if (import.meta.env.DEV && useEmulators) {
     console.log('%c INITIALIZING FIREKIT WITH EMULATORS ', 'background: #4CAF50; color: #fff; font-weight: bold;');
@@ -127,6 +140,15 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
       window.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost}:${authPort}`;
       window.FIRESTORE_EMULATOR_HOST = `${emulatorHost}:${firestorePort}`;
       window.FUNCTIONS_EMULATOR_HOST = `${emulatorHost}:${functionsPort}`;
+      
+      console.log('%c Window emulator variables set:', 'font-weight: bold;', {
+        FIREBASE_EMULATOR_MODE: window.FIREBASE_EMULATOR_MODE,
+        FIREBASE_AUTH_EMULATOR_HOST: window.FIREBASE_AUTH_EMULATOR_HOST,
+        FIRESTORE_EMULATOR_HOST: window.FIRESTORE_EMULATOR_HOST,
+        FUNCTIONS_EMULATOR_HOST: window.FUNCTIONS_EMULATOR_HOST
+      });
+    } else {
+      console.warn('Window object not available, cannot set emulator variables on window');
     }
     
     const appBaseConfig = baseConfig.app as unknown as ActualFirebaseConfig;
@@ -158,6 +180,12 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
       admin: adminConfig,
     };
     
+    console.log('%c Firebase config being used:', 'font-weight: bold;', {
+      projectId: appConfig.projectId,
+      authDomain: appConfig.authDomain,
+      // Don't log sensitive data like API keys
+    });
+    
     // Create a custom options object that specifically tells Firekit to use emulators in development mode
     const firekitOptions = {
       roarConfig: configToUse,
@@ -181,24 +209,31 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
     };
 
     try {
-      console.log('Initializing Firekit with emulator configuration', firekitOptions);
+      console.log('%c Initializing Firekit with emulator configuration', 'background: #FFA000; color: #fff; font-weight: bold;', firekitOptions);
       const firekit = new RoarFirekit(firekitOptions);
+      
+      console.log('%c Calling firekit.init()', 'font-weight: bold;');
       const instance = await firekit.init();
-      console.log('Firekit initialized successfully with emulators', instance);
+      console.log('%c Firekit initialized successfully with emulators', 'background: #4CAF50; color: #fff; font-weight: bold;', instance);
       
       // Initialize the test user ID if possible
       try {
         // Try with admin auth first if available
         if (instance.admin?.auth) {
+          console.log('%c Initializing test user from emulator', 'font-weight: bold;');
           await initTestUserFromEmulator(instance.admin.auth);
+          console.log('%c Test user initialized successfully', 'font-weight: bold;');
+        } else {
+          console.warn('Admin auth not available, cannot initialize test user');
         }
       } catch (error) {
         console.warn('Error initializing test user ID:', error);
       }
       
+      console.log('%c ===== FIREKIT INITIALIZATION COMPLETE ===== ', 'background: #3f51b5; color: #fff; font-size: 14px; padding: 4px; border-radius: 4px; font-weight: bold;');
       return instance;
     } catch (error) {
-      console.error('Error initializing Firekit with emulators:', error);
+      console.error('%c Error initializing Firekit with emulators:', 'background: #F44336; color: #fff; font-weight: bold;', error);
       throw error;
     }
   } else {

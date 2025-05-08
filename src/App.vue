@@ -36,6 +36,7 @@ import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
 import NavBar from '@/components/NavBar.vue';
 import EmulatorToggle from '@/components/EmulatorToggle.vue';
+import './helpers/checkEmulator.js';
 
 const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>
