@@ -13,7 +13,17 @@ mkdir -p ./emulator_data/emulator_data
 
 # Start Firebase emulators
 echo "🚀 Starting Firebase emulators..."
-firebase emulators:start --import=./emulator_data/emulator_data --export-on-exit=./emulator_data/emulator_data
+firebase emulators:start --import=./emulator_data/emulator_data --export-on-exit=./emulator_data/emulator_data &
 
-# This script will block until the emulators are stopped
+# Wait for emulators to start
+echo "⏳ Waiting for emulators to initialize..."
+sleep 10
+
+# Set up the test user
+echo "👤 Setting up test user in emulators..."
+node ./scripts/setup-emulator-test-user.js
+
+# Keep the script running until user terminates
+echo "✅ Emulators are running. Press Ctrl+C to stop."
+wait
 echo "✅ Emulators stopped" 

@@ -43,6 +43,16 @@
     <button @click="showAdvanced = !showAdvanced" class="advanced-toggle">
       {{ showAdvanced ? 'Hide Advanced' : 'Show Advanced' }}
     </button>
+    
+    <!-- Added test user login for emulators -->
+    <div v-if="usingEmulators" class="test-user-section">
+      <h4>Emulator Test User</h4>
+      <div class="test-user-info">
+        <p>Email: test@example.com</p>
+        <p>Password: password123</p>
+      </div>
+      <button @click="loginTestUser" class="login-button">Login Test User</button>
+    </div>
   </div>
 </template>
 
@@ -50,7 +60,15 @@
 import { ref, onMounted } from 'vue';
 import { initNewFirekit } from '../firebaseInit';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, collection, getDocs, connectFirestoreEmulator } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, connectFirestoreEmulator, doc, getDoc } from 'firebase/firestore';
+import { initializeApp } from 'firebase/app';
+import { connectAuthEmulator } from 'firebase/auth';
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
+import baseConfig from '../config/firebaseLevante';
+
+// Define test user credentials locally to avoid import issues
+const TEST_USER_EMAIL = 'test@example.com';
+const TEST_USER_PASSWORD = 'password123';
 
 export default {
   name: 'EmulatorToggle',
@@ -63,9 +81,15 @@ export default {
     const emulatorHost = ref('127.0.0.1');
     const verificationStatus = ref('');
     const statusClass = ref('');
+    let firebaseApp = null;
+    let auth = null;
+    let db = null;
+    let functions = null;
 
     // Read port values from localStorage on mount
-    onMounted(() => {
+    onMounted(async () => {
+      console.log('%c ===== INITIALIZING EMULATOR TOGGLE ===== ', 'background: #673AB7; color: #fff; font-size: 12px; padding: 3px; border-radius: 4px;');
+      
       // In development mode, emulators are on by default
       if (import.meta.env.DEV) {
         usingEmulators.value = true;
@@ -119,10 +143,47 @@ export default {
       const savedEmulatorHost = localStorage.getItem('emulatorHost');
       if (savedEmulatorHost) emulatorHost.value = savedEmulatorHost;
       
-      // Automatically verify emulator connection on startup
-      setTimeout(() => {
-        verifyEmulatorConnection();
-      }, 1000);
+      if (usingEmulators.value) {
+        // Set global emulator variables first
+        console.log('%c Setting global emulator variables...', 'background: #673AB7; color: #fff;');
+        
+        if (typeof window !== 'undefined') {
+          window.FIREBASE_EMULATOR_MODE = true;
+          window.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost.value}:${authPort.value}`;
+          window.FIRESTORE_EMULATOR_HOST = `${emulatorHost.value}:${firestorePort.value}`;
+          window.FUNCTIONS_EMULATOR_HOST = `${emulatorHost.value}:${functionsPort.value}`;
+          
+          console.log('Window emulator variables:', {
+            FIREBASE_EMULATOR_MODE: window.FIREBASE_EMULATOR_MODE,
+            FIREBASE_AUTH_EMULATOR_HOST: window.FIREBASE_AUTH_EMULATOR_HOST,
+            FIRESTORE_EMULATOR_HOST: window.FIRESTORE_EMULATOR_HOST,
+            FUNCTIONS_EMULATOR_HOST: window.FUNCTIONS_EMULATOR_HOST
+          });
+        }
+        
+        if (typeof process !== 'undefined' && process.env) {
+          process.env.FIREBASE_EMULATOR_MODE = 'true';
+          process.env.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost.value}:${authPort.value}`;
+          process.env.FIRESTORE_EMULATOR_HOST = `${emulatorHost.value}:${firestorePort.value}`;
+          process.env.FUNCTIONS_EMULATOR_HOST = `${emulatorHost.value}:${functionsPort.value}`;
+        }
+        
+        try {
+          // Initialize Firebase manually to ensure emulators are connected properly
+          const { auth: authInstance, db: dbInstance } = await initializeFirebaseEmulators();
+          
+          // Store the initialized instances
+          auth = authInstance;
+          db = dbInstance;
+          
+          // Verify emulator connection
+          await verifyEmulatorConnection();
+        } catch (error) {
+          console.error('Error initializing Firebase with emulators:', error);
+          verificationStatus.value = `Error: ${error.message}`;
+          statusClass.value = 'status-error';
+        }
+      }
     });
 
     async function toggleEmulators(event) {
@@ -137,6 +198,165 @@ export default {
       
       // Apply settings immediately
       await applySettings();
+    }
+
+    // Direct function to initialize Firebase with emulators
+    async function initializeFirebaseEmulators() {
+      console.log('%c DIRECT FIREBASE EMULATOR INITIALIZATION ', 'background: #673AB7; color: #fff; font-weight: bold;');
+      
+      try {
+        // Get the base config
+        const appBaseConfig = baseConfig.app;
+        
+        // First, clear any existing Firebase instances
+        if (firebaseApp) {
+          console.log('Clearing existing Firebase instances...');
+          firebaseApp = null;
+          auth = null;
+          db = null;
+          functions = null;
+        }
+        
+        // Set environment variables explicitly for all environments
+        if (typeof window !== 'undefined') {
+          window.FIREBASE_EMULATOR_MODE = true;
+          window.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost.value}:${authPort.value}`;
+          window.FIRESTORE_EMULATOR_HOST = `${emulatorHost.value}:${firestorePort.value}`;
+          window.FUNCTIONS_EMULATOR_HOST = `${emulatorHost.value}:${functionsPort.value}`;
+        }
+        
+        if (typeof process !== 'undefined' && process.env) {
+          process.env.FIREBASE_EMULATOR_MODE = 'true';
+          process.env.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost.value}:${authPort.value}`;
+          process.env.FIRESTORE_EMULATOR_HOST = `${emulatorHost.value}:${firestorePort.value}`;
+          process.env.FUNCTIONS_EMULATOR_HOST = `${emulatorHost.value}:${functionsPort.value}`;
+        }
+        
+        console.log('Emulator environment variables:', {
+          'window.FIREBASE_AUTH_EMULATOR_HOST': typeof window !== 'undefined' ? window.FIREBASE_AUTH_EMULATOR_HOST : 'N/A',
+          'process.env.FIREBASE_AUTH_EMULATOR_HOST': typeof process !== 'undefined' ? process.env.FIREBASE_AUTH_EMULATOR_HOST : 'N/A'
+        });
+        
+        // Initialize Firebase app
+        try {
+          // Create a unique app name to avoid conflicts
+          const appName = `emulator-app-${Date.now()}`;
+          firebaseApp = initializeApp({
+            apiKey: appBaseConfig.apiKey,
+            authDomain: appBaseConfig.authDomain,
+            projectId: appBaseConfig.projectId,
+            storageBucket: appBaseConfig.storageBucket,
+            messagingSenderId: appBaseConfig.messagingSenderId,
+            appId: appBaseConfig.appId
+          }, appName);
+          
+          console.log('Firebase app initialized with name:', appName);
+        } catch (error) {
+          console.error('Error initializing Firebase app:', error);
+          throw error;
+        }
+        
+        // Get Firebase Auth - IMPORTANT: Get auth first before connecting to emulator
+        auth = getAuth(firebaseApp);
+        
+        // CRITICAL: Connect to Auth emulator FIRST before any other operation
+        console.log(`Connecting to Auth emulator at http://${emulatorHost.value}:${authPort.value}`);
+        
+        try {
+          // Suppress verbose log messages
+          const originalInfo = console.info;
+          console.info = () => {};
+          
+          // IMPORTANT: Use the complete URL with http:// prefix
+          connectAuthEmulator(auth, `http://${emulatorHost.value}:${authPort.value}`, { disableWarnings: true });
+          
+          // Restore console.info
+          console.info = originalInfo;
+          
+          console.log('%c Successfully connected to Auth emulator', 'background: #4CAF50; color: #fff;');
+        } catch (error) {
+          console.error('Failed to connect to Auth emulator:', error);
+          throw error;
+        }
+        
+        // Then get Firestore AFTER auth is connected to emulator
+        db = getFirestore(firebaseApp);
+        
+        // Connect to Firestore emulator AFTER Auth
+        try {
+          connectFirestoreEmulator(db, emulatorHost.value, firestorePort.value);
+          console.log('%c Successfully connected to Firestore emulator', 'background: #4CAF50; color: #fff;');
+        } catch (error) {
+          console.error('Failed to connect to Firestore emulator:', error);
+          throw error;
+        }
+        
+        // Connect to Functions emulator
+        try {
+          functions = getFunctions(firebaseApp);
+          connectFunctionsEmulator(functions, emulatorHost.value, functionsPort.value);
+          console.log('%c Successfully connected to Functions emulator', 'background: #4CAF50; color: #fff;');
+        } catch (error) {
+          console.error('Failed to connect to Functions emulator:', error);
+          // Non-critical, continue anyway
+        }
+        
+        return { auth, db, functions, firebaseApp };
+      } catch (error) {
+        console.error('Error in direct Firebase initialization:', error);
+        throw error;
+      }
+    }
+
+    // Function to login with the test user
+    async function loginTestUser() {
+      console.log('%c LOGGING IN TEST USER ', 'background: #FF9800; color: #fff; font-weight: bold;');
+      verificationStatus.value = 'Logging in test user...';
+      statusClass.value = 'status-checking';
+      
+      try {
+        // Ensure Firebase is initialized with emulators first
+        if (!auth) {
+          const { auth: authInstance } = await initializeFirebaseEmulators();
+          auth = authInstance;
+        }
+        
+        // Attempt to sign in with test credentials
+        try {
+          console.log(`Signing in with ${TEST_USER_EMAIL} and ${TEST_USER_PASSWORD}`);
+          const userCredential = await signInWithEmailAndPassword(
+            auth,
+            TEST_USER_EMAIL,
+            TEST_USER_PASSWORD
+          );
+          
+          if (userCredential && userCredential.user) {
+            console.log('%c Successfully logged in test user', 'background: #4CAF50; color: #fff;', {
+              uid: userCredential.user.uid,
+              email: userCredential.user.email
+            });
+            
+            verificationStatus.value = `Logged in as ${userCredential.user.email}`;
+            statusClass.value = 'status-success';
+            
+            // Verify that we can now read from Firestore
+            await verifyEmulatorConnection();
+          }
+        } catch (error) {
+          console.error('Error signing in test user:', error);
+          
+          if (error.code === 'auth/user-not-found') {
+            verificationStatus.value = 'Test user not found. Add a user to the emulator.';
+          } else {
+            verificationStatus.value = `Login error: ${error.message}`;
+          }
+          statusClass.value = 'status-error';
+        }
+      } catch (error) {
+        console.error('Error initializing Firebase for test user login:', error);
+        verificationStatus.value = `Error: ${error.message}`;
+        statusClass.value = 'status-error';
+      }
     }
 
     async function verifyEmulatorConnection() {
@@ -165,74 +385,51 @@ export default {
       }
       
       try {
-        // 2. Check direct connectivity to Auth emulator
-        const authEmulatorUrl = `http://${emulatorHost.value}:${authPort.value}`;
-        console.log(`Testing direct connectivity to auth emulator at ${authEmulatorUrl}`);
-        
-        try {
-          const response = await fetch(authEmulatorUrl, { 
-            method: 'GET',
-            headers: { 'Accept': 'application/json' },
-            mode: 'no-cors' 
-          });
-          console.log('Auth emulator response:', response);
-        } catch (error) {
-          console.warn('Auth emulator direct connection test failed:', error);
-          // This might fail due to CORS, which is actually expected, so we continue
+        // Use initialized instances if available, otherwise initialize Firebase
+        if (!auth || !db) {
+          const { auth: authInstance, db: dbInstance } = await initializeFirebaseEmulators();
+          auth = authInstance;
+          db = dbInstance;
         }
         
-        // 3. Most reliable test: try to use the Firebase Auth object
-        const auth = getAuth();
-        
-        // Check if Auth is connected to emulator by inspecting internal properties
-        // This is a bit hacky but works to detect emulator use
-        const isAuthEmulated = auth.config?.emulator?.url?.includes(authPort.value);
-        console.log('%c Auth emulator check:', 'font-weight: bold;', {
-          'Auth config': auth.config,
-          'Using auth emulator': isAuthEmulated
-        });
-        
-        // 4. Check Firestore emulator
-        const db = getFirestore();
-        let hasFirestoreData = false;
-        
+        // Try to access Firestore to verify permissions
         try {
-          // Try to read from Firestore to see if it's connected
-          const testCollection = collection(db, 'emulator_test');
+          // First check if we're authenticated
+          const currentUser = auth.currentUser;
+          console.log('%c Current user:', 'font-weight: bold;', currentUser ? {
+            uid: currentUser.uid,
+            email: currentUser.email,
+            isAnonymous: currentUser.isAnonymous
+          } : 'Not signed in');
+          
+          // Try to read a document from Firestore
+          console.log('Trying to read document from Firestore...');
+          
+          // Test collection access
+          const testCollection = collection(db, 'test_collection');
           const snapshot = await getDocs(testCollection);
           
-          console.log('%c Firestore test query results:', 'font-weight: bold;', {
+          console.log('Successfully read from Firestore collection:', {
             empty: snapshot.empty,
-            size: snapshot.size,
-            metadata: snapshot.metadata
+            size: snapshot.size
           });
           
-          // Check Firestore's internal properties to see if it's using the emulator
-          // @ts-ignore - _delegate is an internal property
-          const isFirestoreEmulated = db._delegate?._settings?.host?.includes(firestorePort.value);
-          console.log('%c Firestore emulator check:', 'font-weight: bold;', {
-            'Using firestore emulator': isFirestoreEmulated,
-            // @ts-ignore - accessing internal property
-            'Firestore settings': db._delegate?._settings
-          });
-          
-          // Final verification result
-          if (isAuthEmulated || isFirestoreEmulated) {
-            verificationStatus.value = 'VERIFIED: Using Firebase Emulators ✓';
-            statusClass.value = 'status-success';
-            console.log('%c VERIFIED: Using Firebase Emulators', 'background: #4CAF50; color: #fff; font-weight: bold;');
-          } else {
-            verificationStatus.value = 'NOT USING EMULATORS - Connected to production';
-            statusClass.value = 'status-error';
-            console.log('%c NOT using emulators - connected to production', 'background: #F44336; color: #fff;');
-          }
+          verificationStatus.value = 'VERIFIED: Connected to Firebase Emulators ✓';
+          statusClass.value = 'status-success';
+          console.log('%c VERIFIED: Connected to emulators with working permissions', 'background: #4CAF50; color: #fff;');
         } catch (error) {
-          console.error('Error verifying emulator connection:', error);
-          verificationStatus.value = `Error: ${error.message}`;
-          statusClass.value = 'status-error';
+          console.error('Error accessing Firestore:', error);
+          
+          if (error.code === 'permission-denied') {
+            verificationStatus.value = 'CONNECTED BUT MISSING PERMISSIONS: Try logging in';
+            statusClass.value = 'status-warning';
+          } else {
+            verificationStatus.value = `Error: ${error.message}`;
+            statusClass.value = 'status-error';
+          }
         }
       } catch (error) {
-        console.error('Error in verification process:', error);
+        console.error('Error initializing Firebase for verification:', error);
         verificationStatus.value = `Error: ${error.message}`;
         statusClass.value = 'status-error';
       }
@@ -255,64 +452,16 @@ export default {
       });
       
       if (usingEmulators.value) {
-        // Set global emulator variables first
-        if (typeof window !== 'undefined') {
-          window.FIREBASE_EMULATOR_MODE = true;
-          window.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost.value}:${authPort.value}`;
-          window.FIRESTORE_EMULATOR_HOST = `${emulatorHost.value}:${firestorePort.value}`;
-          window.FUNCTIONS_EMULATOR_HOST = `${emulatorHost.value}:${functionsPort.value}`;
-          
-          console.log('%c Set window emulator variables:', 'font-weight: bold;', {
-            FIREBASE_EMULATOR_MODE: window.FIREBASE_EMULATOR_MODE,
-            FIREBASE_AUTH_EMULATOR_HOST: window.FIREBASE_AUTH_EMULATOR_HOST,
-            FIRESTORE_EMULATOR_HOST: window.FIRESTORE_EMULATOR_HOST,
-            FUNCTIONS_EMULATOR_HOST: window.FUNCTIONS_EMULATOR_HOST
-          });
-        } else {
-          console.warn('No window object available, cannot set window emulator variables');
-        }
-        
-        if (typeof process !== 'undefined') {
-          process.env.FIREBASE_EMULATOR_MODE = 'true';
-          process.env.FIREBASE_AUTH_EMULATOR_HOST = `${emulatorHost.value}:${authPort.value}`;
-          process.env.FIRESTORE_EMULATOR_HOST = `${emulatorHost.value}:${firestorePort.value}`;
-          process.env.FUNCTIONS_EMULATOR_HOST = `${emulatorHost.value}:${functionsPort.value}`;
-          
-          console.log('Set process.env emulator variables:', {
-            FIREBASE_EMULATOR_MODE: process.env.FIREBASE_EMULATOR_MODE,
-            FIREBASE_AUTH_EMULATOR_HOST: process.env.FIREBASE_AUTH_EMULATOR_HOST,
-            FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST,
-            FUNCTIONS_EMULATOR_HOST: process.env.FUNCTIONS_EMULATOR_HOST
-          });
-        } else {
-          console.warn('No process object available, cannot set process.env emulator variables');
-        }
-        
         try {
-          console.log('%c Initializing Firekit with emulator settings...', 'font-weight: bold;');
-          // Create a new Firekit instance with emulator settings
-          // The emulator ports will be picked up from the window/process variables
-          const firekitInstance = await initNewFirekit();
-          console.log('%c Firekit initialized successfully with emulators', 'background: #4CAF50; color: #fff;', firekitInstance);
+          // Initialize Firebase directly with the new emulator settings
+          const { auth: newAuth, db: newDb } = await initializeFirebaseEmulators();
           
-          // Verify connectivity to emulators
-          console.log('%c Checking emulator connectivity...', 'font-weight: bold;');
+          // Update the stored instances
+          auth = newAuth;
+          db = newDb;
           
-          try {
-            // Simple fetch test to see if we can reach the auth emulator
-            const authEmulatorUrl = `http://${emulatorHost.value}:${authPort.value}`;
-            console.log(`Testing connectivity to auth emulator at ${authEmulatorUrl}`);
-            
-            fetch(authEmulatorUrl, { mode: 'no-cors' })
-              .then(() => {
-                console.log('%c Auth emulator connection test successful', 'background: #4CAF50; color: #fff;');
-              })
-              .catch((error) => {
-                console.error('%c Auth emulator connection test failed:', 'background: #F44336; color: #fff;', error);
-              });
-          } catch (error) {
-            console.warn('Error testing emulator connectivity:', error);
-          }
+          // Verify the connection
+          await verifyEmulatorConnection();
           
           // Alert the user that they need to reload for changes to fully take effect
           console.log('%c Reloading page to apply emulator settings...', 'font-weight: bold;');
@@ -333,28 +482,16 @@ export default {
           console.log('Reset window emulator variables');
         }
         
-        if (typeof process !== 'undefined') {
+        if (typeof process !== 'undefined' && process.env) {
           delete process.env.FIREBASE_EMULATOR_MODE;
           delete process.env.FIREBASE_AUTH_EMULATOR_HOST;
           delete process.env.FIRESTORE_EMULATOR_HOST;
           delete process.env.FUNCTIONS_EMULATOR_HOST;
-          
-          console.log('Reset process.env emulator variables');
         }
         
-        try {
-          // Create a new Firekit instance without emulator settings
-          console.log('Initializing Firekit with production settings...');
-          await initNewFirekit();
-          console.log('%c Switched to production Firebase', 'background: #4CAF50; color: #fff;');
-          
-          // Alert the user that they need to reload for changes to fully take effect
-          alert('Switched to production Firebase. The page will now reload.');
-          window.location.reload();
-        } catch (error) {
-          console.error('%c Error switching to production:', 'background: #F44336; color: #fff;', error);
-          alert('Error switching to production. See console for details.');
-        }
+        // Alert the user that they need to reload for changes to fully take effect
+        alert('Switched to production Firebase. The page will now reload.');
+        window.location.reload();
       }
     }
 
@@ -369,7 +506,8 @@ export default {
       applySettings,
       verificationStatus,
       statusClass,
-      verifyEmulatorConnection
+      verifyEmulatorConnection,
+      loginTestUser
     };
   }
 };
@@ -524,6 +662,11 @@ export default {
   color: white;
 }
 
+.status-warning {
+  background-color: #FF9800;
+  color: white;
+}
+
 .verify-button {
   padding: 6px 12px;
   background-color: #2196F3;
@@ -537,5 +680,43 @@ export default {
 
 .verify-button:hover {
   background-color: #1976D2;
+}
+
+.test-user-section {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #e3f2fd;
+  border-radius: 4px;
+  border-left: 4px solid #2196F3;
+}
+
+.test-user-section h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  color: #1565C0;
+}
+
+.test-user-info {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.test-user-info p {
+  margin: 4px 0;
+}
+
+.login-button {
+  padding: 6px 12px;
+  background-color: #FF9800;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.login-button:hover {
+  background-color: #F57C00;
 }
 </style> 

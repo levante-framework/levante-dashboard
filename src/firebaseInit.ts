@@ -114,6 +114,105 @@ declare global {
   }
 }
 
+// Keep track of Firebase initialization status to prevent duplicate initialization
+let isInitialized = false;
+let firebaseApp: any = null;
+let auth: any = null;
+let db: any = null;
+let functions: any = null;
+
+// Function to directly initialize Firebase with emulators
+function initializeFirebaseWithEmulators() {
+  // Ensure we only initialize once
+  if (isInitialized) {
+    return { firebaseApp, auth, db, functions };
+  }
+  
+  console.log('%c DIRECT FIREBASE EMULATOR INITIALIZATION ', 'background: #673AB7; color: #fff; font-weight: bold;');
+  
+  try {
+    // Get emulator settings
+    const firestorePort = parseInt(localStorage.getItem('firestorePort') || '8180', 10);
+    const authPort = parseInt(localStorage.getItem('authPort') || '9199', 10);
+    const functionsPort = parseInt(localStorage.getItem('functionsPort') || '5102', 10);
+    const emulatorHost = localStorage.getItem('emulatorHost') || '127.0.0.1';
+    
+    // Get the base config
+    const appBaseConfig = baseConfig.app as unknown as ActualFirebaseConfig;
+    
+    // Initialize Firebase app
+    try {
+      // Try to initialize the app
+      firebaseApp = initializeApp({
+        apiKey: appBaseConfig.apiKey,
+        authDomain: appBaseConfig.authDomain,
+        projectId: appBaseConfig.projectId,
+        storageBucket: appBaseConfig.storageBucket,
+        messagingSenderId: appBaseConfig.messagingSenderId,
+        appId: appBaseConfig.appId
+      });
+      console.log('Firebase app initialized');
+    } catch (error: any) {
+      if (error.code === 'app/duplicate-app') {
+        console.log('Firebase app already initialized, getting existing app');
+        firebaseApp = initializeApp();
+      } else {
+        throw error;
+      }
+    }
+    
+    // Get Firebase services
+    auth = getAuth(firebaseApp);
+    db = getFirestore(firebaseApp);
+    functions = getFunctions(firebaseApp);
+    
+    // Connect to emulators
+    console.log(`Connecting to emulators - Auth: ${emulatorHost}:${authPort}, Firestore: ${emulatorHost}:${firestorePort}, Functions: ${emulatorHost}:${functionsPort}`);
+    
+    // IMPORTANT: Connect to Auth emulator FIRST
+    try {
+      // Suppress verbose log messages
+      const originalInfo = console.info;
+      console.info = () => {};
+      
+      // Connect to Auth emulator
+      connectAuthEmulator(auth, `http://${emulatorHost}:${authPort}`, { disableWarnings: true });
+      
+      // Restore console.info
+      console.info = originalInfo;
+      
+      console.log('%c Successfully connected to Auth emulator', 'background: #4CAF50; color: #fff;');
+    } catch (error) {
+      console.error('Failed to connect to Auth emulator:', error);
+      throw error;
+    }
+    
+    // Connect to Firestore emulator AFTER Auth
+    try {
+      connectFirestoreEmulator(db, emulatorHost, firestorePort);
+      console.log('%c Successfully connected to Firestore emulator', 'background: #4CAF50; color: #fff;');
+    } catch (error) {
+      console.error('Failed to connect to Firestore emulator:', error);
+      throw error;
+    }
+    
+    // Connect to Functions emulator
+    try {
+      connectFunctionsEmulator(functions, emulatorHost, functionsPort);
+      console.log('%c Successfully connected to Functions emulator', 'background: #4CAF50; color: #fff;');
+    } catch (error) {
+      console.error('Failed to connect to Functions emulator:', error);
+      throw error;
+    }
+    
+    isInitialized = true;
+    return { firebaseApp, auth, db, functions };
+  } catch (error) {
+    console.error('Error initializing Firebase with emulators:', error);
+    throw error;
+  }
+}
+
 export async function initNewFirekit(): Promise<RoarFirekit> {
   let configToUse: { app: FirebaseConfig; admin: FirebaseConfig };
   
@@ -149,6 +248,24 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
       });
     } else {
       console.warn('Window object not available, cannot set emulator variables on window');
+    }
+    
+    // Initialize Firebase directly for more control
+    try {
+      // This ensures Firebase is properly connected to emulators before Firekit tries to use it
+      const { auth, db, functions } = initializeFirebaseWithEmulators();
+      
+      // After direct initialization, try to authenticate with the test user
+      try {
+        console.log('%c Attempting to initialize test user from emulator', 'font-weight: bold;');
+        await initTestUserFromEmulator(auth);
+      } catch (error) {
+        console.warn('Error initializing test user:', error);
+        // Continue anyway, as this is not critical
+      }
+    } catch (error) {
+      console.warn('Error in direct Firebase initialization:', error);
+      // Continue with Firekit initialization anyway, it might still work
     }
     
     const appBaseConfig = baseConfig.app as unknown as ActualFirebaseConfig;

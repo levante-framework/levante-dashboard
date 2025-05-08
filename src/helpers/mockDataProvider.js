@@ -6,7 +6,7 @@
 // Test user ID that will be updated at runtime
 // It will be filled with the actual UID from the emulator after user creation
 export let TEST_USER_ID = '';
-export const TEST_USER_EMAIL = '7vpqcm4ihi@levante.com';
+export const TEST_USER_EMAIL = 'test@example.com';
 
 /**
  * Set the test user ID at runtime
@@ -21,6 +21,7 @@ export const setTestUserId = (uid) => {
   console.log('============================================');
   console.log('TEST USER CONFIGURED: Copy this to use in console if needed');
   console.log(`TEST_USER_ID = '${uid}';`);
+  console.log(`window.setEmulatorTestUserId('${uid}');`);
   console.log('============================================');
   
   return uid;
@@ -54,8 +55,20 @@ export const getMockUserClaims = () => {
  * @returns {Object} Firebase user object
  */
 export const getMockFirebaseUser = () => {
+  // Generate a fallback UID if TEST_USER_ID is empty
+  const uid = TEST_USER_ID || `mock-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  
+  // Log a warning if we're using a generated UID instead of the configured one
+  if (!TEST_USER_ID) {
+    console.warn('TEST_USER_ID is empty! Using generated UID:', uid);
+    console.warn('For proper emulator integration, run setup-emulator-test-user.js');
+    
+    // Set the TEST_USER_ID so it's available for other functions
+    setTestUserId(uid);
+  }
+  
   return {
-    uid: TEST_USER_ID,
+    uid,
     email: TEST_USER_EMAIL,
     emailVerified: true,
     displayName: "Test User",
