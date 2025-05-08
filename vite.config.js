@@ -20,6 +20,13 @@ export default defineConfig({
       globals: {
         process: true,
       },
+      include: ['process', 'buffer', 'util'],
+      overrides: {
+        process: true,
+        buffer: true,
+        util: true
+      },
+      protocolImports: true,
     }),
     UnheadVite(),
     ...(process.env.NODE_ENV === 'development' ? [mkcert()] : []),
@@ -49,6 +56,9 @@ export default defineConfig({
     cssCodeSplit: true,
     sourcemap: true,
     rollupOptions: {
+      external: [
+        'vite-plugin-node-polyfills/shims/process'
+      ],
       output: {
         manualChunks: {
           lodash: ['lodash'],
