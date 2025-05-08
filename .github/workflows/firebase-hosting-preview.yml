@@ -103,7 +103,7 @@ jobs:
         id: firebase-deploy
         run: |
           FIREBASE_PROJECT="${{ secrets.FIREBASE_PROJECT }}"
-          TARGET="${{ contains(github.repository, 'levante') && 'production' || 'staging' }}"
+          TARGET="${{ contains(github.repository, 'levante') && 'dev' || 'staging' }}"
           
           echo "Deploying to project: $FIREBASE_PROJECT, target: $TARGET"
           
