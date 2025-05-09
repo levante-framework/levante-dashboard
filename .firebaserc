@@ -17,6 +17,9 @@
         ],
         "staging": [
           "roar-staging"
+        ],
+        "dev": [
+          "levante-admin-dev"
         ]
       }
     },

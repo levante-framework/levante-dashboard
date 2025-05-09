@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../firebase-functions/packages"
+		}
+	],
+	"settings": {}
+}

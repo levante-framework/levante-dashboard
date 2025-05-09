@@ -1,0 +1,20 @@
+{
+  "users": [
+    {
+      "localId": "test-user-id",
+      "email": "test@example.com",
+      "passwordHash": "password123",
+      "displayName": "Test User",
+      "emailVerified": true,
+      "disabled": false
+    },
+    {
+      "localId": "admin-user-id",
+      "email": "admin@example.com",
+      "passwordHash": "password123",
+      "displayName": "Admin User",
+      "emailVerified": true,
+      "disabled": false
+    }
+  ]
+} 

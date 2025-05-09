@@ -195,13 +195,27 @@ const handleFormSubmit = (isFormValid) => {
   if (!isFormValid) {
     return;
   }
-  emit('submit', state);
+  
+  // Clean the email (trim whitespace, remove parentheses)
+  const cleanedEmail = state.email.trim().replace(/[\(\)]/g, '');
+  
+  // Make a copy of the state and ensure email is trimmed
+  const formData = {
+    ...state,
+    email: cleanedEmail
+  };
+  
+  emit('submit', formData);
 };
 
 const isValidEmail = (email) => {
+  // Ensure we're working with a trimmed email
+  const trimmedEmail = (email || '').trim();
+  // Remove any parentheses that might be present
+  const cleanedEmail = trimmedEmail.replace(/[\(\)]/g, '');
   var re =
     /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-  return re.test(email);
+  return re.test(cleanedEmail);
 };
 
 const evaluatingEmail = ref(false);
@@ -270,10 +284,13 @@ function sendResetEmail() {
 watch(
   () => state.email,
   async (email) => {
-    emit('update:email', email);
-    if (isValidEmail(email)) {
+    // Trim the email before emitting to remove spaces and parentheses
+    const trimmedEmail = email.trim();
+    const cleanedEmail = trimmedEmail.replace(/[\(\)]/g, '');
+    emit('update:email', cleanedEmail);
+    if (isValidEmail(cleanedEmail)) {
       evaluatingEmail.value = true;
-      validateRoarEmail(email);
+      validateRoarEmail(cleanedEmail);
     }
   },
 );
