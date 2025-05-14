@@ -93,24 +93,11 @@ const { data: userClaims } = useUserClaimsQuery({
 
 const computedItems = computed(() => {
   const items = [];
-  // TO DO: REMOVE USERS AFTER NAMING 3 TICKET IS COMPLETED
   const headers = ['Assignments', 'Users'];
   for (const header of headers) {
     const headerItems = rawActions.value
       .filter((action) => action.category === header)
       .map((action) => {
-        if (action.title === 'Sync Passwords') {
-          return {
-          label: action.title,
-          icon: action.icon,
-          badge: 'Temporary',
-          badgeClass: 'bg-yellow-300',
-          command: () => {
-            router.push(action.buttonLink);
-          },
-        };
-        }
-
         return {
           label: action.title,
           icon: action.icon,
