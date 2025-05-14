@@ -121,6 +121,9 @@
               v-if="variant.variant?.conditions?.assigned?.conditions?.length > 0"
             >
               <span class="font-bold">Assigned to:</span> {{parseConditions(variant.variant?.conditions?.assigned).map((entry) => {
+                  if (entry.value === 'student') {
+                    return entry.op === "EQUAL" ? "Children" : "Not Children";
+                  }
                   const capitalizedValue = entry.value.charAt(0).toUpperCase() + entry.value.slice(1);
                   return entry.op === "EQUAL" ? `${capitalizedValue}s` : `Not ${capitalizedValue}s`
                 }).join(", ")}}<br/>
@@ -206,7 +209,7 @@
       </PvDataTable>
     </div>
     <div v-if="variant.variant?.conditions?.optional === true" class="flex mt-3 flex-column w-full ml-3 pr-5">
-      <PvTag severity="success"> Assignment optional for all students </PvTag>
+      <PvTag severity="success"> Assignment optional for all children </PvTag>
     </div>
     <div
       v-else-if="variant.variant?.conditions?.optional?.conditions?.length > 0"
@@ -235,7 +238,7 @@
       v-if="!variant.variant?.conditions?.assigned && !variant.variant?.conditions?.optional"
       class="flex mt-2 flex-column w-full px-3 ml-3"
     >
-      <PvTag severity="danger"> Assignment required for all students </PvTag>
+      <PvTag severity="danger"> Assignment required for all children </PvTag>
     </div>
   </div>
   <PvDialog v-model:visible="visible" modal header="Parameters" :style="{ width: '50rem' }">
