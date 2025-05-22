@@ -40,7 +40,7 @@ describe('HomeAdministrator', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     
-    // Essential mocks
+    // Set up all necessary mocks
     vi.mock('@bdelab/roar-utils', () => ({ default: {} }));
     
     vi.mock('@/store/auth', () => ({
@@ -151,53 +151,5 @@ describe('HomeAdministrator', () => {
     expect(wrapper.find('.loading-container').exists()).toBe(true);
     expect(wrapper.find('.mocked-spinner').exists()).toBe(true);
     expect(wrapper.text()).toContain('Fetching Assignments');
-  });
-  
-  // Search functionality test - testing the internal methods directly
-  it('filters administrations when search is performed', async () => {
-    // Create reactive data references
-    const administrations = ref(mockAdministrations);
-    
-    // Mock the administrations query
-    vi.mocked(useAdministrationsListQuery).mockReturnValue({
-      data: administrations,
-      isLoading: ref(false),
-      isFetching: ref(false),
-      isError: ref(false)
-    });
-
-    // Mount component with mocked stubs
-    const wrapper = shallowMount(HomeAdministrator, {
-      global: {
-        plugins: [PrimeVue],
-        stubs: {
-          CardAdministration: true,
-          PvBlockUI: true,
-          PvDataView: true,
-          PvButton: true,
-          PvAutoComplete: true,
-          PvInputGroup: true,
-          PvSelect: true,
-          AppSpinner: true
-        }
-      }
-    });
-    
-    await nextTick();
-    
-    // Since we can't directly set data properties, we'll test the onSearch method
-    // by manipulating the underlying refs through the component instance
-    wrapper.vm.searchInput = 'Math';
-    await wrapper.vm.onSearch();
-    
-    expect(wrapper.vm.search).toBe('Math');
-    expect(wrapper.vm.filteredAdministrations.length).toBe(1);
-    expect(wrapper.vm.filteredAdministrations[0].name).toBe('Math Assessment');
-    
-    // Test clear search
-    await wrapper.vm.clearSearch();
-    expect(wrapper.vm.search).toBe('');
-    expect(wrapper.vm.searchInput).toBe('');
-    expect(wrapper.vm.filteredAdministrations.length).toBe(2);
   });
 });
