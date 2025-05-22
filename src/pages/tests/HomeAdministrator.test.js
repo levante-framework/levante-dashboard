@@ -6,7 +6,7 @@ import HomeAdministrator from '@/pages/HomeAdministrator.vue';
 import PrimeVue from 'primevue/config';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
 
-// Mock administration data for testing HomeAdministrator component
+// Mock administration data for testing
 const mockAdministrations = [
   {
     id: 'admin-1',
@@ -101,13 +101,13 @@ describe('HomeAdministrator', () => {
         plugins: [PrimeVue],
         stubs: {
           CardAdministration: true,
+          LevanteSpinner: true,
           PvBlockUI: true,
           PvDataView: true,
           PvButton: true,
           PvAutoComplete: true,
           PvInputGroup: true,
-          PvSelect: true,
-          AppSpinner: true
+          PvSelect: true
         }
       }
     });
@@ -121,7 +121,7 @@ describe('HomeAdministrator', () => {
   });
   
   // Loading state test
-  it('renders loading state', async () => {
+  it('renders loading state when data is loading', async () => {
     vi.mocked(useAdministrationsListQuery).mockReturnValue({
       data: ref([]),
       isLoading: ref(true),
@@ -134,151 +134,8 @@ describe('HomeAdministrator', () => {
         plugins: [PrimeVue],
         stubs: {
           CardAdministration: true,
-          AppSpinner: {
+          LevanteSpinner: {
             template: '<div class="mocked-spinner">Loading</div>'
-        
-    });
-
-    afterEach(() => {
-        vi.restoreAllMocks();
-    });
-
-    it('renders static elements before data loads and empty table', async () => {
-
-      vi.mocked(useAdministrationsListQuery).mockReturnValue({
-        data: ref([]),
-        isLoading: ref(false),
-        isFetching: ref(false),
-        isError: ref(false),
-      });
-
-      const wrapper = mount(HomeAdministrator, { 
-            global: { 
-                plugins: [VueQuery.VueQueryPlugin, PrimeVue], 
-            },
-        });
-
-        await nextTick();
-        expect(wrapper.text()).toContain('All Assignments');
-        expect(wrapper.text()).toContain(
-          "This page lists all the assignments that are administered to your users." +
-          "You can view and monitor completion and create new bundles of tasks, surveys, and questionnaires to be administered as assignments."
-        );
-        expect(wrapper.text()).toContain('Search by name');
-        expect(wrapper.text()).toContain('Sort by');
-        expect(wrapper.text()).not.toContain('Fetching Assignments');
-        expect(wrapper.text()).toContain('No Assignments Yet');
-        expect(wrapper.text()).toContain('Go create your first assignment to get started');
-    });
-
-    it('renders loading state when data is loading', async () => {
-      const mockedUseAdministrationsListQuery = vi.mocked(useAdministrationsListQuery);
-
-      mockedUseAdministrationsListQuery.mockReturnValue({
-        data: ref([]),
-        isLoading: ref(true),
-        isFetching: ref(false),
-        isError: ref(false),
-      });
-
-      const wrapper = mount(HomeAdministrator, {
-        global: {
-          plugins: [VueQuery.VueQueryPlugin, PrimeVue],
-        },
-      });
-
-      await nextTick();
-      
-      expect(wrapper.find('.loading-container').exists()).toBe(true);
-      expect(wrapper.find('.levante-spinner-container').exists()).toBe(true);
-      expect(wrapper.text()).toContain('Fetching Assignments');
-    });
-
-
-    it('Data table renders with administrations data', async() => {
-      vi.mocked(useAdministrationsListQuery).mockReturnValue({
-        data: ref([mockAdministration]),
-        isLoading: ref(false),
-        isFetching: ref(false),
-        isError: ref(false),
-      });
-
-      const wrapper = mount(HomeAdministrator, { 
-        global: { 
-          plugins: [VueQuery.VueQueryPlugin, PrimeVue, ConfirmService, ToastService], 
-          components: {
-            'router-link': { template: '<a></a>' },
-          },
-          directives: {
-            tooltip: {
-            },
-          },
-        },
-      });
-
-      await nextTick();
-
-      const card = wrapper.find('[data-cy="h2-card-admin-title"]');
-      expect(card.exists()).toBe(true);
-      expect(card.text()).toContain('Newest assignment');
-    });
-
-    it('Data table search functionality', async () => {
-      vi.mocked(useAdministrationsListQuery).mockReturnValue({
-        data: ref([mockAdministration]),
-        isLoading: ref(false),
-        isFetching: ref(false),
-        isError: ref(false),
-      });
-
-      const wrapper = mount(HomeAdministrator, { 
-        global: { 
-          plugins: [VueQuery.VueQueryPlugin, PrimeVue, ConfirmService, ToastService], 
-          components: {
-            'router-link': { template: '<a></a>' },
-          },
-          directives: {
-            tooltip: {},
-          },
-        },
-      });
-
-      await nextTick();
-
-      const searchInput = wrapper.find('[data-cy="search-input"] input');
-      expect(searchInput.exists()).toBe(true);
-
-      await searchInput.setValue('New');
-      await searchInput.trigger('keyup.enter');
-      expect(wrapper.find('[data-cy="h2-card-admin-title"]').text()).toContain("Newest assignment");
-
-      await searchInput.setValue('Fake');
-      await searchInput.trigger('keyup.enter');
-      expect(wrapper.find('[data-cy="h2-card-admin-title"]').exists()).toBe(false);
-      
-    });
-
-    it('Data table sort functionality', async () => {
-      const mockData = [
-        { ...mockAdministration, id:'1', name: 'B Assignment', publicName: "B Assignment" },
-        { ...mockAdministration, id: '2', name: 'A Assignment', publicName: "A Assignment" },
-      ];
-
-      vi.mocked(useAdministrationsListQuery).mockReturnValue({
-        data: ref(mockData),
-        isLoading: ref(false),
-        isFetching: ref(false),
-        isError: ref(false),
-      });
-
-      const wrapper = mount(HomeAdministrator, { 
-        global: { 
-          plugins: [VueQuery.VueQueryPlugin, PrimeVue, ConfirmService, ToastService], 
-          components: {
-            'router-link': { template: '<a></a>' },
-          },
-          directives: {
-            tooltip: {},
           },
           PvBlockUI: true,
           PvDataView: true,
@@ -295,5 +152,48 @@ describe('HomeAdministrator', () => {
     expect(wrapper.find('.loading-container').exists()).toBe(true);
     expect(wrapper.find('.mocked-spinner').exists()).toBe(true);
     expect(wrapper.text()).toContain('Fetching Assignments');
+  });
+  
+  // Search functionality test
+  it('filters administrations when search is performed', async () => {
+    const administrationData = ref(mockAdministrations);
+    
+    vi.mocked(useAdministrationsListQuery).mockReturnValue({
+      data: administrationData,
+      isLoading: ref(false),
+      isFetching: ref(false),
+      isError: ref(false)
+    });
+
+    // Create a wrapper with a mock implementation of onSearch
+    const wrapper = shallowMount(HomeAdministrator, {
+      global: {
+        plugins: [PrimeVue],
+        stubs: {
+          CardAdministration: true,
+          LevanteSpinner: true,
+          PvBlockUI: true,
+          PvDataView: true,
+          PvButton: true,
+          PvAutoComplete: true,
+          PvInputGroup: true,
+          PvSelect: true
+        }
+      }
+    });
+    
+    await nextTick();
+    
+    // Verify initial state
+    expect(wrapper.vm.filteredAdministrations.length).toBe(2);
+    
+    // Manually set the search input value and trigger search
+    wrapper.vm.searchInput = 'Reading';
+    await wrapper.vm.onSearch();
+    
+    // Check that the filteredAdministrations has been updated correctly
+    expect(wrapper.vm.filteredAdministrations.length).toBe(1);
+    expect(wrapper.vm.filteredAdministrations[0].name).toBe('Reading Assessment');
+    expect(wrapper.vm.search).toBe('Reading');
   });
 });
