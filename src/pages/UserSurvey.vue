@@ -10,7 +10,7 @@ import { getParsedLocale } from '@/helpers/survey';
 import { onBeforeRouteLeave } from 'vue-router';
 import { isLevante } from '@/helpers';
 import PvButton from 'primevue/button';
-
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
 
 const authStore = useAuthStore();
 const surveyStore = useSurveyStore();
@@ -18,7 +18,7 @@ const { locale } = useI18n();
 const context = new AudioContext();
 
 
-onBeforeRouteLeave((to, from) => {
+onBeforeRouteLeave(() => {
   const surveyStore = useSurveyStore();
   
   if (isLevante && surveyStore.currentSurveyAudioSource) {
@@ -65,7 +65,10 @@ async function playAudio(name) {
     </div>
   </div>
 
-  <AppSpinner v-if="!surveyStore.survey || surveyStore.isSavingSurveyResponses || (surveyStore.surveyAudioLoading && authStore.userData.userType !== 'student')" />
+  <LevanteSpinner 
+    v-if="!surveyStore.survey || surveyStore.isSavingSurveyResponses || surveyStore.surveyAudioLoading"
+    fullscreen  
+  />
 </template>
 
 <style>

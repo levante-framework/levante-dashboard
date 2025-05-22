@@ -10,7 +10,7 @@
               class="bg-primary text-white border-none p-2 ml-auto"
               @click="newGroup"
             >
-              New Group
+              Add Group
             </PvButton>
              <PvButton
               class="bg-primary text-white border-none p-2 ml-auto"
@@ -92,7 +92,7 @@
             readonly
           />
           <PvButton
-            class="bg-primary border-none p-2 text-white hover:bg-red-900"
+            class="bg-primary border-none p-2 text-white hover:bg-red-900 font-normal"
             @click="copyToClipboard(`https://roar.education/register/?code=${activationCode}`)"
           >
             <i class="pi pi-copy p-2"></i>
@@ -126,8 +126,8 @@
     </section>
   </main>
   <RoarModal
-    title="Edit Organization"
-    subtitle="Modify or add organization information"
+    title="Edit Group"
+    subtitle="Modify or add Group information"
     :is-enabled="isEditModalEnabled"
     @modal-closed="closeEditModal"
   >
@@ -156,7 +156,7 @@
   </RoarModal>
 </template>
 <script setup>
-import { ref, computed, onMounted, watchEffect } from 'vue';
+import { ref, computed, onMounted, watch, watchEffect } from 'vue';
 import * as Sentry from '@sentry/vue';
 import { storeToRefs } from 'pinia';
 import { useToast } from 'primevue/usetoast';
@@ -398,14 +398,14 @@ const tableColumns = computed(() => {
       buttonIcon: 'pi pi-pencil',
       sort: false,
     },
-    {
-      header: 'Export Users',
-      buttonLabel: 'Export Users',
-      button: true,
-      eventName: 'export-org-users',
-      buttonIcon: 'pi pi-download mr-2',
-      sort: false,
-    },
+    // {
+    //   header: 'Export Users',
+    //   buttonLabel: 'Export Users',
+    //   button: true,
+    //   eventName: 'export-org-users',
+    //   buttonIcon: 'pi pi-download mr-2',
+    //   sort: false,
+    // },
   );
 
   return columns;
@@ -428,7 +428,7 @@ watchEffect(async () => {
         routeParams: {
           orgType: activeOrgType.value,
           orgId: org.id,
-          orgName: org?.name || '',
+          orgName: org?.name || '_',
           tooltip: 'View Users in ' + org?.name || '',
         },
       };
@@ -511,12 +511,12 @@ watchEffect(() => {
   selectedDistrict.value = _get(_head(allDistricts.value), 'id');
 });
 
-watchEffect(allSchools, (newValue) => {
+watch(allSchools, (newValue) => {
   selectedSchool.value = _get(_head(newValue), 'id');
 });
 
 const tableKey = ref(0);
-watchEffect([selectedDistrict, selectedSchool], () => {
+watch([selectedDistrict, selectedSchool], () => {
   tableKey.value += 1;
 });
 </script>

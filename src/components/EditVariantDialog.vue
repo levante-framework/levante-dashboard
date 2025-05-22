@@ -21,13 +21,13 @@
         <div>
           <div class="text-sm font-light uppercase text-gray-400">Task Name</div>
           <div class="text-3xl font-bold uppercase">
-            {{ assessment.task.id }}
+            {{ assessment.task.name }}
           </div>
         </div>
-        <div v-if="assessment.variant?.params?.taskName" class="gap-2">
+        <div v-if="assessment.variant?.name" class="gap-2">
           <div class="text-sm font-light uppercase text-gray-500">Variant Name</div>
-          <div class="text-xl uppercase">
-            {{ assessment.variant?.params?.taskName }}
+          <div class="text-xl">
+            {{ assessment.variant?.name }}
           </div>
         </div>
       </div>
@@ -49,15 +49,15 @@
         >
           <div class="text-xl uppercase font-bold">No Conditions Added</div>
           <div class="text-sm uppercase text-gray-700">
-            Assignment will be <PvTag severity="warning" class="mx-1">ASSIGNED</PvTag> to all {{ isLevante ? 'users' : 'students' }} in the
-            administration.
+            Assignment will be <PvTag severity="warning" class="mx-1">ASSIGNED</PvTag> to all {{ isLevante ? 'users' : 'participants' }} in the
+            {{ selectedGroup }}
           </div>
         </div>
         <!-- ASSIGNED CONDITIONS  -->
         <div v-for="(condtion, index) in assignedConditions" :key="index">
             <div class="flex gap-2 align-content-start flex-grow-0 params-container mb-2">
                <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
-                <PvSelect v-model="condtion.field" :options="computedFieldOptions" optionLabel="label" class="w-full" placeholder="Select a Field" inputId="Field"/>
+                <PvSelect v-model="condtion.field" :options="fieldOptions" optionLabel="label" class="w-full" placeholder="Select a Field" inputId="Field"/>
               </div>
 
               <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
@@ -105,19 +105,19 @@
           >
             <div class="text-xl uppercase font-bold">No Conditions Added</div>
             <div v-if="isOptionalForAll" class="text-sm uppercase text-gray-700">
-              Assignment will be <PvTag severity="success" class="mx-1">OPTIONAL</PvTag> for all {{ isLevante ? 'users' : 'students' }} in the
-              administration.
+              Assignment will be <PvTag severity="success" class="mx-1">OPTIONAL</PvTag> for all {{ isLevante ? 'users' : 'participants' }} in the
+              {{ selectedGroup }}
             </div>
             <div v-else class="text-sm uppercase text-gray-700">
-              Assignment will <PvTag severity="danger" class="mx-1">NOT BE OPTIONAL</PvTag> for any {{ isLevante ? 'users' : 'students' }} in the
-              administration.
+              Assignment will <PvTag severity="danger" class="mx-1">NOT BE OPTIONAL</PvTag> for any {{ isLevante ? 'users' : 'participants' }} in the
+              {{ selectedGroup }}
             </div>
           </div>
 
           <div v-for="(condtion, index) in optionalConditions" :key="index">
             <div class="flex gap-2 align-content-start flex-grow-0 params-container mb-2">
                <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
-                <PvSelect v-model="condtion.field" :options="computedFieldOptions" optionLabel="label" class="w-full" placeholder="Select a Field" inputId="Field"/>
+                <PvSelect v-model="condtion.field" :options="fieldOptions" optionLabel="label" class="w-full" placeholder="Select a Field" inputId="Field"/>
               </div>
 
               <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
@@ -139,8 +139,8 @@
 
           <div class="flex flex-row justify-content-between align-items-center">
             <div class="flex flex-row justify-content-end align-items-center gap-2 mr-2">
-              <div class="uppercase text-md font-bold text-gray-600">Make Assessment Optional For All {{ isLevante ? 'Users' : 'Students' }}</div>
-              <PvInputSwitch
+              <div class="uppercase text-md font-bold text-gray-600">Make Assessment Optional For All {{ isLevante ? 'Users' : 'Participants' }}</div>
+              <PvToggleSwitch
                 v-model="isOptionalForAll"
                 data-cy="switch-optional-for-everyone"
                 @update:model-value="handleOptionalForAllSwitch"
@@ -152,8 +152,8 @@
                 icon="pi pi-plus mr-2"
                 class="bg-primary text-white border-none border-round p-2 hover:bg-red-900"
                 :disabled="isOptionalForAll === true"
-                @click="addOptionalCondition"
                 data-cy="button-optional-condition"
+                @click="addOptionalCondition"
               />
             </div>
           </div>
@@ -201,8 +201,9 @@ import PvButton from 'primevue/button';
 import PvDialog from 'primevue/dialog';
 import PvDivider from 'primevue/divider';
 import PvSelect from 'primevue/select';
-import PvInputSwitch from 'primevue/inputswitch';
+import PvToggleSwitch from 'primevue/toggleswitch';
 import PvTag from 'primevue/tag';
+import PvColumn from 'primevue/column';
 
 const props = defineProps({
   assessment: {
@@ -244,13 +245,8 @@ const computedValueOptions = (field) => {
   if (!processedField) return 
   const selectedField = processedField.label;
 
-  if (selectedField === 'Grade') {
+  if (selectedField === 'Age') {
     return [
-      { label: 'PK', value: 'PK' },
-      { label: 'TK', value: 'TK' },
-      { label: 'K', value: 'K' },
-      { label: '1', value: '1' },
-      { label: '2', value: '2' },
       { label: '3', value: '3' },
       { label: '4', value: '4' },
       { label: '5', value: '5' },
@@ -261,12 +257,6 @@ const computedValueOptions = (field) => {
       { label: '10', value: '10' },
       { label: '11', value: '11' },
       { label: '12', value: '12' },
-    ];
-  } else if (selectedField === 'School Level') {
-    return [
-      { label: 'Elementary', value: 'Elementary' },
-      { label: 'Middle', value: 'Middle' },
-      { label: 'High', value: 'High' },
     ];
   } else if (selectedField === 'User Type') {
     return [
@@ -282,17 +272,12 @@ const computedConditionOptions = (field) => {
   if (!processedField) return 
   const selectedField = processedField.label;
   
-  if (selectedField === 'Grade') {
+  if (selectedField === 'Age') {
     return [
       { label: 'Less Than', value: 'LESS_THAN' },
       { label: 'Greater Than', value: 'GREATER_THAN' },
       { label: 'Less Than or Equal', value: 'LESS_THAN_OR_EQUAL' },
       { label: 'Greater Than or Equal', value: 'GREATER_THAN_OR_EQUAL' },
-      { label: 'Equal', value: 'EQUAL' },
-      { label: 'Not Equal', value: 'NOT_EQUAL' },
-    ];
-  } else if (selectedField === 'School Level') {
-    return [
       { label: 'Equal', value: 'EQUAL' },
       { label: 'Not Equal', value: 'NOT_EQUAL' },
     ];
@@ -463,16 +448,7 @@ const computedConditions = (assignedConditions, optionalConditions) => {
 
 
 const fieldOptions = [
-  { label: 'Grade', value: 'studentData.grade', project: 'ROAR' },
-  { label: 'School Level', value: 'studentData.schoolLevel', project: 'ROAR' },
   { label: 'User Type', value: 'userType', project: 'LEVANTE' },
+  { label: 'Age', value: 'age', project: 'LEVANTE' },
 ];
-
-const computedFieldOptions = computed(() => {
-  if (isLevante) {
-    return fieldOptions.filter((option) => option.project === 'LEVANTE' || option.project === 'ALL');
-  } else {
-    return fieldOptions.filter((option) => option.project === 'ROAR' || option.project === 'ALL');
-  }
-});
 </script>

@@ -31,6 +31,14 @@
             </template>
 
             <template #end>
+              <router-link :to="{ name: 'Debug' }" class="mr-3">
+                <PvButton
+                  icon="pi pi-bug"
+                  class="p-button-text p-button-rounded"
+                  aria-label="Debug"
+                  label="Debug"
+                />
+              </router-link>
               <UserActions :isBasicView="computedIsBasicView" />
             </template>
           </PvMenubar>
@@ -94,22 +102,25 @@ const { data: userClaims } = useUserClaimsQuery({
 const computedItems = computed(() => {
   const items = [];
   // TO DO: REMOVE USERS AFTER NAMING 3 TICKET IS COMPLETED
-  const headers = ['Assignments', 'Users'];
+
+  // Groups only has one associated page and therefore is not nested within items
+  const groupsAction = rawActions.value.find((action) => action.category === 'Groups');
+  if (groupsAction) {
+    items.push({
+      label: groupsAction.title,
+      icon: groupsAction.icon,
+      command: () => {
+        router.push(groupsAction.buttonLink);
+      },
+    });
+  }
+
+  const headers = ['Users', 'Assignments'];
   for (const header of headers) {
     const headerItems = rawActions.value
       .filter((action) => action.category === header)
       .map((action) => {
-        if (action.title === 'Sync Passwords') {
-          return {
-          label: action.title,
-          icon: action.icon,
-          badge: 'Temporary',
-          badgeClass: 'bg-yellow-300',
-          command: () => {
-            router.push(action.buttonLink);
-          },
-        };
-        }
+
 
         return {
           label: action.title,
@@ -127,18 +138,6 @@ const computedItems = computed(() => {
       });
     }
   }
-  // Groups only has one associated page and therefore is not nested within items
-  const groupsAction = rawActions.value.find((action) => action.category === 'Groups');
-  if (groupsAction) {
-    items.push({
-      label: groupsAction.title,
-      icon: groupsAction.icon,
-      command: () => {
-        router.push(groupsAction.buttonLink);
-      },
-    });
-  }
-
   return items;
 });
 

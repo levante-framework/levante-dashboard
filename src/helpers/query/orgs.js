@@ -27,7 +27,6 @@ export const getOrgsRequestBody = ({
   page,
   paginate = true,
   select = [
-    'abbreviation',
     'id',
     'name',
     'tags',
@@ -57,32 +56,19 @@ export const getOrgsRequestBody = ({
     },
   ];
 
-  requestBody.structuredQuery.where = {
-    compositeFilter: {
-      op: 'AND',
-      filters: [
-        {
-          fieldFilter: {
-            field: { fieldPath: 'archived' },
-            op: 'EQUAL',
-            value: { booleanValue: false },
-          },
-        },
-      ],
-    },
-  };
+  const filters = [];
 
   if (orgName && !(parentDistrict || parentSchool)) {
-    requestBody.structuredQuery.where.compositeFilter.filters.push({
+    filters.push({
       fieldFilter: {
         field: { fieldPath: 'name' },
         op: 'EQUAL',
         value: { stringValue: orgName },
       },
     });
-  } else if (orgType === 'schools' && parentDistrict) {
+  } else if ( (orgType === 'schools' && parentDistrict) || (orgType === 'classes' && parentDistrict && !parentSchool)) {
     if (orgName) {
-      requestBody.structuredQuery.where.compositeFilter.filters.push(
+      filters.push(
         {
           fieldFilter: {
             field: { fieldPath: 'name' },
@@ -99,7 +85,7 @@ export const getOrgsRequestBody = ({
         },
       );
     } else {
-      requestBody.structuredQuery.where.compositeFilter.filters.push({
+      filters.push({
         fieldFilter: {
           field: { fieldPath: 'districtId' },
           op: 'EQUAL',
@@ -109,7 +95,7 @@ export const getOrgsRequestBody = ({
     }
   } else if (orgType === 'classes' && parentSchool) {
     if (orgName) {
-      requestBody.structuredQuery.where.compositeFilter.filters.push(
+      filters.push(
         {
           fieldFilter: {
             field: { fieldPath: 'name' },
@@ -126,7 +112,7 @@ export const getOrgsRequestBody = ({
         },
       );
     } else {
-      requestBody.structuredQuery.where.compositeFilter.filters.push({
+      filters.push({
         fieldFilter: {
           field: { fieldPath: 'schoolId' },
           op: 'EQUAL',
@@ -134,6 +120,15 @@ export const getOrgsRequestBody = ({
         },
       });
     }
+  }
+
+  if (filters.length > 0) {
+    requestBody.structuredQuery.where = {
+      compositeFilter: {
+        op: 'AND',
+        filters,
+      },
+    };
   }
 
   if (aggregationQuery) {
@@ -238,7 +233,7 @@ export const fetchOrgByName = async (orgType, orgName, selectedDistrict, selecte
     aggregationQuery: false,
     orgName,
     paginate: false,
-    select: ['id', 'abbreviation'],
+    select: ['id'],
   });
 
   return axiosInstance.post(':runQuery', requestBody).then(({ data }) => mapFields(data));

@@ -39,7 +39,7 @@
           />
           <label for="ms-columns" class="view-label2">Freeze Columns</label>
         </PvFloatLabel>
-        <span v-if="props.allowExport" class="flex flex-row flex-wrap justify-content-end gap-2 max-h-3 export-wrapper">
+        <!-- <span v-if="props.allowExport" class="flex flex-row flex-wrap justify-content-end gap-2 max-h-3 export-wrapper">
           <PvButton
             v-if="allowExport"
             v-tooltip.bottom="
@@ -60,7 +60,7 @@
             class="m-1 h-3rem bg-primary text-white border-none border-round h-2rem text-sm hover:bg-red-900"
             @click="exportCSV(false, $event)"
           />
-        </span>
+        </span> -->
       </div>
     </div>
     <div class="flex flex-column">
@@ -181,11 +181,10 @@
                 <PvButton
                   severity="secondary"
                   text
-                  class="border border-round surface-200 text-primary p-2 hover:surface-500 hover:text-white"
+                  class="column-button border border-round surface-200 text-primary p-2 hover:surface-500 hover:text-white"
                   :label="col.buttonLabel"
                   :aria-label="col.buttonTooltip"
                   :icon="col.buttonIcon"
-                  style="color: black !important"
                   data-cy="event-button"
                   size="small"
                   @click="$emit(col.eventName, colData)"
@@ -614,6 +613,14 @@ const onFreezeToggle = (selected) => {
 const emit = defineEmits(['export-all', 'selection', 'reset-filters', 'export-selected', 'export-org-users']);
 </script>
 <style>
+
+.column-button {
+  color: black !important;
+}
+
+.column-button > .p-button-label {
+  font-weight: normal !important;
+}
 
 .options-container {
   .button-container {

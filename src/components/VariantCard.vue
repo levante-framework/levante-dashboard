@@ -117,14 +117,10 @@
         <div class="flex align-items-center gap-2">
           <p class="m-0 mt-1 ml-2">
             <span class="font-bold">Variant name:</span> {{ variant.variant.name }} <br />
-            <div
-              v-if="variant.variant?.conditions?.assigned?.conditions?.length > 0"
-            >
-              <span class="font-bold">Assigned to:</span> {{parseConditions(variant.variant?.conditions?.assigned).map((entry) => {
-                  const capitalizedValue = entry.value.charAt(0).toUpperCase() + entry.value.slice(1);
-                  return entry.op === "EQUAL" ? `${capitalizedValue}s` : `Not ${capitalizedValue}s`
-                }).join(", ")}}<br/>
-            </div>
+            <span v-if="formattedAssignedConditions">
+              <span class="font-bold">Assigned to:</span>
+              {{ formattedAssignedConditions }}<br/>
+            </span>
           </p>
         </div>
       </div>
@@ -206,7 +202,7 @@
       </PvDataTable>
     </div>
     <div v-if="variant.variant?.conditions?.optional === true" class="flex mt-3 flex-column w-full ml-3 pr-5">
-      <PvTag severity="success"> Assignment optional for all students </PvTag>
+      <PvTag severity="success"> Assignment optional for all participants </PvTag>
     </div>
     <div
       v-else-if="variant.variant?.conditions?.optional?.conditions?.length > 0"
@@ -235,7 +231,7 @@
       v-if="!variant.variant?.conditions?.assigned && !variant.variant?.conditions?.optional"
       class="flex mt-2 flex-column w-full px-3 ml-3"
     >
-      <PvTag severity="danger"> Assignment required for all students </PvTag>
+      <PvTag severity="danger"> Assignment required for all participants </PvTag>
     </div>
   </div>
   <PvDialog v-model:visible="visible" modal header="Parameters" :style="{ width: '50rem' }">
@@ -265,7 +261,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import _toPairs from 'lodash/toPairs';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
@@ -296,12 +292,44 @@ const props = defineProps({
   },
 });
 
-const isDev = import.meta.env.MODE === 'development';
 const backupImage = '/src/assets/roar-logo.png';
 const showContent = ref(false);
 const op = ref(null);
 const visible = ref(false);
 const emit = defineEmits(['remove', 'select', 'moveUp', 'moveDown']);
+
+const formattedAssignedConditions = computed(() => {
+  const conditions = props.variant.variant?.conditions?.assigned?.conditions;
+  if (!conditions || !Array.isArray(conditions) || conditions.length === 0) {
+    return "";
+  }
+
+  const processedStrings = conditions
+    .filter(entry => entry.field !== 'age')
+    .map(entry => {
+      const valueStr = String(entry.value ?? '');
+      if (!valueStr) return ''; // Handle cases where value might be null, undefined, or already an empty string
+      
+      // Replace "student" with "child" for display purposes
+      let displayValue = valueStr;
+      if (entry.field === 'userType' && valueStr.toLowerCase() === 'student') {
+        displayValue = 'child';
+      }
+      
+      const capitalizedValue = displayValue.charAt(0).toUpperCase() + displayValue.slice(1);
+      // Special case for 'child' to pluralize correctly as 'Children' instead of 'Childs'
+      if (entry.field === 'userType' && displayValue.toLowerCase() === 'child') {
+        return entry.op === "EQUAL" ? "Children" : "Not Children";
+      }
+      return entry.op === "EQUAL" ? `${capitalizedValue}s` : `Not ${capitalizedValue}s`;
+    })
+    .filter(str => str !== ''); // Remove empty strings that might result from 'age' filter or empty values
+
+  if (processedStrings.length === 0) {
+    return "";
+  }
+  return processedStrings.join(", ");
+});
 
 const handleRemove = () => {
   emit('remove', props.variant);
