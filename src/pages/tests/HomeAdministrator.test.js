@@ -6,7 +6,7 @@ import HomeAdministrator from '@/pages/HomeAdministrator.vue';
 import PrimeVue from 'primevue/config';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
 
-// Mock administration data
+// Mock administration data for testing HomeAdministrator component
 const mockAdministrations = [
   {
     id: 'admin-1',
@@ -36,6 +36,7 @@ const mockAdministrations = [
   }
 ];
 
+// Test suite for the HomeAdministrator component
 describe('HomeAdministrator', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
