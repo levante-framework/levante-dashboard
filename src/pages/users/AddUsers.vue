@@ -6,9 +6,8 @@
 
       <PvDivider />
 
-      <div v-if="!isFileUploaded || errorUsers.length" class="text-gray-500 mb-2 surface-100 border-round p-2">
+      <div class="text-gray-500 mb-2 surface-100 border-round p-2">
         <PvFileUpload
-          v-if="!isFileUploaded || errorUsers.length"
           name="massUploader[]"
           custom-upload
           accept=".csv"
@@ -440,9 +439,21 @@ async function submitUsers() {
   showErrorTable.value = false;
   errorMessage.value = '';
 
-  // Group needs to be an array of strings
-  const usersToBeRegistered = _cloneDeep(toRaw(rawUserFile.value));
+  // Get users to be registered (those with empty uid)
+  const usersToBeRegistered = _cloneDeep(toRaw(rawUserFile.value)).filter(user => !user.uid || user.uid === '');
   const usersWithErrors = [];
+
+  // If no users to register, show message and return
+  if (usersToBeRegistered.length === 0) {
+    toast.add({
+      severity: 'info',
+      summary: 'No New Users to Register',
+      detail: 'All users in the file have already been registered',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    activeSubmit.value = false;
+    return;
+  }
 
   // Check orgs exist
   for (const user of usersToBeRegistered) {
@@ -602,9 +613,13 @@ async function submitUsers() {
       currentRegisteredUsers.forEach((registeredUser, index) => {
         const rawUserIndex = processedUserCount + index;
         if (rawUserIndex < rawUserFile.value.length) {
-          rawUserFile.value[rawUserIndex].email = registeredUser.email;
-          rawUserFile.value[rawUserIndex].password = registeredUser.password;
-          rawUserFile.value[rawUserIndex].uid = registeredUser.uid;
+          // Preserve all existing user data and update with new registration data
+          rawUserFile.value[rawUserIndex] = {
+            ...rawUserFile.value[rawUserIndex],
+            email: registeredUser.email,
+            password: registeredUser.password,
+            uid: registeredUser.uid
+          };
         }
       });
 
@@ -616,7 +631,7 @@ async function submitUsers() {
         severity: 'success',
         summary: 'User Creation Successful',
         life: TOAST_DEFAULT_LIFE_DURATION
-      })
+      });
       convertUsersToCSV();
     } catch (error) {
       // TODO: Show users that failed to register
@@ -639,11 +654,16 @@ const csvBlob = ref(null);
 const csvURL = ref(null);
 
 function convertUsersToCSV() {
+  // Get the first user to determine headers
   const headerObj = toRaw(rawUserFile.value[0]);
 
   // Convert Objects to CSV String
   const csvHeader = Object.keys(headerObj).join(',') + '\n';
-  const csvRows = rawUserFile.value
+  
+  // Get all users from rawUserFile (which now contains updated data for newly registered users)
+  const allUsers = toRaw(rawUserFile.value);
+
+  const csvRows = allUsers
     .map((obj) =>
       Object.values(obj)
         .map((value) => {
