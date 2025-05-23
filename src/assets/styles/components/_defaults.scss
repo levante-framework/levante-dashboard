@@ -11,6 +11,8 @@ $xl: 1920px;
 .p-component-overlay {
   background-color: var(--maskbg);
   transition-duration: 0.2s;
+  /* If you want to disable the grayed-out effect globally, uncomment the line below */
+  /* background-color: transparent !important; */
 }
 
 .p-disabled,

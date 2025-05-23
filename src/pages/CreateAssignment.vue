@@ -611,10 +611,23 @@ const submit = async () => {
 // +------------------------------------------------------------------------------------------------------------------+
 // | Lifecycle hooks and subscriptions
 // +------------------------------------------------------------------------------------------------------------------+
+
+// Function to remove any stuck overlays
+const removeStuckOverlays = () => {
+  const overlays = document.querySelectorAll('.p-component-overlay');
+  overlays.forEach(overlay => {
+    if (overlay && overlay.parentNode) {
+      overlay.parentNode.removeChild(overlay);
+    }
+  });
+};
+
 let unsubscribe;
 const init = () => {
   if (unsubscribe) unsubscribe();
   initialized.value = true;
+  // Remove any stuck overlays when initializing
+  removeStuckOverlays();
 };
 
 unsubscribe = authStore.$subscribe(async (mutation, state) => {
@@ -623,6 +636,9 @@ unsubscribe = authStore.$subscribe(async (mutation, state) => {
 
 onMounted(async () => {
   if (roarfirekit.value.restConfig) init();
+  
+  // Also remove overlays when component mounts
+  setTimeout(removeStuckOverlays, 100);
 });
 
 watch([existingAdministrationData, allVariants], ([adminInfo, allVariantInfo]) => {
@@ -654,6 +670,11 @@ watch([existingAdministrationData, allVariants], ([adminInfo, allVariantInfo]) =
 </script>
 
 <style lang="scss">
+/* Prevent grayed out overlay on CreateAssignment page */
+.p-component-overlay {
+  background-color: transparent !important;
+}
+
 .required {
     float: right;
 }
