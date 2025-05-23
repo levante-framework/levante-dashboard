@@ -1,11 +1,11 @@
-import { useMutation, useQueryClient } from "@tanstack/vue-query";
-import { useAuthStore } from "@/store/auth";
-import { ADMINISTRATION_UPSERT_MUTATION_KEY } from "@/constants/mutationKeys";
+import { useMutation, useQueryClient } from '@tanstack/vue-query';
+import { useAuthStore } from '@/store/auth';
+import { ADMINISTRATION_UPSERT_MUTATION_KEY } from '@/constants/mutationKeys';
 import {
   ADMINISTRATIONS_QUERY_KEY,
   ADMINISTRATIONS_LIST_QUERY_KEY,
   ADMINISTRATION_ASSIGNMENTS_QUERY_KEY,
-} from "@/constants/queryKeys";
+} from '@/constants/queryKeys';
 
 /**
  * Upsert Administration mutation.

@@ -3,23 +3,11 @@
     <div class="card flex justify-content-center">
       <div v-if="!noConsent" class="flex flex-wrap gap-3">
         <div class="flex align-items-center">
-          <PvRadioButton
-            v-model="decision"
-            input-id="helpChoose"
-            name="help"
-            value="help"
-            @change="whatDecision"
-          />
+          <PvRadioButton v-model="decision" input-id="helpChoose" name="help" value="help" @change="whatDecision" />
           <label for="helpChoose" class="ml-2">Help me choose</label>
         </div>
         <div class="flex align-items-center">
-          <PvRadioButton
-            v-model="decision"
-            input-id="iKnow"
-            name="know"
-            value="know"
-            @change="whatDecision"
-          />
+          <PvRadioButton v-model="decision" input-id="iKnow" name="know" value="know" @change="whatDecision" />
           <label for="iKnow" class="ml-2">I know what to select</label>
         </div>
       </div>
@@ -54,7 +42,9 @@
           <div class="ml-5" style="width: 70%">
             <div v-for="param in defaultParams" :key="param" class="mt-1 mb-1 ml-3 mr-0 p-0 text-center flex">
               <i :class="param.icon" style="font-size: 1rem; width: 10%"></i>
-              <div class="mr-3 ml-0 p-0 flex" style="width: 80%">{{ param.name }}</div>
+              <div class="mr-3 ml-0 p-0 flex" style="width: 80%">
+                {{ param.name }}
+              </div>
             </div>
           </div>
         </div>
@@ -177,7 +167,7 @@
             style="width: 70%"
             :placeholder="props.legal?.assent[0]?.fileName || 'Select an Assent Form'"
             @change="updateAssent"
-            />
+          />
         </div>
         <div class="hidden">
           <h3 class="mb-4 mt-5">Consent Amount and Expected Time</h3>
@@ -390,7 +380,6 @@ onMounted(() => {
     selectedAssent.value = props.legal.assent[0];
   }
 });
-
 
 watch(
   () => props.legal,

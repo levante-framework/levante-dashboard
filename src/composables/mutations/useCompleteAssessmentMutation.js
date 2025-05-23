@@ -1,7 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/vue-query";
-import { useAuthStore } from "@/store/auth";
-import { COMPLETE_ASSESSMENT_MUTATION_KEY } from "@/constants/mutationKeys";
-import { USER_ASSIGNMENTS_QUERY_KEY } from "@/constants/queryKeys";
+import { useMutation, useQueryClient } from '@tanstack/vue-query';
+import { useAuthStore } from '@/store/auth';
+import { COMPLETE_ASSESSMENT_MUTATION_KEY } from '@/constants/mutationKeys';
+import { USER_ASSIGNMENTS_QUERY_KEY } from '@/constants/queryKeys';
 
 /**
  * Complete Assessment mutation.
@@ -19,9 +19,7 @@ const useCompleteAssessmentMutation = () => {
     mutationFn: async ({ adminId, taskId }) => {
       // Check if roarfirekit is initialized before attempting to use it.
       if (!authStore.isFirekitInit || !authStore.roarfirekit) {
-        throw new Error(
-          "Roarfirekit is not initialized. Cannot complete assessment.",
-        );
+        throw new Error('Roarfirekit is not initialized. Cannot complete assessment.');
       }
       await authStore.roarfirekit.completeAssessment(adminId, taskId);
     },
