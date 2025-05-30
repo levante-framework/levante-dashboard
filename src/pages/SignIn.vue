@@ -236,6 +236,7 @@ const modalPassword = ref("");
 const authWithEmail = async (state) => {
   // If username is supplied instead of email
   // turn it into our internal auth email
+
   incorrect.value = false;
   let creds = toRaw(state);
   if (creds.useLink && !creds.usePassword) {
