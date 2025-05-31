@@ -6,7 +6,7 @@
   "scripts": {
     "build:dev": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=DEV && vite build",
     "build:prod": "export VITE_LEVANTE=TRUE && vite build",
-    "dev": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=DEV && vite --force --host",
+    "dev": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=DEV && export USE_FIREBASE_EMULATORS=true && vite --force --host",
     "local:prod": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=PROD && vite --force --host",
     "dev:pc": "powershell -Command \"$env:VITE_LEVANTE='TRUE'; $env:VITE_FIREBASE_PROJECT='DEV'; vite --force --host\"",
     "deploy:dev": "npm run build:dev && npx firebase use levante-admin-dev && npx firebase deploy --only hosting --config levante-firebase.json",
@@ -20,7 +20,10 @@
     "preview": "vite preview",
     "test": "vitest --config vitest.config.js",
     "test:watch": "vitest --watch",
-    "version": "npm run format && git add -A"
+    "version": "npm run format && git add -A",
+    "emulators:start": "firebase emulators:start --config levante-firebase.json",
+    "emulators:stop": "firebase emulators:stop",
+    "dev:emulators": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=DEV && export USE_FIREBASE_EMULATORS=true && vite --force --host"
   },
   "dependencies": {
     "@bdelab/roar-pa": "2.2.4",

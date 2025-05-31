@@ -14,6 +14,7 @@ export default defineConfig({
   define: {
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(commitHash),
     "import.meta.env.VITE_LEVANTE": JSON.stringify("TRUE"),
+    "process.env.USE_FIREBASE_EMULATORS": JSON.stringify(process.env.USE_FIREBASE_EMULATORS || "false"),
   },
   plugins: [
     Vue({
