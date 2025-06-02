@@ -26,6 +26,7 @@ export const useAuthStore = () => {
         ssoProvider: null,
         showOptionalAssessments: false,
         authStateListener: null,
+        authStateTimeout: null,
       };
     },
     getters: {
@@ -45,15 +46,35 @@ export const useAuthStore = () => {
         return Boolean(state.firebaseUser.appFirebaseUser);
       },
       isAuthenticated: (state) => {
-        return (
-          Boolean(state.firebaseUser.adminFirebaseUser) &&
-          Boolean(state.firebaseUser.appFirebaseUser)
-        );
+        // For merged firekit architecture, we only need one user to be authenticated
+        // since admin and app users are the same
+        return Boolean(state.firebaseUser.adminFirebaseUser || state.firebaseUser.appFirebaseUser);
       },
       isFirekitInit: (state) => {
-        return Boolean(state.roarfirekit?.initialized && state.roarfirekit?.project?.auth);
+        // For merged firekit, we need to check if firekit exists and is initialized
+        // The project.auth might be structured differently in merged architecture
+        const hasFirekit = Boolean(state.roarfirekit);
+        const isInitialized = Boolean(state.roarfirekit?.initialized);
+        const hasAuth = Boolean(state.roarfirekit?.project?.auth || state.roarfirekit?.auth);
+        
+        console.log('Auth store: isFirekitInit check:', {
+          hasFirekit,
+          isInitialized,
+          hasAuth,
+          result: hasFirekit && isInitialized && hasAuth
+        });
+        
+        return hasFirekit && isInitialized && hasAuth;
       },
       isUserAdmin: (state) => {
+        console.log('Auth store: isUserAdmin check:', {
+          userClaims: state.userClaims,
+          claims: state.userClaims?.claims,
+          superAdmin: state.userClaims?.claims?.super_admin,
+          admin: state.userClaims?.claims?.admin,
+          minimalAdminOrgs: state.userClaims?.claims?.minimalAdminOrgs
+        });
+        
         if (
           state.userClaims?.claims?.super_admin ||
           state.userClaims?.claims?.admin
@@ -111,6 +132,19 @@ export const useAuthStore = () => {
       setAuthStateListeners() {
         console.log('Auth store: Setting up auth state listeners...');
         
+        // Clean up existing listener to prevent duplicates
+        if (this.authStateListener) {
+          console.log('Auth store: Cleaning up existing auth state listener');
+          this.authStateListener();
+          this.authStateListener = null;
+        }
+        
+        // Clean up existing timeout
+        if (this.authStateTimeout) {
+          clearTimeout(this.authStateTimeout);
+          this.authStateTimeout = null;
+        }
+        
         if (!this.roarfirekit?.project?.auth) {
           console.error('Auth store: Cannot set up auth listeners - no auth instance found');
           return;
@@ -120,17 +154,30 @@ export const useAuthStore = () => {
           this.authStateListener = onAuthStateChanged(
             this.roarfirekit.project.auth,
             async (user) => {
+              console.log('Auth store: Auth state changed:', {
+                hasUser: !!user,
+                uid: user?.uid,
+                email: user?.email,
+                previousAdminUser: !!this.firebaseUser.adminFirebaseUser,
+                previousUid: this.firebaseUser.adminFirebaseUser?.uid,
+                timestamp: new Date().toISOString()
+              });
+              
+              // Update state immediately without debounce to prevent race conditions
               if (user) {
-                this.localFirekitInit = true;
+                console.log('Auth store: Setting user in auth state immediately');
                 // For merged architecture, both admin and app users are the same
                 this.firebaseUser.adminFirebaseUser = user;
                 this.firebaseUser.appFirebaseUser = user;
                 logger.setUser(user);
               } else {
+                console.log('Auth store: Clearing user from auth state immediately');
                 this.firebaseUser.adminFirebaseUser = null;
                 this.firebaseUser.appFirebaseUser = null;
                 logger.setUser(null);
               }
+              
+              console.log('Auth store: Auth state update complete, current uid:', this.uid);
             },
           );
           
@@ -212,34 +259,69 @@ export const useAuthStore = () => {
           router.replace({ name: "EnableCookies" });
         };
         
-        if (this.isFirekitInit) {
-          console.log('Auth store: Checking for redirect result...');
-          
-          // For merged architecture, redirect handling is simpler
-          if (typeof this.roarfirekit.signInFromRedirectResult === 'function') {
-            console.log('Auth store: Using signInFromRedirectResult method');
-            try {
-              return await this.roarfirekit
-                .signInFromRedirectResult(enableCookiesCallback)
-                .then((result) => {
-                  if (result !== null) {
-                    this.spinner = true;
-                  } else {
-                    this.spinner = false;
-                  }
+        console.log('Auth store: Checking for redirect result...', {
+          hasFirekit: !!this.roarfirekit,
+          initialized: this.roarfirekit?.initialized,
+          hasProject: !!this.roarfirekit?.project,
+          hasAuth: !!this.roarfirekit?.project?.auth,
+          isFirekitInit: this.isFirekitInit
+        });
+        
+        try {
+          if (this.isFirekitInit) {
+            console.log('Auth store: Firekit is initialized, checking for redirect result...');
+            
+            // For merged architecture, redirect handling is simpler
+            if (typeof this.roarfirekit.signInFromRedirectResult === 'function') {
+              console.log('Auth store: Using signInFromRedirectResult method');
+              
+              try {
+                // Add timeout protection
+                const redirectPromise = this.roarfirekit.signInFromRedirectResult(enableCookiesCallback);
+                const timeoutPromise = new Promise((resolve) => {
+                  setTimeout(() => {
+                    console.log('Auth store: Redirect check timed out, continuing...');
+                    resolve(null);
+                  }, 5000); // 5 second timeout
                 });
-            } catch (error) {
-              console.error('Auth store: Error in signInFromRedirectResult:', error);
+                
+                const result = await Promise.race([redirectPromise, timeoutPromise]);
+                
+                if (result !== null) {
+                  console.log('Auth store: Redirect result found:', result);
+                  this.spinner = true; // Keep spinner if we have a redirect result
+                  return result;
+                } else {
+                  console.log('Auth store: No redirect result found');
+                  this.spinner = false;
+                  return null;
+                }
+              } catch (redirectError) {
+                console.warn('Auth store: Error checking redirect result:', redirectError);
+                this.spinner = false;
+                return null;
+              }
+            } else {
+              console.log('Auth store: No redirect result method found - this is normal for merged architecture');
               this.spinner = false;
+              return null;
             }
           } else {
-            console.log('Auth store: No redirect result method found - this is normal for merged architecture');
+            console.warn('Auth store: Firekit not initialized, cannot check redirect result');
             this.spinner = false;
-            return Promise.resolve(null);
+            return null;
           }
-        } else {
-          console.warn('Firekit not initialized, cannot check redirect result');
+        } catch (error) {
+          console.error('Auth store: Error in initStateFromRedirect:', error);
           this.spinner = false;
+          return null;
+        } finally {
+          // Ensure spinner is turned off if we're not handling a redirect
+          if (this.spinner) {
+            console.log('Auth store: initStateFromRedirect complete, spinner still active (redirect in progress)');
+          } else {
+            console.log('Auth store: initStateFromRedirect complete, no redirect found');
+          }
         }
       },
       async forceIdTokenRefresh() {
@@ -269,11 +351,45 @@ export const useAuthStore = () => {
           return this.roarfirekit.signOut();
         }
       },
+      async clearSession() {
+        console.log("Auth store: Clearing session and signing out...");
+        
+        // Clear all local storage
+        localStorage.clear();
+        
+        // Clear session storage
+        sessionStorage.clear();
+        
+        // Clear user data
+        this.userData = null;
+        this.userClaims = null;
+        this.firebaseUser.adminFirebaseUser = null;
+        this.firebaseUser.appFirebaseUser = null;
+        
+        // Sign out from Firebase
+        if (this.isFirekitInit) {
+          await this.roarfirekit.signOut();
+        }
+        
+        // Reset PostHog
+        posthogInstance.reset();
+        
+        console.log("Auth store: Session cleared successfully");
+        
+        // Reload the page to ensure clean state
+        window.location.reload();
+      },
       setUserData(userData) {
         this.userData = userData;
       },
       setUserClaims(userClaims) {
+        console.log('Auth store: Setting userClaims:', userClaims);
         this.userClaims = userClaims;
+        console.log('Auth store: UserClaims set, checking admin status:', {
+          isUserAdmin: this.isUserAdmin,
+          isUserSuperAdmin: this.isUserSuperAdmin,
+          claims: this.userClaims?.claims
+        });
       },
     },
     persist: {

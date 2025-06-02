@@ -68,7 +68,11 @@ const init = () => {
 };
 
 unsubscribe = authStore.$subscribe(async (mutation, state) => {
-  if (state.roarfirekit?.restConfig) init();
+  // Check if firekit is initialized and has a project (works for both merged and dual architecture)
+  if (state.roarfirekit?.initialized && state.roarfirekit?.project) {
+    console.log('HomeSelector: Firekit ready, initializing...');
+    init();
+  }
 });
 
 const { isLoading: isLoadingUserData, data: userData } = useUserDataQuery(
@@ -159,10 +163,18 @@ watch(
 );
 
 onMounted(async () => {
+  console.log('HomeSelector: Component mounted');
   if (requireRefresh.value) {
     requireRefresh.value = false;
     router.go(0);
   }
-  if (roarfirekit.value?.restConfig) init();
+  
+  // Check if firekit is already ready
+  if (roarfirekit.value?.initialized && roarfirekit.value?.project) {
+    console.log('HomeSelector: Firekit already ready on mount, initializing...');
+    init();
+  } else {
+    console.log('HomeSelector: Waiting for firekit to be ready...');
+  }
 });
 </script>

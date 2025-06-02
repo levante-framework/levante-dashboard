@@ -104,13 +104,40 @@ export const administrationPageFetcher = async (
   fetchTestData = false,
   orderBy,
 ) => {
-  const authStore = useAuthStore();
-  const { roarfirekit } = storeToRefs(authStore);
-  const administrationIds = await roarfirekit.value.getAdministrations({
-    testData: toValue(fetchTestData),
+  console.log('administrationPageFetcher: Starting fetch', {
+    isSuperAdmin: isSuperAdmin?.value,
+    exhaustiveAdminOrgs: exhaustiveAdminOrgs?.value,
+    fetchTestData: toValue(fetchTestData),
+    orderBy: orderBy?.value
   });
 
+  const authStore = useAuthStore();
+  const { roarfirekit } = storeToRefs(authStore);
+  
+  console.log('administrationPageFetcher: Firekit state', {
+    hasFirekit: !!roarfirekit.value,
+    initialized: roarfirekit.value?.initialized,
+    hasGetAdministrations: typeof roarfirekit.value?.getAdministrations === 'function'
+  });
+
+  console.log('administrationPageFetcher: About to call getAdministrations...');
+  
+  let administrationIds;
+  try {
+    administrationIds = await roarfirekit.value.getAdministrations({
+      testData: toValue(fetchTestData),
+    });
+    
+    console.log('administrationPageFetcher: getAdministrations returned:', administrationIds);
+  } catch (error) {
+    console.error('administrationPageFetcher: Error calling getAdministrations:', error);
+    throw error;
+  }
+
+  console.log('administrationPageFetcher: Getting axios instance...');
   const axiosInstance = getAxiosInstance();
+  console.log('administrationPageFetcher: Axios instance created');
+
   const documentPrefix = axiosInstance.defaults.baseURL.replace(
     "https://firestore.googleapis.com/v1/",
     "",
@@ -119,7 +146,11 @@ export const administrationPageFetcher = async (
     (id) => `${documentPrefix}/administrations/${id}`,
   );
 
+  console.log('administrationPageFetcher: About to fetch documents:', documents);
+
   const { data } = await axiosInstance.post(":batchGet", { documents });
+
+  console.log('administrationPageFetcher: Documents fetched, processing...');
 
   const administrationData = _without(
     data.map(({ found }) => {
@@ -137,11 +168,15 @@ export const administrationPageFetcher = async (
     undefined,
   );
 
+  console.log('administrationPageFetcher: About to map administrations...');
+
   const administrations = await mapAdministrations({
     isSuperAdmin,
     data: administrationData,
     adminOrgs: exhaustiveAdminOrgs,
   });
+
+  console.log('administrationPageFetcher: Administrations mapped, sorting...');
 
   const orderField = (orderBy?.value ?? orderByDefault)[0].field.fieldPath;
   const orderDirection = (orderBy?.value ?? orderByDefault)[0].direction;
@@ -154,6 +189,8 @@ export const administrationPageFetcher = async (
         return 2 * +(b[orderField] > a[orderField]) - 1;
       return 0;
     });
+
+  console.log('administrationPageFetcher: Completed successfully, returning:', sortedAdministrations);
 
   return sortedAdministrations;
 };

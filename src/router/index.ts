@@ -104,7 +104,6 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: "/auth-email-link",
     name: "AuthEmailLink",
-    beforeRouteLeave: [removeQueryParams, removeHash],
     component: () => import("../components/auth/AuthEmailLink.vue"),
     meta: { pageTitle: "Email Link Authentication" },
   },
@@ -278,14 +277,23 @@ router.beforeEach(
     from: RouteLocationNormalized,
     next: NavigationGuardNext,
   ) => {
+    console.log('Router guard: Navigation from', from.name, 'to', to.name);
+    
     // Don't allow routing to LEVANTE pages if not in LEVANTE instance
     if (!isLevante && to.meta?.project === "LEVANTE") {
+      console.log('Router guard: Blocking navigation to LEVANTE page in non-LEVANTE instance');
       next({ name: "Home" });
       // next function can only be called once per route
       return;
     }
 
     const store = useAuthStore();
+    console.log('Router guard: Auth store state:', {
+      isAuthenticated: (store as any).isAuthenticated,
+      isFirekitInit: (store as any).isFirekitInit,
+      uid: (store as any).uid,
+      hasFirekit: !!store.roarfirekit
+    });
 
     const allowedUnauthenticatedRoutes = [
       "SignIn",
@@ -298,18 +306,40 @@ router.beforeEach(
     const inMaintenanceMode = false;
 
     if (inMaintenanceMode && to.name !== "Maintenance") {
+      console.log('Router guard: Redirecting to maintenance');
       next({ name: "Maintenance" });
       return;
     } else if (!inMaintenanceMode && to.name === "Maintenance") {
+      console.log('Router guard: Redirecting away from maintenance');
       next({ name: "Home" });
       return false;
     }
+    
+    // Wait for firekit to be initialized before making authentication decisions
+    if (!(store as any).isFirekitInit) {
+      console.log('Router guard: Firekit not initialized, waiting...');
+      
+      // Wait for firekit initialization with timeout
+      let attempts = 0;
+      while (!(store as any).isFirekitInit && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+      
+      if (!(store as any).isFirekitInit) {
+        console.warn('Router guard: Firekit initialization timeout, proceeding with current state');
+      } else {
+        console.log('Router guard: Firekit initialized after waiting');
+      }
+    }
+    
     // Check if user is signed in. If not, go to signin
     if (
       !to.path.includes("__/auth/handler") &&
-      !store.isAuthenticated &&
-      !allowedUnauthenticatedRoutes.includes(to.name)
+      !(store as any).isAuthenticated &&
+      !allowedUnauthenticatedRoutes.includes(to.name as string)
     ) {
+      console.log('Router guard: User not authenticated, redirecting to SignIn');
       next({ name: "SignIn" });
       return;
     }
@@ -319,8 +349,15 @@ router.beforeEach(
     const requiresSuperAdmin = _get(to, "meta.requireSuperAdmin", false);
 
     // Check user roles
-    const isUserAdmin = store.isUserAdmin;
-    const isUserSuperAdmin = store.isUserSuperAdmin;
+    const isUserAdmin = (store as any).isUserAdmin;
+    const isUserSuperAdmin = (store as any).isUserSuperAdmin;
+    
+    console.log('Router guard: Role check:', {
+      requiresAdmin,
+      requiresSuperAdmin,
+      isUserAdmin,
+      isUserSuperAdmin
+    });
 
     // All current conditions:
     // 1. Super Admin: true, Admin: true
@@ -329,6 +366,7 @@ router.beforeEach(
     // (Also exists because requiresAdmin/requiresSuperAdmin is not defined on every route)
 
     if (isUserSuperAdmin) {
+      console.log('Router guard: Super admin access granted');
       next();
       return;
     } else if (isUserAdmin) {
@@ -336,22 +374,27 @@ router.beforeEach(
       // So if isLevante, then allow regular admins to access any route with requireAdmin = true.
       // and if ROAR, then prohibit regular admins from accessing any route with requireSuperAdmin = true.
       if (isLevante && requiresAdmin) {
+        console.log('Router guard: LEVANTE admin access granted');
         next();
         return;
       } else if (requiresSuperAdmin) {
+        console.log('Router guard: Super admin required, redirecting to home');
         next({ name: "Home" });
         return;
       }
+      console.log('Router guard: Admin access granted');
       next();
       return;
     }
 
     // If we get here, the user is a regular user
     if (requiresSuperAdmin || requiresAdmin) {
+      console.log('Router guard: Admin access required, redirecting to home');
       next({ name: "Home" });
       return;
     }
 
+    console.log('Router guard: Regular user access granted');
     next();
     return;
   },

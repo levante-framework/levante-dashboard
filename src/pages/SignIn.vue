@@ -155,10 +155,20 @@
       ></PvButton>
     </template>
   </RoarModal>
+  
+  <!-- Temporary Clear Session Button -->
+  <div style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
+    <button 
+      @click="clearSession" 
+      style="background: red; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer;"
+    >
+      Clear Session & Sign Out
+    </button>
+  </div>
 </template>
 
 <script setup>
-import { onMounted, ref, toRaw, onBeforeUnmount, computed } from "vue";
+import { onMounted, ref, toRaw, onBeforeUnmount, computed, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
 import PvButton from "primevue/button";
@@ -178,22 +188,93 @@ const incorrect = ref(false);
 const authStore = useAuthStore();
 const router = useRouter();
 const adminSignIn = ref(false);
+const hasRouted = ref(false); // Add guard to prevent multiple routing
 
 const { spinner, ssoProvider, routeToProfile, roarfirekit } =
   storeToRefs(authStore);
 const warningModalOpen = ref(false);
 
-authStore.$subscribe(() => {
-  if (authStore.uid) {
-    if (ssoProvider.value) {
-      router.push({ path: APP_ROUTES.SSO });
-    } else if (routeToProfile.value) {
-      router.push({ path: APP_ROUTES.ACCOUNT_PROFILE });
-    } else {
-      router.push({ path: APP_ROUTES.HOME });
-    }
+// Use a more specific subscription that only triggers when uid changes
+let routingTimeout = null;
+let lastUid = null;
+
+// Watch only the uid property instead of the entire store
+const currentUid = computed(() => authStore.uid);
+
+watch(currentUid, (newUid, oldUid) => {
+  console.log('SignIn: UID changed from', oldUid, 'to', newUid);
+  
+  // Only process if the uid actually changed
+  if (newUid === lastUid) {
+    console.log('SignIn: UID unchanged, skipping processing');
+    return;
   }
-});
+  
+  lastUid = newUid;
+  
+  // Clear any existing routing timeout
+  if (routingTimeout) {
+    clearTimeout(routingTimeout);
+    routingTimeout = null;
+  }
+  
+  if (newUid && !hasRouted.value) {
+    console.log('SignIn: User authenticated, waiting for userClaims before routing...');
+    
+    // Wait for userClaims to be fetched before routing
+    const waitForUserClaims = async () => {
+      let attempts = 0;
+      const maxAttempts = 50; // 10 seconds max wait
+      
+      while (attempts < maxAttempts && !hasRouted.value) {
+        // Check if userClaims are available
+        if (authStore.userClaims) {
+          console.log('SignIn: UserClaims available, proceeding with routing...');
+          break;
+        }
+        
+        // Wait 200ms before checking again
+        await new Promise(resolve => setTimeout(resolve, 200));
+        attempts++;
+        
+        if (attempts % 10 === 0) {
+          console.log(`SignIn: Still waiting for userClaims, attempt ${attempts}/${maxAttempts}`);
+        }
+      }
+      
+      if (attempts >= maxAttempts) {
+        console.warn('SignIn: Timeout waiting for userClaims, proceeding with routing anyway');
+      }
+      
+      // Proceed with routing if we haven't already routed
+      if (authStore.uid && !hasRouted.value && authStore.uid === lastUid) {
+        console.log('SignIn: Auth state stable, proceeding with routing...');
+        hasRouted.value = true; // Set guard to prevent multiple routing
+        spinner.value = false; // Hide spinner before routing
+        
+        if (ssoProvider.value) {
+          console.log('SignIn: Routing to SSO');
+          router.push({ path: APP_ROUTES.SSO });
+        } else if (routeToProfile.value) {
+          console.log('SignIn: Routing to profile');
+          router.push({ path: APP_ROUTES.ACCOUNT_PROFILE });
+        } else {
+          console.log('SignIn: Routing to home');
+          router.push({ path: APP_ROUTES.HOME });
+        }
+      } else {
+        console.log('SignIn: Auth state changed during delay, canceling routing');
+      }
+    };
+    
+    // Start waiting for userClaims
+    waitForUserClaims();
+  } else if (!newUid && hasRouted.value) {
+    console.log('SignIn: User logged out, resetting routing guard');
+    hasRouted.value = false;
+    lastUid = null;
+  }
+}, { immediate: true });
 
 const toggleAdminSignIn = () => {
   adminSignIn.value = !adminSignIn.value;
@@ -203,31 +284,30 @@ const authWithGoogle = () => {
   if (isMobileBrowser()) {
     authStore.signInWithGoogleRedirect();
   } else {
+    spinner.value = true; // Show spinner during login
+    
     authStore
       .signInWithGooglePopup()
       .then(async () => {
-        if (authStore.uid) {
-          const userClaims = await fetchDocById("userClaims", authStore.uid);
-          authStore.userClaims = userClaims;
-        }
-        if (authStore.roarUid) {
-          const userData = await fetchDocById("users", authStore.roarUid);
-          authStore.userData = userData;
-        }
+        console.log('SignIn: Google login successful, user data will be fetched by App.vue');
+        
+        // Don't fetch user data here - App.vue handles this
+        // This prevents race conditions and duplicate API calls
+        
+        // Don't set spinner to false here - let the auth store subscription handle routing
       })
       .catch((e) => {
         const errorCode = e.code;
+        spinner.value = false; // Hide spinner on error
+        hasRouted.value = false; // Reset routing guard on error
+        
         if (errorCode === "auth/email-already-in-use") {
           // User tried to register with an email that is already linked to a firebase account.
           openWarningModal();
-          spinner.value = false;
         } else {
           console.log("caught error", e);
-          spinner.value = false;
         }
       });
-
-    spinner.value = true;
   }
 };
 
@@ -247,10 +327,12 @@ const authWithEmail = async (state) => {
       creds.email = `${creds.email}@roar-auth.com`;
     }
 
+    spinner.value = true; // Show spinner during login
+    
     await authStore
       .logInWithEmailAndPassword(creds)
       .then(async () => {
-        console.log('SignIn: Login successful, fetching user data...');
+        console.log('SignIn: Login successful, user data will be fetched by App.vue');
         console.log('SignIn: Firekit state:', {
           hasFirekit: !!authStore.roarfirekit,
           initialized: authStore.roarfirekit?.initialized,
@@ -259,20 +341,15 @@ const authWithEmail = async (state) => {
           roarUid: authStore.roarUid
         });
         
-        if (authStore.uid) {
-          console.log('SignIn: Fetching userClaims for uid:', authStore.uid);
-          const userClaims = await fetchDocById("userClaims", authStore.uid);
-          authStore.userClaims = userClaims;
-        }
-        if (authStore.roarUid) {
-          console.log('SignIn: Fetching userData for roarUid:', authStore.roarUid);
-          const userData = await fetchDocById("users", authStore.roarUid);
-          authStore.userData = userData;
-        }
-
-        spinner.value = true;
+        // Don't fetch user data here - App.vue handles this
+        // This prevents race conditions and duplicate API calls
+        
+        // Don't set spinner to false here - let the auth store subscription handle routing
+        // The spinner will be hidden when the route changes
       })
       .catch((e) => {
+        spinner.value = false; // Hide spinner on error
+        hasRouted.value = false; // Reset routing guard on error
         incorrect.value = true;
         if (["auth/user-not-found", "auth/wrong-password"].includes(e.code)) {
           return;
@@ -306,12 +383,24 @@ const displaySignInMethods = computed(() => {
   });
 });
 
+const clearSession = () => {
+  authStore.clearSession();
+};
+
 onMounted(() => {
   document.body.classList.add("page-signin");
+  hasRouted.value = false; // Reset routing guard on mount
 });
 
 onBeforeUnmount(() => {
   document.body.classList.remove("page-signin");
+  hasRouted.value = false; // Reset routing guard on unmount
+  
+  // Clean up routing timeout
+  if (routingTimeout) {
+    clearTimeout(routingTimeout);
+    routingTimeout = null;
+  }
 });
 </script>
 

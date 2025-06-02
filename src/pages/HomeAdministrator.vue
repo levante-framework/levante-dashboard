@@ -173,6 +173,8 @@ import useAdministrationsListQuery from "@/composables/queries/useAdministration
 import CardAdministration from "@/components/CardAdministration.vue";
 import LevanteSpinner from "@/components/LevanteSpinner.vue";
 
+console.log('HomeAdministrator: Script setup executing...');
+
 const initialized = ref(false);
 const pageLimit = ref(10);
 const page = ref(0);
@@ -190,46 +192,86 @@ const authStore = useAuthStore();
 
 const { roarfirekit } = storeToRefs(authStore);
 
+console.log('HomeAdministrator: Initial setup complete');
+
 let unsubscribeInitializer;
 const init = () => {
-  if (unsubscribeInitializer) unsubscribeInitializer();
+  console.log('HomeAdministrator: init() called');
+  if (unsubscribeInitializer) {
+    console.log('HomeAdministrator: Unsubscribing from auth store');
+    unsubscribeInitializer();
+  }
+  console.log('HomeAdministrator: Setting initialized to true');
   initialized.value = true;
 };
 
+console.log('HomeAdministrator: Setting up auth store subscription...');
 unsubscribeInitializer = authStore.$subscribe(async (mutation, state) => {
-  if (state.roarfirekit.restConfig) init();
+  console.log('HomeAdministrator: Auth store subscription triggered', {
+    hasFirekit: !!state.roarfirekit,
+    initialized: state.roarfirekit?.initialized,
+    hasProject: !!state.roarfirekit?.project
+  });
+  
+  // Check if firekit is initialized and has a project (works for both merged and dual architecture)
+  if (state.roarfirekit?.initialized && state.roarfirekit?.project) {
+    console.log('HomeAdministrator: Firekit ready, calling init()...');
+    init();
+  } else {
+    console.log('HomeAdministrator: Firekit not ready yet');
+  }
 });
 
+console.log('HomeAdministrator: Auth store subscription set up');
+
 onMounted(() => {
-  if (roarfirekit.value.restConfig) init();
+  console.log('HomeAdministrator: onMounted called');
+  console.log('HomeAdministrator: Current firekit state:', {
+    hasFirekit: !!roarfirekit.value,
+    initialized: roarfirekit.value?.initialized,
+    hasProject: !!roarfirekit.value?.project
+  });
+  
+  // Check if firekit is already ready
+  if (roarfirekit.value?.initialized && roarfirekit.value?.project) {
+    console.log('HomeAdministrator: Firekit already ready on mount, calling init()...');
+    init();
+  } else {
+    console.log('HomeAdministrator: Waiting for firekit to be ready...');
+  }
 });
+
+console.log('HomeAdministrator: onMounted handler set up');
+
+// Watch the initialized state
+watch(initialized, (newValue) => {
+  console.log('HomeAdministrator: Initialized state changed to:', newValue);
+  if (newValue) {
+    console.log('HomeAdministrator: Component is now initialized, queries should start');
+  }
+});
+
+console.log('HomeAdministrator: Setting up userClaims query...');
 
 const { data: userClaims } = useUserClaimsQuery({
   enabled: initialized,
 });
 
+console.log('HomeAdministrator: userClaims query set up');
+
+// Watch userClaims
+watch(userClaims, (newValue) => {
+  console.log('HomeAdministrator: UserClaims changed:', newValue);
+});
+
 const { isSuperAdmin } = useUserType(userClaims);
 
-/**
- * Generate search tokens for autocomplete.
- *
- * Using the administrations data, generates search tokens for the autocomplete search feature by splitting the
- * invididual administration names into separate tokens. For example, the administration "Partner Test Administration"
- * would be split into three tokens: "partner", "test", and "administration".
- *
- * @returns {void}
- */
-const generateAutoCompleteSearchTokens = () => {
-  if (!administrations.value?.length) return;
+// Watch isSuperAdmin
+watch(isSuperAdmin, (newValue) => {
+  console.log('HomeAdministrator: isSuperAdmin changed:', newValue);
+});
 
-  // Set search tokens based on each administration's name.
-  for (const item of administrations.value) {
-    searchTokens.value.push(...item.name.toLowerCase().split(" "));
-  }
-
-  // Remove duplicates from array.
-  searchTokens.value = [...new Set(searchTokens.value)];
-};
+console.log('HomeAdministrator: Setting up administrations query...');
 
 const {
   isLoading: isLoadingAdministrations,
@@ -237,6 +279,21 @@ const {
   data: administrations,
 } = useAdministrationsListQuery(orderBy, fetchTestAdministrations, {
   enabled: initialized,
+});
+
+console.log('HomeAdministrator: administrations query set up');
+
+// Watch the query states
+watch(isLoadingAdministrations, (newValue) => {
+  console.log('HomeAdministrator: isLoadingAdministrations changed:', newValue);
+});
+
+watch(isFetchingAdministrations, (newValue) => {
+  console.log('HomeAdministrator: isFetchingAdministrations changed:', newValue);
+});
+
+watch(administrations, (newValue) => {
+  console.log('HomeAdministrator: administrations data changed:', newValue);
 });
 
 /**
@@ -405,6 +462,27 @@ const onSortChange = (event) => {
   }
 
   sortKey.value = sortValue;
+};
+
+/**
+ * Generate search tokens for autocomplete.
+ *
+ * Using the administrations data, generates search tokens for the autocomplete search feature by splitting the
+ * invididual administration names into separate tokens. For example, the administration "Partner Test Administration"
+ * would be split into three tokens: "partner", "test", and "administration".
+ *
+ * @returns {void}
+ */
+const generateAutoCompleteSearchTokens = () => {
+  if (!administrations.value?.length) return;
+
+  // Set search tokens based on each administration's name.
+  for (const item of administrations.value) {
+    searchTokens.value.push(...item.name.toLowerCase().split(" "));
+  }
+
+  // Remove duplicates from array.
+  searchTokens.value = [...new Set(searchTokens.value)];
 };
 </script>
 
