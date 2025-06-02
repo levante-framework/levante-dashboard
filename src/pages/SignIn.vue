@@ -159,8 +159,8 @@
   <!-- Temporary Clear Session Button -->
   <div style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
     <button 
-      @click="clearSession" 
-      style="background: red; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer;"
+      style="background: red; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer;" 
+      @click="clearSession"
     >
       Clear Session & Sign Out
     </button>

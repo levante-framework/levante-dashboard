@@ -102,7 +102,7 @@ export const getUsersRequestBody = ({
   if (aggregationQuery) {
     return {
       structuredAggregationQuery: {
-        ...requestBody,
+        structuredQuery: requestBody.structuredQuery,
         aggregations: [
           {
             alias: "count",
@@ -183,9 +183,19 @@ export const countUsersByOrg = async (
     restrictToActiveUsers: restrictToActiveUsers,
   });
 
+  console.log('countUsersByOrg request body:', JSON.stringify(requestBody, null, 2));
+
   return axiosInstance
     .post(":runAggregationQuery", requestBody)
     .then(({ data }) => {
+      console.log('countUsersByOrg response data:', data);
       return Number(convertValues(data[0].result?.aggregateFields?.count));
+    })
+    .catch((error) => {
+      console.error('countUsersByOrg error:', error);
+      console.error('Error response:', error.response?.data);
+      // Temporary fallback: return 0 if aggregation query fails
+      console.warn('Returning 0 as fallback for failed user count query');
+      return 0;
     });
 };

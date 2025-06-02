@@ -18,8 +18,8 @@
   <!-- Temporary Clear Session Button - appears on loading screen -->
   <div v-if="!isAuthStoreReady" style="position: fixed; top: 10px; right: 10px; z-index: 9999;">
     <button 
-      @click="clearSession" 
-      style="background: red; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;"
+      style="background: red; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;" 
+      @click="clearSession"
     >
       Clear Session & Reload
     </button>

@@ -14,6 +14,7 @@ interface OrgDataBase {
   name: string;
   id?: string; // Optional for new orgs, assigned by backend
   tags?: string[];
+  abbreviation?: string; // Optional abbreviation field
 }
 
 interface DistrictOrg extends OrgDataBase {
@@ -59,8 +60,29 @@ const useUpsertOrgMutation = () => {
   return useMutation<OrgData, Error, OrgData, UpsertOrgMutationContext>({
     mutationKey: [ORG_MUTATION_KEY],
     mutationFn: async (data: OrgData): Promise<OrgData> => {
-      await authStore.roarfirekit.upsertOrg(data);
-      return data;
+      // Check if roarfirekit is available
+      if (!authStore.roarfirekit) {
+        throw new Error('Firekit not initialized');
+      }
+      
+      console.log('useUpsertOrgMutation: About to call upsertOrg with data:', JSON.stringify(data, null, 2));
+      console.log('useUpsertOrgMutation: Auth store state:', {
+        isAuthenticated: (authStore as any).isAuthenticated,
+        isAdmin: (authStore.roarfirekit as any)?.isAdmin?.(),
+        uid: (authStore as any).uid,
+        roarUid: (authStore as any).roarUid
+      });
+      
+      try {
+        // Use the firekit upsertOrg method with type assertion
+        // TypeScript doesn't recognize the method because auth store is JS, but we know it exists
+        const result = await (authStore.roarfirekit as any).upsertOrg(data);
+        console.log('useUpsertOrgMutation: upsertOrg completed successfully:', result);
+        return result;
+      } catch (error) {
+        console.error('useUpsertOrgMutation: Error calling upsertOrg:', error);
+        throw error;
+      }
     },
     onMutate: async (newOrgData: OrgData) => {
       let queryKey: string[];

@@ -277,7 +277,7 @@ const orgTypes = [
   { firestoreCollection: "groups", singular: "group", label: "Cohort" },
 ];
 
-const orgType = ref();
+const orgType = ref(orgTypes[0]);
 
 const orgTypeLabel = computed(() => {
   if (orgType.value) {
@@ -323,43 +323,204 @@ const submit = async () => {
   if (isFormValid) {
     let orgDataToSubmit = {
       name: state.orgName,
-      abbreviation: state.orgInitials,
       type: orgType.value.firestoreCollection,
     };
 
+    // Only add tags if they exist
     if (state.tags.length > 0) orgDataToSubmit.tags = state.tags;
 
-    if (orgType.value?.singular === "class") {
-      orgDataToSubmit.schoolId = toRaw(state.parentSchool).id;
-      orgDataToSubmit.districtId = toRaw(state.parentDistrict).id;
-    } else if (orgType.value?.singular === "school") {
-      orgDataToSubmit.districtId = toRaw(state.parentDistrict).id;
-    } else if (orgType.value?.singular === "group") {
-      orgDataToSubmit.parentOrgId = toRaw(state.parentDistrict).id;
-    }
-
-    upsertOrg(orgDataToSubmit, {
-      onSuccess: () => {
-        toast.add({
-          severity: "success",
-          summary: "Success",
-          detail: `Group created`,
-          life: TOAST_DEFAULT_LIFE_DURATION,
-        });
-        resetForm();
-        v$.value.$reset();
-      },
-      onError: (error) => {
+    // Add specific validation and fields based on organization type
+    if (orgType.value?.singular === "district") {
+      // Districts might need additional fields - let's ensure we have the minimum required
+      console.log('Creating district with data:', orgDataToSubmit);
+      
+      // Ensure we have all required fields for a district
+      if (!orgDataToSubmit.name || orgDataToSubmit.name.trim() === '') {
+        console.error('District name is required');
         toast.add({
           severity: "error",
-          summary: "Error",
-          detail: error.message,
+          summary: "Validation Error",
+          detail: "District name is required.",
           life: TOAST_DEFAULT_LIFE_DURATION,
         });
-        console.error(`Error creating Group:`, error);
-      },
+        return;
+      }
+    } else if (orgType.value?.singular === "class") {
+      if (!state.parentSchool || !state.parentDistrict) {
+        console.error('Missing parent data for class:', { parentSchool: state.parentSchool, parentDistrict: state.parentDistrict });
+        toast.add({
+          severity: "error",
+          summary: "Validation Error",
+          detail: "School and district are required for creating a class.",
+          life: TOAST_DEFAULT_LIFE_DURATION,
+        });
+        return;
+      }
+      // Validate parent objects exist before accessing their properties
+      const parentSchool = toRaw(state.parentSchool);
+      const parentDistrict = toRaw(state.parentDistrict);
+      if (!parentSchool?.id || !parentDistrict?.id) {
+        console.error('Invalid parent data for class:', { parentSchool, parentDistrict });
+        toast.add({
+          severity: "error",
+          summary: "Validation Error",
+          detail: "Invalid school or district data.",
+          life: TOAST_DEFAULT_LIFE_DURATION,
+        });
+        return;
+      }
+      orgDataToSubmit.schoolId = parentSchool.id;
+      orgDataToSubmit.districtId = parentDistrict.id;
+    } else if (orgType.value?.singular === "school") {
+      if (!state.parentDistrict) {
+        console.error('Missing parent district for school:', { parentDistrict: state.parentDistrict });
+        toast.add({
+          severity: "error",
+          summary: "Validation Error",
+          detail: "District is required for creating a school.",
+          life: TOAST_DEFAULT_LIFE_DURATION,
+        });
+        return;
+      }
+      // Validate parent object exists before accessing its properties
+      const parentDistrict = toRaw(state.parentDistrict);
+      if (!parentDistrict?.id) {
+        console.error('Invalid parent district for school:', { parentDistrict });
+        toast.add({
+          severity: "error",
+          summary: "Validation Error",
+          detail: "Invalid district data.",
+          life: TOAST_DEFAULT_LIFE_DURATION,
+        });
+        return;
+      }
+      orgDataToSubmit.districtId = parentDistrict.id;
+    } else if (orgType.value?.singular === "group") {
+      if (!state.parentDistrict) {
+        console.error('Missing parent district for group:', { parentDistrict: state.parentDistrict });
+        toast.add({
+          severity: "error",
+          summary: "Validation Error",
+          detail: "District is required for creating a cohort.",
+          life: TOAST_DEFAULT_LIFE_DURATION,
+        });
+        return;
+      }
+      // Validate parent object exists before accessing its properties
+      const parentDistrict = toRaw(state.parentDistrict);
+      if (!parentDistrict?.id) {
+        console.error('Invalid parent district for group:', { parentDistrict });
+        toast.add({
+          severity: "error",
+          summary: "Validation Error",
+          detail: "Invalid district data.",
+          life: TOAST_DEFAULT_LIFE_DURATION,
+        });
+        return;
+      }
+      orgDataToSubmit.parentOrgId = parentDistrict.id;
+      orgDataToSubmit.parentOrgType = "district";
+    }
+
+    // Validate the final data structure
+    if (!orgDataToSubmit.name || !orgDataToSubmit.type) {
+      console.error('Invalid org data structure:', orgDataToSubmit);
+      toast.add({
+        severity: "error",
+        summary: "Validation Error",
+        detail: "Organization name and type are required.",
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+      return;
+    }
+
+    // Debug logging
+    console.log('=== ORGANIZATION CREATION DEBUG ===');
+    console.log('Submitting org data:', JSON.stringify(orgDataToSubmit, null, 2));
+    console.log('Org type selected:', orgType.value);
+    console.log('Auth store state:', {
+      isAuthenticated: authStore.isAuthenticated,
+      isAdmin: authStore.roarfirekit?.isAdmin?.(),
+      uid: authStore.uid,
+      roarUid: authStore.roarUid
     });
+    console.log('Firekit available:', !!authStore.roarfirekit);
+    console.log('=== END DEBUG ===');
+
+    // Try using createOrg method instead of upsertOrg
+    try {
+      console.log('Attempting to create organization using createOrg method...');
+      
+      // Prepare the data for createOrg method
+      let createOrgData = { 
+        name: orgDataToSubmit.name,
+        ...(orgDataToSubmit.tags && { tags: orgDataToSubmit.tags })
+      };
+      
+      // Add parent relationships for createOrg method
+      if (orgDataToSubmit.districtId) {
+        createOrgData.districtId = orgDataToSubmit.districtId;
+      }
+      if (orgDataToSubmit.schoolId) {
+        createOrgData.schoolId = orgDataToSubmit.schoolId;
+      }
+      if (orgDataToSubmit.parentOrgId) {
+        createOrgData.parentOrgId = orgDataToSubmit.parentOrgId;
+      }
+      if (orgDataToSubmit.parentOrgType) {
+        createOrgData.parentOrgType = orgDataToSubmit.parentOrgType;
+      }
+      
+      console.log('CreateOrg data prepared:', JSON.stringify(createOrgData, null, 2));
+      
+      const result = await authStore.roarfirekit.createOrg(
+        orgDataToSubmit.type,
+        createOrgData,
+        false, // testData
+        false, // demoData
+        undefined // orgId
+      );
+      
+      console.log('Organization created successfully:', result);
+      toast.add({
+        severity: "success",
+        summary: "Success",
+        detail: `${orgTypeLabel.value} created`,
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+      resetForm();
+      v$.value.$reset();
+    } catch (error) {
+      console.error(`Error creating ${orgTypeLabel.value} with createOrg:`, error);
+      console.error('Submitted data was:', JSON.stringify(orgDataToSubmit, null, 2));
+      
+      // Fallback to upsertOrg method
+      console.log('Falling back to upsertOrg method...');
+      upsertOrg(orgDataToSubmit, {
+        onSuccess: () => {
+          toast.add({
+            severity: "success",
+            summary: "Success",
+            detail: `${orgTypeLabel.value} created`,
+            life: TOAST_DEFAULT_LIFE_DURATION,
+          });
+          resetForm();
+          v$.value.$reset();
+        },
+        onError: (error) => {
+          console.error(`Error creating ${orgTypeLabel.value}:`, error);
+          console.error('Submitted data was:', JSON.stringify(orgDataToSubmit, null, 2));
+          toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: error.message || 'Failed to create organization',
+            life: TOAST_DEFAULT_LIFE_DURATION,
+          });
+        },
+      });
+    }
   } else {
+    console.log('Form validation failed:', v$.value.$errors);
     toast.add({
       severity: "warn",
       summary: "Validation Error",
