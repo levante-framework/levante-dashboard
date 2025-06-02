@@ -250,11 +250,22 @@ const authWithEmail = async (state) => {
     await authStore
       .logInWithEmailAndPassword(creds)
       .then(async () => {
+        console.log('SignIn: Login successful, fetching user data...');
+        console.log('SignIn: Firekit state:', {
+          hasFirekit: !!authStore.roarfirekit,
+          initialized: authStore.roarfirekit?.initialized,
+          hasIdToken: !!authStore.roarfirekit?.idToken,
+          uid: authStore.uid,
+          roarUid: authStore.roarUid
+        });
+        
         if (authStore.uid) {
+          console.log('SignIn: Fetching userClaims for uid:', authStore.uid);
           const userClaims = await fetchDocById("userClaims", authStore.uid);
           authStore.userClaims = userClaims;
         }
         if (authStore.roarUid) {
+          console.log('SignIn: Fetching userData for roarUid:', authStore.roarUid);
           const userData = await fetchDocById("users", authStore.roarUid);
           authStore.userData = userData;
         }

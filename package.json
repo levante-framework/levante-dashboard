@@ -21,8 +21,11 @@
     "test": "vitest --config vitest.config.js",
     "test:watch": "vitest --watch",
     "version": "npm run format && git add -A",
-    "emulators:start": "firebase emulators:start --config levante-firebase.json",
-    "emulators:stop": "firebase emulators:stop",
+    "emulators:start": "cd ../firebase-functions && npm run dev",
+    "emulators:stop": "pkill -f 'firebase emulators:start'",
+    "emulators:clean": "cd ../firebase-functions && npm run dev:clean",
+    "emulators:seed": "cd ../firebase-functions && npm run emulator:seed",
+    "emulators:setup": "cd ../firebase-functions && npm run emulator:setup",
     "dev:emulators": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=DEV && export USE_FIREBASE_EMULATORS=true && vite --force --host"
   },
   "dependencies": {

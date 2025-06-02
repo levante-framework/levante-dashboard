@@ -85,7 +85,102 @@ export const getAxiosInstance = (
 ) => {
   const authStore = useAuthStore();
   const { roarfirekit } = storeToRefs(authStore);
-  const axiosOptions = _get(roarfirekit.value.restConfig, db) ?? {};
+  
+  console.log('getAxiosInstance called:', {
+    db,
+    unauthenticated,
+    hasFirekit: !!roarfirekit.value,
+    firekitInitialized: roarfirekit.value?.initialized,
+    firekitType: roarfirekit.value?.constructor?.name,
+    hasProject: !!roarfirekit.value?.project,
+    hasAuth: !!roarfirekit.value?.project?.auth,
+    hasIdToken: !!roarfirekit.value?.idToken
+  });
+  
+  // Get the restConfig - try multiple approaches
+  let restConfig = null;
+  let axiosOptions = {};
+  
+  if (roarfirekit.value) {
+    console.log('getAxiosInstance firekit details:', {
+      firekitKeys: Object.keys(roarfirekit.value).filter(key => !key.startsWith('_')),
+      hasRestConfigProperty: 'restConfig' in roarfirekit.value,
+      restConfigDescriptor: Object.getOwnPropertyDescriptor(roarfirekit.value, 'restConfig'),
+      prototypeKeys: Object.getOwnPropertyNames(Object.getPrototypeOf(roarfirekit.value))
+    });
+    
+    // Try different ways to access restConfig
+    try {
+      // Method 1: Direct property access
+      restConfig = roarfirekit.value.restConfig;
+      console.log('getAxiosInstance: Direct access result:', restConfig);
+      
+      // Method 2: If direct access fails, try calling it as a method
+      if (!restConfig && typeof roarfirekit.value.restConfig === 'function') {
+        restConfig = roarfirekit.value.restConfig();
+        console.log('getAxiosInstance: Method call result:', restConfig);
+      }
+      
+      // Method 3: Try accessing through prototype
+      if (!restConfig) {
+        const proto = Object.getPrototypeOf(roarfirekit.value);
+        const descriptor = Object.getOwnPropertyDescriptor(proto, 'restConfig');
+        if (descriptor && descriptor.get) {
+          restConfig = descriptor.get.call(roarfirekit.value);
+          console.log('getAxiosInstance: Prototype getter result:', restConfig);
+        }
+      }
+    } catch (error) {
+      console.error('getAxiosInstance: Error accessing restConfig:', error);
+    }
+    
+    if (restConfig) {
+      console.log('getAxiosInstance restConfig structure:', {
+        restConfig,
+        hasAdmin: !!restConfig.admin,
+        hasApp: !!restConfig.app,
+        adminConfig: restConfig.admin,
+        appConfig: restConfig.app
+      });
+      
+      // Try to get the config for the specified database
+      axiosOptions = restConfig[db] || restConfig.admin || restConfig.app || {};
+    } else {
+      console.warn('getAxiosInstance: Could not access restConfig, trying fallback...');
+      
+      // Fallback: try to construct the config manually
+      const projectId = roarfirekit.value?.roarConfig?.merged?.projectId;
+      const useEmulators = roarfirekit.value?.roarConfig?.merged?.useEmulators;
+      const emulatorPorts = roarfirekit.value?.roarConfig?.merged?.emulatorPorts;
+      const idToken = roarfirekit.value?.idToken;
+      
+      if (projectId) {
+        let baseURL;
+        if (useEmulators && emulatorPorts?.db) {
+          const host = roarfirekit.value?.roarConfig?.merged?.emulatorHost || 'localhost';
+          const port = emulatorPorts.db;
+          baseURL = `http://${host}:${port}/v1/projects/${projectId}/databases/(default)/documents`;
+        } else {
+          baseURL = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
+        }
+        
+        const headers = {};
+        if (idToken) {
+          headers.Authorization = `Bearer ${idToken}`;
+        }
+        
+        axiosOptions = { headers, baseURL };
+        console.log('getAxiosInstance: Using fallback config:', axiosOptions);
+      }
+    }
+  }
+  
+  console.log('getAxiosInstance axiosOptions:', {
+    db,
+    axiosOptions,
+    hasBaseURL: !!axiosOptions.baseURL,
+    baseURL: axiosOptions.baseURL
+  });
 
   // // Add appCheckToken to the headers if it exists in the firekit config
   // const appCheckToken = roarfirekit.value[db]?.appCheckToken;
@@ -108,6 +203,18 @@ export const getAxiosInstance = (
   // retries it after the base URL is set.
   // @TODO: Remove once initialization logic issue is identified and fixed.
   if (!axiosOptions.baseURL) {
+    console.error('getAxiosInstance: Base URL is not set!', {
+      db,
+      axiosOptions,
+      firekitState: {
+        hasFirekit: !!roarfirekit.value,
+        initialized: roarfirekit.value?.initialized,
+        hasProject: !!roarfirekit.value?.project,
+        hasAuth: !!roarfirekit.value?.project?.auth,
+        restConfig: restConfig,
+        restConfigType: typeof restConfig
+      }
+    });
     throw new Error("Base URL is not set.");
   }
 

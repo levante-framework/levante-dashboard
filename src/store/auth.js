@@ -25,8 +25,7 @@ export const useAuthStore = () => {
         routeToProfile: false,
         ssoProvider: null,
         showOptionalAssessments: false,
-        adminAuthStateListener: null,
-        appAuthStateListener: null,
+        authStateListener: null,
       };
     },
     getters: {
@@ -52,7 +51,7 @@ export const useAuthStore = () => {
         );
       },
       isFirekitInit: (state) => {
-        return state.roarfirekit?.initialized;
+        return Boolean(state.roarfirekit?.initialized && state.roarfirekit?.project?.auth);
       },
       isUserAdmin: (state) => {
         if (
@@ -77,41 +76,68 @@ export const useAuthStore = () => {
     },
     actions: {
       async initFirekit() {
+        console.log('Auth store: Starting firekit initialization...');
         try {
           this.roarfirekit = await initNewFirekit();
+          console.log('Auth store: Firekit initialized successfully:', {
+            type: this.roarfirekit?.constructor?.name,
+            initialized: this.roarfirekit?.initialized,
+            hasProject: !!this.roarfirekit?.project,
+            projectAuth: !!this.roarfirekit?.project?.auth,
+          });
+          
+          // Wait for initialization to complete
+          if (!this.roarfirekit?.initialized || !this.roarfirekit?.project?.auth) {
+            console.warn('Auth store: Waiting for firekit to fully initialize...');
+            let attempts = 0;
+            while ((!this.roarfirekit?.initialized || !this.roarfirekit?.project?.auth) && attempts < 30) {
+              await new Promise(resolve => setTimeout(resolve, 200));
+              attempts++;
+              console.log(`Auth store: Waiting for firekit initialization, attempt ${attempts}`);
+            }
+            
+            if (!this.roarfirekit?.initialized || !this.roarfirekit?.project?.auth) {
+              console.error('Auth store: Firekit failed to initialize after waiting');
+              return;
+            }
+          }
+          
+          console.log('Auth store: Firekit confirmed ready, setting up auth listeners...');
           this.setAuthStateListeners();
         } catch (error) {
-          // @TODO: Improve error handling as this is a critical error.
           console.error("Error initializing Firekit:", error);
         }
       },
       setAuthStateListeners() {
-        this.adminAuthStateListener = onAuthStateChanged(
-          this.roarfirekit?.admin.auth,
-          async (user) => {
-            if (user) {
-              this.localFirekitInit = true;
-              this.firebaseUser.adminFirebaseUser = user;
-              logger.setUser(user);
-            } else {
-              this.firebaseUser.adminFirebaseUser = null;
-              logger.setUser(null);
-            }
-          },
-        );
+        console.log('Auth store: Setting up auth state listeners...');
+        
+        if (!this.roarfirekit?.project?.auth) {
+          console.error('Auth store: Cannot set up auth listeners - no auth instance found');
+          return;
+        }
 
-        this.appAuthStateListener = onAuthStateChanged(
-          this.roarfirekit?.app.auth,
-          async (user) => {
-            if (user) {
-              this.firebaseUser.appFirebaseUser = user;
-              logger.setUser(user);
-            } else {
-              this.firebaseUser.appFirebaseUser = null;
-              logger.setUser(null);
-            }
-          },
-        );
+        try {
+          this.authStateListener = onAuthStateChanged(
+            this.roarfirekit.project.auth,
+            async (user) => {
+              if (user) {
+                this.localFirekitInit = true;
+                // For merged architecture, both admin and app users are the same
+                this.firebaseUser.adminFirebaseUser = user;
+                this.firebaseUser.appFirebaseUser = user;
+                logger.setUser(user);
+              } else {
+                this.firebaseUser.adminFirebaseUser = null;
+                this.firebaseUser.appFirebaseUser = null;
+                logger.setUser(null);
+              }
+            },
+          );
+          
+          console.log('Auth store: Auth state listeners set up successfully');
+        } catch (error) {
+          console.error('Auth store: Error setting up auth state listeners:', error);
+        }
       },
       async completeAssessment(adminId, taskId) {
         await this.roarfirekit.completeAssessment(adminId, taskId);
@@ -130,7 +156,22 @@ export const useAuthStore = () => {
         if (this.isFirekitInit) {
           return this.roarfirekit
             .logInWithEmailAndPassword({ email, password })
-            .then(() => {})
+            .then(async () => {
+              // Wait for the firekit to have the ID token before resolving
+              console.log('Auth store: Login successful, waiting for ID token...');
+              let attempts = 0;
+              while (!this.roarfirekit.idToken && attempts < 30) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+                console.log(`Auth store: Waiting for ID token, attempt ${attempts}`);
+              }
+              
+              if (!this.roarfirekit.idToken) {
+                console.warn('Auth store: ID token not available after login');
+              } else {
+                console.log('Auth store: ID token available, login complete');
+              }
+            })
             .catch((error) => {
               console.error("Error signing in:", error);
               throw error;
@@ -170,17 +211,35 @@ export const useAuthStore = () => {
           const router = useRouter();
           router.replace({ name: "EnableCookies" });
         };
+        
         if (this.isFirekitInit) {
-          return await this.roarfirekit
-            .signInFromRedirectResult(enableCookiesCallback)
-            .then((result) => {
-              // If the result is null, then no redirect operation was called.
-              if (result !== null) {
-                this.spinner = true;
-              } else {
-                this.spinner = false;
-              }
-            });
+          console.log('Auth store: Checking for redirect result...');
+          
+          // For merged architecture, redirect handling is simpler
+          if (typeof this.roarfirekit.signInFromRedirectResult === 'function') {
+            console.log('Auth store: Using signInFromRedirectResult method');
+            try {
+              return await this.roarfirekit
+                .signInFromRedirectResult(enableCookiesCallback)
+                .then((result) => {
+                  if (result !== null) {
+                    this.spinner = true;
+                  } else {
+                    this.spinner = false;
+                  }
+                });
+            } catch (error) {
+              console.error('Auth store: Error in signInFromRedirectResult:', error);
+              this.spinner = false;
+            }
+          } else {
+            console.log('Auth store: No redirect result method found - this is normal for merged architecture');
+            this.spinner = false;
+            return Promise.resolve(null);
+          }
+        } else {
+          console.warn('Firekit not initialized, cannot check redirect result');
+          this.spinner = false;
         }
       },
       async forceIdTokenRefresh() {
