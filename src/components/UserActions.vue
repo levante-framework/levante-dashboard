@@ -9,7 +9,7 @@
           text
           data-cy="button-sign-out"
           class="no-underline h-2 p-1 m-0 text-primary border-none border-round h-2rem text-sm hover:bg-red-900 hover:text-white"
-          @click="signOut"
+          @click="() => signOut()"
         >
           {{ $t("navBar.signOut") }}
         </PvButton>
@@ -47,36 +47,65 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue';
-import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
+import { ref, watchEffect, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import PvButton from 'primevue/button';
 import PvSelect from 'primevue/select';
-import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
+import { useAuthStore } from '@/store/auth';
 import { APP_ROUTES } from '@/constants/routes';
 
 interface Props {
-  isBasicView: boolean;
+  isBasicView?: boolean;
 }
 
-interface DropdownOption {
-  label: string;
-  value: string;
-}
+const props = withDefaults(defineProps<Props>(), {
+  isBasicView: false,
+});
 
-interface DropdownChangeEvent {
-  value: string;
-}
-
-const i18n = useI18n();
+const { t } = useI18n();
 const router = useRouter();
-const { mutate: signOut } = useSignOutMutation() as any;
+const authStore = useAuthStore();
 
-const feedbackButton = ref<HTMLButtonElement | null>(null);
+const { mutate: signOut } = useSignOutMutation();
 
-const props = defineProps<Props>();
+const feedbackButton = ref(null);
 
-watchEffect((): void => {
+const helpOptions = computed(() => [
+  {
+    label: t('navBar.help'),
+    value: 'help',
+  },
+  {
+    label: t('navBar.signOut'),
+    value: 'signOut',
+  },
+]);
+
+const profileOptions = [
+  { label: 'Settings', value: 'settings' },
+  { label: t('navBar.signOut'), value: 'signout' },
+];
+
+const handleHelpChange = (e: { value: string }) => {
+  if (e.value === 'help') {
+    // Handle help action
+    console.log('Help selected');
+  } else if (e.value === 'signout') {
+    signOut();
+  }
+};
+
+const handleProfileChange = (e: { value: string }) => {
+  if (e.value === 'settings') {
+    router.push({ path: APP_ROUTES.ACCOUNT_PROFILE });
+  } else if (e.value === 'signout') {
+    signOut();
+  }
+};
+
+watchEffect(() => {
   const feedbackElement = document.getElementById('sentry-feedback');
   if (feedbackElement) {
     if (!props.isBasicView) {
@@ -84,32 +113,6 @@ watchEffect((): void => {
     }
   }
 });
-
-const helpOptions: DropdownOption[] = [
-  { label: 'Researcher Documentation', value: 'researcherDocumentation' },
-  { label: 'Report an Issue', value: 'reportAnIssue' },
-];
-
-const profileOptions: DropdownOption[] = [
-  { label: 'Settings', value: 'settings' },
-  { label: i18n.t('navBar.signOut'), value: 'signout' },
-];
-
-const handleHelpChange = (e: DropdownChangeEvent): void => {
-  if (e.value === 'researcherDocumentation') {
-    window.open('https://researcher.levante-network.org/', '_blank');
-  } else if (e.value === 'reportAnIssue') {
-    window.open('https://watery-wrench-dee.notion.site/13c244e26d9b8005adbde4522455edfd', '_blank');
-  }
-};
-
-const handleProfileChange = (e: DropdownChangeEvent): void => {
-  if (e.value === 'settings') {
-    router.push({ path: APP_ROUTES.ACCOUNT_PROFILE });
-  } else if (e.value === 'signout') {
-    signOut();
-  }
-};
 </script>
 
 <style>

@@ -297,6 +297,27 @@ watch(administrations, (newValue) => {
 });
 
 /**
+ * Generate search tokens for autocomplete.
+ *
+ * Using the administrations data, generates search tokens for the autocomplete search feature by splitting the
+ * invididual administration names into separate tokens. For example, the administration "Partner Test Administration"
+ * would be split into three tokens: "partner", "test", and "administration".
+ *
+ * @returns {void}
+ */
+const generateAutoCompleteSearchTokens = () => {
+  if (!administrations.value?.length) return;
+
+  // Set search tokens based on each administration's name.
+  for (const item of administrations.value) {
+    searchTokens.value.push(...item.name.toLowerCase().split(" "));
+  }
+
+  // Remove duplicates from array.
+  searchTokens.value = [...new Set(searchTokens.value)];
+};
+
+/**
  * Administration data watcher
  *
  * Watches the administrations data, and once data is available, generates search tokens and sets the filtered
@@ -462,27 +483,6 @@ const onSortChange = (event) => {
   }
 
   sortKey.value = sortValue;
-};
-
-/**
- * Generate search tokens for autocomplete.
- *
- * Using the administrations data, generates search tokens for the autocomplete search feature by splitting the
- * invididual administration names into separate tokens. For example, the administration "Partner Test Administration"
- * would be split into three tokens: "partner", "test", and "administration".
- *
- * @returns {void}
- */
-const generateAutoCompleteSearchTokens = () => {
-  if (!administrations.value?.length) return;
-
-  // Set search tokens based on each administration's name.
-  for (const item of administrations.value) {
-    searchTokens.value.push(...item.name.toLowerCase().split(" "));
-  }
-
-  // Remove duplicates from array.
-  searchTokens.value = [...new Set(searchTokens.value)];
 };
 </script>
 

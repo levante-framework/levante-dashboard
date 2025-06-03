@@ -81,18 +81,32 @@ export const taskFetcher = async (
   allData = false,
   select = ["name", "testData", "demoData"],
 ) => {
-  const axiosInstance = getAxiosInstance("app");
-  const requestBody = getTasksRequestBody({
-    registered,
-    allData,
-    aggregationQuery: false,
-    paginate: false,
-    select: allData ? "" : select,
+  console.log('taskFetcher: Starting task fetch with params:', { registered, allData, select });
+  
+  // Use firekit method instead of direct REST API calls
+  const { useAuthStore } = await import("@/store/auth");
+  const authStore = useAuthStore();
+  
+  console.log('taskFetcher: Auth store state:', {
+    hasFirekit: !!authStore.roarfirekit,
+    initialized: authStore.roarfirekit?.initialized,
+    hasGetTasks: typeof authStore.roarfirekit?.getTasks === 'function'
   });
+  
+  if (!authStore.roarfirekit || !authStore.roarfirekit.initialized) {
+    console.error('taskFetcher: Firekit not initialized');
+    throw new Error('Firekit not initialized');
+  }
 
-  return axiosInstance
-    .post(":runQuery", requestBody)
-    .then(({ data }) => mapFields(data));
+  try {
+    console.log('taskFetcher: Calling firekit.getTasks...');
+    const tasks = await authStore.roarfirekit.getTasks(registered, allData);
+    console.log('taskFetcher: Successfully fetched tasks:', { count: tasks?.length, tasks });
+    return tasks;
+  } catch (error) {
+    console.error('taskFetcher: Error fetching tasks via firekit:', error);
+    throw error;
+  }
 };
 
 /**
@@ -161,71 +175,107 @@ export const getVariantsRequestBody = ({
 };
 
 export const variantsFetcher = async (registered = false) => {
-  const axiosInstance = getAxiosInstance("app");
-  const requestBody = getVariantsRequestBody({
-    registered,
-    aggregationQuery: false,
-    paginate: false,
+  console.log('variantsFetcher: Starting variant fetch with params:', { registered });
+  
+  // Use firekit method instead of direct REST API calls
+  const { useAuthStore } = await import("@/store/auth");
+  const authStore = useAuthStore();
+  
+  console.log('variantsFetcher: Auth store state:', {
+    hasFirekit: !!authStore.roarfirekit,
+    initialized: authStore.roarfirekit?.initialized,
+    hasGetVariants: typeof authStore.roarfirekit?.getVariants === 'function'
   });
+  
+  if (!authStore.roarfirekit || !authStore.roarfirekit.initialized) {
+    console.error('variantsFetcher: Firekit not initialized');
+    throw new Error('Firekit not initialized');
+  }
 
-  return axiosInstance.post(":runQuery", requestBody).then(async ({ data }) => {
-    // Convert to regular object. Second arg is true to return parent doc ID as well.
-    const variants = mapFields(data, true);
-
-    // Retrieve all paths to the parent task documents. Note that there will be
-    // duplicates so we use _uniq. We also use _without to remove undefined
-    // values. The undefined values come from continuation tokens when the query
-    // is paginated.
-    const taskDocPaths = _uniq(
-      _without(
-        data.map((taskDoc) => {
-          if (taskDoc.document?.name) {
-            return taskDoc.document.name.split("/variants/")[0];
-          } else {
-            return undefined;
-          }
-        }),
-        undefined,
-      ),
-    );
-
-    // Use batchGet to get all task docs with one post request
-    const batchTaskDocs = await axiosInstance
-      .post(":batchGet", {
-        documents: taskDocPaths,
-      })
-      .then(({ data }) => {
-        return _without(
-          data.map(({ found }) => {
-            if (found) {
-              return {
-                name: found.name,
-                data: {
-                  id: found.name.split("/tasks/")[1],
-                  ..._mapValues(found.fields, (value) => convertValues(value)),
-                },
-              };
-            }
-            return undefined;
-          }),
-          undefined,
-        );
-      });
-
-    const taskDocDict = batchTaskDocs.reduce((acc, task) => {
-      acc[task.data.id] = { ...task };
-      return acc;
-    }, {});
-
-    // But the order of batchGet is not guaranteed, so we need to match the task
-    // docs back with their variants.
-    return variants.map((variant) => {
-      const task = taskDocDict[variant.parentDoc];
-      return {
-        id: variant.id,
-        variant,
-        task: task.data,
-      };
+  try {
+    console.log('variantsFetcher: Calling firekit.getVariants...');
+    
+    // Try calling with different parameters to include test data
+    // The firekit method might accept additional options
+    let variants;
+    try {
+      // First try with testData option
+      variants = await authStore.roarfirekit.getVariants(registered, { includeTestData: true });
+      console.log('variantsFetcher: Called with includeTestData option');
+    } catch (error) {
+      console.log('variantsFetcher: includeTestData option not supported, trying with testData parameter');
+      try {
+        // Try with testData as second parameter
+        variants = await authStore.roarfirekit.getVariants(registered, true);
+        console.log('variantsFetcher: Called with testData as second parameter');
+      } catch (error2) {
+        console.log('variantsFetcher: testData parameter not supported, using default call');
+        // Fall back to default call
+        variants = await authStore.roarfirekit.getVariants(registered);
+        console.log('variantsFetcher: Called with default parameters');
+      }
+    }
+    
+    console.log('variantsFetcher: Successfully fetched variants:', { 
+      count: variants?.length, 
+      isArray: Array.isArray(variants),
+      firstVariant: variants?.[0],
+      allVariantIds: variants?.map(v => v?.id || v?.variant?.id || 'no-id'),
+      sampleVariantStructure: variants?.[0] ? Object.keys(variants[0]) : 'no variants',
+      rawVariantsResponse: variants,
+      variantsType: typeof variants,
+      variantsConstructor: variants?.constructor?.name
     });
-  });
+    
+    // If firekit returns empty results, try direct REST API call as fallback
+    if (!variants || variants.length === 0) {
+      console.log('variantsFetcher: Firekit returned empty results, trying direct REST API call...');
+      
+      const { getAxiosInstance } = await import("@/helpers/query/utils");
+      const axiosInstance = getAxiosInstance();
+      
+      try {
+        const response = await axiosInstance.get('/variants');
+        console.log('variantsFetcher: Direct REST API response:', response.data);
+        
+        if (response.data?.documents) {
+          // Transform the REST API response to match the expected format
+          const transformedVariants = response.data.documents.map(doc => {
+            const fields = doc.fields;
+            return {
+              id: fields.id?.stringValue,
+              name: fields.name?.stringValue,
+              description: fields.description?.stringValue,
+              registered: fields.registered?.booleanValue,
+              testData: fields.testData?.booleanValue,
+              task: {
+                id: fields.task?.mapValue?.fields?.id?.stringValue,
+                name: fields.task?.mapValue?.fields?.name?.stringValue
+              },
+              variant: {
+                id: fields.variant?.mapValue?.fields?.id?.stringValue,
+                name: fields.variant?.mapValue?.fields?.name?.stringValue,
+                params: fields.variant?.mapValue?.fields?.params?.mapValue?.fields || {},
+                conditions: fields.variant?.mapValue?.fields?.conditions?.arrayValue?.values || []
+              }
+            };
+          });
+          
+          console.log('variantsFetcher: Transformed variants from REST API:', {
+            count: transformedVariants.length,
+            firstVariant: transformedVariants[0]
+          });
+          
+          return transformedVariants;
+        }
+      } catch (restError) {
+        console.error('variantsFetcher: Direct REST API call also failed:', restError);
+      }
+    }
+    
+    return variants;
+  } catch (error) {
+    console.error('variantsFetcher: Error fetching variants via firekit:', error);
+    throw error;
+  }
 };

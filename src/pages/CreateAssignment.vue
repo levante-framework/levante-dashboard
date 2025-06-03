@@ -285,8 +285,51 @@ const findVariantWithParams = (variants, params) => {
   });
 };
 
-const { data: allVariants } = useTaskVariantsQuery(true, {
+const { data: allVariants } = useTaskVariantsQuery(false, {
   enabled: initialized,
+});
+
+const variantsByTaskId = computed(() => {
+  console.log('CreateAssignment: Computing variantsByTaskId...');
+  console.log('CreateAssignment: allVariants.value:', allVariants.value);
+  console.log('CreateAssignment: initialized.value:', initialized.value);
+  
+  if (!allVariants.value) {
+    console.log('CreateAssignment: allVariants.value is null/undefined');
+    return {};
+  }
+  
+  // Check if it's an array and has length - handle Vue 3 Proxy arrays properly
+  const variantsArray = toRaw(allVariants.value);
+  console.log('CreateAssignment: Raw variants array:', variantsArray);
+  console.log('CreateAssignment: Is array:', Array.isArray(variantsArray));
+  console.log('CreateAssignment: Array length:', variantsArray?.length);
+  
+  if (Array.isArray(variantsArray) && variantsArray.length > 0) {
+    console.log('CreateAssignment: Processing variants array with length:', variantsArray.length);
+    console.log('CreateAssignment: First variant structure:', variantsArray[0]);
+    console.log('CreateAssignment: First variant task:', variantsArray[0]?.task);
+    console.log('CreateAssignment: First variant task.id:', variantsArray[0]?.task?.id);
+    
+    // Check if any variants have task.id
+    const variantsWithTaskId = variantsArray.filter(v => v?.task?.id);
+    console.log('CreateAssignment: Variants with task.id:', variantsWithTaskId.length);
+    
+    if (variantsWithTaskId.length > 0) {
+      console.log('CreateAssignment: Sample variant with task.id:', variantsWithTaskId[0]);
+    }
+  } else {
+    console.log('CreateAssignment: allVariants is not an array or is empty');
+    console.log('CreateAssignment: Raw array type:', typeof variantsArray);
+    console.log('CreateAssignment: Raw array length:', variantsArray?.length);
+    return {};
+  }
+  
+  const grouped = _groupBy(variantsArray, "task.id");
+  console.log('CreateAssignment: Grouped variants by task ID:', grouped);
+  console.log('CreateAssignment: Number of task groups:', Object.keys(grouped).length);
+  
+  return grouped;
 });
 
 // +------------------------------------------------------------------------------------------------------------------+
@@ -408,13 +451,34 @@ const minEndDate = computed(() => {
 // | Org Selection
 // +------------------------------------------------------------------------------------------------------------------+
 const orgsList = computed(() => {
-  return {
-    districts: existingDistrictsData.value,
-    schools: existingSchoolsData.value,
-    classes: existingClassesData.value,
-    groups: existingGroupData.value,
-    families: existingFamiliesData.value,
-  };
+  console.log('CreateAssignment: Computing orgsList...');
+  console.log('CreateAssignment: props.adminId:', props.adminId);
+  
+  // When editing an existing assignment, use the existing organizations for pre-selection
+  // When creating a new assignment, pass empty arrays and let GroupPicker fetch its own data
+  if (props.adminId) {
+    // Editing mode - use existing organizations for pre-selection
+    const result = {
+      districts: existingDistrictsData.value || [],
+      schools: existingSchoolsData.value || [],
+      classes: existingClassesData.value || [],
+      groups: existingGroupData.value || [],
+      families: existingFamiliesData.value || [],
+    };
+    console.log('CreateAssignment: Editing mode - returning existing org data:', result);
+    return result;
+  } else {
+    // Creating mode - pass empty arrays, GroupPicker will fetch its own data
+    const result = {
+      districts: [],
+      schools: [],
+      classes: [],
+      groups: [],
+      families: [],
+    };
+    console.log('CreateAssignment: Creating mode - returning empty arrays for GroupPicker to fetch its own data:', result);
+    return result;
+  }
 });
 
 const selection = (selected) => {
@@ -429,10 +493,6 @@ const selection = (selected) => {
 const variants = ref([]);
 const preSelectedVariants = ref([]);
 const nonUniqueTasks = ref("");
-
-const variantsByTaskId = computed(() => {
-  return _groupBy(allVariants.value, "task.id");
-});
 
 const handleVariantsChanged = (newVariants) => {
   variants.value = newVariants;
@@ -696,16 +756,38 @@ const submit = async () => {
 // +------------------------------------------------------------------------------------------------------------------+
 let unsubscribe;
 const init = () => {
+  console.log('CreateAssignment: init() called');
+  console.log('CreateAssignment: Current initialized value:', initialized.value);
+  console.log('CreateAssignment: roarfirekit.value.restConfig:', roarfirekit.value?.restConfig);
+  
   if (unsubscribe) unsubscribe();
   initialized.value = true;
+  
+  console.log('CreateAssignment: initialized set to true');
 };
 
 unsubscribe = authStore.$subscribe(async (mutation, state) => {
-  if (state.roarfirekit.restConfig) init();
+  console.log('CreateAssignment: Auth store subscription triggered');
+  console.log('CreateAssignment: state.roarfirekit.restConfig:', state.roarfirekit?.restConfig);
+  
+  if (state.roarfirekit.restConfig) {
+    console.log('CreateAssignment: restConfig available, calling init()');
+    init();
+  } else {
+    console.log('CreateAssignment: restConfig not available yet');
+  }
 });
 
 onMounted(async () => {
-  if (roarfirekit.value.restConfig) init();
+  console.log('CreateAssignment: onMounted called');
+  console.log('CreateAssignment: roarfirekit.value.restConfig:', roarfirekit.value?.restConfig);
+  
+  if (roarfirekit.value.restConfig) {
+    console.log('CreateAssignment: restConfig available on mount, calling init()');
+    init();
+  } else {
+    console.log('CreateAssignment: restConfig not available on mount, waiting for subscription');
+  }
 });
 
 watch(

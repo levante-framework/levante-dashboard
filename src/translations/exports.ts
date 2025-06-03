@@ -12,3 +12,32 @@ export { default as pageTitlesES } from "./es/pageTitles.json";
 export { default as pageTitlesCO } from "./es/co/pageTitles.json";
 export { default as deTranslations } from "./de/de-componentTranslations.json";
 export { default as pageTitlesDE } from "./de/pageTitles.json";
+
+// Language dropdown options for the LanguageSelector component
+export const languageDropdownOptions = [
+  {
+    name: "English (United States)",
+    value: "en-US",
+    code: "usa"
+  },
+  {
+    name: "English (United Kingdom)",
+    value: "en",
+    code: "gb"
+  },
+  {
+    name: "Español (Spain)",
+    value: "es",
+    code: "es"
+  },
+  {
+    name: "Español (América Latina)",
+    value: "es-CO",
+    code: "col"
+  },
+  {
+    name: "Deutsch",
+    value: "de",
+    code: "de"
+  }
+];

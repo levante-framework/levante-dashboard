@@ -257,39 +257,76 @@ export const fetchDocumentsById = async (
   db = FIRESTORE_DATABASES.ADMIN,
 ) => {
   const axiosInstance = getAxiosInstance(db);
-  const baseURL = axiosInstance.defaults.baseURL.split("googleapis.com/v1/")[1];
-  const documents = toValue(docIds).map(
-    (docId) => `${baseURL}/${collection}/${docId}`,
-  );
-
-  const requestBody = {
-    documents,
-  };
-
-  if (select?.length > 0) {
-    requestBody.mask = { fieldPaths: select };
-  }
-
-  try {
-    const response = await axiosInstance.post(":batchGet", requestBody);
-
-    return response.data
-      .filter(({ found }) => found)
-      .map(({ found }) => {
-        // Deconstruct the document path as Firebase conveniently doesn't return basic information like the record ID as
-        // part of the documentation data. Whilst this is a bit hacky, it works.
-        const pathParts = found.name.split("/");
-        const documentId = pathParts.pop();
-        const collectionName = pathParts.pop();
-        return {
-          id: documentId,
-          collection: collectionName,
-          ..._mapValues(found.fields, (value) => convertValues(value)),
-        };
+  const baseURL = axiosInstance.defaults.baseURL;
+  
+  // Check if we're using emulators
+  const isEmulator = baseURL.includes('localhost') || baseURL.includes('127.0.0.1');
+  
+  if (isEmulator) {
+    // For emulators, use individual document fetches
+    console.log('fetchDocumentsById: Using individual document fetches for emulator');
+    
+    try {
+      const promises = toValue(docIds).map(async (docId) => {
+        const docPath = `/${collection}/${docId}`;
+        const queryParams = (select ?? []).map((field) => `mask.fieldPaths=${field}`);
+        const queryString = queryParams.length > 0 ? `?${queryParams.join("&")}` : "";
+        
+        try {
+          const response = await axiosInstance.get(docPath + queryString);
+          return {
+            id: docId,
+            collection: collection,
+            ..._mapValues(response.data.fields, (value) => convertValues(value)),
+          };
+        } catch (error) {
+          console.warn(`fetchDocumentsById: Failed to fetch document ${docId}:`, error);
+          return null;
+        }
       });
-  } catch (error) {
-    console.error("fetchDocumentsById: Error fetching documents by ID:", error);
-    return [];
+      
+      const results = await Promise.all(promises);
+      return results.filter(doc => doc !== null);
+    } catch (error) {
+      console.error("fetchDocumentsById: Error in individual document fetches:", error);
+      return [];
+    }
+  } else {
+    // For production, use batchGet
+    const baseURLPath = baseURL.split("googleapis.com/v1/")[1];
+    const documents = toValue(docIds).map(
+      (docId) => `${baseURLPath}/${collection}/${docId}`,
+    );
+
+    const requestBody = {
+      documents,
+    };
+
+    if (select?.length > 0) {
+      requestBody.mask = { fieldPaths: select };
+    }
+
+    try {
+      const response = await axiosInstance.post(":batchGet", requestBody);
+
+      return response.data
+        .filter(({ found }) => found)
+        .map(({ found }) => {
+          // Deconstruct the document path as Firebase conveniently doesn't return basic information like the record ID as
+          // part of the documentation data. Whilst this is a bit hacky, it works.
+          const pathParts = found.name.split("/");
+          const documentId = pathParts.pop();
+          const collectionName = pathParts.pop();
+          return {
+            id: documentId,
+            collection: collectionName,
+            ..._mapValues(found.fields, (value) => convertValues(value)),
+          };
+        });
+    } catch (error) {
+      console.error("fetchDocumentsById: Error fetching documents by ID:", error);
+      return [];
+    }
   }
 };
 
@@ -337,38 +374,78 @@ export const batchGetDocs = async (
   }
 
   const axiosInstance = getAxiosInstance(db);
-  const baseURL = axiosInstance.defaults.baseURL.split("googleapis.com/v1/")[1];
-  const documents = docPaths.map((docPath) => `${baseURL}/${docPath}`);
-  const batchDocs = await axiosInstance
-    .post(":batchGet", {
-      documents,
-      ...(select.length > 0 && {
-        mask: { fieldPaths: select },
-      }),
-    })
-    .then(({ data }) => {
-      return _without(
-        data.map(({ found }) => {
-          if (found) {
-            const nameSplit = found.name.split("/");
-            return {
-              name: found.name,
-              data: {
-                id: nameSplit.pop(),
-                collection: nameSplit.pop(),
-                ..._mapValues(found.fields, (value) => convertValues(value)),
-              },
-            };
-          }
-          return undefined;
+  const baseURL = axiosInstance.defaults.baseURL;
+  
+  // Check if we're using emulators
+  const isEmulator = baseURL.includes('localhost') || baseURL.includes('127.0.0.1');
+  
+  if (isEmulator) {
+    // For emulators, use individual document fetches
+    console.log('batchGetDocs: Using individual document fetches for emulator');
+    
+    try {
+      const promises = docPaths.map(async (docPath) => {
+        const queryParams = select.length > 0 ? select.map((field) => `mask.fieldPaths=${field}`).join("&") : "";
+        const queryString = queryParams ? `?${queryParams}` : "";
+        
+        try {
+          const response = await axiosInstance.get(`/${docPath}${queryString}`);
+          const pathParts = docPath.split("/");
+          const documentId = pathParts.pop();
+          const collectionName = pathParts.pop();
+          
+          return {
+            id: documentId,
+            collection: collectionName,
+            ..._mapValues(response.data.fields, (value) => convertValues(value)),
+          };
+        } catch (error) {
+          console.warn(`batchGetDocs: Failed to fetch document ${docPath}:`, error);
+          return null;
+        }
+      });
+      
+      const results = await Promise.all(promises);
+      return results.filter(doc => doc !== null);
+    } catch (error) {
+      console.error("batchGetDocs: Error in individual document fetches:", error);
+      return [];
+    }
+  } else {
+    // For production, use batchGet
+    const baseURLPath = baseURL.split("googleapis.com/v1/")[1];
+    const documents = docPaths.map((docPath) => `${baseURLPath}/${docPath}`);
+    const batchDocs = await axiosInstance
+      .post(":batchGet", {
+        documents,
+        ...(select.length > 0 && {
+          mask: { fieldPaths: select },
         }),
-        undefined,
-      );
-    });
+      })
+      .then(({ data }) => {
+        return _without(
+          data.map(({ found }) => {
+            if (found) {
+              const nameSplit = found.name.split("/");
+              return {
+                name: found.name,
+                data: {
+                  id: nameSplit.pop(),
+                  collection: nameSplit.pop(),
+                  ..._mapValues(found.fields, (value) => convertValues(value)),
+                },
+              };
+            }
+            return undefined;
+          }),
+          undefined,
+        );
+      });
 
-  return docPaths
-    .map((docPath) => batchDocs.find((doc) => doc.name.includes(docPath)))
-    .map((doc) => doc?.data);
+    return docPaths
+      .map((docPath) => batchDocs.find((doc) => doc.name.includes(docPath)))
+      .map((doc) => doc?.data);
+  }
 };
 
 export const matchMode2Op = {

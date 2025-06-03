@@ -31,7 +31,43 @@ const useUpsertAdministrationMutation = (): UseMutationReturnType<
   return useMutation({
     mutationKey: ADMINISTRATION_UPSERT_MUTATION_KEY,
     mutationFn: async (data: AdministrationData): Promise<void> => {
-      await authStore.roarfirekit.upsertAdministration(data);
+      console.log('useUpsertAdministrationMutation: Starting mutation with data:', data);
+      
+      if (!authStore.roarfirekit) {
+        throw new Error('Firekit not initialized');
+      }
+      
+      console.log('useUpsertAdministrationMutation: Firekit object:', authStore.roarfirekit);
+      console.log('useUpsertAdministrationMutation: Available methods:', Object.getOwnPropertyNames(authStore.roarfirekit));
+      console.log('useUpsertAdministrationMutation: Firekit prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(authStore.roarfirekit)));
+      
+      // Check if upsertAdministration method exists
+      if (typeof authStore.roarfirekit.upsertAdministration === 'function') {
+        console.log('useUpsertAdministrationMutation: upsertAdministration method found, calling...');
+        await authStore.roarfirekit.upsertAdministration(data);
+      } else {
+        console.error('useUpsertAdministrationMutation: upsertAdministration method not found!');
+        console.log('useUpsertAdministrationMutation: Looking for alternative methods...');
+        
+        // Check for alternative method names
+        const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(authStore.roarfirekit));
+        const administrationMethods = methods.filter(method => 
+          method.toLowerCase().includes('administration') || 
+          method.toLowerCase().includes('upsert')
+        );
+        console.log('useUpsertAdministrationMutation: Found administration/upsert methods:', administrationMethods);
+        
+        // Try calling the cloud function directly
+        console.log('useUpsertAdministrationMutation: Attempting to call cloud function directly...');
+        try {
+          const result = await authStore.roarfirekit.callFunction('upsertAdministration', data);
+          console.log('useUpsertAdministrationMutation: Cloud function call successful:', result);
+        } catch (error) {
+          console.error('useUpsertAdministrationMutation: Cloud function call failed:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          throw new Error(`Failed to upsert administration: ${errorMessage}`);
+        }
+      }
     },
     onSuccess: (): void => {
       // Invalidate the queries to refetch the administration data.

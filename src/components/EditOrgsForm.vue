@@ -24,61 +24,59 @@ import PvInputText from 'primevue/inputtext';
 import _isEmpty from 'lodash/isEmpty';
 
 interface Props {
-  orgType: string;
-  orgId: string;
   editMode?: boolean;
-}
-
-interface Emits {
-  modalClosed: [];
-  'update:orgData': [orgData: OrgData];
-}
-
-interface OrgData {
-  name: string;
-  tags: string[];
-}
-
-interface ServerOrgData {
-  name?: string;
-  tags?: string[];
-  [key: string]: any;
+  orgType?: string;
+  orgId?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   editMode: true,
 });
 
+interface OrgData {
+  name?: string;
+  tags?: string[];
+  [key: string]: any;
+}
+
 // +------------+
 // | Initialize |
 // +------------+
-const initialized = ref<boolean>(false);
+const initialized = ref(false);
 const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
 
-const emit = defineEmits<Emits>();
+const emit = defineEmits<{
+  'update:localOrgData': [value: OrgData];
+}>();
 
 // +----------------------------+
 // | Query for existing orgData |
 // +----------------------------+
 const { data: serverOrgData } = useQuery({
   queryKey: ['org', props.orgType, props.orgId],
-  queryFn: (): Promise<ServerOrgData> => fetchDocById(props.orgType, props.orgId),
-  placeholderData: (previousData) => previousData,
-  enabled: initialized,
-  staleTime: 5 * 60 * 1000, // 5 minutes
+  queryFn: () => fetchDocById(props.orgType, props.orgId),
+  enabled: computed(() => !!props.orgId),
 });
 
-// +-------------+
-// | Local State |
-// +-------------+
+// +------------------+
+// | Reactive orgData |
+// +------------------+
 const localOrgData = ref<OrgData>({
   name: '',
   tags: [],
 });
 
-const setupOrgData = (orgData: ServerOrgData | null | undefined): void => {
-  const org: OrgData = {
+watch(
+  () => localOrgData.value,
+  (newVal) => {
+    emit('update:localOrgData', newVal);
+  },
+  { deep: true }
+);
+
+const setupOrgData = (orgData: OrgData) => {
+  const org = {
     name: orgData?.name ?? '',
     tags: orgData?.tags ?? [],
   };
@@ -86,43 +84,31 @@ const setupOrgData = (orgData: ServerOrgData | null | undefined): void => {
 };
 
 watch(
-  () => serverOrgData,
-  (orgData) => {
-    if (!_isEmpty(orgData)) {
-      setupOrgData(orgData.value);
+  () => serverOrgData.value,
+  (newVal) => {
+    if (newVal && !_isEmpty(newVal)) {
+      setupOrgData(newVal);
     }
-  },
-  { deep: true, immediate: false },
+  }
 );
 
 // +--------------------+
 // | Initialize firekit |
 // +--------------------+
 let unsubscribe: (() => void) | undefined;
-const init = (): void => {
+const init = () => {
   if (unsubscribe) unsubscribe();
   initialized.value = true;
 };
 
 unsubscribe = authStore.$subscribe(async (mutation, state) => {
-  if ((state.roarfirekit as any)?.restConfig) init();
+  if (state.roarfirekit && (state.roarfirekit as any).initialized) init();
 });
 
-onMounted((): void => {
-  if ((roarfirekit.value as any)?.restConfig) init();
+onMounted(() => {
+  if (roarfirekit.value && (roarfirekit.value as any).initialized) init();
   if (!_isEmpty(serverOrgData.value)) setupOrgData(serverOrgData.value);
 });
-
-// +---------------------+
-// | Handle update event |
-// +---------------------+
-watch(
-  () => localOrgData,
-  (orgData) => {
-    emit('update:orgData', orgData.value);
-  },
-  { deep: true, immediate: false },
-);
 </script>
 <style>
 .form-container {

@@ -272,9 +272,18 @@ export const orgFetcher = async (
   adminOrgs,
   select = ["name", "id", "tags", "currentActivationCode"],
 ) => {
+  console.log('orgFetcher: Starting org fetch with params:', { 
+    orgType, 
+    selectedDistrict: toValue(selectedDistrict), 
+    isSuperAdmin: isSuperAdmin?.value,
+    adminOrgs: adminOrgs?.value,
+    select 
+  });
+  
   const districtId = toValue(selectedDistrict);
 
   if (isSuperAdmin.value) {
+    console.log('orgFetcher: Using super admin path for', orgType);
     const axiosInstance = getAxiosInstance();
     const requestBody = getOrgsRequestBody({
       orgType: orgType,
@@ -285,86 +294,183 @@ export const orgFetcher = async (
     });
 
     if (orgType === "districts") {
-      console.log(`Fetching ${orgType}`);
+      console.log(`orgFetcher: Fetching ${orgType}`);
     } else if (orgType === "schools") {
-      console.log(`Fetching ${orgType} for ${districtId}`);
+      console.log(`orgFetcher: Fetching ${orgType} for ${districtId}`);
     }
 
     return axiosInstance
       .post(":runQuery", requestBody)
-      .then(({ data }) => mapFields(data));
-  } else {
-    if (["groups", "families"].includes(orgType)) {
-      const promises = (adminOrgs.value[orgType] ?? []).map((orgId) => {
-        return fetchDocById(orgType, orgId, select);
+      .then(({ data }) => {
+        console.log('orgFetcher: Super admin query result:', { orgType, count: data?.length, data });
+        return mapFields(data);
+      })
+      .catch(error => {
+        console.error('orgFetcher: Super admin query error:', { orgType, error });
+        throw error;
       });
-      return Promise.all(promises);
-    } else if (orgType === "districts") {
-      // First grab all the districts in adminOrgs
+  } else {
+    console.log('orgFetcher: Using regular admin path for', orgType);
+    if (["groups", "families"].includes(orgType)) {
+      console.log('orgFetcher: Fetching groups/families from adminOrgs:', adminOrgs.value[orgType]);
       const promises = (adminOrgs.value[orgType] ?? []).map((orgId) => {
-        return fetchDocById(orgType, orgId, select);
+        console.log('orgFetcher: Fetching individual org:', { orgType, orgId });
+        return fetchDocById(orgType, orgId, select).catch(error => {
+          console.error('orgFetcher: Error fetching individual org:', { orgType, orgId, error });
+          return null;
+        });
+      });
+      return Promise.all(promises).then(results => {
+        const filteredResults = results.filter(r => r !== null);
+        console.log('orgFetcher: Groups/families fetch results:', { orgType, count: filteredResults?.length, results: filteredResults });
+        return filteredResults;
+      }).catch(error => {
+        console.error('orgFetcher: Groups/families fetch error:', { orgType, error });
+        throw error;
+      });
+    } else if (orgType === "districts") {
+      console.log('orgFetcher: Fetching districts with complex logic');
+      console.log('orgFetcher: adminOrgs.value:', adminOrgs.value);
+      
+      // First grab all the districts in adminOrgs
+      const districtIds = adminOrgs.value[orgType] ?? [];
+      console.log('orgFetcher: District IDs from adminOrgs:', districtIds);
+      
+      const promises = districtIds.map((orgId) => {
+        console.log('orgFetcher: Fetching district:', orgId);
+        return fetchDocById(orgType, orgId, select).then(result => {
+          console.log('orgFetcher: Successfully fetched district:', { orgId, result });
+          return result;
+        }).catch(error => {
+          console.error('orgFetcher: Error fetching district:', { orgId, error });
+          return null;
+        });
       });
 
       // Then add all of the district IDs listed in the docs for each school and class in adminOrgs.
       const schoolPromises = (adminOrgs.value["schools"] ?? []).map(
         (schoolId) => {
-          return fetchDocById("schools", schoolId, ["districtId"]);
+          console.log('orgFetcher: Fetching school for district lookup:', schoolId);
+          return fetchDocById("schools", schoolId, ["districtId"]).catch(error => {
+            console.error('orgFetcher: Error fetching school for district lookup:', { schoolId, error });
+            return null;
+          });
         },
       );
 
       const classPromises = (adminOrgs.value["classes"] ?? []).map(
         (classId) => {
-          return fetchDocById("classes", classId, ["districtId"]);
+          console.log('orgFetcher: Fetching class for district lookup:', classId);
+          return fetchDocById("classes", classId, ["districtId"]).catch(error => {
+            console.error('orgFetcher: Error fetching class for district lookup:', { classId, error });
+            return null;
+          });
         },
       );
 
-      const schools = await Promise.all(schoolPromises);
-      const classes = await Promise.all(classPromises);
-      const districtIds = schools.map((school) => school.districtId);
-      districtIds.push(...classes.map((class_) => class_.districtId));
-
-      for (const districtId of districtIds) {
-        promises.push(fetchDocById(orgType, districtId, select));
-      }
-
-      return Promise.all(promises);
-    } else if (orgType === "schools") {
-      const districtDoc = await fetchDocById("districts", districtId, [
-        "schools",
-      ]);
-      if ((adminOrgs.value["districts"] ?? []).includes(districtId)) {
-        const promises = (districtDoc.schools ?? []).map((schoolId) => {
-          return fetchDocById("schools", schoolId, select);
-        });
-        return Promise.all(promises);
-      } else if ((adminOrgs.value["schools"] ?? []).length > 0) {
-        const schoolIds = _intersection(
-          adminOrgs.value["schools"],
-          districtDoc.schools,
-        );
-        const promises = (schoolIds ?? []).map((schoolId) => {
-          return fetchDocById("schools", schoolId, select);
-        });
-        return Promise.all(promises);
-      } else if ((adminOrgs.value["classes"] ?? []).length > 0) {
-        const classPromises = (adminOrgs.value["classes"] ?? []).map(
-          (classId) => {
-            return fetchDocById("classes", classId, ["schoolId"]);
-          },
-        );
+      try {
+        const schools = await Promise.all(schoolPromises);
         const classes = await Promise.all(classPromises);
-        const schoolIds = _intersection(
-          districtDoc.schools,
-          classes.map((class_) => class_.schoolId),
-        );
-        const promises = (schoolIds ?? []).map((schoolId) => {
-          return fetchDocById("schools", schoolId, select);
-        });
-        return Promise.all(promises);
-      }
+        console.log('orgFetcher: Schools and classes fetched:', { schools, classes });
+        
+        const districtIds = schools.filter(s => s !== null).map((school) => school.districtId);
+        districtIds.push(...classes.filter(c => c !== null).map((class_) => class_.districtId));
+        console.log('orgFetcher: Additional district IDs from schools/classes:', districtIds);
 
-      return Promise.resolve([]);
+        for (const districtId of districtIds) {
+          console.log('orgFetcher: Adding promise for additional district:', districtId);
+          promises.push(fetchDocById(orgType, districtId, select).then(result => {
+            console.log('orgFetcher: Successfully fetched additional district:', { districtId, result });
+            return result;
+          }).catch(error => {
+            console.error('orgFetcher: Error fetching additional district:', { districtId, error });
+            return null;
+          }));
+        }
+
+        const results = await Promise.all(promises);
+        const filteredResults = results.filter(r => r !== null);
+        console.log('orgFetcher: Final districts fetch results:', { count: filteredResults?.length, results: filteredResults });
+        return filteredResults;
+      } catch (error) {
+        console.error('orgFetcher: Error in districts complex logic:', error);
+        throw error;
+      }
+    } else if (orgType === "schools") {
+      console.log('orgFetcher: Fetching schools for district:', districtId);
+      try {
+        const districtDoc = await fetchDocById("districts", districtId, [
+          "schools",
+        ]);
+        console.log('orgFetcher: District doc fetched:', districtDoc);
+        
+        if ((adminOrgs.value["districts"] ?? []).includes(districtId)) {
+          console.log('orgFetcher: User has access to entire district');
+          const promises = (districtDoc.schools ?? []).map((schoolId) => {
+            return fetchDocById("schools", schoolId, select).catch(error => {
+              console.error('orgFetcher: Error fetching school:', { schoolId, error });
+              return null;
+            });
+          });
+          const results = await Promise.all(promises);
+          const filteredResults = results.filter(r => r !== null);
+          console.log('orgFetcher: Schools fetch results (full district access):', { count: filteredResults?.length, results: filteredResults });
+          return filteredResults;
+        } else if ((adminOrgs.value["schools"] ?? []).length > 0) {
+          console.log('orgFetcher: User has access to specific schools');
+          const schoolIds = _intersection(
+            adminOrgs.value["schools"],
+            districtDoc.schools,
+          );
+          console.log('orgFetcher: Intersection of admin schools and district schools:', schoolIds);
+          const promises = (schoolIds ?? []).map((schoolId) => {
+            return fetchDocById("schools", schoolId, select).catch(error => {
+              console.error('orgFetcher: Error fetching specific school:', { schoolId, error });
+              return null;
+            });
+          });
+          const results = await Promise.all(promises);
+          const filteredResults = results.filter(r => r !== null);
+          console.log('orgFetcher: Schools fetch results (specific schools):', { count: filteredResults?.length, results: filteredResults });
+          return filteredResults;
+        } else if ((adminOrgs.value["classes"] ?? []).length > 0) {
+          console.log('orgFetcher: User has access via classes');
+          const classPromises = (adminOrgs.value["classes"] ?? []).map(
+            (classId) => {
+              return fetchDocById("classes", classId, ["schoolId"]).catch(error => {
+                console.error('orgFetcher: Error fetching class for school lookup:', { classId, error });
+                return null;
+              });
+            },
+          );
+          const classes = await Promise.all(classPromises);
+          const schoolIds = _intersection(
+            districtDoc.schools,
+            classes.filter(c => c !== null).map((class_) => class_.schoolId),
+          );
+          console.log('orgFetcher: School IDs from classes:', schoolIds);
+          const promises = (schoolIds ?? []).map((schoolId) => {
+            return fetchDocById("schools", schoolId, select).catch(error => {
+              console.error('orgFetcher: Error fetching school via class:', { schoolId, error });
+              return null;
+            });
+          });
+          const results = await Promise.all(promises);
+          const filteredResults = results.filter(r => r !== null);
+          console.log('orgFetcher: Schools fetch results (via classes):', { count: filteredResults?.length, results: filteredResults });
+          return filteredResults;
+        }
+
+        console.log('orgFetcher: No matching access pattern for schools, returning empty array');
+        return [];
+      } catch (error) {
+        console.error('orgFetcher: Error fetching schools:', error);
+        throw error;
+      }
     }
+    
+    console.log('orgFetcher: No matching orgType, returning empty array');
+    return [];
   }
 };
 
@@ -378,6 +484,17 @@ export const orgPageFetcher = async (
   isSuperAdmin,
   adminOrgs,
 ) => {
+  console.log('orgPageFetcher: Starting with params:', {
+    activeOrgType: toValue(activeOrgType),
+    selectedDistrict: toValue(selectedDistrict),
+    selectedSchool: toValue(selectedSchool),
+    orderBy: toValue(orderBy),
+    pageLimit: toValue(pageLimit),
+    page: toValue(page),
+    isSuperAdmin: toValue(isSuperAdmin),
+    adminOrgs: toValue(adminOrgs)
+  });
+
   const axiosInstance = getAxiosInstance();
   const requestBody = getOrgsRequestBody({
     orgType: activeOrgType.value,
@@ -390,32 +507,21 @@ export const orgPageFetcher = async (
     page: page.value,
   });
 
+  console.log('orgPageFetcher: Generated request body:', JSON.stringify(requestBody, null, 2));
+
   if (isSuperAdmin.value) {
+    console.log('orgPageFetcher: Using super admin path');
     return axiosInstance
       .post(":runQuery", requestBody)
       .then(({ data }) => mapFields(data));
   } else {
-    if (
-      activeOrgType.value === "schools" &&
-      (adminOrgs.value["districts"] ?? []).includes(selectedDistrict.value)
-    ) {
-      const query = axiosInstance
-        .post(":runQuery", requestBody)
-        .then(({ data }) => {
-          return mapFields(data);
-        });
-      return query;
-    } else if (
-      activeOrgType.value === "classes" &&
-      ((adminOrgs.value["schools"] ?? []).includes(selectedSchool.value) ||
-        (adminOrgs.value["districts"] ?? []).includes(selectedDistrict.value))
-    ) {
-      return axiosInstance
-        .post(":runQuery", requestBody)
-        .then(({ data }) => mapFields(data));
-    }
-
+    console.log('orgPageFetcher: Using non-super admin path');
+    // For non-super admin users, always use individual document fetching
+    // to avoid 400 errors with complex REST API queries in emulators
+    console.log('orgPageFetcher: Fetching orgs via individual org IDs');
     const orgIds = adminOrgs.value[activeOrgType.value] ?? [];
+    console.log('orgPageFetcher: Org IDs to fetch:', orgIds);
+    
     // @TODO: Refactor to a single query for all orgs instead of multiple parallel queries.
     const promises = orgIds.map((orgId) =>
       fetchDocById(activeOrgType.value, orgId),
@@ -445,6 +551,16 @@ export const orgFetchAll = async (
   adminOrgs,
   select,
 ) => {
+  console.log('orgFetchAll: Starting with params:', {
+    activeOrgType: toValue(activeOrgType),
+    selectedDistrict: toValue(selectedDistrict),
+    selectedSchool: toValue(selectedSchool),
+    orderBy: toValue(orderBy),
+    isSuperAdmin: toValue(isSuperAdmin),
+    adminOrgs: toValue(adminOrgs),
+    select
+  });
+
   const axiosInstance = getAxiosInstance();
   const requestBody = getOrgsRequestBody({
     orgType: activeOrgType.value,
@@ -456,7 +572,10 @@ export const orgFetchAll = async (
     select,
   });
 
+  console.log('orgFetchAll: Generated request body:', JSON.stringify(requestBody, null, 2));
+
   if (isSuperAdmin.value) {
+    console.log('orgFetchAll: Using super admin path');
     try {
       return await axiosInstance
         .post(":runQuery", requestBody)
@@ -469,14 +588,15 @@ export const orgFetchAll = async (
       return [];
     }
   } else {
+    console.log('orgFetchAll: Using non-super admin path, calling orgPageFetcher');
     try {
       return await orgPageFetcher(
         activeOrgType,
         selectedDistrict,
         selectedSchool,
         orderBy,
-        // Set page limit to max array length in javascript.
-        { value: 2 ** 31 - 1 },
+        // Set page limit to a reasonable value instead of max integer
+        { value: 1000 },
         { value: 0 },
         isSuperAdmin,
         adminOrgs,
@@ -486,6 +606,12 @@ export const orgFetchAll = async (
         "orgFetchAll: Error fetching all orgs for non-super admin:",
         error,
       );
+      console.error("orgFetchAll: Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
       return [];
     }
   }

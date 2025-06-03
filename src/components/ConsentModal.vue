@@ -31,86 +31,88 @@ import _lowerCase from 'lodash/lowerCase';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/store/auth';
+import PvButton from 'primevue/button';
+import PvDialog from 'primevue/dialog';
+
+const i18n = useI18n();
+const router = useRouter();
+const authStore = useAuthStore() as any;
 
 interface Props {
   consentText: string;
   consentType: string;
-  onConfirm: () => Promise<void>;
+  onConfirm?: () => Promise<void>;
 }
 
-const i18n = useI18n();
-const router = useRouter();
-const authStore = useAuthStore();
-
 const props = withDefaults(defineProps<Props>(), {
-  consentText: 'Text Here',
-  consentType: 'Consent',
+  onConfirm: undefined,
 });
 
 const confirm = useConfirm();
 const toast = useToast();
 
-const dialogVisible = ref<boolean>(false);
-const isSubmitting = ref<boolean>(false);
+const dialogVisible = ref(false);
+const isSubmitting = ref(false);
 
-const markdownToHtml = computed((): string => {
-  const sanitizedHtml = DOMPurify.sanitize(marked(props.consentText));
-  return sanitizedHtml;
+const markdownToHtml = computed(() => {
+  const rawHtml = marked(props.consentText);
+  return DOMPurify.sanitize(rawHtml);
 });
 
-onMounted((): void => {
-  dialogVisible.value = true;
+const consentTypeText = computed(() => {
+  return _lowerCase(props.consentType);
+});
 
-  const acceptIcon = computed((): string => (isSubmitting.value ? 'pi pi-spin pi-spinner mr-2' : 'pi pi-check mr-2'));
-  const header = props.consentType.includes('consent')
-    ? i18n.t('consentModal.consentTitle')
-    : i18n.t('consentModal.assentTitle');
+const isVisible = computed(() => {
+  return authStore.userData?.consent?.[props.consentType] === false;
+});
 
+const handleConfirm = () => {
   confirm.require({
-    group: 'templating',
-    header: i18n.t(`consentModal.header`, props.consentType.toUpperCase()),
-    icon: 'pi pi-question-circle',
-    acceptLabel: i18n.t('consentModal.acceptButton', 'Accept'),
-    rejectLabel: i18n.t('consentModal.rejectButton', 'Reject'),
-    acceptClass: 'bg-green-600 text-white border-none border-round p-2 hover:bg-green-800',
-    acceptIcon: 'pi pi-check mr-2',
-    rejectClass: 'bg-red-600 text-white border-none border-round p-2 hover:bg-red-800',
-    rejectIcon: 'pi pi-times mr-2',
-    accept: async (): Promise<void | boolean> => {
-      try {
-        isSubmitting.value = true;
+    message: 'Do you agree to the terms and conditions?',
+    header: 'Confirmation',
+    icon: 'pi pi-exclamation-triangle',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true,
+    },
+    acceptProps: {
+      label: 'Save',
+    },
+    accept: async () => {
+      if (!props.onConfirm) return;
 
+      try {
         await new Promise((resolve) => setTimeout(resolve, 600));
         await props.onConfirm();
 
         toast.add({
           severity: TOAST_SEVERITIES.INFO,
-          summary: i18n.t('consentModal.toastHeader'),
-          detail: i18n.t(`consentModal.${_lowerCase(props.consentType)}UpdatedStatus`),
-          life: TOAST_DEFAULT_LIFE_DURATION,
+          summary: 'Success',
+          detail: 'Consent updated successfully',
+          life: 3000,
         });
-
-        dialogVisible.value = false;
       } catch (error) {
+        console.error('Error updating consent:', error);
         toast.add({
           severity: TOAST_SEVERITIES.ERROR,
           summary: 'Error',
-          detail: 'An error occurred while updating the consent status, please try again.',
-          life: TOAST_DEFAULT_LIFE_DURATION,
+          detail: 'Failed to update consent',
+          life: 3000,
         });
-
-        Sentry.captureException(error);
-
-        return Promise.resolve(false);
-      } finally {
-        isSubmitting.value = false;
       }
     },
-    reject: (): void => {
-      (authStore as any).signOut();
+    reject: () => {
+      authStore.signOut();
       router.push({ name: 'SignOut' });
     },
   });
+};
+
+onMounted(() => {
+  dialogVisible.value = true;
+  handleConfirm();
 });
 </script>
 
