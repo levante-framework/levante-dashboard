@@ -37,36 +37,117 @@ const useUpsertAdministrationMutation = (): UseMutationReturnType<
         throw new Error('Firekit not initialized');
       }
       
-      console.log('useUpsertAdministrationMutation: Firekit object:', authStore.roarfirekit);
-      console.log('useUpsertAdministrationMutation: Available methods:', Object.getOwnPropertyNames(authStore.roarfirekit));
-      console.log('useUpsertAdministrationMutation: Firekit prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(authStore.roarfirekit)));
+      const firekit = authStore.roarfirekit as any;
       
-      // Check if upsertAdministration method exists
-      if (typeof authStore.roarfirekit.upsertAdministration === 'function') {
-        console.log('useUpsertAdministrationMutation: upsertAdministration method found, calling...');
-        await authStore.roarfirekit.upsertAdministration(data);
-      } else {
-        console.error('useUpsertAdministrationMutation: upsertAdministration method not found!');
-        console.log('useUpsertAdministrationMutation: Looking for alternative methods...');
-        
-        // Check for alternative method names
-        const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(authStore.roarfirekit));
-        const administrationMethods = methods.filter(method => 
-          method.toLowerCase().includes('administration') || 
-          method.toLowerCase().includes('upsert')
-        );
-        console.log('useUpsertAdministrationMutation: Found administration/upsert methods:', administrationMethods);
-        
-        // Try calling the cloud function directly
-        console.log('useUpsertAdministrationMutation: Attempting to call cloud function directly...');
-        try {
-          const result = await authStore.roarfirekit.callFunction('upsertAdministration', data);
-          console.log('useUpsertAdministrationMutation: Cloud function call successful:', result);
-        } catch (error) {
-          console.error('useUpsertAdministrationMutation: Cloud function call failed:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          throw new Error(`Failed to upsert administration: ${errorMessage}`);
+      try {
+        // Transform the data to match the expected Firestore structure
+        const administrationDoc = {
+          name: data.name || data.publicName,
+          publicName: data.publicName,
+          dates: {
+            start: data.dateOpen,
+            end: data.dateClose,
+            created: new Date().toISOString(),
+          },
+          assessments: data.assessments || [],
+          assignedOrgs: {
+            districts: data.orgs?.districts || [],
+            schools: data.orgs?.schools || [],
+            classes: data.orgs?.classes || [],
+            groups: data.orgs?.groups || [],
+            families: data.orgs?.families || [],
+          },
+          testData: data.isTestData || false,
+          sequential: data.sequential || false,
+          legal: data.legal || {
+            consent: null,
+            assent: null,
+            amount: "",
+            expectedTime: ""
+          },
+          stats: {
+            total: {
+              assignment: {
+                started: 0,
+                completed: 0,
+                assigned: 0,
+              },
+            },
+          },
+        };
+
+        // Add task-specific stats for each assessment
+        if (data.assessments && Array.isArray(data.assessments)) {
+          data.assessments.forEach((assessment: any) => {
+            if (assessment.taskId) {
+              (administrationDoc.stats.total as any)[assessment.taskId] = {
+                assigned: 0,
+              };
+            }
+          });
         }
+
+        console.log('useUpsertAdministrationMutation: Transformed administration doc:', administrationDoc);
+
+        // Debug: Log all available properties to understand the structure
+        console.log('useUpsertAdministrationMutation: Firekit object:', firekit);
+        console.log('useUpsertAdministrationMutation: Firekit properties:', Object.keys(firekit));
+        console.log('useUpsertAdministrationMutation: Project object:', firekit.project);
+        console.log('useUpsertAdministrationMutation: Project properties:', firekit.project ? Object.keys(firekit.project) : 'No project');
+        
+        // Try different ways to access Firestore
+        let firestoreInstance = null;
+        
+        if (firekit.project && firekit.project.firestore) {
+          console.log('useUpsertAdministrationMutation: Found firestore at project.firestore');
+          firestoreInstance = firekit.project.firestore;
+        } else if (firekit.project && firekit.project.db) {
+          console.log('useUpsertAdministrationMutation: Found firestore at project.db');
+          firestoreInstance = firekit.project.db;
+        } else if (firekit.firestore) {
+          console.log('useUpsertAdministrationMutation: Found firestore at firekit.firestore');
+          firestoreInstance = firekit.firestore;
+        } else if (firekit.db) {
+          console.log('useUpsertAdministrationMutation: Found firestore at firekit.db');
+          firestoreInstance = firekit.db;
+        } else {
+          console.error('useUpsertAdministrationMutation: No firestore instance found');
+          console.error('useUpsertAdministrationMutation: Available firekit properties:', Object.keys(firekit));
+          console.error('useUpsertAdministrationMutation: Project properties:', firekit.project ? Object.keys(firekit.project) : 'No project');
+          throw new Error('No Firestore instance available');
+        }
+
+        console.log('useUpsertAdministrationMutation: Using Firestore instance:', firestoreInstance);
+        console.log('useUpsertAdministrationMutation: Firestore instance type:', typeof firestoreInstance);
+        console.log('useUpsertAdministrationMutation: Firestore instance constructor:', firestoreInstance.constructor.name);
+        console.log('useUpsertAdministrationMutation: Firestore instance methods:', Object.getOwnPropertyNames(firestoreInstance));
+        console.log('useUpsertAdministrationMutation: Firestore instance prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(firestoreInstance)));
+        
+        // Try different ways to access collections
+        let collection = null;
+        let docRef = null;
+        
+        if (typeof firestoreInstance.collection === 'function') {
+          console.log('useUpsertAdministrationMutation: Using collection() method');
+          collection = firestoreInstance.collection('administrations');
+          docRef = data.id ? collection.doc(data.id) : collection.doc();
+        } else if (typeof firestoreInstance.doc === 'function') {
+          console.log('useUpsertAdministrationMutation: Using doc() method directly');
+          const docPath = data.id ? `administrations/${data.id}` : `administrations/${Date.now()}`;
+          docRef = firestoreInstance.doc(docPath);
+        } else {
+          console.error('useUpsertAdministrationMutation: No collection or doc method found');
+          console.error('useUpsertAdministrationMutation: Available methods:', Object.getOwnPropertyNames(firestoreInstance));
+          throw new Error('No collection or doc method available on Firestore instance');
+        }
+        
+        console.log('useUpsertAdministrationMutation: Document reference:', docRef);
+        await docRef.set(administrationDoc);
+        console.log('useUpsertAdministrationMutation: Administration created successfully with ID:', docRef.id);
+
+      } catch (error) {
+        console.error('useUpsertAdministrationMutation: Error creating administration:', error);
+        throw error;
       }
     },
     onSuccess: (): void => {
