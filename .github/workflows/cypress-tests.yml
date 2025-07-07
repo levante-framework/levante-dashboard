@@ -1,4 +1,4 @@
-name: Run all cypress tests
+name: Cypress E2E Tests
 
 on:
   push:
@@ -16,6 +16,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Checkout firebase-functions repo
+        uses: actions/checkout@v4
+        with:
+          repository: levante-framework/firebase-functions
+          path: firebase-functions
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -23,6 +29,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Install firebase-functions dependencies
+        run: |
+          cd firebase-functions
+          npm install
 
       - name: Cache npm dependencies
         uses: actions/cache@v3
@@ -32,8 +43,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
+      - name: Start Firebase emulators
+        run: |
+          cd firebase-functions
+          npm run dev &
+          sleep 30 # wait for firebase emulators to start
+        
       - name: Run cypress tests
         uses: cypress-io/github-action@v6
         with:
           browser: chrome
-          start: npm run dev:db
+          start: npm run dev
