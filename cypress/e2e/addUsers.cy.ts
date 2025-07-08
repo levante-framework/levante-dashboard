@@ -1,11 +1,20 @@
+/// <reference types="cypress" />
 
 const username = 'admin@levante.test';
 const password = 'admin123';
 
+// Add type augmentation - make this file a module
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Cypress {
+    interface Chainable {
+      login(username: string, password: string): Chainable<Element>;
+    }
+  }
+}
 
 describe('Core Admin Actions', () => {
   beforeEach(() => {
-    // @ts-expect-error - login is not typed
     cy.login(username, password);
   });
 
@@ -25,3 +34,6 @@ describe('Core Admin Actions', () => {
   });
   
 });
+
+// Make this file a module
+export {};
