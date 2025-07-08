@@ -897,6 +897,8 @@ const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentScho
   // Array of objects. Ex: [{id: 'lut54353jkler'}]
   const orgs = await fetchOrgByName(orgType, normalizedOrgName, parentDistrict, parentSchool);
 
+  console.log('orgs: ', orgs);
+
   if (orgs.length === 0) {
     if (orgType === 'districts') {
       throw new Error(`No Groups found for site '${orgName}'`);
