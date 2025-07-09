@@ -20,7 +20,7 @@
             v-model="orgType"
             :options="orgTypes"
             class="w-full"
-            data-cy="dropdown-org-type"
+            data-cy="dropdown-group-type"
             input-id="orgType"
             option-label="label"
             show-clear
@@ -72,7 +72,7 @@
 
       <div class="flex flex-column gap-1 w-full">
         <PvFloatLabel>
-          <PvInputText id="orgName" v-model="orgName" class="w-full" data-cy="input-org-name" />
+          <PvInputText id="orgName" v-model="orgName" class="w-full" data-cy="input-group-name" />
           <label for="orgName">{{ orgTypeLabel }} Name<span class="required-asterisk">*</span></label>
         </PvFloatLabel>
         <small v-if="v$.orgName.$error" class="p-error">Please supply a name.</small>

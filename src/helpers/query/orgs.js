@@ -240,7 +240,7 @@ export const fetchOrgByName = async (orgType, orgNormalizedName, selectedDistric
     aggregationQuery: false,
     orgNormalizedName,
     paginate: false,
-    select: ['id', 'name', 'normalizedName'],
+    select: ['id', 'normalizedName'],
     orderBy,
   });
 
