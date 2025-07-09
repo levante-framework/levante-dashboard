@@ -42,6 +42,8 @@ function processTasksSequentially(taskTabs: any, tasksRemaining: number): void {
     });
 }
 
+// TODO: This should use an assignment created from the core admin tests, 
+// verifying that assignment was assigned correctly and is playable. 
 describe('test core tasks from dashboard', () => {
   it('logs in to the dashboard and begins each task', () => {
     cy.visit(dashboardUrl);
