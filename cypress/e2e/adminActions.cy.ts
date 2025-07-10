@@ -117,14 +117,46 @@ describe('Core Admin Actions', () => {
   });
 
   it('creates an assignment', () => {
-    // Navigate through the navbar to Add Users, routing directtly causes reloads and breaks the test
     cy.contains('Assignments').click();
     cy.contains('Create Assignment').click();
-    
+
     // Verify we're on the add assignment page
     cy.url().should('include', '/create-assignment');
-    
-    
+
+    // Fill in assignment name
+    cy.get('[data-cy="input-administration-name"]').type('Cypress Assignment');
+
+    // Select start date (today)
+    cy.get('[data-cy="input-start-date"] .p-datepicker-trigger').click();
+    cy.get('.p-datepicker-today').click();
+
+    // Select end date (a week from now, assume same month for simplicity)
+    cy.get('[data-cy="input-end-date"] .p-datepicker-trigger').click();
+    const weekLater = new Date().getDate() + 7;
+    cy.get('.p-datepicker').contains(weekLater).click();
+
+    // Select group (Cypress Site)
+    cy.get('[data-cy="dropdown-selected-district"]').click();
+    cy.get('.p-select-overlay').should('be.visible');
+    cy.get('.p-select-overlay').contains('Cypress Site').click();
+
+    // Select task
+    // Open task dropdown
+    cy.get('input[placeholder="Select TaskID"]').click();
+    // Select 'Vocabulary' from Language and Literacy group
+    cy.get('.p-select-overlay').contains('Vocabulary').click();
+
+    // Select the first variant by clicking the arrow button
+    cy.get('.h-6rem').first().find('.pi-chevron-right').click();
+
+    // Select radio "No" for sequential
+    cy.get('[data-cy="radio-button-not-sequential"]').click();
+
+    // Submit
+    cy.get('[data-cy="button-create-administration"]').click();
+
+    // Verify success
+    cy.contains('success').should('exist');
   });
 });
 
