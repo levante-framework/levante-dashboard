@@ -43,6 +43,20 @@ jobs:
           cd firebase-functions
           npm install
 
+      - name: Build firebase functions
+        run: |
+          cd firebase-functions
+          # Build the levante-admin functions specifically
+          if [ -d "functions/levante-admin" ]; then
+            echo "Building levante-admin functions"
+            cd functions/levante-admin
+            npm install
+            npm run build
+          else
+            echo "levante-admin functions directory not found"
+            exit 1
+          fi
+
       - name: Cache npm dependencies
         uses: actions/cache@v3
         with:
@@ -54,11 +68,52 @@ jobs:
       - name: Start Firebase emulators
         run: |
           cd firebase-functions
+          # Use demo project to avoid authentication issues
+          export FIREBASE_PROJECT_ID=demo-levante-test
+          export GCLOUD_PROJECT=demo-levante-test
+          
+          # Configure Firebase to use demo project
+          npx firebase use demo-levante-test --add || true
+          
           npm run dev &
-          sleep 30 # wait for firebase emulators to start
+          
+          # Wait for emulators to start and be ready
+          echo "Waiting for Firebase emulators to start..."
+          for i in {1..60}; do
+            # Check if essential services are ready
+            if curl -s http://localhost:4001 > /dev/null 2>&1 && \
+               curl -s http://localhost:9199 > /dev/null 2>&1 && \
+               curl -s http://localhost:8180 > /dev/null 2>&1 && \
+               curl -s http://localhost:5002 > /dev/null 2>&1 && \
+               curl -s http://localhost:9899 > /dev/null 2>&1; then
+              echo "Firebase emulators are ready!"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "Firebase emulators failed to start within 60 seconds"
+              echo "Checking emulator status:"
+              curl -s http://localhost:4001 || echo "UI emulator (4001) not ready"
+              curl -s http://localhost:9199 || echo "Auth emulator (9199) not ready"
+              curl -s http://localhost:8180 || echo "Firestore emulator (8180) not ready"
+              curl -s http://localhost:5002 || echo "Functions emulator (5002) not ready"
+              curl -s http://localhost:9899 || echo "Tasks emulator (9899) not ready"
+              exit 1
+            fi
+            echo "Waiting for emulators... ($i/60)"
+            sleep 1
+          done
+
+      - name: Seed emulator data
+        run: |
+          cd firebase-functions
+          npm run emulator:seed
         
       - name: Run cypress tests
         uses: cypress-io/github-action@v6
         with:
           browser: chrome
           start: npm run dev
+          wait-on: 'http://localhost:5173'
+          wait-on-timeout: 120
+        env:
+          CYPRESS_BASE_URL: http://localhost:5173
