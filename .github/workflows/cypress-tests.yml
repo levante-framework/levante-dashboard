@@ -13,6 +13,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.LEVANTE_BOT_APP_ID }}
+          private_key: ${{ secrets.LEVANTE_BOT_APP_PRIVATE_KEY }}
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -21,6 +28,7 @@ jobs:
         with:
           repository: levante-framework/firebase-functions
           path: firebase-functions
+          token: ${{ steps.generate_token.outputs.token }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
