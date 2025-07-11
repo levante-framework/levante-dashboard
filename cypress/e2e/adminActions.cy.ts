@@ -54,7 +54,7 @@ describe('Core Admin Actions', () => {
     // select district from the dropdown
     cy.get('[data-cy="dropdown-parent-district"]').click();
     cy.get('.p-select-overlay').should('be.visible');
-    cy.get('.p-select-overlay').contains('Cypress Site').click();
+    cy.get('.p-select-overlay').contains('Test District').click();
     // fill in the name
     cy.get('[data-cy="input-group-name"]').type('Cypress School');
     // click the create button
@@ -71,11 +71,11 @@ describe('Core Admin Actions', () => {
     // select district from the dropdown
     cy.get('[data-cy="dropdown-parent-district"]').click();
     cy.get('.p-select-overlay').should('be.visible');
-    cy.get('.p-select-overlay').contains('Cypress Site').click();
+    cy.get('.p-select-overlay').contains('Test District').click();
     // select school from the dropdown
     cy.get('[data-cy="dropdown-parent-school"]').click();
     cy.get('.p-select-overlay').should('be.visible');
-    cy.get('.p-select-overlay').contains('Cypress School').click();
+    cy.get('.p-select-overlay').contains('Test Elementary School').click();
     // fill in the name
     cy.get('[data-cy="input-group-name"]').type('Cypress Class');
     // click the create button
@@ -92,7 +92,7 @@ describe('Core Admin Actions', () => {
     // select district from the dropdown
     cy.get('[data-cy="dropdown-parent-district"]').click();
     cy.get('.p-select-overlay').should('be.visible');
-    cy.get('.p-select-overlay').contains('Cypress Site').click();
+    cy.get('.p-select-overlay').contains('Test District').click();
     // fill in the name
     cy.get('[data-cy="input-group-name"]').type('Cypress Cohort');
     // click the create button
@@ -116,7 +116,7 @@ describe('Core Admin Actions', () => {
     cy.get('[data-cy=continue-to-link-users]').should('exist');
   });
 
-  it('creates an assignment', () => {
+  it('creates an assignment for a site', () => {
     cy.contains('Assignments').click();
     cy.contains('Create Assignment').click();
 
@@ -126,28 +126,46 @@ describe('Core Admin Actions', () => {
     // Fill in assignment name
     cy.get('[data-cy="input-administration-name"]').type('Cypress Assignment');
 
-    // Select start date (today)
-    cy.get('[data-cy="input-start-date"] .p-datepicker-trigger').click();
-    cy.get('.p-datepicker-today').click();
+    // Select start date (today) - use the Today button from PrimeVue
+    cy.get('[data-cy="input-start-date"]').click();
+    cy.get('.p-datepicker').should('be.visible');
+    cy.get('.p-datepicker-buttonbar').contains('Today').click();
 
-    // Select end date (a week from now, assume same month for simplicity)
-    cy.get('[data-cy="input-end-date"] .p-datepicker-trigger').click();
-    const weekLater = new Date().getDate() + 7;
-    cy.get('.p-datepicker').contains(weekLater).click();
+    // Select end date (a week from now) - use a simpler approach
+    cy.get('[data-cy="input-end-date"]').click();
+    cy.get('.p-datepicker').should('be.visible');
+    
+    // Calculate a safe date (today + 7 days) and format it
+    const today = new Date();
+    const weekLater = new Date(today);
+    weekLater.setDate(today.getDate() + 7);
+    
+    // If crossing month boundary, click next month arrow
+    if (weekLater.getMonth() !== today.getMonth()) {
+      cy.get('.p-datepicker-next').click();
+    }
+    
+    // Select the specific day - use more specific selector to avoid ambiguity
+    cy.get('.p-datepicker-calendar tbody td')
+      .not('.p-datepicker-other-month')
+      .contains(weekLater.getDate().toString())
+      .first()
+      .click();
 
-    // Select group (Cypress Site)
-    cy.get('[data-cy="dropdown-selected-district"]').click();
+    // Select group - choose the first site from the Sites tab (default tab)
+    cy.get('.p-listbox').should('be.visible');
+    cy.get('.p-listbox .p-listbox-option').first().click();
+
+    // Select task from TaskPicker dropdown
+    cy.contains('Select TaskID').click();
     cy.get('.p-select-overlay').should('be.visible');
-    cy.get('.p-select-overlay').contains('Cypress Site').click();
-
-    // Select task
-    // Open task dropdown
-    cy.get('input[placeholder="Select TaskID"]').click();
-    // Select 'Vocabulary' from Language and Literacy group
+    
+    // Select Vocabulary directly from the grouped options
     cy.get('.p-select-overlay').contains('Vocabulary').click();
 
-    // Select the first variant by clicking the arrow button
-    cy.get('.h-6rem').first().find('.pi-chevron-right').click();
+    // Wait for variant cards to appear and select the first variant
+    cy.get('[data-cy="selected-variant"]').should('be.visible');
+    cy.get('[data-cy="selected-variant"]').first().click();
 
     // Select radio "No" for sequential
     cy.get('[data-cy="radio-button-not-sequential"]').click();
@@ -155,9 +173,230 @@ describe('Core Admin Actions', () => {
     // Submit
     cy.get('[data-cy="button-create-administration"]').click();
 
-    // Verify success
-    cy.contains('success').should('exist');
+    // Wait for success toast to appear before redirect
+    cy.get('.p-toast-message-success').should('be.visible');
+    cy.contains('Assignment created').should('be.visible');
   });
+
+  it('creates an assignment for a school', () => {
+    cy.contains('Assignments').click();
+    cy.contains('Create Assignment').click();
+
+    // Verify we're on the add assignment page
+    cy.url().should('include', '/create-assignment');
+
+    // Fill in assignment name
+    cy.get('[data-cy="input-administration-name"]').type('Cypress School Assignment');
+
+    // Select start date (today) - use the Today button from PrimeVue
+    cy.get('[data-cy="input-start-date"]').click();
+    cy.get('.p-datepicker').should('be.visible');
+    cy.get('.p-datepicker-buttonbar').contains('Today').click();
+
+    // Select end date (a week from now) - use a simpler approach
+    cy.get('[data-cy="input-end-date"]').click();
+    cy.get('.p-datepicker').should('be.visible');
+    
+    // Calculate a safe date (today + 7 days) and format it
+    const today = new Date();
+    const weekLater = new Date(today);
+    weekLater.setDate(today.getDate() + 7);
+    
+    // If crossing month boundary, click next month arrow
+    if (weekLater.getMonth() !== today.getMonth()) {
+      cy.get('.p-datepicker-next').click();
+    }
+    
+    // Select the specific day - use more specific selector to avoid ambiguity
+    cy.get('.p-datepicker-calendar tbody td')
+      .not('.p-datepicker-other-month')
+      .contains(weekLater.getDate().toString())
+      .first()
+      .click();
+
+    // Wait for the GroupPicker component to be loaded (this includes waiting for claims to load)
+    // The TabView has v-if="claimsLoaded" so we need to wait for it to actually render
+    cy.get('.p-panel').should('be.visible');
+    cy.get('.p-panel').contains('Select Group(s)').should('be.visible');
+    
+    // Wait for the TabView to be rendered (after claims are loaded)
+    cy.get('.p-tabview', { timeout: 10000 }).should('be.visible');
+    
+    // Select group - switch to Schools tab and choose first school
+    cy.get('.p-tabview-tab-header').contains('Schools').click();
+    
+    // Wait for the listbox to update after tab switch
+    cy.get('.p-listbox').should('be.visible');
+    cy.get('.p-listbox .p-listbox-option').first().click();
+
+    // Select task from TaskPicker dropdown
+    cy.contains('Select TaskID').click();
+    cy.get('.p-select-overlay').should('be.visible');
+    
+    // Select Vocabulary directly from the grouped options
+    cy.get('.p-select-overlay').contains('Vocabulary').click();
+
+    // Wait for variant cards to appear and select the first variant
+    cy.get('[data-cy="selected-variant"]').should('be.visible');
+    cy.get('[data-cy="selected-variant"]').first().click();
+
+    // Select radio "No" for sequential
+    cy.get('[data-cy="radio-button-not-sequential"]').click();
+
+    // Submit
+    cy.get('[data-cy="button-create-administration"]').click();
+
+    // Wait for success toast to appear before redirect
+    cy.get('.p-toast-message-success').should('be.visible');
+    cy.contains('Assignment created').should('be.visible');
+  });
+
+  it('creates an assignment for a class', () => {
+    cy.contains('Assignments').click();
+    cy.contains('Create Assignment').click();
+
+    // Verify we're on the add assignment page
+    cy.url().should('include', '/create-assignment');
+
+    // Fill in assignment name
+    cy.get('[data-cy="input-administration-name"]').type('Cypress Class Assignment');
+
+    // Select start date (today) - use the Today button from PrimeVue
+    cy.get('[data-cy="input-start-date"]').click();
+    cy.get('.p-datepicker').should('be.visible');
+    cy.get('.p-datepicker-buttonbar').contains('Today').click();
+
+    // Select end date (a week from now) - use a simpler approach
+    cy.get('[data-cy="input-end-date"]').click();
+    cy.get('.p-datepicker').should('be.visible');
+    
+    // Calculate a safe date (today + 7 days) and format it
+    const today = new Date();
+    const weekLater = new Date(today);
+    weekLater.setDate(today.getDate() + 7);
+    
+    // If crossing month boundary, click next month arrow
+    if (weekLater.getMonth() !== today.getMonth()) {
+      cy.get('.p-datepicker-next').click();
+    }
+    
+    // Select the specific day - use more specific selector to avoid ambiguity
+    cy.get('.p-datepicker-calendar tbody td')
+      .not('.p-datepicker-other-month')
+      .contains(weekLater.getDate().toString())
+      .first()
+      .click();
+
+    // Wait for the GroupPicker component to be loaded (this includes waiting for claims to load)
+    // The TabView has v-if="claimsLoaded" so we need to wait for it to actually render
+    cy.get('.p-panel').should('be.visible');
+    cy.get('.p-panel').contains('Select Group(s)').should('be.visible');
+    
+    // Wait for the TabView to be rendered (after claims are loaded)
+    cy.get('.p-tabview', { timeout: 10000 }).should('be.visible');
+    
+    // Select group - switch to Classes tab and choose first class
+    cy.get('.p-tabview-tab-header').contains('Classes').click();
+    
+    // Wait for the listbox to update after tab switch
+    cy.get('.p-listbox').should('be.visible');
+    cy.get('.p-listbox .p-listbox-option').first().click();
+
+    // Select task from TaskPicker dropdown
+    cy.contains('Select TaskID').click();
+    cy.get('.p-select-overlay').should('be.visible');
+    
+    // Select Vocabulary directly from the grouped options
+    cy.get('.p-select-overlay').contains('Vocabulary').click();
+
+    // Wait for variant cards to appear and select the first variant
+    cy.get('[data-cy="selected-variant"]').should('be.visible');
+    cy.get('[data-cy="selected-variant"]').first().click();
+
+    // Select radio "No" for sequential
+    cy.get('[data-cy="radio-button-not-sequential"]').click();
+
+    // Submit
+    cy.get('[data-cy="button-create-administration"]').click();
+
+    // Wait for success toast to appear before redirect
+    cy.get('.p-toast-message-success').should('be.visible');
+    cy.contains('Assignment created').should('be.visible');
+  });
+
+  it('creates an assignment for a cohort', () => {
+    cy.contains('Assignments').click();
+    cy.contains('Create Assignment').click();
+
+    // Verify we're on the add assignment page
+    cy.url().should('include', '/create-assignment');
+
+    // Fill in assignment name
+    cy.get('[data-cy="input-administration-name"]').type('Cypress Cohort Assignment');
+
+    // Select start date (today) - use the Today button from PrimeVue
+    cy.get('[data-cy="input-start-date"]').click();
+    cy.get('.p-datepicker').should('be.visible');
+    cy.get('.p-datepicker-buttonbar').contains('Today').click();
+
+    // Select end date (a week from now) - use a simpler approach
+    cy.get('[data-cy="input-end-date"]').click();
+    cy.get('.p-datepicker').should('be.visible');
+    
+    // Calculate a safe date (today + 7 days) and format it
+    const today = new Date();
+    const weekLater = new Date(today);
+    weekLater.setDate(today.getDate() + 7);
+    
+    // If crossing month boundary, click next month arrow
+    if (weekLater.getMonth() !== today.getMonth()) {
+      cy.get('.p-datepicker-next').click();
+    }
+    
+    // Select the specific day - use more specific selector to avoid ambiguity
+    cy.get('.p-datepicker-calendar tbody td')
+      .not('.p-datepicker-other-month')
+      .contains(weekLater.getDate().toString())
+      .first()
+      .click();
+
+    // Wait for the GroupPicker component to be loaded (this includes waiting for claims to load)
+    // The TabView has v-if="claimsLoaded" so we need to wait for it to actually render
+    cy.get('.p-panel').should('be.visible');
+    cy.get('.p-panel').contains('Select Group(s)').should('be.visible');
+    
+    // Wait for the TabView to be rendered (after claims are loaded)
+    cy.get('.p-tabview', { timeout: 10000 }).should('be.visible');
+    
+    // Select group - switch to Cohorts tab and choose first cohort
+    cy.get('.p-tabview-tab-header').contains('Cohorts').click();
+    
+    // Wait for the listbox to update after tab switch
+    cy.get('.p-listbox').should('be.visible');
+    cy.get('.p-listbox .p-listbox-option').first().click();
+
+    // Select task from TaskPicker dropdown
+    cy.contains('Select TaskID').click();
+    cy.get('.p-select-overlay').should('be.visible');
+    
+    // Select Vocabulary directly from the grouped options
+    cy.get('.p-select-overlay').contains('Vocabulary').click();
+
+    // Wait for variant cards to appear and select the first variant
+    cy.get('[data-cy="selected-variant"]').should('be.visible');
+    cy.get('[data-cy="selected-variant"]').first().click();
+
+    // Select radio "No" for sequential
+    cy.get('[data-cy="radio-button-not-sequential"]').click();
+
+    // Submit
+    cy.get('[data-cy="button-create-administration"]').click();
+
+    // Wait for success toast to appear before redirect
+    cy.get('.p-toast-message-success').should('be.visible');
+    cy.contains('Assignment created').should('be.visible');
+  });
+
 });
 
 // Make this file a module
