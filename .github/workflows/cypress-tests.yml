@@ -35,6 +35,13 @@ jobs:
         with:
           node-version: '20.x'
 
+      - name: Cache Firebase Emulators
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('firebase-functions/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-firebase-emulators-
+
       - name: Install dependencies
         run: npm install
 
@@ -107,13 +114,29 @@ jobs:
         run: |
           cd firebase-functions
           npm run emulator:seed
-        
-      - name: Run cypress tests
+
+      - name: Start Vite dev server
+        run: npm run dev &
+
+      - name: Wait for Vite to be ready
+        run: |
+          echo "Waiting for http://localhost:5173"
+          for i in {1..300}; do
+            if curl -s --head http://localhost:5173 | grep "200 OK" > /dev/null; then
+              echo "Vite ready!"
+              break
+            fi
+            echo "Waiting for Vite... ($i/300)"
+            sleep 1
+          done
+          if [ $i -eq 300 ]; then
+            echo "Vite failed to start within 300 seconds"
+            exit 1
+          fi
+
+      - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
           browser: chrome
-          start: npm run dev
-          wait-on: 'http://localhost:5173'
-          wait-on-timeout: 120
         env:
           CYPRESS_BASE_URL: http://localhost:5173
