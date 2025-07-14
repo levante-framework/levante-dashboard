@@ -7,7 +7,7 @@ export default defineConfig({
       // implement node event listeners here
     },
     // Use HTTPS locally, HTTP in CI
-    baseUrl: 'https://localhost:5173/',
+    baseUrl: process.env.CI ? 'http://localhost:5173/' : 'https://localhost:5173/',
     supportFile: 'cypress/support/e2e.ts',
     specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
   },
