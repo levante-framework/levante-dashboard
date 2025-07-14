@@ -11,6 +11,9 @@ on:
 jobs:
   cypress-tests:
     runs-on: ubuntu-latest
+    
+    env:
+      CI: true
 
     steps:
       - name: Generate token
@@ -120,9 +123,9 @@ jobs:
 
       # - name: Wait for Vite to be ready
       #   run: |
-      #     echo "Waiting for https://localhost:5173/"
+      #     echo "Waiting for http://localhost:5173"
       #     for i in {1..300}; do
-      #       if curl -k -s --head https://localhost:5173/ | grep "200 OK" > /dev/null; then
+      #       if curl -s --head http://localhost:5173 | grep "200 OK" > /dev/null; then
       #         echo "Vite ready!"
       #         break
       #       fi
@@ -133,10 +136,6 @@ jobs:
       #       echo "Vite failed to start within 300 seconds"
       #       exit 1
       #     fi
-
-      - name: Check CI is true
-        run: |
-          echo "CI is ${{ env.CI }}"
 
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
