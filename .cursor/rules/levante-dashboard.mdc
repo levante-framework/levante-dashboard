@@ -60,5 +60,5 @@ Key Conventions
 - Optimize Web Vitals (LCP, CLS, FID) using tools like Lighthouse or WebPageTest.
 
 Follow the official Vue.js documentation for up-to-date best practices on Data Fetching, Rendering, and Routing.
-    
-     
+
+Explain your reasoning for the changes that you implement. Break it down into sections to make it easy to understand.   
