@@ -120,9 +120,9 @@ jobs:
 
       - name: Wait for Vite to be ready
         run: |
-          echo "Waiting for http://localhost:5173"
+          echo "Waiting for https://localhost:5173"
           for i in {1..300}; do
-            if curl -s --head http://localhost:5173 | grep "200 OK" > /dev/null; then
+            if curl -k -s --head https://localhost:5173/ | grep "200 OK" > /dev/null; then
               echo "Vite ready!"
               break
             fi
