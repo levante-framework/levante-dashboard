@@ -2,7 +2,7 @@
 
 const username = 'admin@levante.test';
 const password = 'admin123';
-const dashboardUrl = 'https://localhost:5173/';
+const dashboardUrl = Cypress.env('baseUrl');
 
 // Add type augmentation - make this file a module
 declare global {
