@@ -118,23 +118,25 @@ jobs:
       - name: Start Vite dev server
         run: npm run dev &
 
-      - name: Wait for Vite to be ready
-        run: |
-          echo "Waiting for https://localhost:5173/"
-          for i in {1..300}; do
-            if curl -k -s --head https://localhost:5173/ | grep "200 OK" > /dev/null; then
-              echo "Vite ready!"
-              break
-            fi
-            echo "Waiting for Vite... ($i/300)"
-            sleep 1
-          done
-          if [ $i -eq 300 ]; then
-            echo "Vite failed to start within 300 seconds"
-            exit 1
-          fi
+      # - name: Wait for Vite to be ready
+      #   run: |
+      #     echo "Waiting for https://localhost:5173/"
+      #     for i in {1..300}; do
+      #       if curl -k -s --head https://localhost:5173/ | grep "200 OK" > /dev/null; then
+      #         echo "Vite ready!"
+      #         break
+      #       fi
+      #       echo "Waiting for Vite... ($i/300)"
+      #       sleep 1
+      #     done
+      #     if [ $i -eq 300 ]; then
+      #       echo "Vite failed to start within 300 seconds"
+      #       exit 1
+      #     fi
 
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
           browser: chrome
+          wait-on: 'https://localhost:5173/'
+          wait-on-timeout: 60
