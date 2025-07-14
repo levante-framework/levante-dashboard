@@ -25,7 +25,7 @@ export default defineConfig({
       },
     }),
     UnheadVite(),
-    ...(process.env.NODE_ENV === 'development' && process.env.CI !== 'true' ? [mkcert()] : []),
+    ...(process.env.NODE_ENV === 'development' ? [mkcert()] : []),
     ...(process.env.NODE_ENV !== 'development'
       ? [
           sentryVitePlugin({
