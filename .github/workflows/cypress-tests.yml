@@ -139,4 +139,4 @@ jobs:
         with:
           browser: chrome
         env:
-          CYPRESS_BASE_URL: http://localhost:5173
+          CYPRESS_baseUrl: http://localhost:5173
