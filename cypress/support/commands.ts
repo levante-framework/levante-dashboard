@@ -10,4 +10,5 @@ Cypress.Commands.add('login', (username: string, password: string) => {
   
   // Ensure we're on the home page and fully authenticated
   cy.url().should('contain', '/');
+  console.log('Logged in');
 });

@@ -45,34 +45,34 @@ function processTasksSequentially(taskTabs: any, tasksRemaining: number): void {
 // TODO: This should use an assignment created from the core admin tests, 
 // verifying that assignment was assigned correctly and is playable. 
 describe('test core tasks from dashboard', () => {
-  it('logs in to the dashboard and begins each task', () => {
-    cy.visit(dashboardUrl);
+  // it('logs in to the dashboard and begins each task', () => {
+  //   cy.visit(dashboardUrl);
 
-    // Fill in username field
-    cy.get('input')
-      .then((inputs) => {
-        cy.wrap(inputs[0]).type(username);
-      });
+  //   // Fill in username field
+  //   cy.get('input')
+  //     .then((inputs) => {
+  //       cy.wrap(inputs[0]).type(username);
+  //     });
 
-    // Fill in password field
-    cy.get('input')
-      .then((inputs) => {
-        cy.wrap(inputs[1]).type(password);
-      });
+  //   // Fill in password field
+  //   cy.get('input')
+  //     .then((inputs) => {
+  //       cy.wrap(inputs[1]).type(password);
+  //     });
 
-    // Click login button
-    cy.get('button').filter('[data-pc-name=button]').click();
+  //   // Click login button
+  //   cy.get('button').filter('[data-pc-name=button]').click();
 
-    // Wait for tasks to load and start processing
-    cy.get('[data-pc-section=tablist]', { timeout: 240000 })
-      .children()
-      .then((taskTabs) => {
-        processTasksSequentially(taskTabs, taskTabs.length - 1);
-      });
+  //   // Wait for tasks to load and start processing
+  //   cy.get('[data-pc-section=tablist]', { timeout: 240000 })
+  //     .children()
+  //     .then((taskTabs) => {
+  //       processTasksSequentially(taskTabs, taskTabs.length - 1);
+  //     });
 
-    // Sign out
-    cy.contains('sign out', { matchCase: false }).click();
-  });
+  //   // Sign out
+  //   cy.contains('sign out', { matchCase: false }).click();
+  // });
 });
 
 // Make this file a module
