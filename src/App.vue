@@ -40,9 +40,18 @@ import { i18n } from '@/translations/i18n';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 
 const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
-const VueQueryDevtools = defineAsyncComponent(() =>
-  import('@tanstack/vue-query-devtools').then((module) => module.VueQueryDevtools),
-);
+const VueQueryDevtools = defineAsyncComponent({
+  loader: () =>
+    import('@tanstack/vue-query-devtools')
+      .then((module) => module.VueQueryDevtools)
+      .catch((error) => {
+        console.warn('Failed to load Vue Query Devtools:', error);
+        // Return a placeholder component that renders nothing
+        return { template: '<div></div>' };
+      }),
+  errorComponent: { template: '<div></div>' },
+  loadingComponent: { template: '<div></div>' }
+});
 
 const isAuthStoreReady = ref(false);
 const showDevtools = ref(false);
@@ -94,10 +103,12 @@ onBeforeMount(async () => {
 onMounted(() => {
   const isLocal = import.meta.env.MODE === 'development';
   const isDevToolsEnabled = import.meta.env.VITE_QUERY_DEVTOOLS_ENABLED === 'true';
+  const isCI = import.meta.env.CI === 'true' || process.env.CI === 'true';
 
-  if (isLocal) {
+  // Only show devtools in local development, not in CI
+  if (isLocal && !isCI) {
     showDevtools.value = true;
-  } else if (isDevToolsEnabled) {
+  } else if (isDevToolsEnabled && !isCI) {
     window.toggleDevtools = () => {
       showDevtools.value = !showDevtools.value;
     };
