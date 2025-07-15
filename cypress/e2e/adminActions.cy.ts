@@ -130,6 +130,9 @@ describe('Core Admin Actions', () => {
     cy.get('[data-cy="input-start-date"]').click();
     cy.get('.p-datepicker').should('be.visible');
     cy.get('.p-datepicker-buttonbar').contains('Today').click();
+    
+    // Wait for the start date picker panel to close after selecting Today
+    cy.get('.p-datepicker-panel').should('not.exist');
 
     // Select end date (a week from now) - use a simpler approach
     cy.get('[data-cy="input-end-date"]').click();
@@ -192,6 +195,9 @@ describe('Core Admin Actions', () => {
     cy.get('[data-cy="input-start-date"]').click();
     cy.get('.p-datepicker').should('be.visible');
     cy.get('.p-datepicker-buttonbar').contains('Today').click();
+    
+    // Wait for the start date picker panel to close after selecting Today
+    cy.get('.p-datepicker-panel').should('not.exist');
 
     // Select end date (a week from now) - use a simpler approach
     cy.get('[data-cy="input-end-date"]').click();
@@ -265,6 +271,9 @@ describe('Core Admin Actions', () => {
     cy.get('[data-cy="input-start-date"]').click();
     cy.get('.p-datepicker').should('be.visible');
     cy.get('.p-datepicker-buttonbar').contains('Today').click();
+    
+    // Wait for the start date picker panel to close after selecting Today
+    cy.get('.p-datepicker-panel').should('not.exist');
 
     // Select end date (a week from now) - use a simpler approach
     cy.get('[data-cy="input-end-date"]').click();
@@ -338,6 +347,9 @@ describe('Core Admin Actions', () => {
     cy.get('[data-cy="input-start-date"]').click();
     cy.get('.p-datepicker').should('be.visible');
     cy.get('.p-datepicker-buttonbar').contains('Today').click();
+    
+    // Wait for the start date picker panel to close after selecting Today
+    cy.get('.p-datepicker-panel').should('not.exist');
 
     // Select end date (a week from now) - use a simpler approach
     cy.get('[data-cy="input-end-date"]').click();
