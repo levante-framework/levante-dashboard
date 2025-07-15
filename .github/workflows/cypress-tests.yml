@@ -12,6 +12,14 @@ jobs:
   cypress-tests:
     runs-on: ubuntu-latest
     
+    # Runs tests in parallel with matrix strategy https://docs.cypress.io/guides/guides/parallelization
+    # https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs
+    # Also see warning here https://github.com/cypress-io/github-action#parallel
+    strategy:
+      fail-fast: false # https://github.com/cypress-io/github-action/issues/48
+      matrix:
+        containers: [1, 2] # Uses 2 parallel instances
+    
     env:
       CI: true
 
@@ -121,21 +129,48 @@ jobs:
       - name: Start Vite dev server
         run: npm run dev &
 
+      - name: Wait for Vite dev server
+        run: |
+          echo "Waiting for Vite dev server to start..."
+          for i in {1..60}; do
+            if curl -s http://localhost:5173 > /dev/null 2>&1; then
+              echo "Vite dev server is ready!"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "Vite dev server failed to start within 60 seconds"
+              exit 1
+            fi
+            echo "Waiting for Vite dev server... ($i/60)"
+            sleep 1
+          done
+
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
           browser: chrome
+          wait-on: 'http://localhost:5173'
+          # Records to Cypress Cloud 
+          # https://docs.cypress.io/guides/cloud/projects#Set-up-a-project-to-record
+          record: true
+          parallel: true # Runs test in parallel using settings above
+        env:
+          # For recording and parallelization to work you must set your CYPRESS_RECORD_KEY
+          # in GitHub repo → Settings → Secrets → Actions
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          # Using the bot token instead of personal access token
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
 
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-            name: cypress-screenshots
+            name: cypress-screenshots-${{ matrix.containers }}
             path: cypress/screenshots/
             
       - name: Upload Cypress videos
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-            name: cypress-videos
+            name: cypress-videos-${{ matrix.containers }}
             path: cypress/videos/
