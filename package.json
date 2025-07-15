@@ -13,7 +13,7 @@
     "deploy:dev": "npm run build:dev && npx firebase use levante-admin-dev && npx firebase deploy --only hosting --config levante-firebase.json",
     "deploy:prod": "npm run build:prod && npx firebase use levante-admin-prod && npx firebase deploy --only hosting --config firebase.json",
     "cy": "cypress open",
-    "cy:run": "cypress run",
+    "cy:run": "cypress run --browser chrome",
     "format": "prettier . --write --log-level=warn",
     "generate-pwa-assets": "pwa-assets-generator",
     "check-format": "prettier . --check",
