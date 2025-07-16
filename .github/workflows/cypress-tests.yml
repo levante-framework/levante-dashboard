@@ -127,23 +127,64 @@ jobs:
           npm run emulator:seed
 
       - name: Start Vite dev server
-        run: npm run dev &
+        run: |
+          # Set environment variables for emulator mode
+          export VITE_EMULATOR=TRUE
+          export VITE_FIREBASE_PROJECT=DEV
+          export VITE_LEVANTE=TRUE
+          npm run dev &
 
       - name: Wait for Vite dev server
         run: |
           echo "Waiting for Vite dev server to start..."
-          for i in {1..60}; do
+          for i in {1..120}; do
             if curl -s http://localhost:5173 > /dev/null 2>&1; then
               echo "Vite dev server is ready!"
+              # Give it a few more seconds to fully initialize the app
+              sleep 5
               break
             fi
-            if [ $i -eq 60 ]; then
-              echo "Vite dev server failed to start within 60 seconds"
+            if [ $i -eq 120 ]; then
+              echo "Vite dev server failed to start within 120 seconds"
               exit 1
             fi
-            echo "Waiting for Vite dev server... ($i/60)"
+            echo "Waiting for Vite dev server... ($i/120)"
             sleep 1
           done
+
+      - name: Debug application state
+        run: |
+          echo "Checking if app is properly loaded..."
+          # Check if the app loads and contains expected elements
+          response=$(curl -s http://localhost:5173)
+          if echo "$response" | grep -q "<!doctype html" || echo "$response" | grep -q "<!DOCTYPE html"; then
+            echo "✓ App is serving HTML content"
+          else
+            echo "✗ App is not serving HTML content"
+            echo "Response: $response"
+          fi
+          
+          # Check if basic app elements are present
+          if echo "$response" | grep -q "id=\"app\""; then
+            echo "✓ App container found"
+          else
+            echo "✗ App container not found"
+          fi
+          
+          # Show environment variables being used
+          echo "Environment variables:"
+          echo "VITE_EMULATOR: ${VITE_EMULATOR:-not set}"
+          echo "VITE_FIREBASE_PROJECT: ${VITE_FIREBASE_PROJECT:-not set}" 
+          echo "VITE_LEVANTE: ${VITE_LEVANTE:-not set}"
+          
+          # Check if we can access the sign-in page specifically
+          echo "Checking sign-in page..."
+          signin_response=$(curl -s http://localhost:5173/signin)
+          if echo "$signin_response" | grep -q "data-cy=input-username-email"; then
+            echo "✓ Sign-in form elements found"
+          else
+            echo "✗ Sign-in form elements not found"
+          fi
 
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
@@ -158,6 +199,10 @@ jobs:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           # bot token
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          # Pass environment variables to Cypress tests
+          VITE_EMULATOR: TRUE
+          VITE_FIREBASE_PROJECT: DEV
+          VITE_LEVANTE: TRUE
 
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v4
