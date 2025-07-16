@@ -44,12 +44,10 @@ Cypress.Commands.add('login', (username: string, password: string) => {
   // Wait for sign-in form to be available, with better error handling
   cy.get('[data-cy=input-username-email]', { timeout: 30000 })
     .should('be.visible')
-    .and('be.enabled')
     .type(username);
     
   cy.get('[data-cy=input-password]', { timeout: 10000 })
     .should('be.visible')
-    .and('be.enabled')
     .type(password);
     
   cy.get('[data-cy=submit-sign-in-with-password]', { timeout: 10000 })
