@@ -29,7 +29,7 @@ export default defineConfig({
     ...(process.env.NODE_ENV !== 'development'
       ? [
           sentryVitePlugin({
-            org: 'roar-89588e380',
+            org: 'levante-framework',
             project: 'dashboard',
           }),
         ]
@@ -68,8 +68,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      '@levante-framework/firekit',
-      'primevue/**'
+      '@levante-framework/firekit'
     ],
     esbuildOptions: {
       mainFields: ['module', 'main'],
