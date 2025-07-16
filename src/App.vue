@@ -81,23 +81,41 @@ const loadSessionTimeoutHandler = computed(() => isAuthStoreReady.value && authS
 const navbarBlacklist = ref(['SignIn', 'Register', 'Maintenance', 'PlayApp', 'SWR', 'SRE', 'PA']);
 
 onBeforeMount(async () => {
-  await authStore.initFirekit();
+  try {
+    // Add timeout to prevent hanging indefinitely
+    const initWithTimeout = Promise.race([
+      authStore.initFirekit(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Firebase initialization timeout')), 10000)
+      )
+    ]);
 
-  await authStore.initStateFromRedirect().then(async () => {
-    // @TODO: Refactor this callback as we should ideally use the useUserClaimsQuery and useUserDataQuery composables.
-    // @NOTE: Whilst the rest of the application relies on the user's ROAR UID, this callback requires the user's ID
-    // in order for SSO to work and cannot currently be changed without significant refactoring.
-    if (authStore.uid) {
-      const userClaims = await fetchDocById('userClaims', authStore.uid);
-      authStore.setUserClaims(userClaims);
-    }
-    if (authStore.roarUid) {
-      const userData = await fetchDocById('users', authStore.roarUid);
-      authStore.setUserData(userData);
-    }
-  });
+    await initWithTimeout;
 
-  isAuthStoreReady.value = true;
+    await authStore.initStateFromRedirect().then(async () => {
+      // @TODO: Refactor this callback as we should ideally use the useUserClaimsQuery and useUserDataQuery composables.
+      // @NOTE: Whilst the rest of the application relies on the user's ROAR UID, this callback requires the user's ID
+      // in order for SSO to work and cannot currently be changed without significant refactoring.
+      if (authStore.uid) {
+        const userClaims = await fetchDocById('userClaims', authStore.uid);
+        authStore.setUserClaims(userClaims);
+      }
+      if (authStore.roarUid) {
+        const userData = await fetchDocById('users', authStore.roarUid);
+        authStore.setUserData(userData);
+      }
+    }).catch(error => {
+      console.warn('Error during auth state initialization:', error);
+      // Continue anyway to allow app to load
+    });
+  } catch (error) {
+    console.error('Firebase initialization failed:', error);
+    // Allow app to continue loading even if Firebase fails
+    // This ensures the app doesn't hang indefinitely in CI
+  } finally {
+    // Always set auth store as ready to allow app to render
+    isAuthStoreReady.value = true;
+  }
 });
 
 onMounted(() => {

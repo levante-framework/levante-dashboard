@@ -8,5 +8,10 @@ declare namespace Cypress {
      * @param password - The password to log in with
      */
     login(username: string, password: string): Chainable<Element>;
+    
+    /**
+     * Custom command to debug page state for troubleshooting
+     */
+    debugPageState(): Chainable<Element>;
   }
 } 
