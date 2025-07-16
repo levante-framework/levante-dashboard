@@ -67,7 +67,10 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['@levante-framework/firekit'],
+    include: [
+      '@levante-framework/firekit',
+      'primevue/**'
+    ],
     esbuildOptions: {
       mainFields: ['module', 'main'],
       resolveExtensions: ['.js', '.mjs', '.cjs'],
