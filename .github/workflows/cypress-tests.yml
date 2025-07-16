@@ -151,14 +151,12 @@ jobs:
           browser: chrome
           wait-on: 'http://localhost:5173'
           # Records to Cypress Cloud 
-          # https://docs.cypress.io/guides/cloud/projects#Set-up-a-project-to-record
           record: true
           parallel: true # Runs test in parallel using settings above
         env:
-          # For recording and parallelization to work you must set your CYPRESS_RECORD_KEY
-          # in GitHub repo → Settings → Secrets → Actions
+          # Required for recording and parallelization
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
-          # Using the bot token instead of personal access token
+          # bot token
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
 
       - name: Upload Cypress screenshots
