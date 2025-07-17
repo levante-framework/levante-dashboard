@@ -1,4 +1,4 @@
-const axios = require('axios');
+import axios from 'axios';
 
 const DEFAULT_URL = 'http://localhost:5173/signin';
 const DEFAULT_SELECTOR = 'data-cy="input-username-email"';
@@ -14,24 +14,23 @@ const waitForSelector = async (url, selector, timeout) => {
 
   while (Date.now() < endTime) {
     try {
-      const res = await get(url);
+      const res = await axios.get(url);
       if (res.status === 200 && res.data.includes(selector)) {
         console.log('✅ Selector found, app is ready.');
         return;
       }
     } catch (error) {
-      // Optional: log once if status is not 200 or host unreachable
+      // Silent retry
     }
 
     await wait(1000);
-    process.stdout.write('.'); // progress indicator
+    process.stdout.write('.');
   }
 
   console.error('\n❌ Timed out waiting for selector.');
   process.exit(1);
 };
 
-// Optional: allow overrides via CLI args
 const url = process.argv[2] || DEFAULT_URL;
 const selector = process.argv[3] || DEFAULT_SELECTOR;
 const timeout = parseInt(process.argv[4], 10) || DEFAULT_TIMEOUT;
