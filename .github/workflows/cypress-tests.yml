@@ -191,11 +191,13 @@ jobs:
             echo "Sign-in response preview: $(echo "$signin_response" | head -c 500)"
           fi
 
+      - name: Wait for App to be ready
+        run: npm run test:setup
+
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
           browser: chrome
-          wait-on: 'http://localhost:5173'
           # Records to Cypress Cloud
           record: true
           parallel: true # Runs test in parallel using settings above
