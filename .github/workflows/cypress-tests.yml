@@ -191,15 +191,6 @@ jobs:
             echo "Sign-in response preview: $(echo "$signin_response" | head -c 500)"
           fi
 
-      - name: Wait for App to be ready
-        run: npm run test:setup
-
-      - name: Show Vite log (if needed)
-        if: always()
-        run: |
-          echo "📄 Dumping vite.log:"
-          cat vite.log || echo "vite.log not found"
-
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:

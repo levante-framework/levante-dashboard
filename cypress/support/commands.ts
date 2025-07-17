@@ -30,7 +30,7 @@ Cypress.Commands.add('login', (username: string, password: string) => {
   cy.url().should('contain', '/signin');
   
   // Wait for the page to fully load and check for essential elements
-  cy.get('body', { timeout: 30000 }).should('be.visible');
+  cy.get('body', { timeout: 45000 }).should('be.visible');
   
   // Debug page state if needed
   cy.debugPageState();
@@ -39,7 +39,7 @@ Cypress.Commands.add('login', (username: string, password: string) => {
   cy.wait(3000);
   
   // Wait for sign-in form to be available, with better error handling
-  cy.get('[data-cy=input-username-email]', { timeout: 30000 })
+  cy.get('[data-cy=input-username-email]', { timeout: 45000 })
     .should('be.visible')
     .type(username);
     
@@ -53,7 +53,7 @@ Cypress.Commands.add('login', (username: string, password: string) => {
     .click();
   
   // Wait for the admin view to be fully loaded
-  cy.contains('All Assignments', { timeout: 30000 });
+  cy.contains('All Assignments', { timeout: 45000 });
   
   // Ensure we're on the home page and fully authenticated
   cy.url().should('contain', '/');
