@@ -135,7 +135,7 @@ jobs:
           export CI=true
           export NODE_ENV=development
           export VITE_QUERY_DEVTOOLS_ENABLED=false
-          npm run dev &
+          nohup npm run dev > vite.log 2>&1 &
 
       - name: Wait for Vite dev server
         run: |
