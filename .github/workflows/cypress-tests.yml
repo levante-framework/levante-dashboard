@@ -198,6 +198,7 @@ jobs:
         uses: cypress-io/github-action@v6
         with:
           browser: chrome
+          wait-on: 'http://localhost:5173'
           # Records to Cypress Cloud
           record: true
           parallel: true # Runs test in parallel using settings above
