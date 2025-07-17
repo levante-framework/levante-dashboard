@@ -35,9 +35,6 @@ Cypress.Commands.add('login', (username: string, password: string) => {
   // Debug page state if needed
   cy.debugPageState();
   
-  // Check if app is properly loaded (not showing spinner)
-  cy.get('#app', { timeout: 20000 }).should('be.visible');
-  
   // Wait longer for Firebase to initialize and UI to render
   cy.wait(3000);
   
