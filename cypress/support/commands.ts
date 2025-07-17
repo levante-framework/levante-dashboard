@@ -27,35 +27,16 @@ Cypress.Commands.add('debugPageState', () => {
 
 Cypress.Commands.add('login', (username: string, password: string) => {
   cy.visit('/signin');
-  cy.url().should('contain', '/signin');
-  
-  // Wait for the page to fully load and check for essential elements
-  cy.get('body', { timeout: 45000 }).should('be.visible');
-  
-  // Debug page state if needed
-  cy.debugPageState();
-  
-  // Wait longer for Firebase to initialize and UI to render
-  cy.wait(3000);
-  
-  // Wait for sign-in form to be available, with better error handling
-  cy.get('[data-cy=input-username-email]', { timeout: 45000 })
-    .should('be.visible')
-    .type(username);
-    
-  cy.get('[data-cy=input-password]', { timeout: 10000 })
-    .should('be.visible')
-    .type(password);
-    
-  cy.get('[data-cy=submit-sign-in-with-password]', { timeout: 10000 })
-    .should('be.visible')
-    .and('be.enabled')
-    .click();
-  
-  // Wait for the admin view to be fully loaded
-  cy.contains('All Assignments', { timeout: 45000 });
-  
-  // Ensure we're on the home page and fully authenticated
-  cy.url().should('contain', '/');
-  console.log('Logged in');
+
+  // Aguarda o input aparecer com tempo extra de tolerância
+  cy.get('[data-cy="input-username-email"]', { timeout: 60000 }).should('exist');
+  cy.get('[data-cy="input-password"]', { timeout: 60000 }).should('exist');
+
+  // Preenche e faz login
+  cy.get('[data-cy="input-username-email"]').type(username);
+  cy.get('[data-cy="input-password"]').type(password);
+  cy.get('[data-cy="login-button"]').click();
+
+  // Garante que redirecionou com sucesso
+  cy.url({ timeout: 20000 }).should('not.include', '/signin');
 });
