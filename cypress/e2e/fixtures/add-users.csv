@@ -1,0 +1,4 @@
+id,userType,month,year,caregiverId,teacherId,site,school,class,cohort
+1,child,2,2020,4,5,Test District,,,Reading Intervention Cohort
+2,caregiver,,,,,Test District,,,Reading Intervention Cohort
+3,teacher,,,,,Test District,,,Reading Intervention Cohort
