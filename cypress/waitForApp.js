@@ -1,4 +1,4 @@
-import { get } from 'axios';
+const axios = require('axios');
 
 const DEFAULT_URL = 'http://localhost:5173/signin';
 const DEFAULT_SELECTOR = 'data-cy="input-username-email"';
