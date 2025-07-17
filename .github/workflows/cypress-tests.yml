@@ -133,7 +133,7 @@ jobs:
           export VITE_FIREBASE_PROJECT=DEV
           export VITE_LEVANTE=TRUE
           export CI=true
-          export NODE_ENV=production
+          export NODE_ENV=development
           export VITE_QUERY_DEVTOOLS_ENABLED=false
           npm run dev &
 
@@ -179,6 +179,7 @@ jobs:
           echo "VITE_EMULATOR: ${VITE_EMULATOR:-not set}"
           echo "VITE_FIREBASE_PROJECT: ${VITE_FIREBASE_PROJECT:-not set}" 
           echo "VITE_LEVANTE: ${VITE_LEVANTE:-not set}"
+          echo "NODE_ENV: ${NODE_ENV:-not set}"
 
           # Check if we can access the sign-in page specifically
           echo "Checking sign-in page..."
@@ -187,6 +188,7 @@ jobs:
             echo "✓ Sign-in form elements found"
           else
             echo "✗ Sign-in form elements not found"
+            echo "Sign-in response preview: $(echo "$signin_response" | head -c 500)"
           fi
 
       - name: Run Cypress tests
@@ -207,6 +209,8 @@ jobs:
           VITE_FIREBASE_PROJECT: DEV
           VITE_LEVANTE: TRUE
           CI: true
+          # Fixed: Use development mode for dev server
+          NODE_ENV: development
           VITE_QUERY_DEVTOOLS_ENABLED: false
 
       - name: Upload Cypress screenshots
