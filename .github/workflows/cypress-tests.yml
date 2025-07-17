@@ -207,7 +207,6 @@ jobs:
           VITE_FIREBASE_PROJECT: DEV
           VITE_LEVANTE: TRUE
           CI: true
-          NODE_ENV: production
           VITE_QUERY_DEVTOOLS_ENABLED: false
 
       - name: Upload Cypress screenshots
