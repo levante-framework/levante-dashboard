@@ -12,7 +12,7 @@
     "dev:pc": "powershell -Command \"$env:VITE_LEVANTE='TRUE'; $env:VITE_FIREBASE_PROJECT='DEV'; vite --force --host\"",
     "deploy:dev": "npm run build:dev && npx firebase use levante-admin-dev && npx firebase deploy --only hosting --config levante-firebase.json",
     "deploy:prod": "npm run build:prod && npx firebase use levante-admin-prod && npx firebase deploy --only hosting --config firebase.json",
-    "test:setup": "npx wait-on http://localhost:5173 && node ./cypress/waitForApp.js",
+    "test:setup": "node ./cypress/waitForApp.js http://localhost:5173/signin 'data-cy=\"input-username-email\"' 45000",
     "cy": "cypress open",
     "cy:run": "cypress run --browser chrome",
     "format": "prettier . --write --log-level=warn",
