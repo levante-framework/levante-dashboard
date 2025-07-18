@@ -25,11 +25,11 @@ export default defineConfig({
       },
     }),
     UnheadVite(),
-    ...(process.env.NODE_ENV === 'development' ? [mkcert()] : []),
+    ...(process.env.NODE_ENV === 'development' && process.env.CI !== 'true' ? [mkcert()] : []),
     ...(process.env.NODE_ENV !== 'development'
       ? [
           sentryVitePlugin({
-            org: 'roar-89588e380',
+            org: 'levante-framework',
             project: 'dashboard',
           }),
         ]
@@ -67,7 +67,9 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['@levante-framework/firekit'],
+    include: [
+      '@levante-framework/firekit'
+    ],
     esbuildOptions: {
       mainFields: ['module', 'main'],
       resolveExtensions: ['.js', '.mjs', '.cjs'],
