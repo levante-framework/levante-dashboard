@@ -130,7 +130,7 @@ jobs:
         run: |
           # Set environment variables for emulator mode
           export VITE_EMULATOR=TRUE
-          export VITE_FIREBASE_PROJECT=DEV
+          export VITE_FIREBASE_PROJECT=demo-levante-test
           export VITE_LEVANTE=TRUE
           export CI=true
           export NODE_ENV=development
