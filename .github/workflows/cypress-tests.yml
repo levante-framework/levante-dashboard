@@ -216,7 +216,7 @@ jobs:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
           # Pass environment variables to Cypress tests
           VITE_EMULATOR: TRUE
-          VITE_FIREBASE_PROJECT: DEV
+          VITE_FIREBASE_PROJECT: demo-levante-test
           VITE_LEVANTE: TRUE
           CI: true
           # Fixed: Use development mode for dev server
