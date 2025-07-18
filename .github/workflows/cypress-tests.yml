@@ -155,6 +155,16 @@ jobs:
             sleep 1
           done
 
+      - name: Dump home page content
+        run: |
+          echo "--- / page content ---"
+          curl -s http://localhost:5173 | head -n 60
+
+      - name: Dump signin page content
+        run: |
+          echo "--- /signin page content ---"
+          curl -s http://localhost:5173/signin | head -n 60
+
       - name: Debug application state
         run: |
           echo "Checking if app is properly loaded..."
