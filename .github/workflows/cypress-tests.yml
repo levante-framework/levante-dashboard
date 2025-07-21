@@ -127,14 +127,18 @@ jobs:
           npm run emulator:seed
 
       - name: Start Vite dev server
-        env:
-          VITE_EMULATOR: 'TRUE'
-          VITE_FIREBASE_PROJECT: 'DEV'
-          VITE_LEVANTE: 'TRUE'
-          CI: 'true'
-          NODE_ENV: 'development'
-          VITE_QUERY_DEVTOOLS_ENABLED: 'false'
-        run: npm run dev &
+        run: |
+          # Set environment variables for emulator mode
+          export VITE_EMULATOR=TRUE
+          export VITE_FIREBASE_PROJECT=demo-levante-test
+          export VITE_LEVANTE=TRUE
+          export CI=true
+          export NODE_ENV=development
+          export VITE_QUERY_DEVTOOLS_ENABLED=false
+
+          echo "VITE_FIREBASE_PROJECT=$VITE_FIREBASE_PROJECT"
+
+          npm run dev &
 
       - name: Wait for Vite dev server
         run: |
@@ -164,7 +168,7 @@ jobs:
           echo "--- /signin page content ---"
           curl -s http://localhost:5173/signin | head -n 60
 
-      - name: Debug application state test
+      - name: Debug application state
         run: |
           echo "Checking if app is properly loaded..."
           # Check if the app loads and contains expected elements
@@ -215,7 +219,7 @@ jobs:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
           # Pass environment variables to Cypress tests
           VITE_EMULATOR: TRUE
-          VITE_FIREBASE_PROJECT: DEV
+          VITE_FIREBASE_PROJECT: demo-levante-test
           VITE_LEVANTE: TRUE
           CI: true
           # Fixed: Use development mode for dev server
