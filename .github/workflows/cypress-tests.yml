@@ -27,6 +27,9 @@ jobs:
       VITE_LEVANTE: TRUE
       NODE_ENV: development
       VITE_QUERY_DEVTOOLS_ENABLED: false
+      FIREBASE_PROJECT_ID: demo-levante-test
+      GCLOUD_PROJECT: demo-levante-test
+      VITE_FIREBASE_PROJECT: demo-levante-test
 
     steps:
       - name: Generate token
