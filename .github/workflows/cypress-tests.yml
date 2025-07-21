@@ -22,6 +22,11 @@ jobs:
 
     env:
       CI: true
+      VITE_EMULATOR: TRUE
+      VITE_FIREBASE_PROJECT: demo-levante-test
+      VITE_LEVANTE: TRUE
+      NODE_ENV: development
+      VITE_QUERY_DEVTOOLS_ENABLED: false
 
     steps:
       - name: Generate token
