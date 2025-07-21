@@ -48,12 +48,14 @@ const VueQueryDevtools = defineAsyncComponent({
       return Promise.resolve({ template: '<div></div>' });
     }
 
-    return import('@tanstack/vue-query-devtools')
-      .then((module) => module.VueQueryDevtools)
-      .catch((error) => {
-        console.warn('Failed to load Vue Query Devtools:', error);
-        return { template: '<div></div>' };
-      });
+    if (import.meta.env.DEV && !import.meta.env.SSR && typeof window !== 'undefined') {
+      return import('@tanstack/vue-query-devtools')
+        .then((module) => module.VueQueryDevtools)
+        .catch((error) => {
+          console.warn('Failed to load Vue Query Devtools:', error);
+          return { template: '<div></div>' };
+        });
+    }
   },
   errorComponent: { template: '<div></div>' },
   loadingComponent: { template: '<div></div>' },
