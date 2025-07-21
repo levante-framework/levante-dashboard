@@ -15,6 +15,7 @@ declare global {
 
 describe('Core Admin Actions', () => {
   beforeEach(() => {
+    cy.debugPageState();
     cy.login(username, password);
   });
 
