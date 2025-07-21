@@ -135,17 +135,15 @@ jobs:
           npm run emulator:seed
 
       - name: Start Vite dev server
+        env:
+          VITE_EMULATOR: TRUE
+          VITE_FIREBASE_PROJECT: demo-levante-test
+          VITE_LEVANTE: TRUE
+          CI: true
+          NODE_ENV: development
+          VITE_QUERY_DEVTOOLS_ENABLED: false
         run: |
-          # Set environment variables for emulator mode
-          export VITE_EMULATOR=TRUE
-          export VITE_FIREBASE_PROJECT=demo-levante-test
-          export VITE_LEVANTE=TRUE
-          export CI=true
-          export NODE_ENV=development
-          export VITE_QUERY_DEVTOOLS_ENABLED=false
-
           echo "VITE_FIREBASE_PROJECT=$VITE_FIREBASE_PROJECT"
-
           npm run dev &
 
       - name: Wait for Vite dev server
