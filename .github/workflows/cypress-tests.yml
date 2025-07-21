@@ -165,7 +165,7 @@ jobs:
           echo "--- /signin page content ---"
           curl -s http://localhost:5173/signin | head -n 60
 
-      - name: Debug application state
+      - name: Debug application state test
         run: |
           echo "Checking if app is properly loaded..."
           # Check if the app loads and contains expected elements
