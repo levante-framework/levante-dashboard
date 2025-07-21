@@ -74,7 +74,7 @@
             style="border-radius: 3rem; height: 3rem"
             @click="authWithGoogle"
           >
-            <img src="../assets/provider-google-logo.svg" alt="The Google Logo" class="flex mr-2 w-2" />
+            <img src="/assets/provider-google-logo.svg" />
             <span>Google</span>
           </PvButton>
         </div>
