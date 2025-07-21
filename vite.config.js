@@ -13,7 +13,10 @@ const commitHash = child.execSync('git rev-parse --short HEAD').toString();
 export default defineConfig({
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(commitHash),
-    'import.meta.env.VITE_LEVANTE': JSON.stringify('TRUE'),
+    'import.meta.env.VITE_LEVANTE': JSON.stringify(process.env.VITE_LEVANTE || 'TRUE'),
+    'import.meta.env.VITE_FIREBASE_PROJECT': JSON.stringify(process.env.VITE_FIREBASE_PROJECT || 'DEV'),
+    'import.meta.env.VITE_EMULATOR': JSON.stringify(process.env.VITE_EMULATOR || 'FALSE'),
+    'import.meta.env.VITE_QUERY_DEVTOOLS_ENABLED': JSON.stringify(process.env.VITE_QUERY_DEVTOOLS_ENABLED || 'false'),
   },
   plugins: [
     Vue({
