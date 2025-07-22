@@ -227,7 +227,7 @@ const clearSearch = () => {
 const isAddGroupModalVisible = ref(false);
 
 const addUsers = () => {
-  router.push({ name: 'Add Users' });
+  router.push({ name: 'AddUsers' });
 };
 
 const authStore = useAuthStore();

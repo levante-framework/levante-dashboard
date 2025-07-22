@@ -59,7 +59,7 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
   {
     title: 'Add Users',
     icon: 'pi pi-user-plus',
-    buttonLink: { name: 'Add Users' },
+    buttonLink: { name: 'AddUsers' },
     requiresSuperAdmin: true,
     requiresAdmin: true,
     project: 'LEVANTE',
@@ -68,7 +68,7 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
   {
     title: 'Link Users',
     icon: 'pi pi-link',
-    buttonLink: { name: 'Link Users' },
+    buttonLink: { name: 'LinkUsers' },
     requiresSuperAdmin: true,
     requiresAdmin: true,
     project: 'LEVANTE',
