@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
   libasound2 \
   libxtst6 \
   xvfb && \
-  npm install -g firebase-tools wait-on
+  npm install -g firebase-tools vite wait-on
 
 # Define diretório de trabalho
 WORKDIR /e2e
