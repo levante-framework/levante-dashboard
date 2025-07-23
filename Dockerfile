@@ -1,7 +1,7 @@
-# Multi-stage build para otimização
+# Multi-stage build for optimization
 FROM node:20-alpine AS base
 
-# Instala dependências do sistema necessárias para Cypress e Firebase
+# Install system dependencies required for Cypress and Firebase
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -14,45 +14,45 @@ RUN apk add --no-cache \
     curl \
     bash
 
-# Instala ferramentas globais necessárias
+# Install global tools
 RUN npm install -g firebase-tools vite wait-on
 
-# Define variáveis de ambiente para Cypress
+# Set Cypress environment variables
 ENV CYPRESS_CACHE_FOLDER=/root/.cache/Cypress
 ENV CYPRESS_REMOTE_DEBUGGING_PORT=9222
 
-# Stage para instalação de dependências
+# Stage for dependency installation
 FROM base AS deps
 
-# Define diretório de trabalho
+# Set working directory
 WORKDIR /app
 
-# Copia arquivos de dependências
+# Copy dependency files
 COPY package*.json ./
 
-# Instala dependências com cache otimizado
+# Install dependencies with optimized cache
 RUN npm ci --only=production && npm cache clean --force
 
-# Stage para dependências de desenvolvimento
+# Stage for development dependencies
 FROM deps AS dev-deps
 
-# Instala todas as dependências incluindo devDependencies
+# Install all dependencies including devDependencies
 RUN npm ci
 
-# Stage final
+# Final stage
 FROM base AS final
 
-# Define diretório de trabalho
+# Set working directory
 WORKDIR /app
 
-# Copia dependências instaladas
+# Copy installed dependencies
 COPY --from=dev-deps /app/node_modules ./node_modules
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copia código fonte
+# Copy source code
 COPY . .
 
-# Define variáveis de ambiente
+# Set environment variables
 ENV VITE_EMULATOR=TRUE
 ENV VITE_FIREBASE_PROJECT=DEV
 ENV VITE_LEVANTE=TRUE
@@ -65,7 +65,7 @@ ENV CHROME_PATH=/usr/bin/chromium-browser
 # Expose port
 EXPOSE 5173
 
-# Script de inicialização
+# Startup script
 COPY <<EOF /app/start.sh
 #!/bin/bash
 set -e
@@ -87,5 +87,5 @@ EOF
 
 RUN chmod +x /app/start.sh
 
-# Comando principal
+# Main command
 CMD ["/app/start.sh"]
