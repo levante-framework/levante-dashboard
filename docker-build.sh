@@ -1,16 +1,16 @@
 #!/bin/bash
 
-# Script para build e execução do container Docker para testes E2E
+# Script for building and running Docker container for E2E tests
 
 set -e
 
-# Cores para output
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Função para imprimir mensagens coloridas
+# Function to print colored messages
 print_message() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
@@ -23,38 +23,38 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Nome da imagem
+# Image name
 IMAGE_NAME="levante-e2e"
 CONTAINER_NAME="levante-e2e-container"
 
-# Função para limpar containers e imagens antigas
+# Function to clean up old containers and images
 cleanup() {
-    print_message "Limpando containers e imagens antigas..."
+    print_message "Cleaning up old containers and images..."
     
-    # Para e remove container se existir
+    # Stop and remove container if exists
     docker stop $CONTAINER_NAME 2>/dev/null || true
     docker rm $CONTAINER_NAME 2>/dev/null || true
     
-    # Remove imagem se existir
+    # Remove image if exists
     docker rmi $IMAGE_NAME 2>/dev/null || true
 }
 
-# Função para build da imagem
+# Function to build image
 build_image() {
-    print_message "Construindo imagem Docker..."
+    print_message "Building Docker image..."
     docker build -t $IMAGE_NAME .
     
     if [ $? -eq 0 ]; then
-        print_message "Imagem construída com sucesso!"
+        print_message "Image built successfully!"
     else
-        print_error "Falha na construção da imagem"
+        print_error "Failed to build image"
         exit 1
     fi
 }
 
-# Função para executar testes
+# Function to run tests
 run_tests() {
-    print_message "Executando testes E2E..."
+    print_message "Running E2E tests..."
     
     docker run --rm \
         --name $CONTAINER_NAME \
@@ -69,37 +69,37 @@ run_tests() {
         $IMAGE_NAME
     
     if [ $? -eq 0 ]; then
-        print_message "Testes executados com sucesso!"
+        print_message "Tests executed successfully!"
     else
-        print_error "Falha na execução dos testes"
+        print_error "Failed to execute tests"
         exit 1
     fi
 }
 
-# Função para mostrar ajuda
+# Function to show help
 show_help() {
-    echo "Uso: $0 [OPÇÃO]"
+    echo "Usage: $0 [OPTION]"
     echo ""
-    echo "Opções:"
-    echo "  build     - Apenas construir a imagem Docker"
-    echo "  run       - Executar testes (requer imagem já construída)"
-    echo "  full      - Limpar, construir e executar testes (padrão)"
-    echo "  clean     - Limpar containers e imagens"
-    echo "  help      - Mostrar esta ajuda"
+    echo "Options:"
+    echo "  build     - Only build Docker image"
+    echo "  run       - Run tests (requires image to be built)"
+    echo "  full      - Clean, build and run tests (default)"
+    echo "  clean     - Clean containers and images"
+    echo "  help      - Show this help"
     echo ""
-    echo "Exemplos:"
-    echo "  $0          # Executa o processo completo"
-    echo "  $0 build    # Apenas constrói a imagem"
-    echo "  $0 run      # Executa testes (imagem deve existir)"
+    echo "Examples:"
+    echo "  $0          # Execute complete process"
+    echo "  $0 build    # Only build image"
+    echo "  $0 run      # Run tests (image must exist)"
 }
 
-# Verificar se Docker está rodando
+# Check if Docker is running
 if ! docker info >/dev/null 2>&1; then
-    print_error "Docker não está rodando. Inicie o Docker e tente novamente."
+    print_error "Docker is not running. Start Docker and try again."
     exit 1
 fi
 
-# Processar argumentos
+# Process arguments
 case "${1:-full}" in
     "build")
         cleanup
@@ -120,7 +120,7 @@ case "${1:-full}" in
         show_help
         ;;
     *)
-        print_error "Opção inválida: $1"
+        print_error "Invalid option: $1"
         show_help
         exit 1
         ;;
