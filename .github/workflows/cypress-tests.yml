@@ -41,24 +41,22 @@ jobs:
           path: firebase-functions
           token: ${{ steps.generate_token.outputs.token }}
 
-      - name: Set up Docker Buildx
+            - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Verify Docker Compose
-        run: |
-          docker compose version || docker-compose --version
-          echo "Docker Compose is available"
-
-      - name: Run E2E tests with Docker Compose
+      - name: Run E2E tests with Docker
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
         run: |
-          # Make script executable
-          chmod +x docker-test.sh
-
-          # Run tests
-          ./docker-test.sh test
+          # Build and run Docker container
+          docker build -t levante-e2e .
+          docker run --rm \
+            -e CYPRESS_RECORD_KEY=$CYPRESS_RECORD_KEY \
+            -e GITHUB_TOKEN=$GITHUB_TOKEN \
+            -v ${{ github.workspace }}/cypress/screenshots:/app/cypress/screenshots \
+            -v ${{ github.workspace }}/cypress/videos:/app/cypress/videos \
+            levante-e2e
 
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v4
