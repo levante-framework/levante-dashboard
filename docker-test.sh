@@ -28,16 +28,23 @@ if ! docker info >/dev/null 2>&1; then
     exit 1
 fi
 
-# Check if Docker Compose is available
-if ! docker-compose --version >/dev/null 2>&1; then
+# Check if Docker Compose is available (try both versions)
+if ! docker compose version >/dev/null 2>&1 && ! docker-compose --version >/dev/null 2>&1; then
     print_error "Docker Compose is not available. Install Docker Compose and try again."
     exit 1
+fi
+
+# Set compose command
+if docker compose version >/dev/null 2>&1; then
+    COMPOSE_CMD="docker compose"
+else
+    COMPOSE_CMD="docker-compose"
 fi
 
 # Function to cleanup
 cleanup() {
     print_message "Cleaning up containers..."
-    docker-compose down --volumes --remove-orphans
+    $COMPOSE_CMD down --volumes --remove-orphans
 }
 
 # Function to show help
@@ -63,29 +70,29 @@ show_help() {
 case "${1:-test}" in
     "build")
         print_message "Building Docker images..."
-        docker-compose build
+        $COMPOSE_CMD build
         ;;
     "up")
         print_message "Starting services..."
-        docker-compose up -d
+        $COMPOSE_CMD up -d
         print_message "Services started. Use '$0 logs' to see logs."
         ;;
     "down")
         print_message "Stopping services..."
-        docker-compose down
+        $COMPOSE_CMD down
         ;;
     "test")
         print_message "Running complete test suite..."
         cleanup
-        docker-compose build
-        docker-compose up -d
+        $COMPOSE_CMD build
+        $COMPOSE_CMD up -d
         print_message "Waiting for services to be ready..."
-        docker-compose run --rm cypress
+        $COMPOSE_CMD run --rm cypress
         print_message "Tests completed!"
         cleanup
         ;;
     "logs")
-        docker-compose logs -f
+        $COMPOSE_CMD logs -f
         ;;
     "clean")
         cleanup
