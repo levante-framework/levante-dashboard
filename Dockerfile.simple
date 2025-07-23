@@ -29,6 +29,8 @@ RUN npm install -g firebase-tools vite wait-on
 # Set environment variables for native modules
 ENV PKG_CONFIG_PATH=/usr/lib/pkgconfig
 ENV PKG_CONFIG_LIBDIR=/usr/lib/pkgconfig
+ENV NPM_CONFIG_UNSAFE_PERM=true
+ENV NPM_CONFIG_CACHE=/root/.npm
 
 # Set working directory
 WORKDIR /app
@@ -36,8 +38,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies with fallback strategy
+RUN npm install --no-audit --no-fund --prefer-offline || \
+    (npm cache clean --force && npm install --no-audit --no-fund)
 
 # Copy source code
 COPY . .

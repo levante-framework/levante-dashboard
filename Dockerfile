@@ -34,6 +34,8 @@ ENV NPM_CONFIG_CACHE=/root/.npm
 # Set environment variables for native modules
 ENV PKG_CONFIG_PATH=/usr/lib/pkgconfig
 ENV PKG_CONFIG_LIBDIR=/usr/lib/pkgconfig
+ENV NPM_CONFIG_UNSAFE_PERM=true
+ENV NPM_CONFIG_CACHE=/root/.npm
 
 # Stage for dependency installation
 FROM base AS deps
@@ -44,8 +46,9 @@ WORKDIR /app
 # Copy dependency files
 COPY package*.json package-lock.json ./
 
-# Install all dependencies (production and development)
-RUN npm ci --no-audit --no-fund && npm cache clean --force
+# Install all dependencies
+RUN npm install --no-audit --no-fund --prefer-offline || \
+    (npm cache clean --force && npm install --no-audit --no-fund)
 
 # Final stage
 FROM base AS final
