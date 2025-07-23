@@ -47,8 +47,7 @@ WORKDIR /app
 COPY package*.json package-lock.json ./
 
 # Install all dependencies
-RUN npm install --no-audit --no-fund --prefer-offline || \
-    (npm cache clean --force && npm install --no-audit --no-fund)
+RUN npm install
 
 # Final stage
 FROM base AS final
