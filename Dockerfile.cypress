@@ -1,0 +1,29 @@
+FROM cypress/included:14.4.1
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install --no-audit --no-fund
+
+# Copy source code
+COPY . .
+
+# Set environment variables
+ENV CYPRESS_baseUrl=http://app:5173
+ENV VITE_EMULATOR=TRUE
+ENV VITE_FIREBASE_PROJECT=DEV
+ENV VITE_LEVANTE=TRUE
+ENV VITE_QUERY_DEVTOOLS_ENABLED=false
+ENV CI=true
+ENV NODE_ENV=development
+
+# Wait for app to be ready and run tests
+CMD ["sh", "-c", "\
+    echo 'Waiting for app to be ready...' && \
+    npx wait-on http://app:5173 --timeout=60000 && \
+    echo 'Running Cypress tests...' && \
+    npx cypress run --browser chrome --record --parallel"] 

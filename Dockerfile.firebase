@@ -1,0 +1,43 @@
+FROM node:20-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    curl \
+    bash \
+    openjdk11-jre
+
+# Install Firebase CLI globally
+RUN npm install -g firebase-tools
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files for firebase-functions
+COPY firebase-functions/package*.json ./firebase-functions/
+COPY firebase-functions/functions/levante-admin/package*.json ./firebase-functions/functions/levante-admin/
+
+# Install firebase-functions dependencies
+RUN cd firebase-functions && npm install
+RUN cd firebase-functions/functions/levante-admin && npm install
+
+# Copy firebase-functions source
+COPY firebase-functions ./firebase-functions
+
+# Build firebase functions
+RUN cd firebase-functions/functions/levante-admin && npm run build
+
+# Copy firebase configuration
+COPY firebase.json .firebaserc ./
+
+# Expose ports
+EXPOSE 4001 9199 8180 5002 9899
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=30 \
+    CMD curl -f http://localhost:4001 || exit 1
+
+# Start Firebase emulators
+CMD ["sh", "-c", "\
+    cd firebase-functions && \
+    npx firebase use demo-levante-test --add || true && \
+    npm run dev"] 
