@@ -47,7 +47,7 @@ WORKDIR /app
 COPY package*.json package-lock.json ./
 
 # Install all dependencies
-RUN npm install
+RUN cd /app && npm install
 
 # Final stage
 FROM base AS final
