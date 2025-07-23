@@ -1,7 +1,7 @@
 # Multi-stage build for optimization
 FROM node:20-alpine AS base
 
-# Install system dependencies required for Cypress and Firebase
+# Install system dependencies required for Cypress, Firebase and native modules
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -12,7 +12,16 @@ RUN apk add --no-cache \
     ttf-freefont \
     openjdk11-jre \
     curl \
-    bash
+    bash \
+    # Dependencies for canvas and other native modules
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    musl-dev \
+    gcc \
+    g++ \
+    make \
+    python3
 
 # Install global tools
 RUN npm install -g firebase-tools vite wait-on
@@ -21,6 +30,10 @@ RUN npm install -g firebase-tools vite wait-on
 ENV CYPRESS_CACHE_FOLDER=/root/.cache/Cypress
 ENV CYPRESS_REMOTE_DEBUGGING_PORT=9222
 ENV NPM_CONFIG_CACHE=/root/.npm
+
+# Set environment variables for native modules
+ENV PKG_CONFIG_PATH=/usr/lib/pkgconfig
+ENV PKG_CONFIG_LIBDIR=/usr/lib/pkgconfig
 
 # Stage for dependency installation
 FROM base AS deps
