@@ -116,6 +116,10 @@ case "${1:-full}" in
         cleanup
         build_image "Dockerfile.simple"
         ;;
+    "build-debug")
+        cleanup
+        build_image "Dockerfile.debug"
+        ;;
     "run")
         run_tests
         ;;
@@ -127,6 +131,11 @@ case "${1:-full}" in
     "full-simple")
         cleanup
         build_image "Dockerfile.simple"
+        run_tests
+        ;;
+    "full-debug")
+        cleanup
+        build_image "Dockerfile.debug"
         run_tests
         ;;
     "clean")
