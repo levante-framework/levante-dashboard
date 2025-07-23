@@ -1,0 +1,101 @@
+# Debug Dockerfile for troubleshooting npm install issues
+FROM node:20-alpine
+
+# Install system dependencies including build tools
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    openjdk11-jre \
+    curl \
+    bash \
+    # Native module dependencies
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    musl-dev \
+    gcc \
+    g++ \
+    make \
+    python3 \
+    # Additional dependencies
+    pixman-dev \
+    libpng-dev \
+    giflib-dev \
+    librsvg-dev
+
+# Install global tools
+RUN npm install -g firebase-tools vite wait-on
+
+# Set environment variables
+ENV VITE_EMULATOR=TRUE
+ENV VITE_FIREBASE_PROJECT=DEV
+ENV VITE_LEVANTE=TRUE
+ENV VITE_QUERY_DEVTOOLS_ENABLED=false
+ENV CI=true
+ENV NODE_ENV=development
+ENV CHROME_BIN=/usr/bin/chromium-browser
+ENV CHROME_PATH=/usr/bin/chromium-browser
+ENV CYPRESS_CACHE_FOLDER=/root/.cache/Cypress
+ENV PKG_CONFIG_PATH=/usr/lib/pkgconfig
+ENV PKG_CONFIG_LIBDIR=/usr/lib/pkgconfig
+ENV NPM_CONFIG_UNSAFE_PERM=true
+ENV NPM_CONFIG_CACHE=/root/.npm
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Debug: Show package.json content
+RUN echo "=== Package.json content ===" && cat package.json
+
+# Debug: Show npm version and config
+RUN echo "=== NPM Version ===" && npm --version && \
+    echo "=== NPM Config ===" && npm config list
+
+# Debug: Try to install with different strategies
+RUN echo "=== Attempting npm install ===" && \
+    npm install --verbose --no-audit --no-fund --prefer-offline || \
+    (echo "=== First attempt failed, trying with cache clean ===" && \
+     npm cache clean --force && \
+     npm install --verbose --no-audit --no-fund) || \
+    (echo "=== Second attempt failed, trying with different registry ===" && \
+     npm config set registry https://registry.npmjs.org/ && \
+     npm install --verbose --no-audit --no-fund)
+
+# Copy source code
+COPY . .
+
+# Expose port
+EXPOSE 5173
+
+# Startup script
+COPY <<EOF /app/start.sh
+#!/bin/bash
+set -e
+
+echo "Starting development server..."
+npm run dev &
+DEV_PID=\$!
+
+echo "Waiting for app to be ready..."
+npx wait-on http://localhost:5173 --timeout=60000
+
+echo "Running Cypress tests..."
+npx cypress run --browser chromium --headless
+
+# Cleanup
+kill \$DEV_PID 2>/dev/null || true
+wait \$DEV_PID 2>/dev/null || true
+EOF
+
+RUN chmod +x /app/start.sh
+
+# Main command
+CMD ["/app/start.sh"] 

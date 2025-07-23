@@ -84,9 +84,11 @@ show_help() {
     echo "Options:"
     echo "  build     - Only build Docker image"
     echo "  build-simple - Build using simple Dockerfile"
+    echo "  build-debug - Build using debug Dockerfile"
     echo "  run       - Run tests (requires image to be built)"
     echo "  full      - Clean, build and run tests (default)"
     echo "  full-simple - Clean, build (simple) and run tests"
+    echo "  full-debug - Clean, build (debug) and run tests"
     echo "  clean     - Clean containers and images"
     echo "  help      - Show this help"
     echo ""
@@ -94,6 +96,7 @@ show_help() {
     echo "  $0          # Execute complete process"
     echo "  $0 build    # Only build image"
     echo "  $0 build-simple # Build using simple Dockerfile"
+    echo "  $0 build-debug # Build using debug Dockerfile"
     echo "  $0 run      # Run tests (image must exist)"
 }
 

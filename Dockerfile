@@ -46,8 +46,10 @@ WORKDIR /app
 # Copy dependency files
 COPY package*.json package-lock.json ./
 
-# Install all dependencies
-RUN cd /app && npm install
+# Install dependencies step by step
+RUN cd /app && \
+    npm config set registry https://registry.npmjs.org/ && \
+    npm install --verbose --no-audit --no-fund --prefer-offline
 
 # Final stage
 FROM base AS final
