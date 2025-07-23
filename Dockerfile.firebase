@@ -16,33 +16,12 @@ WORKDIR /app
 # Copy firebase configuration
 COPY firebase.json .firebaserc ./
 
-# Script to clone and setup firebase-functions
-COPY <<EOF /app/setup-firebase.sh
-#!/bin/bash
-set -e
+# Copy firebase-functions (checked out by GitHub Actions)
+COPY firebase-functions ./firebase-functions
 
-# Clone firebase-functions repository
-echo "Cloning firebase-functions repository..."
-git clone https://github.com/levante-framework/firebase-functions.git
-
-# Install dependencies
-echo "Installing firebase-functions dependencies..."
-cd firebase-functions
-npm install
-
-# Build levante-admin functions
-echo "Building levante-admin functions..."
-if [ -d "functions/levante-admin" ]; then
-    cd functions/levante-admin
-    npm install
-    npm run build
-else
-    echo "levante-admin functions directory not found"
-    exit 1
-fi
-EOF
-
-RUN chmod +x /app/setup-firebase.sh
+# Install dependencies and build
+RUN cd firebase-functions && npm install
+RUN cd firebase-functions/functions/levante-admin && npm install && npm run build
 
 # Expose ports
 EXPOSE 4001 9199 8180 5002 9899
@@ -53,7 +32,6 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=30 \
 
 # Start Firebase emulators
 CMD ["sh", "-c", "\
-    /app/setup-firebase.sh && \
     cd firebase-functions && \
     npx firebase use demo-levante-test --add || true && \
     npm run dev"] 
