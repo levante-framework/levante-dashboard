@@ -15,6 +15,7 @@ services:
     environment:
       - FIREBASE_PROJECT_ID=demo-levante-test
       - GCLOUD_PROJECT=demo-levante-test
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:4001']
       interval: 10s
