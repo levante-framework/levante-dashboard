@@ -41,8 +41,9 @@ cleanup() {
 
 # Function to build image
 build_image() {
-    print_message "Building Docker image..."
-    docker build -t $IMAGE_NAME .
+    local dockerfile=${1:-Dockerfile}
+    print_message "Building Docker image using $dockerfile..."
+    docker build -t $IMAGE_NAME -f $dockerfile .
     
     if [ $? -eq 0 ]; then
         print_message "Image built successfully!"
@@ -82,14 +83,17 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  build     - Only build Docker image"
+    echo "  build-simple - Build using simple Dockerfile"
     echo "  run       - Run tests (requires image to be built)"
     echo "  full      - Clean, build and run tests (default)"
+    echo "  full-simple - Clean, build (simple) and run tests"
     echo "  clean     - Clean containers and images"
     echo "  help      - Show this help"
     echo ""
     echo "Examples:"
     echo "  $0          # Execute complete process"
     echo "  $0 build    # Only build image"
+    echo "  $0 build-simple # Build using simple Dockerfile"
     echo "  $0 run      # Run tests (image must exist)"
 }
 
@@ -105,12 +109,21 @@ case "${1:-full}" in
         cleanup
         build_image
         ;;
+    "build-simple")
+        cleanup
+        build_image "Dockerfile.simple"
+        ;;
     "run")
         run_tests
         ;;
     "full")
         cleanup
         build_image
+        run_tests
+        ;;
+    "full-simple")
+        cleanup
+        build_image "Dockerfile.simple"
         run_tests
         ;;
     "clean")

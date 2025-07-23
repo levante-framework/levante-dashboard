@@ -1,7 +1,7 @@
-# Multi-stage build for optimization
-FROM node:20-alpine AS base
+# Simple Dockerfile for E2E testing
+FROM node:20-alpine
 
-# Install system dependencies required for Cypress and Firebase
+# Install system dependencies
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -17,31 +17,14 @@ RUN apk add --no-cache \
 # Install global tools
 RUN npm install -g firebase-tools vite wait-on
 
-# Set Cypress environment variables
-ENV CYPRESS_CACHE_FOLDER=/root/.cache/Cypress
-ENV CYPRESS_REMOTE_DEBUGGING_PORT=9222
-ENV NPM_CONFIG_CACHE=/root/.npm
-
-# Stage for dependency installation
-FROM base AS deps
-
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files
-COPY package*.json package-lock.json ./
+# Copy package files
+COPY package*.json ./
 
-# Install all dependencies (production and development)
-RUN npm ci --no-audit --no-fund && npm cache clean --force
-
-# Final stage
-FROM base AS final
-
-# Set working directory
-WORKDIR /app
-
-# Copy installed dependencies
-COPY --from=deps /app/node_modules ./node_modules
+# Install dependencies
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -55,6 +38,7 @@ ENV CI=true
 ENV NODE_ENV=development
 ENV CHROME_BIN=/usr/bin/chromium-browser
 ENV CHROME_PATH=/usr/bin/chromium-browser
+ENV CYPRESS_CACHE_FOLDER=/root/.cache/Cypress
 
 # Expose port
 EXPOSE 5173
@@ -82,4 +66,4 @@ EOF
 RUN chmod +x /app/start.sh
 
 # Main command
-CMD ["/app/start.sh"]
+CMD ["/app/start.sh"] 
