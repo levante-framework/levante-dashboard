@@ -240,11 +240,29 @@ export const fetchOrgByName = async (orgType, orgNormalizedName, selectedDistric
     aggregationQuery: false,
     orgNormalizedName,
     paginate: false,
-    select: ['id', 'name', 'normalizedName'],
+    select: ['id', 'normalizedName'],
     orderBy,
   });
 
-  return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
+  console.log('requestBody: ', requestBody);
+
+  try {
+    const { data } = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
+    console.log('data: ', data);
+    const mapped = mapFields(data);
+    return Array.isArray(mapped) ? mapped : [];
+  } catch (error) {
+    console.error('error: ', error);
+    // If the error is due to no documents found, return empty array
+    // Otherwise, rethrow
+    if (
+      error?.response?.data?.error?.message?.toLowerCase().includes('no documents') ||
+      error?.response?.status === 404
+    ) {
+      return [];
+    }
+    return [];
+  }
 };
 
 export const orgFetcher = async (
