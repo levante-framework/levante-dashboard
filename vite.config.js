@@ -69,7 +69,7 @@ export default defineConfig({
   optimizeDeps: {
     include: [
       '@levante-framework/firekit',
-      'primevue/password'
+      'primevue'
     ],
     exclude: process.env.CI === 'true' ? ['@tanstack/vue-query-devtools'] : [],
     esbuildOptions: {
