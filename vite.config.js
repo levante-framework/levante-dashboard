@@ -67,6 +67,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
+    holdUntilCrawlEnd: false,
     include: [
       '@levante-framework/firekit',
       'primevue'
