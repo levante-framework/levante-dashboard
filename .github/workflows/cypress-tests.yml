@@ -215,6 +215,7 @@ jobs:
         with:
           browser: chrome
           wait-on: 'http://localhost:5173'
+          wait-on-timeout: 240
           # Records to Cypress Cloud
           record: true
           parallel: true # Runs test in parallel using settings above
