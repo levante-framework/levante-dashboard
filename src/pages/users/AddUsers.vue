@@ -57,7 +57,7 @@
               class="continue-button"
               icon="pi pi-link"
               data-cy="continue-to-link-users"
-              @click="router.push({ name: 'Link Users' })"
+              @click="router.push({ name: 'LinkUsers' })"
             />
             <PvButton label="Download Users" class="download-button" icon="pi pi-download" @click="downloadCSV" />
           </div>

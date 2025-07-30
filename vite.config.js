@@ -67,12 +67,9 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    holdUntilCrawlEnd: false,
     include: [
-      '@levante-framework/firekit',
-      'primevue'
+      '@levante-framework/firekit'
     ],
-    exclude: process.env.CI === 'true' ? ['@tanstack/vue-query-devtools'] : [],
     esbuildOptions: {
       mainFields: ['module', 'main'],
       resolveExtensions: ['.js', '.mjs', '.cjs'],

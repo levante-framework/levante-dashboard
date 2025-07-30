@@ -11,9 +11,9 @@ import _get from 'lodash/get';
 import { pageTitlesEN, pageTitlesUS, pageTitlesES, pageTitlesCO } from '@/translations/exports';
 import { isLevante } from '@/helpers';
 import { APP_ROUTES } from '@/constants/routes';
-import posthogInstance from '@/plugins/posthog';
 import { logger } from '@/logger';
 
+// Helper functions for route cleanup
 function removeQueryParams(to: RouteLocationNormalized) {
   if (Object.keys(to.query).length) return { path: to.path, query: {}, hash: to.hash };
 }
@@ -22,11 +22,13 @@ function removeHash(to: RouteLocationNormalized) {
   if (to.hash) return { path: to.path, query: to.query, hash: '' };
 }
 
+// Define all routes in a clean, organized way
 const routes: Array<RouteRecordRaw> = [
+  // Public routes
   {
     path: '/',
     name: 'Home',
-    component: () => import('../pages/HomeSelector.vue'),
+    component: () => import('@/pages/HomeSelector.vue'),
     meta: {
       pageTitle: {
         'en-US': pageTitlesUS['home'],
@@ -37,55 +39,9 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
-    path: '/debug',
-    name: 'Debug',
-    component: () => import('../pages/Debug.vue'),
-    meta: { pageTitle: 'Debug Information' },
-  },
-  {
-    path: '/game/swr',
-    name: 'SWR',
-    component: () => import('../components/tasks/TaskSWR.vue'),
-    props: { taskId: 'swr' },
-    meta: { pageTitle: 'SWR' },
-  },
-  {
-    path: '/game/pa',
-    name: 'PA',
-    component: () => import('../components/tasks/TaskPA.vue'),
-    props: { taskId: 'pa' },
-    meta: { pageTitle: 'PA' },
-  },
-  {
-    path: '/game/sre',
-    name: 'SRE',
-    component: () => import('../components/tasks/TaskSRE.vue'),
-    props: { taskId: 'sre' },
-    meta: { pageTitle: 'SRE' },
-  },
-  {
-    path: '/game/core-tasks/:taskId',
-    name: 'Core Tasks',
-    component: () => import('../components/tasks/TaskLevante.vue'),
-    props: true,
-    // Add which specific task?
-    // Code in App.vue overwrites updating it programmatically
-    meta: { pageTitle: 'Core Tasks' },
-  },
-  {
-    path: '/manage-tasks-variants',
-    name: 'ManageTasksVariants',
-    component: () => import('../pages/ManageTasksVariants.vue'),
-    meta: {
-      pageTitle: 'Manage Tasks',
-      requireAdmin: true,
-      requireSuperAdmin: true,
-    },
-  },
-  {
-    path: APP_ROUTES.SIGN_IN,
+    path: '/signin',
     name: 'SignIn',
-    component: () => import('../pages/SignIn.vue'),
+    component: () => import('@/pages/SignIn.vue'),
     meta: {
       pageTitle: {
         'en-US': pageTitlesUS['signIn'],
@@ -96,29 +52,48 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
+    path: '/debug',
+    name: 'Debug',
+    component: () => import('@/pages/Debug.vue'),
+    meta: { pageTitle: 'Debug Information' },
+  },
+  {
+    path: '/maintenance',
+    name: 'Maintenance',
+    component: () => import('@/pages/MaintenancePage.vue'),
+    meta: { pageTitle: 'Down for Maintenance' },
+  },
+  {
     path: '/auth-email-link',
     name: 'AuthEmailLink',
-    beforeRouteLeave: [removeQueryParams, removeHash],
-    component: () => import('../components/auth/AuthEmailLink.vue'),
+    component: () => import('@/components/auth/AuthEmailLink.vue'),
     meta: { pageTitle: 'Email Link Authentication' },
   },
   {
     path: '/auth-email-sent',
     name: 'AuthEmailSent',
-    component: () => import('../components/auth/AuthEmailSent.vue'),
+    component: () => import('@/components/auth/AuthEmailSent.vue'),
     meta: { pageTitle: 'Authentication Email Sent' },
   },
   {
+    path: '/enable-cookies',
+    name: 'EnableCookies',
+    component: () => import('@/pages/EnableCookies.vue'),
+    meta: { pageTitle: 'Enable Cookies' },
+  },
+
+  // Admin routes
+  {
     path: '/administrator',
     name: 'Administrator',
-    component: () => import('../pages/HomeAdministrator.vue'),
+    component: () => import('@/pages/HomeAdministrator.vue'),
     meta: { pageTitle: 'Administrator', requireAdmin: true },
   },
   {
     path: '/create-assignment',
     name: 'CreateAssignment',
-    component: () => import('../pages/CreateAssignment.vue'),
-    meta: {
+    component: () => import('@/pages/CreateAssignment.vue'),
+    meta: { 
       pageTitle: 'Create Assignment',
       requireAdmin: true,
       requireSuperAdmin: true,
@@ -128,8 +103,8 @@ const routes: Array<RouteRecordRaw> = [
     path: '/edit-assignment/:adminId',
     name: 'EditAssignment',
     props: true,
-    component: () => import('../pages/CreateAssignment.vue'),
-    meta: {
+    component: () => import('@/pages/CreateAssignment.vue'),
+    meta: { 
       pageTitle: 'Edit an Assignment',
       requireAdmin: true,
       requireSuperAdmin: true,
@@ -138,93 +113,141 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/create-administrator',
     name: 'CreateAdministrator',
-    component: () => import('../pages/CreateAdministrator.vue'),
-    meta: { pageTitle: 'Create an administrator account', requireAdmin: true },
+    component: () => import('@/pages/CreateAdministrator.vue'),
+    meta: { 
+      pageTitle: 'Create an administrator account', 
+      requireAdmin: true 
+    },
   },
   {
     path: '/list-groups',
     name: 'ListGroups',
-    component: () => import('../pages/groups/ListGroups.vue'),
-    meta: { pageTitle: 'Groups', requireAdmin: true },
+    component: () => import('@/pages/groups/ListGroups.vue'),
+    meta: { 
+      pageTitle: 'Groups', 
+      requireAdmin: true 
+    },
   },
   {
     path: '/list-users/:orgType/:orgId/:orgName',
     name: 'ListUsers',
     props: true,
-    component: () => import('../pages/users/ListUsers.vue'),
-    meta: { pageTitle: 'List users', requireAdmin: true },
+    component: () => import('@/pages/users/ListUsers.vue'),
+    meta: { 
+      pageTitle: 'List users', 
+      requireAdmin: true 
+    },
   },
   {
     path: '/administration/:administrationId/:orgType/:orgId',
     name: 'ProgressReport',
     props: true,
-    component: () => import('../pages/ProgressReport.vue'),
-    meta: { pageTitle: 'View Administration', requireAdmin: true },
+    component: () => import('@/pages/ProgressReport.vue'),
+    meta: { 
+      pageTitle: 'View Administration', 
+      requireAdmin: true 
+    },
   },
   {
-    path: APP_ROUTES.ACCOUNT_PROFILE,
+    path: '/profile',
     name: 'Profile',
-    component: () => import('../pages/AdminProfile.vue'),
+    component: () => import('@/pages/AdminProfile.vue'),
     children: [
       {
         path: 'accounts',
         name: 'ProfileAccounts',
-        component: () => import('../components/adminSettings/LinkAccountsView.vue'),
+        component: () => import('@/components/adminSettings/LinkAccountsView.vue'),
         meta: { requireAdmin: true },
       },
       {
         path: 'settings',
         name: 'ProfileSettings',
-        component: () => import('../components/adminSettings/Settings.vue'),
+        component: () => import('@/components/adminSettings/Settings.vue'),
       },
     ],
     meta: { pageTitle: 'Profile' },
   },
   {
-    path: '/enable-cookies',
-    name: 'EnableCookies',
-    component: () => import('../pages/EnableCookies.vue'),
-    meta: { pageTitle: 'Enable Cookies' },
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    component: () => import('../pages/NotFound.vue'),
-    meta: { pageTitle: 'Whoops! 404 Page!' },
-  },
-  {
-    path: '/add-users',
-    name: 'Add Users',
-    component: () => import('../pages/users/AddUsers.vue'),
-    meta: { pageTitle: 'Add Users', requireAdmin: true, project: 'LEVANTE' },
+    path: '/manage-tasks-variants',
+    name: 'ManageTasksVariants',
+    component: () => import('@/pages/ManageTasksVariants.vue'),
+    meta: { 
+      pageTitle: 'Manage Tasks',
+      requireSuperAdmin: true,
+    },
   },
 
+  // LEVANTE-specific routes
+  {
+    path: '/add-users',
+    name: 'AddUsers',
+    component: () => import('@/pages/users/AddUsers.vue'),
+    meta: { 
+      pageTitle: 'Add Users', 
+      requireAdmin: true, 
+      project: 'LEVANTE' 
+    },
+  },
   {
     path: '/link-users',
-    name: 'Link Users',
-    component: () => import('../pages/users/LinkUsers.vue'),
-    meta: { pageTitle: 'Link Users', requireAdmin: true, project: 'LEVANTE' },
+    name: 'LinkUsers',
+    component: () => import('@/pages/users/LinkUsers.vue'),
+    meta: { 
+      pageTitle: 'Link Users', 
+      requireAdmin: true, 
+      project: 'LEVANTE' 
+    },
   },
-  // {
-  //   path: '/edit-users',
-  //   name: 'Edit Users',
-  //   component: () => import('../pages/users/EditUsers.vue'),
-  //   meta: { pageTitle: 'Edit Users', requireAdmin: true, project: 'LEVANTE' },
-  // },
   {
     path: '/survey',
     name: 'Survey',
-    component: () => import('../pages/UserSurvey.vue'),
-    meta: { pageTitle: 'Survey', project: 'LEVANTE' },
+    component: () => import('@/pages/UserSurvey.vue'),
+    meta: { 
+      pageTitle: 'Survey', 
+      project: 'LEVANTE' 
+    },
+  },
+
+  // Game routes
+  {
+    path: '/game/swr',
+    name: 'SWR',
+    component: () => import('@/components/tasks/TaskSWR.vue'),
+    props: { taskId: 'swr' },
+    meta: { pageTitle: 'SWR' },
   },
   {
-    path: '/maintenance',
-    name: 'Maintenance',
-    component: () => import('../pages/MaintenancePage.vue'),
-    meta: { pageTitle: 'Down for Maintenance' },
+    path: '/game/pa',
+    name: 'PA',
+    component: () => import('@/components/tasks/TaskPA.vue'),
+    props: { taskId: 'pa' },
+    meta: { pageTitle: 'PA' },
+  },
+  {
+    path: '/game/sre',
+    name: 'SRE',
+    component: () => import('@/components/tasks/TaskSRE.vue'),
+    props: { taskId: 'sre' },
+    meta: { pageTitle: 'SRE' },
+  },
+  {
+    path: '/game/core-tasks/:taskId',
+    name: 'CoreTasks',
+    component: () => import('@/components/tasks/TaskLevante.vue'),
+    props: true,
+    meta: { pageTitle: 'Core Tasks' },
+  },
+
+  // 404 route
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/pages/NotFound.vue'),
+    meta: { pageTitle: 'Whoops! 404 Page!' },
   },
 ];
 
+// Scroll behavior
 const scrollBehavior: RouterScrollBehavior = (to, from, savedPosition) => {
   if (savedPosition) {
     return savedPosition;
@@ -238,64 +261,55 @@ const scrollBehavior: RouterScrollBehavior = (to, from, savedPosition) => {
   }
 };
 
+// Create router
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
   scrollBehavior,
 });
 
+// Navigation guards
 router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
   // Don't allow routing to LEVANTE pages if not in LEVANTE instance
   if (!isLevante && to.meta?.project === 'LEVANTE') {
     next({ name: 'Home' });
-    // next function can only be called once per route
     return;
   }
 
   const store = useAuthStore();
-
   const allowedUnauthenticatedRoutes = ['SignIn', 'Maintenance', 'AuthEmailLink', 'AuthEmailSent', 'Debug'];
 
+  // Maintenance mode check
   const inMaintenanceMode = false;
-
   if (inMaintenanceMode && to.name !== 'Maintenance') {
     next({ name: 'Maintenance' });
     return;
-  } else if (!inMaintenanceMode && to.name === 'Maintenance') {
+  } else if (inMaintenanceMode && to.name === 'Maintenance') {
     next({ name: 'Home' });
-    return false;
+    return;
   }
-  // Check if user is signed in. If not, go to signin
+
+  // Authentication check
   if (
     !to.path.includes('__/auth/handler') &&
-    !store.isAuthenticated &&
-    !allowedUnauthenticatedRoutes.includes(to.name)
+    !(store as any).isAuthenticated &&
+    !allowedUnauthenticatedRoutes.includes(to.name as string)
   ) {
     next({ name: 'SignIn' });
     return;
   }
 
-  // Check if the route requires admin rights and the user is an admin.
+  // Authorization check
   const requiresAdmin = _get(to, 'meta.requireAdmin', false);
   const requiresSuperAdmin = _get(to, 'meta.requireSuperAdmin', false);
 
-  // Check user roles
-  const isUserAdmin = store.isUserAdmin;
-  const isUserSuperAdmin = store.isUserSuperAdmin;
-
-  // All current conditions:
-  // 1. Super Admin: true, Admin: true
-  // 2. Super Admin: false, Admin: true (Only exits because requiresSuperAdmin is not defined on every route)
-  // 3. Super Admin: false, Admin: false (Allowed routes for all users)
-  // (Also exists because requiresAdmin/requiresSuperAdmin is not defined on every route)
+  const isUserAdmin = (store as any).isUserAdmin;
+  const isUserSuperAdmin = (store as any).isUserSuperAdmin;
 
   if (isUserSuperAdmin) {
     next();
     return;
   } else if (isUserAdmin) {
-    // LEVANTE dashboard has opened some pages to administrators before the ROAR dashboard
-    // So if isLevante, then allow regular admins to access any route with requireAdmin = true.
-    // and if ROAR, then prohibit regular admins from accessing any route with requireSuperAdmin = true.
     if (isLevante && requiresAdmin) {
       next();
       return;
@@ -307,14 +321,13 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
     return;
   }
 
-  // If we get here, the user is a regular user
+  // Regular user access
   if (requiresSuperAdmin || requiresAdmin) {
     next({ name: 'Home' });
     return;
   }
 
   next();
-  return;
 });
 
 // PostHog pageview tracking
