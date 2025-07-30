@@ -45,7 +45,4 @@ coverage
 # Sentry Config File
 .env.sentry-build-plugin
 
-# Cypress
 cypress/screenshots
-cypress/videos
-cypress/downloads
