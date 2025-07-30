@@ -14,6 +14,24 @@ declare global {
 }
 
 describe('Core Admin Actions', () => {
+  it('should force visit signin page and verify it loads', () => {
+    // Force visit the signin page explicitly
+    cy.visit('/signin');
+    
+    // Verify we're on the signin page
+    cy.url().should('include', '/signin');
+    
+    // Wait for and verify signin form elements exist
+    cy.get('[data-cy="input-username-email"]', { timeout: 60000 }).should('exist');
+    cy.get('[data-cy="input-password"]', { timeout: 60000 }).should('exist');
+    cy.get('[data-cy="login-button"]', { timeout: 60000 }).should('exist');
+    
+    // Verify the form is visible and interactive
+    cy.get('[data-cy="input-username-email"]').should('be.visible');
+    cy.get('[data-cy="input-password"]').should('be.visible');
+    cy.get('[data-cy="login-button"]').should('be.visible');
+  });
+
   beforeEach(() => {
     cy.debugPageState();
     cy.login(username, password);

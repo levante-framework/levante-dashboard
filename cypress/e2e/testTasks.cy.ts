@@ -42,37 +42,54 @@ function processTasksSequentially(taskTabs: any, tasksRemaining: number): void {
     });
 }
 
+describe('Signin Page Navigation', () => {
+  it('should force visit the signin page and verify elements', () => {
+    // Force visit the signin page explicitly
+    cy.visit('/signin');
+    
+    // Verify we're on the signin page
+    cy.url().should('include', '/signin');
+    
+    // Wait for and verify signin form elements exist
+    cy.get('[data-cy="input-username-email"]', { timeout: 60000 }).should('exist');
+    cy.get('[data-cy="input-password"]', { timeout: 60000 }).should('exist');
+    cy.get('[data-cy="login-button"]', { timeout: 60000 }).should('exist');
+    
+    // Verify the form is visible and interactive
+    cy.get('[data-cy="input-username-email"]').should('be.visible');
+    cy.get('[data-cy="input-password"]').should('be.visible');
+    cy.get('[data-cy="login-button"]').should('be.visible');
+  });
+});
+
 // TODO: This should use an assignment created from the core admin tests, 
 // verifying that assignment was assigned correctly and is playable. 
 describe('test core tasks from dashboard', () => {
-  // it('logs in to the dashboard and begins each task', () => {
-  //   cy.visit(dashboardUrl);
+  it('logs in to the dashboard and begins each task', () => {
+    // Force visit the signin page explicitly
+    cy.visit('/signin');
 
-  //   // Fill in username field
-  //   cy.get('input')
-  //     .then((inputs) => {
-  //       cy.wrap(inputs[0]).type(username);
-  //     });
+    // Fill in username field
+    cy.get('[data-cy="input-username-email"]', { timeout: 60000 }).should('exist');
+    cy.get('[data-cy="input-username-email"]').type(username);
 
-  //   // Fill in password field
-  //   cy.get('input')
-  //     .then((inputs) => {
-  //       cy.wrap(inputs[1]).type(password);
-  //     });
+    // Fill in password field
+    cy.get('[data-cy="input-password"]', { timeout: 60000 }).should('exist');
+    cy.get('[data-cy="input-password"]').type(password);
 
-  //   // Click login button
-  //   cy.get('button').filter('[data-pc-name=button]').click();
+    // Click login button
+    cy.get('[data-cy="login-button"]').click();
 
-  //   // Wait for tasks to load and start processing
-  //   cy.get('[data-pc-section=tablist]', { timeout: 240000 })
-  //     .children()
-  //     .then((taskTabs) => {
-  //       processTasksSequentially(taskTabs, taskTabs.length - 1);
-  //     });
+    // Wait for tasks to load and start processing
+    cy.get('[data-pc-section=tablist]', { timeout: 240000 })
+      .children()
+      .then((taskTabs) => {
+        processTasksSequentially(taskTabs, taskTabs.length - 1);
+      });
 
-  //   // Sign out
-  //   cy.contains('sign out', { matchCase: false }).click();
-  // });
+    // Sign out
+    cy.contains('sign out', { matchCase: false }).click();
+  });
 });
 
 // Make this file a module

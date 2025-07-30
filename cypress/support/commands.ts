@@ -26,7 +26,13 @@ Cypress.Commands.add('debugPageState', () => {
 });
 
 Cypress.Commands.add('login', (username: string, password: string) => {
-  cy.visit('/signin');
+  // Force visit the signin page explicitly
+  cy.visit('/signin', { timeout: 60000 });
+  
+  // Log the current URL to verify we're on the signin page
+  cy.url().then(url => {
+    cy.log(`Current URL: ${url}`);
+  });
 
   // Aguarda o input aparecer com tempo extra de tolerância
   cy.get('[data-cy="input-username-email"]', { timeout: 60000 }).should('exist');
