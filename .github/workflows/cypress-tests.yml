@@ -91,12 +91,12 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Start Firebase emulators
+        env:
+          FIREBASE_PROJECT_ID: demo-levante-test
+          GCLOUD_PROJECT: demo-levante-test
+          VITE_FIREBASE_PROJECT: demo-levante-test
         run: |
           cd firebase-functions
-          # Use demo project to avoid authentication issues
-          export FIREBASE_PROJECT_ID=demo-levante-test
-          export GCLOUD_PROJECT=demo-levante-test
-          export VITE_FIREBASE_PROJECT=demo-levante-test
 
           # Configure Firebase to use demo project
           npx firebase use demo-levante-test --add || true
