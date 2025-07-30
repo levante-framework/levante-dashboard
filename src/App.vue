@@ -48,7 +48,7 @@ const VueQueryDevtools = defineAsyncComponent({
       return Promise.resolve({ template: '<div></div>' });
     }
 
-    if (import.meta.env.DEV && !import.meta.env.SSR && typeof window !== 'undefined') {
+    if (!import.meta.env.DEV && !import.meta.env.SSR && typeof window !== 'undefined') {
       return import('@tanstack/vue-query-devtools')
         .then((module) => module.VueQueryDevtools)
         .catch((error) => {
