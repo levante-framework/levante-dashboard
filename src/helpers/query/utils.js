@@ -219,6 +219,36 @@ export const fetchDocumentsById = async (collection, docIds, select = [], db = F
   }
 };
 
+export const fetchAllDocuments = async (collection, select = [], db = FIRESTORE_DATABASES.ADMIN) => {
+  const axiosInstance = getAxiosInstance(db);
+  const requestParams = new URLSearchParams();
+
+  if (select?.length > 0) {
+    requestParams.append('mask.fieldPaths', select.join('&mask.fieldPaths='));
+  }
+
+  const url = `${getBaseDocumentPath()}/${collection}?${requestParams.toString()}`;
+
+  try {
+    const response = await axiosInstance.get(url);
+
+    return (response.data.documents || []).map((doc) => {
+      const pathParts = doc.name.split('/');
+      const documentId = pathParts.pop();
+      const collectionName = pathParts.pop();
+
+      return {
+        id: documentId,
+        collection: collectionName,
+        ..._mapValues(doc.fields, (value) => convertValues(value)),
+      };
+    });
+  } catch (error) {
+    console.error('fetchAllDocuments: Error fetching all documents:', error);
+    return [];
+  }
+};
+
 // @TODO: Depreceate fetchDocsById and use fetchDocumentsById instead once the last queries are updated as well. This
 // existing method fetches documents by emitting a single GET request per document, which is inefficient. The new
 // fetchDocumentsById method fetches documents by emitting a single POST request with all document paths.
