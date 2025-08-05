@@ -16,16 +16,13 @@ type UserRoleWithPermissionsType = UserRoleType & {
   };
 };
 
-const useGetUserPermissionsByRoleQuery = (
-  userRoles?: UserRoleType[],
-  queryOptions?: UseQueryOptions,
-): UseQueryReturnType => {
+const useUserPermissionsQuery = (userRoles?: UserRoleType[], queryOptions?: UseQueryOptions): UseQueryReturnType => {
   const authStore = useAuthStore();
   const userData = authStore?.userData;
   const roles = userRoles || (userData?.roles as UserRoleType[]);
 
   const query = useQuery({
-    queryKey: [USER_PERMISSIONS_QUERY_KEY],
+    queryKey: [USER_PERMISSIONS_QUERY_KEY, [...roles]],
     queryFn: async () => fetchAllDocuments(FIRESTORE_COLLECTIONS.PERMISSIONS),
     ...queryOptions,
   });
@@ -35,7 +32,7 @@ const useGetUserPermissionsByRoleQuery = (
 
     const permissionsMap = query.data.value;
 
-    return roles.map(({ siteId, role }) => {
+    return roles.map(({ siteId, role }: UserRoleType) => {
       const rolePermissions = permissionsMap[role] || {};
       const permissionsCopy = Object.entries(rolePermissions).reduce(
         (acc, [action, actions]) => {
@@ -56,4 +53,4 @@ const useGetUserPermissionsByRoleQuery = (
   return { ...query, rolesWithPermissions };
 };
 
-export default useGetUserPermissionsByRoleQuery;
+export default useUserPermissionsQuery;
