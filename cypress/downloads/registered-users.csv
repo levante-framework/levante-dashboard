@@ -1,0 +1,4 @@
+id,userType,month,year,caregiverId,teacherId,site,school,class,cohort,email,password,uid
+"1","child","2","2020","4","5","Test District","","","Reading Intervention Cohort","oe6mdh2w3a@levante.com","zyjmx2oj3v","tk8gZWpDfV6hKqfQZerP"
+"2","caregiver","","","","","Test District","","","Reading Intervention Cohort","h5fpzfuv7h@levante.com","fw9ieva26e","0ZJtzB1Qnbbz8onCHecg"
+"3","teacher","","","","","Test District","","","Reading Intervention Cohort","32qsiuagea@levante.com","9mnrv9mm7o","ItHTv8BC87xB2f69ey9e"
