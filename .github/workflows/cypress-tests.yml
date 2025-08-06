@@ -1,4 +1,4 @@
-name: Run all cypress tests
+name: Cypress E2E Tests
 
 on:
   push:
@@ -12,17 +12,68 @@ jobs:
   cypress-tests:
     runs-on: ubuntu-latest
 
+    # Runs tests in parallel with matrix strategy https://docs.cypress.io/guides/guides/parallelization
+    # https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs
+    # Also see warning here https://github.com/cypress-io/github-action#parallel
+    strategy:
+      fail-fast: false # https://github.com/cypress-io/github-action/issues/48
+      matrix:
+        containers: [1, 2] # Uses 2 parallel instances
+
+    env:
+      CI: true
+
     steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.LEVANTE_BOT_APP_ID }}
+          private_key: ${{ secrets.LEVANTE_BOT_APP_PRIVATE_KEY }}
+
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Checkout firebase-functions repo
+        uses: actions/checkout@v4
+        with:
+          repository: levante-framework/firebase-functions
+          path: firebase-functions
+          token: ${{ steps.generate_token.outputs.token }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
 
+      - name: Cache Firebase Emulators
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('firebase-functions/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-firebase-emulators-
+
       - name: Install dependencies
         run: npm install
+
+      - name: Install firebase-functions dependencies
+        run: |
+          cd firebase-functions
+          npm install
+
+      - name: Build firebase functions
+        run: |
+          cd firebase-functions
+          # Build the levante-admin functions specifically
+          if [ -d "functions/levante-admin" ]; then
+            echo "Building levante-admin functions"
+            cd functions/levante-admin
+            npm install
+            npm run build
+          else
+            echo "levante-admin functions directory not found"
+            exit 1
+          fi
 
       - name: Cache npm dependencies
         uses: actions/cache@v3
@@ -32,8 +83,140 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Run cypress tests
+      - name: Start Firebase emulators
+        run: |
+          cd firebase-functions
+
+          npm run dev &
+
+          # Wait for emulators to start and be ready
+          echo "Waiting for Firebase emulators to start..."
+          for i in {1..60}; do
+            # Check if essential services are ready
+            if curl -s http://localhost:4001 > /dev/null 2>&1 && \
+               curl -s http://localhost:9199 > /dev/null 2>&1 && \
+               curl -s http://localhost:8180 > /dev/null 2>&1 && \
+               curl -s http://localhost:5002 > /dev/null 2>&1 && \
+               curl -s http://localhost:9899 > /dev/null 2>&1; then
+              echo "Firebase emulators are ready!"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "Firebase emulators failed to start within 60 seconds"
+              echo "Checking emulator status:"
+              curl -s http://localhost:4001 || echo "UI emulator (4001) not ready"
+              curl -s http://localhost:9199 || echo "Auth emulator (9199) not ready"
+              curl -s http://localhost:8180 || echo "Firestore emulator (8180) not ready"
+              curl -s http://localhost:5002 || echo "Functions emulator (5002) not ready"
+              curl -s http://localhost:9899 || echo "Tasks emulator (9899) not ready"
+              exit 1
+            fi
+            echo "Waiting for emulators... ($i/60)"
+            sleep 1
+          done
+
+      - name: Seed emulator data
+        run: |
+          cd firebase-functions
+          npm run emulator:seed
+
+      - name: Start Vite dev server
+        run: |
+          # Set environment variables for emulator mode
+          export VITE_EMULATOR=TRUE
+          export VITE_FIREBASE_PROJECT=DEV
+          export VITE_LEVANTE=TRUE
+          export CI=true
+          export NODE_ENV=development
+          export VITE_QUERY_DEVTOOLS_ENABLED=false
+          npm run dev &
+
+      - name: Wait for Vite dev server
+        run: |
+          echo "Waiting for Vite dev server to start..."
+          for i in {1..120}; do
+            if curl -s http://localhost:5173 > /dev/null 2>&1; then
+              echo "Vite dev server is ready!"
+              # Give it a few more seconds to fully initialize the app
+              sleep 5
+              break
+            fi
+            if [ $i -eq 120 ]; then
+              echo "Vite dev server failed to start within 120 seconds"
+              exit 1
+            fi
+            echo "Waiting for Vite dev server... ($i/120)"
+            sleep 1
+          done
+
+      - name: Debug application state
+        run: |
+          echo "Checking if app is properly loaded..."
+          # Check if the app loads and contains expected elements
+          response=$(curl -s http://localhost:5173)
+          if echo "$response" | grep -q "<!doctype html" || echo "$response" | grep -q "<!DOCTYPE html"; then
+            echo "✓ App is serving HTML content"
+          else
+            echo "✗ App is not serving HTML content"
+            echo "Response: $response"
+          fi
+
+          # Check if basic app elements are present
+          if echo "$response" | grep -q "id=\"app\""; then
+            echo "✓ App container found"
+          else
+            echo "✗ App container not found"
+          fi
+
+          # Show environment variables being used
+          echo "Environment variables:"
+          echo "VITE_EMULATOR: ${VITE_EMULATOR:-not set}"
+          echo "VITE_FIREBASE_PROJECT: ${VITE_FIREBASE_PROJECT:-not set}" 
+          echo "VITE_LEVANTE: ${VITE_LEVANTE:-not set}"
+          echo "NODE_ENV: ${NODE_ENV:-not set}"
+
+          # Check if we can access the sign-in page specifically
+          echo "Checking sign-in page..."
+          signin_response=$(curl -s http://localhost:5173/signin)
+          if echo "$signin_response" | grep -q "data-cy=input-username-email"; then
+            echo "✓ Sign-in form elements found"
+          else
+            echo "✗ Sign-in form elements not found"
+            echo "Sign-in response preview: $(echo "$signin_response" | head -c 500)"
+          fi
+
+      - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
           browser: chrome
-          start: npm run dev:db
+          wait-on: 'http://localhost:5173'
+          # Records to Cypress Cloud
+          record: true
+          parallel: true # Runs test in parallel using settings above
+        env:
+          # Required for recording and parallelization
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          # bot token
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          # Pass environment variables to Cypress tests
+          VITE_EMULATOR: TRUE
+          VITE_FIREBASE_PROJECT: DEV
+          VITE_LEVANTE: TRUE
+          CI: true
+          # Fixed: Use development mode for dev server
+          NODE_ENV: development
+          VITE_QUERY_DEVTOOLS_ENABLED: false
+
+      - name: Upload Cypress screenshots
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots-${{ matrix.containers }}
+          path: cypress/screenshots/
+
+      - name: Upload Cypress videos
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-videos-${{ matrix.containers }}
+          path: cypress/videos/

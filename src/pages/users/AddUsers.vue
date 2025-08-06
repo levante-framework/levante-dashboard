@@ -15,6 +15,7 @@
           auto
           :show-upload-button="false"
           :show-cancel-button="false"
+          data-cy="upload-users-csv"
           @uploader="onFileUpload($event)"
         >
           <template #empty>
@@ -55,6 +56,7 @@
               label="Continue to Link Users"
               class="continue-button"
               icon="pi pi-link"
+              data-cy="continue-to-link-users"
               @click="router.push({ name: 'Link Users' })"
             />
             <PvButton label="Download Users" class="download-button" icon="pi pi-download" @click="downloadCSV" />
@@ -66,6 +68,7 @@
             :disabled="activeSubmit"
             class="bg-primary mb-2 p-3 w-2 text-white border-none border-round h-3rem m-0 hover:bg-red-900"
             data-testid="start-adding-button"
+            data-cy="submit-add-users"
             @click="submitUsers"
           />
         </div>
@@ -893,6 +896,8 @@ const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentScho
 
   // Array of objects. Ex: [{id: 'lut54353jkler'}]
   const orgs = await fetchOrgByName(orgType, normalizedOrgName, parentDistrict, parentSchool);
+
+  console.log('orgs: ', orgs);
 
   if (orgs.length === 0) {
     if (orgType === 'districts') {
