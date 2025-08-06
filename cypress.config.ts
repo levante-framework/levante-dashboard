@@ -2,6 +2,7 @@ import { defineConfig } from 'cypress';
 
 export default defineConfig({
   projectId: 'a7nqeq',
+  defaultCommandTimeout: 10000,
   e2e: {
     setupNodeEvents(on, config) {
       // implement node event listeners here
@@ -12,4 +13,3 @@ export default defineConfig({
     specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
   },
 });
-  
