@@ -1,19 +1,18 @@
+import { NAVBAR_BLACKLIST } from '@/constants';
+import { PERMISSIONS } from '@/constants/permissions';
+import { APP_ROUTES } from '@/constants/routes';
+import { logger } from '@/logger';
+import { useAuthStore } from '@/store/auth';
+import { pageTitlesCO, pageTitlesES, pageTitlesUS } from '@/translations/exports';
+import { RoleType } from '@/types';
 import {
   createRouter,
   createWebHistory,
-  RouteRecordRaw,
   NavigationGuardNext,
   RouteLocationNormalized,
+  RouteRecordRaw,
   RouterScrollBehavior,
 } from 'vue-router';
-import { useAuthStore } from '@/store/auth';
-import _get from 'lodash/get';
-import { pageTitlesEN, pageTitlesUS, pageTitlesES, pageTitlesCO } from '@/translations/exports';
-import { isLevante } from '@/helpers';
-import { APP_ROUTES } from '@/constants/routes';
-import posthogInstance from '@/plugins/posthog';
-import { logger } from '@/logger';
-import { NAVBAR_BLACKLIST } from '@/constants';
 
 function removeQueryParams(to: RouteLocationNormalized) {
   if (Object.keys(to.query).length) return { path: to.path, query: {}, hash: to.hash };
@@ -34,34 +33,47 @@ const routes: Array<RouteRecordRaw> = [
         es: pageTitlesES['home'],
         'es-CO': pageTitlesCO['home'],
       },
+      permissions: [],
     },
   },
   {
     path: '/debug',
     name: 'Debug',
     component: () => import('../pages/Debug.vue'),
-    meta: { pageTitle: 'Debug Information' },
+    meta: {
+      pageTitle: 'Debug Information',
+      permissions: [],
+    },
   },
   {
     path: '/game/swr',
     name: 'SWR',
     component: () => import('../components/tasks/TaskSWR.vue'),
     props: { taskId: 'swr' },
-    meta: { pageTitle: 'SWR' },
+    meta: {
+      pageTitle: 'SWR',
+      permissions: [],
+    },
   },
   {
     path: '/game/pa',
     name: 'PA',
     component: () => import('../components/tasks/TaskPA.vue'),
     props: { taskId: 'pa' },
-    meta: { pageTitle: 'PA' },
+    meta: {
+      pageTitle: 'PA',
+      permissions: [],
+    },
   },
   {
     path: '/game/sre',
     name: 'SRE',
     component: () => import('../components/tasks/TaskSRE.vue'),
     props: { taskId: 'sre' },
-    meta: { pageTitle: 'SRE' },
+    meta: {
+      pageTitle: 'SRE',
+      permissions: [],
+    },
   },
   {
     path: '/game/core-tasks/:taskId',
@@ -70,7 +82,10 @@ const routes: Array<RouteRecordRaw> = [
     props: true,
     // Add which specific task?
     // Code in App.vue overwrites updating it programmatically
-    meta: { pageTitle: 'Core Tasks' },
+    meta: {
+      pageTitle: 'Core Tasks',
+      permissions: [],
+    },
   },
   {
     path: '/manage-tasks-variants',
@@ -78,8 +93,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/ManageTasksVariants.vue'),
     meta: {
       pageTitle: 'Manage Tasks',
-      requireAdmin: true,
-      requireSuperAdmin: true,
+      permissions: [PERMISSIONS.SUPER_ADMIN, PERMISSIONS.SITE_ADMIN],
     },
   },
   {
@@ -92,6 +106,7 @@ const routes: Array<RouteRecordRaw> = [
         es: pageTitlesES['signIn'],
         'es-CO': pageTitlesCO['signIn'],
       },
+      permissions: [],
     },
   },
   {
@@ -99,19 +114,28 @@ const routes: Array<RouteRecordRaw> = [
     name: 'AuthEmailLink',
     beforeRouteLeave: [removeQueryParams, removeHash],
     component: () => import('../components/auth/AuthEmailLink.vue'),
-    meta: { pageTitle: 'Email Link Authentication' },
+    meta: {
+      pageTitle: 'Email Link Authentication',
+      permissions: [],
+    },
   },
   {
     path: '/auth-email-sent',
     name: 'AuthEmailSent',
     component: () => import('../components/auth/AuthEmailSent.vue'),
-    meta: { pageTitle: 'Authentication Email Sent' },
+    meta: {
+      pageTitle: 'Authentication Email Sent',
+      permissions: [],
+    },
   },
   {
     path: '/administrator',
     name: 'Administrator',
     component: () => import('../pages/HomeAdministrator.vue'),
-    meta: { pageTitle: 'Administrator', requireAdmin: true },
+    meta: {
+      pageTitle: 'Administrator',
+      permissions: [PERMISSIONS.SITE_ADMIN],
+    },
   },
   {
     path: '/create-assignment',
@@ -119,8 +143,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/CreateAssignment.vue'),
     meta: {
       pageTitle: 'Create Assignment',
-      requireAdmin: true,
-      requireSuperAdmin: true,
+      permissions: [PERMISSIONS.SUPER_ADMIN, PERMISSIONS.SITE_ADMIN],
     },
   },
   {
@@ -130,35 +153,46 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/CreateAssignment.vue'),
     meta: {
       pageTitle: 'Edit an Assignment',
-      requireAdmin: true,
-      requireSuperAdmin: true,
+      permissions: [PERMISSIONS.SUPER_ADMIN, PERMISSIONS.SITE_ADMIN],
     },
   },
   {
     path: '/create-administrator',
     name: 'CreateAdministrator',
     component: () => import('../pages/CreateAdministrator.vue'),
-    meta: { pageTitle: 'Create an administrator account', requireAdmin: true },
+    meta: {
+      pageTitle: 'Create an administrator account',
+      permissions: [PERMISSIONS.SITE_ADMIN],
+    },
   },
   {
     path: '/list-groups',
     name: 'ListGroups',
     component: () => import('../pages/groups/ListGroups.vue'),
-    meta: { pageTitle: 'Groups', requireAdmin: true },
+    meta: {
+      pageTitle: 'Groups',
+      permissions: [PERMISSIONS.SITE_ADMIN],
+    },
   },
   {
     path: '/list-users/:orgType/:orgId/:orgName',
     name: 'ListUsers',
     props: true,
     component: () => import('../pages/users/ListUsers.vue'),
-    meta: { pageTitle: 'List users', requireAdmin: true },
+    meta: {
+      pageTitle: 'List users',
+      permissions: [PERMISSIONS.SITE_ADMIN],
+    },
   },
   {
     path: '/administration/:administrationId/:orgType/:orgId',
     name: 'ProgressReport',
     props: true,
     component: () => import('../pages/ProgressReport.vue'),
-    meta: { pageTitle: 'View Administration', requireAdmin: true },
+    meta: {
+      pageTitle: 'View Administration',
+      permissions: [PERMISSIONS.SITE_ADMIN],
+    },
   },
   {
     path: APP_ROUTES.ACCOUNT_PROFILE,
@@ -169,58 +203,84 @@ const routes: Array<RouteRecordRaw> = [
         path: 'accounts',
         name: 'ProfileAccounts',
         component: () => import('../components/adminSettings/LinkAccountsView.vue'),
-        meta: { requireAdmin: true },
+        meta: {
+          permissions: [PERMISSIONS.SITE_ADMIN],
+        },
       },
       {
         path: 'settings',
         name: 'ProfileSettings',
         component: () => import('../components/adminSettings/Settings.vue'),
+        meta: {
+          permissions: [],
+        },
       },
     ],
-    meta: { pageTitle: 'Profile' },
+    meta: {
+      pageTitle: 'Profile',
+      permissions: [],
+    },
   },
   {
     path: '/enable-cookies',
     name: 'EnableCookies',
     component: () => import('../pages/EnableCookies.vue'),
-    meta: { pageTitle: 'Enable Cookies' },
+    meta: {
+      pageTitle: 'Enable Cookies',
+      permissions: [],
+    },
   },
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('../pages/NotFound.vue'),
-    meta: { pageTitle: 'Whoops! 404 Page!' },
+    meta: {
+      pageTitle: 'Whoops! 404 Page!',
+      permissions: [],
+    },
   },
   {
     path: '/add-users',
     name: 'Add Users',
     component: () => import('../pages/users/AddUsers.vue'),
-    meta: { pageTitle: 'Add Users', requireAdmin: true, project: 'LEVANTE' },
+    meta: {
+      pageTitle: 'Add Users',
+      permissions: [PERMISSIONS.SITE_ADMIN],
+    },
   },
 
   {
     path: '/link-users',
     name: 'Link Users',
     component: () => import('../pages/users/LinkUsers.vue'),
-    meta: { pageTitle: 'Link Users', requireAdmin: true, project: 'LEVANTE' },
+    meta: {
+      pageTitle: 'Link Users',
+      permissions: [PERMISSIONS.SITE_ADMIN],
+    },
   },
   // {
   //   path: '/edit-users',
   //   name: 'Edit Users',
   //   component: () => import('../pages/users/EditUsers.vue'),
-  //   meta: { pageTitle: 'Edit Users', requireAdmin: true, project: 'LEVANTE' },
+  //   meta: { permissions: [],  pageTitle: 'Edit Users', requireAdmin: true, project: 'LEVANTE' },
   // },
   {
     path: '/survey',
     name: 'Survey',
     component: () => import('../pages/UserSurvey.vue'),
-    meta: { pageTitle: 'Survey', project: 'LEVANTE' },
+    meta: {
+      pageTitle: 'Survey',
+      permissions: [],
+    },
   },
   {
     path: '/maintenance',
     name: 'Maintenance',
     component: () => import('../pages/MaintenancePage.vue'),
-    meta: { pageTitle: 'Down for Maintenance' },
+    meta: {
+      pageTitle: 'Down for Maintenance',
+      permissions: [],
+    },
   },
 ];
 
@@ -244,80 +304,52 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
-  // Don't allow routing to LEVANTE pages if not in LEVANTE instance
-  if (!isLevante && to.meta?.project === 'LEVANTE') {
-    next({ name: 'Home' });
-    // next function can only be called once per route
-    return;
-  }
-
-  const store = useAuthStore();
-
-  const allowedUnauthenticatedRoutes = ['SignIn', 'Maintenance', 'AuthEmailLink', 'AuthEmailSent', 'Debug'];
-
+  const authStore = useAuthStore();
+  const allowedUnauthenticatedRoutes = ['AuthEmailLink', 'AuthEmailSent', 'Debug', 'Maintenance', 'SignIn'];
   const inMaintenanceMode = false;
 
   if (NAVBAR_BLACKLIST.includes(to.name)) {
-    store.setShowSideBar(false);
+    authStore.setShowSideBar(false);
   }
 
   if (inMaintenanceMode && to.name !== 'Maintenance') {
-    next({ name: 'Maintenance' });
-    return;
+    return next({ name: 'Maintenance' });
   } else if (!inMaintenanceMode && to.name === 'Maintenance') {
-    next({ name: 'Home' });
-    return false;
+    return next({ name: 'Home' });
   }
+
   // Check if user is signed in. If not, go to signin
   if (
     !to.path.includes('__/auth/handler') &&
-    !store.isAuthenticated &&
+    !authStore.isAuthenticated &&
     !allowedUnauthenticatedRoutes.includes(to.name)
   ) {
-    next({ name: 'SignIn' });
-    return;
+    return next({ name: 'SignIn' });
   }
 
-  // Check if the route requires admin rights and the user is an admin.
-  const requiresAdmin = _get(to, 'meta.requireAdmin', false);
-  const requiresSuperAdmin = _get(to, 'meta.requireSuperAdmin', false);
+  // @TODO
+  // If we're gonna keep this solution,
+  // we need to think about setting up a max num of tries and an error handler.
+  if (!authStore.userData && !allowedUnauthenticatedRoutes.includes(to.name)) {
+    await new Promise<void>((resolve) => {
+      const checkUserData = () => {
+        if (authStore.userData) return resolve();
+        setTimeout(checkUserData, 50);
+      };
 
-  // Check user roles
-  const isUserAdmin = store.isUserAdmin;
-  const isUserSuperAdmin = store.isUserSuperAdmin;
-
-  // All current conditions:
-  // 1. Super Admin: true, Admin: true
-  // 2. Super Admin: false, Admin: true (Only exits because requiresSuperAdmin is not defined on every route)
-  // 3. Super Admin: false, Admin: false (Allowed routes for all users)
-  // (Also exists because requiresAdmin/requiresSuperAdmin is not defined on every route)
-
-  if (isUserSuperAdmin) {
-    next();
-    return;
-  } else if (isUserAdmin) {
-    // LEVANTE dashboard has opened some pages to administrators before the ROAR dashboard
-    // So if isLevante, then allow regular admins to access any route with requireAdmin = true.
-    // and if ROAR, then prohibit regular admins from accessing any route with requireSuperAdmin = true.
-    if (isLevante && requiresAdmin) {
-      next();
-      return;
-    } else if (requiresSuperAdmin) {
-      next({ name: 'Home' });
-      return;
-    }
-    next();
-    return;
+      checkUserData();
+    });
   }
 
-  // If we get here, the user is a regular user
-  if (requiresSuperAdmin || requiresAdmin) {
-    next({ name: 'Home' });
-    return;
+  const routePermissions = to.meta.permissions;
+  const userRoles = authStore.userData?.roles?.map((role: RoleType) => role.role);
+  const hasUserPermissions = routePermissions.some((routePermission: string) => userRoles.includes(routePermission));
+
+  if (routePermissions.length && !hasUserPermissions) {
+    return next({ name: 'Home' });
   }
 
-  next();
-  return;
+  return next();
 });
 
 // PostHog pageview tracking
