@@ -1,4 +1,4 @@
-export type RoleType = {
+export type Role = {
   role: string;
   siteId: string;
 };
