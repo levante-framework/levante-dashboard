@@ -18,10 +18,10 @@ export const FIRESTORE_COLLECTIONS = {
   GUESTS: 'guests',
   LEGAL: 'legal',
   SCHOOLS: 'schools',
+  SYSTEM: 'system',
   TASKS: 'tasks',
   USER_CLAIMS: 'userClaims',
   USERS: 'users',
-  PERMISSIONS: 'permissions',
 } as const;
 
 export const FIRESTORE_BASE_URL = isEmulator ? 'http://127.0.0.1:8180/v1/' : 'https://firestore.googleapis.com/v1/';
