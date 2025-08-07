@@ -1,10 +1,10 @@
 import { NAVBAR_BLACKLIST } from '@/constants';
-import { PERMISSIONS } from '@/constants/permissions';
+import { ROLES } from '@/constants/roles';
 import { APP_ROUTES } from '@/constants/routes';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { pageTitlesCO, pageTitlesES, pageTitlesUS } from '@/translations/exports';
-import { RoleType } from '@/types';
+import { Role } from '@/types';
 import {
   createRouter,
   createWebHistory,
@@ -33,7 +33,7 @@ const routes: Array<RouteRecordRaw> = [
         es: pageTitlesES['home'],
         'es-CO': pageTitlesCO['home'],
       },
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -42,7 +42,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/Debug.vue'),
     meta: {
       pageTitle: 'Debug Information',
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -52,7 +52,7 @@ const routes: Array<RouteRecordRaw> = [
     props: { taskId: 'swr' },
     meta: {
       pageTitle: 'SWR',
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -62,7 +62,7 @@ const routes: Array<RouteRecordRaw> = [
     props: { taskId: 'pa' },
     meta: {
       pageTitle: 'PA',
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -72,7 +72,7 @@ const routes: Array<RouteRecordRaw> = [
     props: { taskId: 'sre' },
     meta: {
       pageTitle: 'SRE',
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -84,7 +84,7 @@ const routes: Array<RouteRecordRaw> = [
     // Code in App.vue overwrites updating it programmatically
     meta: {
       pageTitle: 'Core Tasks',
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -93,7 +93,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/ManageTasksVariants.vue'),
     meta: {
       pageTitle: 'Manage Tasks',
-      permissions: [PERMISSIONS.SUPER_ADMIN, PERMISSIONS.SITE_ADMIN],
+      allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN],
     },
   },
   {
@@ -106,7 +106,7 @@ const routes: Array<RouteRecordRaw> = [
         es: pageTitlesES['signIn'],
         'es-CO': pageTitlesCO['signIn'],
       },
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -116,7 +116,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../components/auth/AuthEmailLink.vue'),
     meta: {
       pageTitle: 'Email Link Authentication',
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -125,7 +125,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../components/auth/AuthEmailSent.vue'),
     meta: {
       pageTitle: 'Authentication Email Sent',
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -134,7 +134,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/HomeAdministrator.vue'),
     meta: {
       pageTitle: 'Administrator',
-      permissions: [PERMISSIONS.SITE_ADMIN],
+      allowedRoles: [ROLES.SITE_ADMIN],
     },
   },
   {
@@ -143,7 +143,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/CreateAssignment.vue'),
     meta: {
       pageTitle: 'Create Assignment',
-      permissions: [PERMISSIONS.SUPER_ADMIN, PERMISSIONS.SITE_ADMIN],
+      allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN],
     },
   },
   {
@@ -153,7 +153,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/CreateAssignment.vue'),
     meta: {
       pageTitle: 'Edit an Assignment',
-      permissions: [PERMISSIONS.SUPER_ADMIN, PERMISSIONS.SITE_ADMIN],
+      allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN],
     },
   },
   {
@@ -162,7 +162,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/CreateAdministrator.vue'),
     meta: {
       pageTitle: 'Create an administrator account',
-      permissions: [PERMISSIONS.SITE_ADMIN],
+      allowedRoles: [ROLES.SITE_ADMIN],
     },
   },
   {
@@ -171,7 +171,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/groups/ListGroups.vue'),
     meta: {
       pageTitle: 'Groups',
-      permissions: [PERMISSIONS.SITE_ADMIN],
+      allowedRoles: [ROLES.SITE_ADMIN],
     },
   },
   {
@@ -181,7 +181,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/users/ListUsers.vue'),
     meta: {
       pageTitle: 'List users',
-      permissions: [PERMISSIONS.SITE_ADMIN],
+      allowedRoles: [ROLES.SITE_ADMIN],
     },
   },
   {
@@ -191,7 +191,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/ProgressReport.vue'),
     meta: {
       pageTitle: 'View Administration',
-      permissions: [PERMISSIONS.SITE_ADMIN],
+      allowedRoles: [ROLES.SITE_ADMIN],
     },
   },
   {
@@ -204,7 +204,7 @@ const routes: Array<RouteRecordRaw> = [
         name: 'ProfileAccounts',
         component: () => import('../components/adminSettings/LinkAccountsView.vue'),
         meta: {
-          permissions: [PERMISSIONS.SITE_ADMIN],
+          allowedRoles: [ROLES.SITE_ADMIN],
         },
       },
       {
@@ -212,13 +212,13 @@ const routes: Array<RouteRecordRaw> = [
         name: 'ProfileSettings',
         component: () => import('../components/adminSettings/Settings.vue'),
         meta: {
-          permissions: [],
+          allowedRoles: [],
         },
       },
     ],
     meta: {
       pageTitle: 'Profile',
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -227,7 +227,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/EnableCookies.vue'),
     meta: {
       pageTitle: 'Enable Cookies',
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -236,7 +236,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/NotFound.vue'),
     meta: {
       pageTitle: 'Whoops! 404 Page!',
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -245,7 +245,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/users/AddUsers.vue'),
     meta: {
       pageTitle: 'Add Users',
-      permissions: [PERMISSIONS.SITE_ADMIN],
+      allowedRoles: [ROLES.SITE_ADMIN],
     },
   },
 
@@ -255,14 +255,14 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/users/LinkUsers.vue'),
     meta: {
       pageTitle: 'Link Users',
-      permissions: [PERMISSIONS.SITE_ADMIN],
+      allowedRoles: [ROLES.SITE_ADMIN],
     },
   },
   // {
   //   path: '/edit-users',
   //   name: 'Edit Users',
   //   component: () => import('../pages/users/EditUsers.vue'),
-  //   meta: { permissions: [],  pageTitle: 'Edit Users', requireAdmin: true, project: 'LEVANTE' },
+  //   meta: { allowedRoles: [],  pageTitle: 'Edit Users', requireAdmin: true, project: 'LEVANTE' },
   // },
   {
     path: '/survey',
@@ -270,7 +270,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/UserSurvey.vue'),
     meta: {
       pageTitle: 'Survey',
-      permissions: [],
+      allowedRoles: [],
     },
   },
   {
@@ -279,7 +279,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/MaintenancePage.vue'),
     meta: {
       pageTitle: 'Down for Maintenance',
-      permissions: [],
+      allowedRoles: [],
     },
   },
 ];
@@ -341,11 +341,11 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
     });
   }
 
-  const routePermissions = to.meta.permissions;
-  const userRoles = authStore.userData?.roles?.map((role: RoleType) => role.role);
-  const hasUserPermissions = routePermissions.some((routePermission: string) => userRoles.includes(routePermission));
+  const allowedRoles = to.meta.allowedRoles;
+  const userRoles = authStore.userData?.roles?.map((role: Role) => role.role);
+  const isUserAllowed = allowedRoles.some((allowedRole: string) => userRoles.includes(allowedRole));
 
-  if (routePermissions.length && !hasUserPermissions) {
+  if (allowedRoles.length && !isUserAllowed) {
     return next({ name: 'Home' });
   }
 
