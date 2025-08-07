@@ -118,13 +118,15 @@ import PvImage from 'primevue/image';
 import PvPassword from 'primevue/password';
 import { useAuthStore } from '@/store/auth';
 import { isMobileBrowser } from '@/helpers';
-import { fetchDocById } from '@/helpers/query/utils';
+import { fetchDocById, fetchAllDocuments } from '@/helpers/query/utils';
 import { isLevante } from '@/helpers';
 import { AUTH_SSO_PROVIDERS } from '@/constants/auth';
 import { APP_ROUTES } from '@/constants/routes';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import SignIn from '@/components/auth/SignIn.vue';
 import LanguageSelector from '@/components/LanguageSelector.vue';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { mapRolesToPermissions } from '@/helpers/query/permissions';
 
 const incorrect = ref(false);
 const authStore = useAuthStore();
@@ -208,7 +210,23 @@ const authWithEmail = async (state) => {
         }
         if (authStore.roarUid) {
           const userData = await fetchDocById('users', authStore.roarUid);
-          authStore.userData = userData;
+
+          if (userData?.roles?.length > 0) {
+            const permissionsCollection = await fetchAllDocuments(FIRESTORE_COLLECTIONS.SYSTEM);
+
+            if (permissionsCollection.length <= 0 || !permissionsCollection[0]?.permissions) {
+              throw new Error('Error trying to fetch permissions');
+            }
+
+            const userRolesWithPermissions = mapRolesToPermissions(
+              userData?.roles,
+              permissionsCollection[0]?.permissions,
+            );
+
+            authStore.userData = { ...userData, roles: userRolesWithPermissions };
+          } else {
+            authStore.userData = userData;
+          }
         }
 
         spinner.value = true;
