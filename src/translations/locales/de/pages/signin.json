@@ -2,7 +2,7 @@
   "$schema": "../../base/metadata-schema.json",
   "$metadata": {
     "component": "signin",
-    "lastUpdated": "2025-08-08T04:49:33.013Z",
+    "lastUpdated": "2025-08-08T05:09:29.248Z",
     "completeness": 100,
     "context": "pages component",
     "source": "crowdin"

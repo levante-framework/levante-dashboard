@@ -2,7 +2,7 @@
   "$schema": "../../base/metadata-schema.json",
   "$metadata": {
     "component": "game-tabs",
-    "lastUpdated": "2025-08-08T04:49:33.011Z",
+    "lastUpdated": "2025-08-08T05:09:29.247Z",
     "completeness": 100,
     "context": "components component",
     "source": "crowdin"

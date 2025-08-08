@@ -2,7 +2,7 @@
   "$schema": "../../base/metadata-schema.json",
   "$metadata": {
     "component": "user-survey",
-    "lastUpdated": "2025-08-08T04:49:33.014Z",
+    "lastUpdated": "2025-08-08T05:09:29.249Z",
     "completeness": 100,
     "context": "surveys component",
     "source": "crowdin"
