@@ -214,7 +214,7 @@ const authWithEmail = async (state) => {
           if (userData?.roles?.length > 0) {
             const permissionsCollection = await fetchAllDocuments(FIRESTORE_COLLECTIONS.SYSTEM);
 
-            if (permissionsCollection.length <= 0 || !permissionsCollection[0]?.permissions) {
+            if (!Array.isArray(permissionsCollection)) {
               throw new Error('Error trying to fetch permissions');
             }
 
