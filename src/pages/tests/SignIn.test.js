@@ -29,6 +29,7 @@ vi.mock('vue-router', () => ({
 
 vi.mock('@/helpers', () => ({
   isLevante: true,
+  isEmulator: true,
   isMobileBrowser: vi.fn(() => isMobileBrowserMock),
 }));
 
