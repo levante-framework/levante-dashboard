@@ -7,67 +7,65 @@
       "consentUpdatedStatus": "Estado de consentimiento actualizado",
       "header": "Consentimiento",
       "rejectButton": "No, cerrar sesión",
-      "title": "",
       "toastHeader": "Confirmado"
     },
     "signin": {
       "atLeastOneLowercase": "Al menos una minúscula",
       "atLeastOneNumber": "Al menos un número",
-      "atLeastOneNumeric": "Al menos un carácter numérico",
+      "atLeastOneNumeric": "Al menos un numérico",
       "atLeastOneUpperCase": "Al menos una mayúscula",
       "buttonLabel": "¡Vamos!",
-      "continueWithGoogle": "Continuar con Google",
+      "continueWithGoogle": "Sigue adelante con Google",
       "emailId": "correo electrónico",
       "emailPlaceholder": "Nombre de usuario o correo electrónico",
       "forgotPassword": "¿Olvidaste tu contraseña?",
       "incorrectEmailOrPassword": "Nombre de usuario/correo electrónico o contraseña incorrectos",
-      "invalidEmailPlaceholder": "Error: correo electrónico inválido",
+      "invalidEmailPlaceholder": "Error: correo electrónico no válido",
       "minimumCharacters": "Mínimo 8 caracteres",
-      "pageTitle": "",
+      "pageTitle": "Iniciar sesión",
       "passwordId": "contraseña",
       "passwordPlaceholder": "Contraseña",
       "pickPassword": "Elige una contraseña",
       "selectLanguage": "Seleccionar idioma",
       "selectLanguageLabel": "Idioma",
-      "signInWithEmailLinkInstead": "Inicia sesión usando el enlace de correo electrónico",
-      "signInWithEmailLinkPlaceHolder": "Presiona ¡Vamos! para iniciar sesión con un enlace de correo electrónico.",
-      "signInWithPasswordInstead": "Inicia sesión usando la contraseña",
+      "signInWithEmailLinkInstead": "Iniciar sesión con enlace de correo electrónico",
+      "signInWithEmailLinkPlaceHolder": "Presiona Go para iniciar sesión con un enlace de correo electrónico.",
+      "signInWithPasswordInstead": "Iniciar sesión con contraseña",
       "suggestions": "Sugerencias"
     }
   },
   "pages": {
     "home-participant": {
-      "consentUpdatedStatus": "",
-      "contactAdministrator": "Por favor, contacta a tu administrador para que te agreguen a una asignación.",
-      "loadingAssignments": "Cargando Asignaciones",
-      "noAssignments": "¡No tienes asignaciones!",
-      "selectAssignment": "Seleccionar una asignación",
-      "showOptionalAssignments": "Mostrar asignaciones opcionales"
+      "contactAdministrator": "Por favor, contacta a tu administrador para que te agregue a una actividad.",
+      "loadingAssignments": "Cargando actividades",
+      "noAssignments": "¡No tienes actividades!",
+      "selectAssignment": "Selecciona una actividad",
+      "showOptionalAssignments": "Mostrar actividades opcionales"
     },
     "home-selector": {
-      "inactivityLogout": "Pronto se cerrará la sesión por razones de seguridad. Por favor haga clic en \"Continuar\" si desea continuar su sesión. Si no, la sesión se cerrará automáticamente en {timeLeft} segundos.",
+      "inactivityLogout": "Pronto será desconectado por motivos de seguridad. Haz clic en \"Continuar\" si desea continuar con su sesión. De lo contrario, se cerrará la sesión automáticamente en {timeLeft} segundos.",
       "inactivityLogoutAcceptLabel": "Continuar",
       "loading": "Cargando..."
     },
     "not-found": {
-      "label": "Volver a la página principal",
+      "label": "Ir a la página de inicio.",
       "pageNotFound": "Página no encontrada",
-      "sorry": "Lo siento, ¡no pudimos encontrar esa página!"
+      "sorry": "¡Lo siento, no pudimos encontrar esa página!"
     },
     "signin": {
       "adminAction": "aquí",
-      "adminInfoPrompt": "Si te registraste con un correo de Google o si tu proveedor de correo utiliza Google SSO.",
-      "adminPrompt": "¿Eres un Administrador? Haz clic {action} para Iniciar sesión.",
+      "adminInfoPrompt": "Si te registraste con un correo de Google o tu proveedor de correo utiliza Google SSO.",
+      "adminPrompt": "¿Eres administrador? Haz clic {action} para iniciar sesión.",
       "havingTrouble": "¿Tienes problemas?",
       "login": "Inicia sesión para acceder a tu panel de control",
-      "loginWith": "Iniciar sesión con",
+      "loginWith": "Inicia sesión con",
       "welcome": "¡Bienvenido a ROAR!"
     }
   },
   "surveys": {
     "user-survey": {
-      "specificRelationDescriptionChildA": "Para el niño con Mes de Nacimiento",
-      "specificRelationDescriptionChildB": "y Año de Nacimiento",
+      "specificRelationDescriptionChildA": "Para niño(a) con mes de nacimiento",
+      "specificRelationDescriptionChildB": "y año de nacimiento",
       "specificRelationDescriptionClass": "Para la clase"
     }
   },
@@ -79,7 +77,7 @@
       "egmaMathName": "Matemáticas",
       "heartsAndFlowersDescription": "Haz coincidir el lado correcto con los corazones y las flores.",
       "heartsAndFlowersName": "Corazones y Flores",
-      "introDescription": "Aprende a jugar a nuestros juegos. ",
+      "introDescription": "Aprende a jugar a nuestros juegos.",
       "introName": "Introducción",
       "matrixReasoningDescription": "Encuentra la pieza que falta para completar el rompecabeza.",
       "matrixReasoningName": "Razonamiento Matricial",
@@ -110,7 +108,7 @@
       "surveyProgressSpecificParentMonth": "Mes",
       "surveyProgressSpecificParentYear": "Año",
       "surveyProgressSpecificTeacher": "Aula",
-      "taskCompleted": "¡Tarea completa!",
+      "taskCompleted": "¡Tarea completada!",
       "theoryOfMindDescription": "Escucha las historias y responde a las preguntas.",
       "theoryOfMindName": "Historias",
       "trogDescription": "Escucha las palabras y elige la imagen correspondiente.",
@@ -123,8 +121,8 @@
       "signOut": "Salir"
     },
     "participant-sidebar": {
-      "grade": "Grado",
-      "studentInfo": "Información del estudiante",
+      "grade": "Calificación",
+      "studentInfo": "Información del nina",
       "tasksCompleted": "¡tareas completadas!"
     },
     "sentry-form": {
