@@ -32,7 +32,7 @@
             <div class="uppercase text-sm text-gray-600">VIEW</div>
             <PvSelectButton
               v-model="reportView"
-              v-tooltip.top="tooltip('View different report')"
+              v-tooltip.top="tooltip('View different report', { showDelay: 0 })"
               :options="reportViews"
               option-disabled="constant"
               :allow-empty="false"
