@@ -3,6 +3,7 @@ import _fromPairs from 'lodash/fromPairs';
 import _invert from 'lodash/invert';
 import _toPairs from 'lodash/toPairs';
 import * as Papa from 'papaparse';
+import { TooltipOptions } from 'primevue/tooltip';
 
 export const isLevante: boolean = import.meta.env.VITE_LEVANTE === 'TRUE';
 export const isEmulator: boolean = (import.meta.env.VITE_EMULATOR as string) === 'TRUE';
@@ -229,3 +230,20 @@ export const normalizeToLowercase = (str = ''): string =>
     .toLowerCase()
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '');
+
+export const tooltip = (param: TooltipOptions | string): TooltipOptions => {
+  const defaultOptions = {
+    autoHide: true,
+    disabled: false,
+    hideDelay: 0,
+    showDelay: 1500,
+    unstyled: false,
+    value: '',
+  } as TooltipOptions;
+
+  if (typeof param === 'string') {
+    return { ...defaultOptions, value: param };
+  }
+
+  return { ...defaultOptions, ...param };
+};
