@@ -10,8 +10,8 @@ const mockAssignmentData = {
   id: '1',
   name: 'Test Assignment',
   publicName: 'Public Test Assignment',
-  dateOpened: new Date('2024-01-01'),
-  dateClosed: new Date('2024-01-31'),
+  dateOpened: new Date('2024-01-01 00:00:00'),
+  dateClosed: new Date('2024-01-31 00:00:00'),
   assessments: [
     { taskId: 'task1', variantName: 'Variant A' },
     { taskId: 'task2', variantName: 'Variant B' },
@@ -88,7 +88,7 @@ describe('AssignmentCard.vue', () => {
 
       expect(datesElement.exists()).toBe(true);
       expect(datesElement.find('.pi.pi-calendar').exists()).toBe(true);
-      expect(datesElement.text()).toContain('Dec 31, 2023 — Jan 30, 2024');
+      expect(datesElement.text()).toContain('Jan 01, 2024 — Jan 31, 2024');
     });
 
     it('should not display dates section when dates are missing', () => {
