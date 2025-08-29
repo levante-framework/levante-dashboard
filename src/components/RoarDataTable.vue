@@ -822,7 +822,6 @@ button.p-column-filter-menu-button.p-link:hover {
   display: inline-block !important;
   text-align: center !important;
   font-weight: bold !important;
-  font-size: 12px !important;
 }
 
 /* Add spacing between icon and text in tags */
