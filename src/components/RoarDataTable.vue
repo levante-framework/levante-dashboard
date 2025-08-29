@@ -204,11 +204,7 @@
                     @click="$emit(col.eventName, colData)"
                   />
                   <span
-                    v-if="
-                      col.eventName === 'assignments-button' &&
-                      colData.assignmentCount !== undefined &&
-                      colData.assignmentCount !== null
-                    "
+                    v-if="col.eventName === 'assignments-button' && colData.assignmentCount != null"
                     class="font-semibold text-sm ml-2"
                   >
                     {{ colData.assignmentCount }}
