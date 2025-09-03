@@ -30,7 +30,7 @@ const useSSOAccountReadinessVerification = () => {
   const queryClient = useQueryClient();
 
   const authStore = useAuthStore();
-  const { roarUid } = storeToRefs(authStore);
+  const { roarUid } = authStore;
 
   const { data: userData, refetch: refetchUserData, isFetchedAfterMount } = useUserDataQuery();
 
@@ -53,20 +53,20 @@ const useSSOAccountReadinessVerification = () => {
       const userType = userData?.value?.userType;
 
       if (!userType) {
-        console.log(`[SSO] User type missing for user ${roarUid.value}. Attempt #${retryCount.value}, retrying...`);
+        console.log(`[SSO] User type missing for user ${roarUid()}. Attempt #${retryCount.value}, retrying...`);
         retryCount.value++;
         return;
       }
 
       if (userType === AUTH_USER_TYPE.GUEST) {
         console.log(
-          `[SSO] User ${roarUid.value} identified as ${userType} user. Attempt #${retryCount.value}, retrying...`,
+          `[SSO] User ${roarUid()} identified as ${userType} user. Attempt #${retryCount.value}, retrying...`,
         );
         retryCount.value++;
         return;
       }
 
-      console.log(`[SSO] User ${roarUid.value} successfully identified as ${userType} user. Routing to home page...`);
+      console.log(`[SSO] User ${roarUid()} successfully identified as ${userType} user. Routing to home page...`);
 
       // Stop the polling mechanism.
       clearInterval(userDataCheckInterval);

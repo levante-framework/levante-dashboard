@@ -14,14 +14,14 @@ import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
  */
 const useUserClaimsQuery = (queryOptions?: UseQueryOptions): UseQueryReturnType => {
   const authStore = useAuthStore();
-  const { uid } = storeToRefs(authStore);
+  const { uid } = authStore;
 
-  const queryConditions = [() => !!uid.value];
+  const queryConditions = [() => !!uid()];
   const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
 
   return useQuery({
-    queryKey: [USER_CLAIMS_QUERY_KEY, uid],
-    queryFn: () => fetchDocById(FIRESTORE_COLLECTIONS.USER_CLAIMS, uid),
+    queryKey: [USER_CLAIMS_QUERY_KEY, uid()],
+    queryFn: () => fetchDocById(FIRESTORE_COLLECTIONS.USER_CLAIMS, uid()),
     enabled: isQueryEnabled,
     ...options,
   });
