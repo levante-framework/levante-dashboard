@@ -38,7 +38,7 @@ describe('useUserDataQuery', () => {
     const mockUserRoarUid = ref(nanoid());
 
     const authStore = useAuthStore(piniaInstance);
-    authStore.roarUid = mockUserRoarUid;
+    authStore.roarUid = () => mockUserRoarUid.value;
 
     vi.spyOn(VueQuery, 'useQuery');
 
@@ -64,7 +64,7 @@ describe('useUserDataQuery', () => {
     const mockStudentUserId = ref(nanoid());
 
     const authStore = useAuthStore(piniaInstance);
-    authStore.roarUid = mockUserRoarUid;
+    authStore.roarUid = () => mockUserRoarUid.value;
 
     vi.spyOn(VueQuery, 'useQuery');
 
@@ -87,7 +87,7 @@ describe('useUserDataQuery', () => {
     const mockUserRoarUid = ref(nanoid());
 
     const authStore = useAuthStore(piniaInstance);
-    authStore.roarUid = mockUserRoarUid;
+    authStore.roarUid = () => mockUserRoarUid.value;
 
     const enableQuery = ref(false);
 
@@ -120,7 +120,7 @@ describe('useUserDataQuery', () => {
     const mockUserRoarUid = ref(null);
 
     const authStore = useAuthStore(piniaInstance);
-    authStore.roarUid = mockUserRoarUid;
+    authStore.roarUid = () => mockUserRoarUid.value;
 
     const queryOptions = { enabled: true };
 
@@ -149,7 +149,7 @@ describe('useUserDataQuery', () => {
     const mockUserRoarUid = ref(null);
 
     const authStore = useAuthStore(piniaInstance);
-    authStore.roarUid = mockUserRoarUid;
+    authStore.roarUid = () => mockUserRoarUid.value;
 
     const queryOptions = { enabled: true };
 
