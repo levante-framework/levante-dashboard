@@ -42,7 +42,14 @@
       "loadingAssignments": "Cargando Asignaciones",
       "noAssignments": "¡No tienes asignaciones!",
       "selectAssignment": "Seleccionar una asignación",
-      "showOptionalAssignments": "Mostrar asignaciones opcionales"
+      "showOptionalAssignments": "Mostrar asignaciones opcionales",
+      "assignments": "Asignaciones",
+      "current": "Actual",
+      "past": "Pasadas",
+      "upcoming": "Próximas",
+      "noCurrentAssignmentsFound": "No se encontraron asignaciones actuales",
+      "noPastAssignmentsFound": "No se encontraron asignaciones pasadas",
+      "noUpcomingAssignmentsFound": "No se encontraron asignaciones próximas"
     },
     "home-selector": {
       "inactivityLogout": "Pronto se cerrará la sesión por razones de seguridad. Por favor haga clic en \"Continuar\" si desea continuar su sesión. Si no, la sesión se cerrará automáticamente en {timeLeft} segundos.",
