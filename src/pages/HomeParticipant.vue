@@ -469,6 +469,10 @@ const specificSurveyData = computed(() => {
 function createSurveyInstance(surveyDataToStartAt) {
   settings.lazyRender = true;
   const surveyInstance = new Model(surveyDataToStartAt);
+
+  // Here is where survey LAF customization happens:
+
+  
   // surveyInstance.showNavigationButtons = 'none';
   surveyInstance.locale = getParsedLocale(locale.value);
   return surveyInstance;
