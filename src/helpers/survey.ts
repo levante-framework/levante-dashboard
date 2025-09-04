@@ -147,8 +147,9 @@ export const fetchAudioLinks = async (surveyType: string): Promise<AudioLinkMap>
   return audioLinkMap;
 };
 
+// We now want to use the full locale string if available.
 export function getParsedLocale(locale: string | undefined | null): string {
-  return (locale || '').split('-')?.[0] || 'en';
+  return locale || 'en-US';
 }
 
 function finishedLoading({

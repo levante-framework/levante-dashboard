@@ -5,7 +5,7 @@
       "assentTitle": "Instemming",
       "consentTitle": "Toestemming",
       "consentUpdatedStatus": "Toestemmingsstatus bijgewerkt",
-      "header": "Consent",
+      "header": "Toestemming",
       "rejectButton": "Nee, log me uit",
       "title": "",
       "toastHeader": "Bevestigd"
@@ -24,7 +24,7 @@
       "invalidEmailPlaceholder": "Fout: ongeldige email",
       "minimumCharacters": "Minimaal 8 tekens",
       "pageTitle": "",
-      "passwordId": "password",
+      "passwordId": "wachtwoord",
       "passwordPlaceholder": "Wachtwoord",
       "pickPassword": "Kies een wachtwoord",
       "selectLanguage": "Selecteer Taal",
@@ -42,7 +42,14 @@
       "loadingAssignments": "Laden van opdrachten",
       "noAssignments": "Je hebt geen opdrachten!",
       "selectAssignment": "Selecteer een opdracht",
-      "showOptionalAssignments": "Toon optionele opdrachten"
+      "showOptionalAssignments": "Toon optionele opdrachten",
+      "assignments": "Opdrachten",
+      "current": "Huidig",
+      "past": "Verleden",
+      "upcoming": "Komend",
+      "noCurrentAssignmentsFound": "Er zijn geen huidige opdrachten gevonden",
+      "noPastAssignmentsFound": "Er zijn geen vorige opdrachten gevonden",
+      "noUpcomingAssignmentsFound": "Er zijn geen komende opdrachten gevonden"
     },
     "home-selector": {
       "inactivityLogout": "Je wordt binnenkort automatisch uitgelogd om veiligheidsredenen. Klik op \"Doorgaan\" als je de sessie wilt voortzetten. \n Anders wordt je automatisch uitgelogd over { timeLeft } seconden.",
