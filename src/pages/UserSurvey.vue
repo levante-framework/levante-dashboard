@@ -1,5 +1,6 @@
 <script setup>
 import 'survey-core/survey-core.css';
+import '@/styles/survey-levante.css';
 import { SurveyComponent } from 'survey-vue3-ui';
 import { useAuthStore } from '@/store/auth';
 import { useSurveyStore } from '@/store/survey';

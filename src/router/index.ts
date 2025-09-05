@@ -37,6 +37,12 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
+    path: '/survey-preview',
+    name: 'SurveyPreview',
+    component: () => import('../pages/SurveyPreview.vue'),
+    meta: { pageTitle: 'Survey Preview' },
+  },
+  {
     path: '/debug',
     name: 'Debug',
     component: () => import('../pages/Debug.vue'),
@@ -253,7 +259,7 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
 
   const store = useAuthStore();
 
-  const allowedUnauthenticatedRoutes = ['SignIn', 'Maintenance', 'AuthEmailLink', 'AuthEmailSent', 'Debug'];
+  const allowedUnauthenticatedRoutes = ['SignIn', 'Maintenance', 'AuthEmailLink', 'AuthEmailSent', 'Debug', 'SurveyPreview'];
 
   const inMaintenanceMode = false;
 

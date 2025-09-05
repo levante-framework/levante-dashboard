@@ -1,0 +1,87 @@
+/* Page background and centering */
+.survey-container,
+.sd-root-modern, .sd-root, body {
+  background: #F7F8FA !important;
+}
+.sd-root-modern {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  width: 100%;
+}
+
+/* Auth-like card wrapper */
+.sd-body, .sd-body__navigation {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.08);
+  padding: 28px;
+}
+
+/* Optional logo/title area */
+.sd-title, .sd-header, .sd-logo {
+  display: none !important;
+}
+
+/* Question spacing */
+.sd-question {
+  margin-bottom: 16px;
+}
+
+/* Input sizing for text fields */
+.sd-input, .sd-dropdown, .sd-text, .sd-comment {
+  height: 48px;
+  padding: 14px 16px;
+  font-size: 15px;
+  border-radius: 12px;
+  border: 1px solid #E5E7EB;
+}
+.sd-input:focus, .sd-dropdown:focus, .sd-text:focus, .sd-comment:focus {
+  border-color: #1F6FEB;
+  box-shadow: 0 0 0 3px rgba(31,111,235,0.18);
+}
+
+/* Primary button */
+.sd-btn, .sd-navigation__complete-btn, .sd-btn--action {
+  background: #1F6FEB;
+  color: #fff;
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-weight: 600;
+  border: 1px solid #1F6FEB;
+}
+.sd-btn:hover, .sd-navigation__complete-btn:hover, .sd-btn--action:hover {
+  background: #1654B8;
+  border-color: #1654B8;
+}
+.sd-btn:disabled, .sd-navigation__complete-btn:disabled {
+  background: #9DBAF7;
+  border-color: #9DBAF7;
+}
+
+/* Links */
+.sd-title a, .sd-body a, .sd-question__content a {
+  color: #1F6FEB;
+  text-decoration: none;
+}
+.sd-title a:hover, .sd-body a:hover, .sd-question__content a:hover {
+  text-decoration: underline;
+}
+
+/* Error styles subtle */
+.sd-item__control .sd-context-error,
+.sd-question__erbox, .sd-panel__erbox, .sd-main__erbox {
+  border-radius: 10px;
+}
+.sd-question--error .sd-input,
+.sd-question--error .sd-dropdown,
+.sd-question--error .sd-text {
+  border-color: #EF4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
+}

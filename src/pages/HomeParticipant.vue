@@ -121,6 +121,7 @@ import SideBar from '@/components/SideBar.vue';
 import { useAssignmentsStore } from '@/store/assignments';
 import PvTag from 'primevue/tag';
 import { ASSIGNMENT_STATUSES } from '@/constants';
+import { levanteLikeTheme } from '@/helpers/surveyTheme';
 
 const showConsent = ref(false);
 const consentVersion = ref('');
@@ -470,9 +471,9 @@ function createSurveyInstance(surveyDataToStartAt) {
   settings.lazyRender = true;
   const surveyInstance = new Model(surveyDataToStartAt);
 
-  // Here is where survey LAF customization happens:
+  // Apply Levante-like theme and SurveyJS Default V2 look
+  surveyInstance.applyTheme(levanteLikeTheme);
 
-  
   // surveyInstance.showNavigationButtons = 'none';
   surveyInstance.locale = getParsedLocale(locale.value);
   return surveyInstance;
