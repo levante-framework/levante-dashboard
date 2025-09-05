@@ -7,7 +7,7 @@
       <div class="assignment-card__header">
         <h4 class="assignment-card__name">
           <i v-if="props.status === ASSIGNMENT_STATUSES.UPCOMING" :class="`pi pi-lock --${props.status}`"></i>
-          <i v-if="props.status === ASSIGNMENT_STATUSES.PAST" :class="`pi pi-check-circle --${props.status}`"></i>
+          <i v-else-if="isAssignmentCompleted" :class="`pi pi-check-circle --${props.status}`"></i>
           {{ props?.data?.publicName || props?.data?.name }}
         </h4>
 
@@ -16,15 +16,6 @@
           <small>{{ format(props?.data?.dateOpened, 'MMM dd, yyyy') }}</small> —
           <small>{{ format(props?.data?.dateClosed, 'MMM dd, yyyy') }}</small>
         </div>
-      </div>
-
-      <div class="assignment-card__tasks">
-        <div
-          v-for="task in props?.data?.assessments"
-          :key="task?.taskId"
-          v-tooltip.top="tooltip(task?.variantName)"
-          class="assignment-card__task"
-        ></div>
       </div>
     </div>
 
@@ -36,9 +27,9 @@
 
 <script lang="ts" setup>
 import { ASSIGNMENT_STATUSES } from '@/constants';
-import { tooltip } from '@/helpers';
 import { AdministrationType } from '@levante-framework/levante-zod';
 import { format } from 'date-fns';
+import { computed } from 'vue';
 
 interface Props {
   data: AdministrationType;
@@ -48,6 +39,8 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const isAssignmentCompleted = computed(() => props.data?.assessments.every((assessment) => !!assessment?.completedOn));
 </script>
 
 <style lang="scss" scoped>
