@@ -27,7 +27,8 @@ const taskStarted = ref(false);
 const gameStarted = ref(false);
 const authStore = useAuthStore();
 const gameStore = useGameStore();
-const { isFirekitInit, roarfirekit } = storeToRefs(authStore);
+const { roarfirekit } = storeToRefs(authStore);
+const { isFirekitInit } = authStore;
 
 const { mutateAsync: completeAssessmentMutate } = useCompleteAssessmentMutation();
 
@@ -75,12 +76,12 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  [isFirekitInit, isLoadingUserData, userData],
+  [isFirekitInit(), isLoadingUserData, userData],
   async ([newFirekitInitValue, newLoadingUserData, newUserData]) => {
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
-    const hasAgeData = birthMonth !== undefined && birthYear !== undefined
-    
+    const hasAgeData = birthMonth !== undefined && birthYear !== undefined;
+
     if (newFirekitInitValue && !newLoadingUserData && hasAgeData && !taskStarted.value) {
       taskStarted.value = true;
       const { selectedAdmin } = storeToRefs(gameStore);

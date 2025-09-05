@@ -1,27 +1,35 @@
 import { defineStore } from 'pinia';
-import { parse, stringify } from 'zipson';
+import { ref } from 'vue';
 
-export const useGameStore = () => {
-  return defineStore({
-    id: 'gameStore',
-    state: () => {
-      return {
-        selectedAdmin: undefined,
-        requireRefresh: false,
-      };
-    },
-    actions: {
-      requireHomeRefresh() {
-        this.requireRefresh = true;
-      },
-    },
+export const useGameStore = defineStore(
+  'gameStore',
+  () => {
+    const requireRefresh = ref(false);
+    const selectedAdmin = ref(undefined);
+
+    function $reset() {
+      requireRefresh.value = false;
+      selectedAdmin.value = undefined;
+    }
+
+    function requireHomeRefresh() {
+      requireRefresh.value = true;
+    }
+
+    return {
+      // State
+      requireRefresh,
+      selectedAdmin,
+
+      // Actions
+      $reset,
+      requireHomeRefresh,
+    };
+  },
+  {
     persist: {
+      paths: ['requireRefresh', 'selectedAdmin'],
       storage: sessionStorage,
-      debug: false,
-      serializer: {
-        deserialize: parse,
-        serialize: stringify,
-      },
     },
-  })();
-};
+  },
+);

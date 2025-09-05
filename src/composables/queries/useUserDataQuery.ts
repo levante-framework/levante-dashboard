@@ -19,9 +19,9 @@ const useUserDataQuery = (
   queryOptions?: UseQueryOptions,
 ): UseQueryReturnType => {
   const authStore = useAuthStore();
-  const { roarUid } = storeToRefs(authStore);
+  const { roarUid } = authStore;
 
-  const uid = computed(() => unref(userId) || roarUid.value);
+  const uid = computed(() => unref(userId) || roarUid());
   const queryConditions = [() => !!uid.value];
   const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
 
