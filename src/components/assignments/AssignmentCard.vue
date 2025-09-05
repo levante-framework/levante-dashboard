@@ -63,10 +63,6 @@ const isAssignmentCompleted = computed(() => props.data?.assessments?.every((ass
     .assignment-card__name {
       color: var(--bright-yellow);
     }
-
-    .assignment-card__task {
-      background: rgba(var(--bright-yellow-rgb), 0.5);
-    }
   }
 }
 
@@ -101,6 +97,7 @@ const isAssignmentCompleted = computed(() => props.data?.assessments?.every((ass
       color: var(--gray-500);
     }
 
+    &.--current,
     &.--past {
       color: var(--bright-green);
     }
@@ -119,25 +116,5 @@ const isAssignmentCompleted = computed(() => props.data?.assessments?.every((ass
   .pi {
     margin: -2px 0 0;
   }
-}
-
-.assignment-card__tasks {
-  display: flex;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  width: 100%;
-  height: auto;
-  margin: 0.5rem 0 0;
-}
-
-.assignment-card__task {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-width: 36px;
-  min-height: 36px;
-  border-radius: 0.5rem;
-  background: var(--surface-d);
 }
 </style>
