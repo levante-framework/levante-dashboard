@@ -120,7 +120,6 @@ import { logger } from '@/logger';
 import { format } from 'date-fns';
 import SideBar from '@/components/SideBar.vue';
 import PvTag from 'primevue/tag';
-import { ASSIGNMENT_STATUSES } from '@/constants';
 
 const showConsent = ref(false);
 const consentVersion = ref('');
@@ -208,12 +207,12 @@ const upcomingAssignments = computed(() => sortedUserAdministrations.value.filte
 
 const assignmentStartDateLabel = computed(() => {
   const dateOpened = selectedAssignment.value?.dateOpened || new Date();
-  return new Date(dateOpened) < now.value ? 'Started:' : 'Start:';
+  return new Date(dateOpened) < now.value ? 'Opened:' : 'Open:';
 });
 
 const assignmentEndDateLabel = computed(() => {
   const dateClosed = selectedAssignment.value?.dateClosed || new Date();
-  return new Date(dateClosed) < now.value ? 'Ended:' : 'End:';
+  return new Date(dateClosed) < now.value ? 'Closed:' : 'Close:';
 });
 
 watch([assignmentsStore, currentAssignments], () => {
@@ -699,11 +698,5 @@ watch(
 
 .switch-container {
   min-width: 24%;
-}
-
-@media screen and (max-width: 1100px) {
-  .tabs-container {
-    flex-direction: row;
-  }
 }
 </style>
