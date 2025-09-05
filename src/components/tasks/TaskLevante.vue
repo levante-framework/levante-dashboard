@@ -8,7 +8,6 @@ import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import _get from 'lodash/get';
 import { useAuthStore } from '@/store/auth';
-import { useGameStore } from '@/store/game';
 import { useAssignmentsStore } from '@/store/assignments';
 import useUserChildDataQuery from '@/composables/queries/useUserChildDataQuery';
 import useCompleteAssessmentMutation from '@/composables/mutations/useCompleteAssessmentMutation';
@@ -62,7 +61,6 @@ window.addEventListener(
 );
 
 onMounted(async () => {
-  console.log('mounted task component');
   try {
     let module = await import('@levante-framework/core-tasks');
     levanteTaskLauncher = module.TaskLauncher;
@@ -102,8 +100,6 @@ async function startTask(selectedAdmin) {
         clearInterval(checkGameStarted);
       }
     }, 100);
-
-    console.log('selectedAdmin id: ', selectedAdmin.value.id);
 
     const appKit = await authStore.roarfirekit.startAssessment(selectedAdmin.value.id, taskId, version);
 
