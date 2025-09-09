@@ -9,8 +9,7 @@ const authStoreMock = {
   signInWithGooglePopup: vi.fn(),
   signInWithGoogleRedirect: vi.fn(),
   spinner: false,
-  uid: () => null,
-  roarUid: () => null,
+  getUserId: () => null,
   $subscribe: vi.fn(),
 };
 

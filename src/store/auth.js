@@ -36,15 +36,11 @@ export const useAuthStore = defineStore(
       userData.value = null;
     }
 
-    function uid() {
+    function getUserId() {
       return firebaseUser.value.adminFirebaseUser?.uid;
     }
 
-    function roarUid() {
-      return userClaims.value?.claims?.roarUid;
-    }
-
-    function email() {
+    function getUserEmail() {
       return firebaseUser.value.adminFirebaseUser?.email;
     }
 
@@ -159,8 +155,8 @@ export const useAuthStore = defineStore(
     }
 
     async function sendMyPasswordResetEmail() {
-      if (email()) {
-        return await roarfirekit.value.sendPasswordResetEmail(email()).then(() => true);
+      if (getUserEmail()) {
+        return await roarfirekit.value.sendPasswordResetEmail(getUserEmail()).then(() => true);
       }
 
       console.warn('Logged in user does not have an associated email. Unable to send password reset email');
@@ -210,7 +206,7 @@ export const useAuthStore = defineStore(
       $reset,
       completeAssessment,
       createUsers,
-      email,
+      getUserEmail,
       forceIdTokenRefresh,
       getLegalDoc,
       initFirekit,
@@ -222,7 +218,6 @@ export const useAuthStore = defineStore(
       isUserAuthedAdmin,
       isUserSuperAdmin,
       logInWithEmailAndPassword,
-      roarUid,
       sendMyPasswordResetEmail,
       setAuthStateListeners,
       setShowSideBar,
@@ -232,7 +227,7 @@ export const useAuthStore = defineStore(
       signInWithGooglePopup,
       signInWithGoogleRedirect,
       signOut,
-      uid,
+      getUserId,
     };
   },
   {
