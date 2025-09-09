@@ -156,7 +156,6 @@ onMounted(async () => {
   if (roarfirekit.value.restConfig) init();
 });
 
-
 const {
   data: districtsData,
   isLoading: isLoadingDistricts,

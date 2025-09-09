@@ -1071,7 +1071,6 @@ export const getUserAssignments = async (roarUid) => {
     });
 };
 
-
 // TODO: Rename this function to be more descriptive.
 export const assignmentFetchAll = async (adminId, orgType, orgId, includeScores = false) => {
   return await assignmentPageFetcher(
