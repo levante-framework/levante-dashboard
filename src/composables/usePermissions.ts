@@ -1,5 +1,5 @@
 // composables/usePermissions.ts
-import { ref, computed, onMounted, readonly } from 'vue';
+import { ref, computed, onMounted, readonly, toValue } from 'vue';
 import { CacheService, PermissionDocument, PermissionService, type Resource, type Action, type Role } from '@levante-framework/permissions-core';
 import { useAuthStore } from '@/store/auth';
 import { getAxiosInstance, getBaseDocumentPath } from '@/helpers/query/utils';
@@ -11,8 +11,10 @@ const permissionService = new PermissionService(cache);
 
 export const usePermissions = () => {
   const authStore = useAuthStore();
-  const { isAuthenticated, firebaseUser, userData, currentSite } = storeToRefs(authStore);
+  const { isAuthenticated, firebaseUser, userData } = storeToRefs(authStore);
+  const currentSite = toValue(authStore.currentSite);
   if (!isAuthenticated.value || !firebaseUser.value.adminFirebaseUser) return;
+  
   const user = {
     uid: firebaseUser.value.adminFirebaseUser.uid,
     email: firebaseUser.value.adminFirebaseUser.email ?? '',
