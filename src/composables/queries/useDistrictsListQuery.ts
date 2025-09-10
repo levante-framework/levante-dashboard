@@ -21,8 +21,9 @@ const useDistrictsListQuery = (queryOptions?: UseQueryOptions): UseQueryReturnTy
   });
 
   // Get admin status and administation orgs.
-  const { isSuperAdmin } = useUserType(userClaims);
+  const { isAdmin, isSuperAdmin } = useUserType(userClaims);
   const administrationOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
+  const isUserAdmin = computed(() => isAdmin || isSuperAdmin);
 
   // Ensure all necessary data is loaded before enabling the query.
   const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
@@ -31,7 +32,7 @@ const useDistrictsListQuery = (queryOptions?: UseQueryOptions): UseQueryReturnTy
 
   return useQuery({
     queryKey: [DISTRICTS_LIST_QUERY_KEY],
-    queryFn: () => orgFetcher(FIRESTORE_COLLECTIONS.DISTRICTS, undefined, isSuperAdmin, administrationOrgs),
+    queryFn: () => orgFetcher(FIRESTORE_COLLECTIONS.DISTRICTS, undefined, isUserAdmin, administrationOrgs),
     enabled: isQueryEnabled,
     ...options,
   });
