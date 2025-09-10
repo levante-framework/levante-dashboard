@@ -12,7 +12,8 @@ import _without from 'lodash/without';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
 import { flattenObj, isEmulator } from '@/helpers';
-import { FIRESTORE_BASE_URL, FIRESTORE_DATABASES } from '@/constants/firebase';
+import { FIRESTORE_BASE_URL, FIRESTORE_COLLECTIONS, FIRESTORE_DATABASES } from '@/constants/firebase';
+import { ROLES } from '@/constants/roles';
 
 export const convertValues = (value) => {
   const passThroughKeys = [
@@ -337,5 +338,84 @@ export const fetchSubcollection = async (
     return {
       error: error.response?.status === 404 ? 'Subcollection not found' : error.message,
     };
+  }
+};
+
+export const fetchAdminsBySiteId = async (siteId = '', db = FIRESTORE_DATABASES.ADMIN) => {
+  if (typeof siteId !== 'string' || siteId.length <= 0) return [];
+
+  const axiosInstance = getAxiosInstance(db);
+
+  const requestBody = {
+    structuredQuery: {
+      from: [{ collectionId: FIRESTORE_COLLECTIONS.USERS }],
+      where: {
+        compositeFilter: {
+          op: 'OR',
+          filters: [
+            {
+              fieldFilter: {
+                field: { fieldPath: 'roles' },
+                op: 'ARRAY_CONTAINS',
+                value: {
+                  mapValue: {
+                    fields: {
+                      siteId: { stringValue: 'any' },
+                      role: { stringValue: ROLES.SUPER_ADMIN },
+                    },
+                  },
+                },
+              },
+            },
+            {
+              fieldFilter: {
+                field: { fieldPath: 'roles' },
+                op: 'ARRAY_CONTAINS',
+                value: {
+                  mapValue: {
+                    fields: {
+                      siteId: { stringValue: siteId },
+                      role: { stringValue: ROLES.ADMIN },
+                    },
+                  },
+                },
+              },
+            },
+            {
+              fieldFilter: {
+                field: { fieldPath: 'roles' },
+                op: 'ARRAY_CONTAINS',
+                value: {
+                  mapValue: {
+                    fields: {
+                      siteId: { stringValue: siteId },
+                      role: { stringValue: ROLES.SITE_ADMIN },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+  };
+
+  try {
+    const response = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
+
+    return response.data
+      .filter((user) => user.document)
+      .map((user) => {
+        const doc = user.document;
+
+        return {
+          id: doc.name.split('/').pop(),
+          ..._mapValues(doc.fields, (value) => convertValues(value)),
+        };
+      });
+  } catch (error) {
+    console.error('fetchAdminsBySiteId: Error fetching admins by siteId:', error);
+    return [];
   }
 };
