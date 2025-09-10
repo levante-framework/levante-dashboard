@@ -34,6 +34,7 @@ interface AuthState {
   showSideBar: boolean;
   adminAuthStateListener: Unsubscribe | null;
   sites: unknown[];
+  currentSite: string | null;
 }
 
 interface LoginCredentials {
@@ -62,6 +63,7 @@ export const useAuthStore = defineStore('authStore', {
       showSideBar: false,
       adminAuthStateListener: null,
       sites: [],
+      currentSite: null,
     };
   },
   getters: {
@@ -197,6 +199,7 @@ export const useAuthStore = defineStore('authStore', {
     setUserData(userData: unknown): void {
       this.userData = userData;
       this.sites = userData.roles.map((role: { siteId: string, role: string }) => role.siteId);
+      this.currentSite = userData.roles[0].siteId;
     },
     setUserClaims(userClaims: UserClaims | null): void {
       this.userClaims = userClaims;
