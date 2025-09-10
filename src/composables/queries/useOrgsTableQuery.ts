@@ -33,7 +33,7 @@ const useOrgsTableQuery = (
   });
 
   // Get the admin status and administation orgs.
-  const { isSuperAdmin } = useUserType(userClaims);
+  const { isAdmin, isSuperAdmin } = useUserType(userClaims);
   const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
 
   // Ensure all necessary data is loaded before enabling the query.
@@ -60,7 +60,7 @@ const useOrgsTableQuery = (
         orderBy,
         ref(100000),
         ref(0),
-        isSuperAdmin,
+        isAdmin || isSuperAdmin,
         adminOrgs,
         selectFields.value,
       ),
