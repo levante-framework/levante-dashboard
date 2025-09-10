@@ -26,7 +26,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('../pages/HomeSelector.vue'),
+    component: () => import('@/pages/HomeSelector.vue'),
     meta: {
       pageTitle: {
         'en-US': pageTitlesUS['home'],
@@ -39,7 +39,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/debug',
     name: 'Debug',
-    component: () => import('../pages/Debug.vue'),
+    component: () => import('@/pages/Debug.vue'),
     meta: {
       pageTitle: 'Debug Information',
       allowedRoles: [],
@@ -90,7 +90,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/manage-tasks-variants',
     name: 'ManageTasksVariants',
-    component: () => import('../pages/ManageTasksVariants.vue'),
+    component: () => import('@/pages/ManageTasksVariants.vue'),
     meta: {
       pageTitle: 'Manage Tasks',
       allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SITE_ADMIN],
@@ -99,7 +99,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: APP_ROUTES.SIGN_IN,
     name: 'SignIn',
-    component: () => import('../pages/SignIn.vue'),
+    component: () => import('@/pages/SignIn.vue'),
     meta: {
       pageTitle: {
         'en-US': pageTitlesUS['signIn'],
@@ -131,7 +131,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/administrator',
     name: 'Administrator',
-    component: () => import('../pages/HomeAdministrator.vue'),
+    component: () => import('@/pages/HomeAdministrator.vue'),
     meta: {
       pageTitle: 'Administrator',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
@@ -140,7 +140,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/create-assignment',
     name: 'CreateAssignment',
-    component: () => import('../pages/CreateAssignment.vue'),
+    component: () => import('@/pages/CreateAssignment.vue'),
     meta: {
       pageTitle: 'Create Assignment',
       allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SITE_ADMIN],
@@ -159,16 +159,25 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/create-administrator',
     name: 'CreateAdministrator',
-    component: () => import('../pages/CreateAdministrator.vue'),
+    component: () => import('@/pages/CreateAdministrator.vue'),
     meta: {
       pageTitle: 'Create an administrator account',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
     },
   },
   {
+    path: '/manage-administrators',
+    name: 'ManageAdministrators',
+    component: () => import('@/pages/ManageAdministrators.vue'),
+    meta: {
+      pageTitle: 'Manage Administrators',
+      allowedRoles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
+    },
+  },
+  {
     path: '/list-groups',
     name: 'ListGroups',
-    component: () => import('../pages/groups/ListGroups.vue'),
+    component: () => import('@/pages/groups/ListGroups.vue'),
     meta: {
       pageTitle: 'Groups',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
@@ -178,7 +187,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/list-users/:orgType/:orgId/:orgName',
     name: 'ListUsers',
     props: true,
-    component: () => import('../pages/users/ListUsers.vue'),
+    component: () => import('@/pages/users/ListUsers.vue'),
     meta: {
       pageTitle: 'List users',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
@@ -188,7 +197,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/administration/:administrationId/:orgType/:orgId',
     name: 'ProgressReport',
     props: true,
-    component: () => import('../pages/ProgressReport.vue'),
+    component: () => import('@/pages/ProgressReport.vue'),
     meta: {
       pageTitle: 'View Administration',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
@@ -197,7 +206,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: APP_ROUTES.ACCOUNT_PROFILE,
     name: 'Profile',
-    component: () => import('../pages/AdminProfile.vue'),
+    component: () => import('@/pages/AdminProfile.vue'),
     children: [
       {
         path: 'accounts',
@@ -224,7 +233,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/enable-cookies',
     name: 'EnableCookies',
-    component: () => import('../pages/EnableCookies.vue'),
+    component: () => import('@/pages/EnableCookies.vue'),
     meta: {
       pageTitle: 'Enable Cookies',
       allowedRoles: [],
@@ -233,7 +242,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
-    component: () => import('../pages/NotFound.vue'),
+    component: () => import('@/pages/NotFound.vue'),
     meta: {
       pageTitle: 'Whoops! 404 Page!',
       allowedRoles: [],
@@ -242,7 +251,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/add-users',
     name: 'Add Users',
-    component: () => import('../pages/users/AddUsers.vue'),
+    component: () => import('@/pages/users/AddUsers.vue'),
     meta: {
       pageTitle: 'Add Users',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
@@ -252,7 +261,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/link-users',
     name: 'Link Users',
-    component: () => import('../pages/users/LinkUsers.vue'),
+    component: () => import('@/pages/users/LinkUsers.vue'),
     meta: {
       pageTitle: 'Link Users',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
@@ -261,13 +270,13 @@ const routes: Array<RouteRecordRaw> = [
   // {
   //   path: '/edit-users',
   //   name: 'Edit Users',
-  //   component: () => import('../pages/users/EditUsers.vue'),
+  //   component: () => import('@/pages/users/EditUsers.vue'),
   //   meta: { allowedRoles: [],  pageTitle: 'Edit Users', requireAdmin: true, project: 'LEVANTE' },
   // },
   {
     path: '/survey',
     name: 'Survey',
-    component: () => import('../pages/UserSurvey.vue'),
+    component: () => import('@/pages/UserSurvey.vue'),
     meta: {
       pageTitle: 'Survey',
       allowedRoles: [],
@@ -276,7 +285,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/maintenance',
     name: 'Maintenance',
-    component: () => import('../pages/MaintenancePage.vue'),
+    component: () => import('@/pages/MaintenancePage.vue'),
     meta: {
       pageTitle: 'Down for Maintenance',
       allowedRoles: [],
