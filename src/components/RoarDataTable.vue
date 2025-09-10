@@ -219,9 +219,16 @@
               </div>
               <div v-else-if="col.field === 'id' && _get(colData, 'userType') === 'admin'">--</div>
               <div v-else-if="col.field === 'username' && _get(colData, 'userType') === 'admin'">--</div>
-              <div v-else-if="col.field === 'user.userType'">
-                <span class="user-type-value">{{ _get(colData, col.field) }}</span>
-              </div>
+
+              <PvTag
+                v-else-if="col.field === 'roles'"
+                class="role-tag"
+                rounded
+                :icon="getAdminRoleTag(_get(colData, col.field))['icon']"
+                :severity="getAdminRoleTag(_get(colData, col.field))['severity']"
+                :value="getAdminRoleTag(_get(colData, col.field))['label']"
+              />
+
               <div v-else>
                 {{ _get(colData, col.field) }}
               </div>
@@ -405,6 +412,7 @@ import { supportLevelColors, progressTags } from '@/helpers/reports';
 import SkeletonTable from '@/components/SkeletonTable.vue';
 import TableScoreTag from '@/components/reports/TableScoreTag.vue';
 import { getTooltip } from '@/helpers';
+import { ROLES } from '@/constants/roles';
 
 /*
 Using the DataTable
@@ -629,6 +637,33 @@ function getFormattedDate(date) {
   return '';
 }
 
+function getAdminRoleTag(roles) {
+  const role = roles
+    ?.filter((value) => ['fqF1XuKJOq61qawBLOJ9', 'any'].includes(value?.siteId))
+    // Replace the hard-coded array with siteId from global state
+    ?.map((value) => value?.role)[0];
+
+  let icon = '';
+  let label = '--';
+  let severity = 'primary';
+
+  switch (role) {
+    case ROLES.ADMIN:
+      icon = 'pi pi-users';
+      label = 'Admin';
+      severity = 'info';
+      break;
+
+    case ROLES.SUPER_ADMIN:
+      icon = 'pi pi-shield';
+      label = 'Super Admin';
+      severity = 'warn';
+      break;
+  }
+
+  return { icon, label, severity };
+}
+
 const onColumnToggle = (selected) => {
   selectedColumns.value = inputColumns.value.filter((col) => {
     return selected.some((s) => s.header === col.header);
@@ -828,5 +863,18 @@ button.p-column-filter-menu-button.p-link:hover {
 
 .user-type-value {
   text-transform: capitalize;
+}
+
+.role-tag {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  font-size: 12px !important;
+  text-transform: capitalize;
+
+  .pi {
+    margin: 0 0.25rem 0 0;
+    font-weight: inherit;
+  }
 }
 </style>
