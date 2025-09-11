@@ -35,6 +35,7 @@ interface AuthState {
   adminAuthStateListener: Unsubscribe | null;
   sites: unknown[];
   currentSite: string | null;
+  shouldUsePermissions: boolean;
 }
 
 interface LoginCredentials {
@@ -64,6 +65,7 @@ export const useAuthStore = defineStore('authStore', {
       adminAuthStateListener: null,
       sites: [],
       currentSite: null,
+      shouldUsePermissions: false,
     };
   },
   getters: {
@@ -203,6 +205,7 @@ export const useAuthStore = defineStore('authStore', {
     },
     setUserClaims(userClaims: UserClaims | null): void {
       this.userClaims = userClaims;
+      this.shouldUsePermissions = userClaims?.claims.useNewPermissions ?? false;
     },
     setShowSideBar(showSideBar: boolean): void {
       this.showSideBar = showSideBar;
