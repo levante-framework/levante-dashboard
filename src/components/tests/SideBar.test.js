@@ -2,13 +2,19 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ref } from 'vue';
 import SideBar from '../SideBar.vue';
 
+const selectedStatusRef = ref('current');
+const selectedAssignmentRef = ref(null);
+const userAssignmentsRef = ref([]);
+
 const mockAssignmentsStore = {
-  selectedStatus: 'current',
-  selectedAssignment: null,
+  selectedStatus: selectedStatusRef,
+  selectedAssignment: selectedAssignmentRef,
+  userAssignments: userAssignmentsRef,
   setSelectedStatus: vi.fn((status) => {
-    mockAssignmentsStore.selectedStatus = status;
+    selectedStatusRef.value = status;
   }),
   setSelectedAssignment: vi.fn(),
 };
@@ -40,6 +46,34 @@ const getDynamicDates = () => {
   return { oneWeekAgo, oneWeekFromNow };
 };
 
+const getTestAssignments = () => {
+  const { oneWeekAgo, oneWeekFromNow } = getDynamicDates();
+
+  return [
+    {
+      id: '1',
+      name: 'Test Assignment 1',
+      publicName: 'Public Test 1',
+      dateOpened: oneWeekAgo,
+      dateClosed: oneWeekFromNow,
+    },
+    {
+      id: '2',
+      name: 'Test Assignment 2',
+      publicName: 'Public Test 2',
+      dateOpened: oneWeekFromNow,
+      dateClosed: new Date(oneWeekFromNow.getTime() + 7 * 24 * 60 * 60 * 1000), // 2 weeks from now
+    },
+    {
+      id: '3',
+      name: 'Test Assignment 3',
+      publicName: 'Public Test 3',
+      dateOpened: new Date(oneWeekAgo.getTime() - 7 * 24 * 60 * 60 * 1000), // 2 weeks ago
+      dateClosed: oneWeekAgo,
+    },
+  ];
+};
+
 const mountOptions = {
   global: {
     plugins: [PrimeVue],
@@ -50,43 +84,19 @@ const mountOptions = {
       },
     },
   },
-  props: {
-    currentAssignments: [
-      {
-        id: '1',
-        name: 'Test Assignment 1',
-        publicName: 'Public Test 1',
-        dateOpened: getDynamicDates().oneWeekAgo,
-        dateClosed: getDynamicDates().oneWeekFromNow,
-      },
-    ],
-    upcomingAssignments: [
-      {
-        id: '2',
-        name: 'Test Assignment 2',
-        publicName: 'Public Test 2',
-        dateOpened: getDynamicDates().oneWeekFromNow,
-        dateClosed: new Date(getDynamicDates().oneWeekFromNow.getTime() + 7 * 24 * 60 * 60 * 1000), // 2 weeks from now
-      },
-    ],
-    pastAssignments: [
-      {
-        id: '3',
-        name: 'Test Assignment 3',
-        publicName: 'Public Test 3',
-        dateOpened: new Date(getDynamicDates().oneWeekAgo.getTime() - 7 * 24 * 60 * 60 * 1000), // 2 weeks ago
-        dateClosed: getDynamicDates().oneWeekAgo,
-      },
-    ],
-  },
 };
 
 beforeEach(() => {
   setActivePinia(createPinia());
   vi.clearAllMocks();
   // Reset store state
-  mockAssignmentsStore.selectedStatus = 'current';
-  mockAssignmentsStore.selectedAssignment = null;
+  selectedStatusRef.value = 'current';
+  selectedAssignmentRef.value = null;
+  userAssignmentsRef.value = getTestAssignments();
+
+  // Reset the mock functions
+  mockAssignmentsStore.setSelectedStatus.mockClear();
+  mockAssignmentsStore.setSelectedAssignment.mockClear();
 });
 
 describe('SideBar.vue', () => {
@@ -293,14 +303,10 @@ describe('SideBar.vue', () => {
 
   describe('Empty States', () => {
     it('should show empty message when no assignments exist', async () => {
-      const wrapper = mount(SideBar, {
-        ...mountOptions,
-        props: {
-          currentAssignments: [],
-          upcomingAssignments: [],
-          pastAssignments: [],
-        },
-      });
+      // Set empty assignments in store
+      userAssignmentsRef.value = [];
+
+      const wrapper = mount(SideBar, mountOptions);
 
       await wrapper.find('.sidebar__toggle-btn').trigger('click');
 
