@@ -86,7 +86,7 @@ const { mutate: signOut } = useSignOutMutation();
 const feedbackButton = ref<HTMLButtonElement | null>(null);
 
 onMounted(() => {
-  siteOptions.value = (authStore.sites as string[]).map((site: string) => ({ label: site, value: site }));
+  siteOptions.value = (authStore.sites as {siteId: string, siteName: string}[]).map((site: {siteId: string, siteName: string}) => ({ label: site.siteName, value: site.siteId }));
 });
 
 const handleSiteChange = (e: DropdownChangeEvent): void => {

@@ -198,9 +198,9 @@ export const useAuthStore = defineStore('authStore', {
         return this.roarfirekit?.signOut();
       }
     },
-    setUserData(userData: unknown): void {
+    setUserData(userData: { roles: { siteId: string; role: string; siteName: string }[] }): void {
       this.userData = userData;
-      this.sites = userData.roles.map((role: { siteId: string, role: string }) => role.siteId);
+      this.sites = userData.roles.map((role: { siteId: string; role: string; siteName: string }) => ({siteId: role.siteId, siteName: role.siteName}));
       this.currentSite = userData.roles[0].siteId;
     },
     setUserClaims(userClaims: UserClaims | null): void {
