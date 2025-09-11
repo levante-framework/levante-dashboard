@@ -31,10 +31,6 @@ vi.mock('@/store/assignments', () => ({
   useAssignmentsStore: vi.fn(() => mockAssignmentsStore),
 }));
 
-vi.mock('date-fns', () => ({
-  format: vi.fn(() => 'Jan 01, 2024'),
-}));
-
 const getDynamicDates = () => {
   const today = new Date();
   const oneWeekAgo = new Date(today);
@@ -93,10 +89,6 @@ beforeEach(() => {
   selectedStatusRef.value = 'current';
   selectedAssignmentRef.value = null;
   userAssignmentsRef.value = getTestAssignments();
-
-  // Reset the mock functions
-  mockAssignmentsStore.setSelectedStatus.mockClear();
-  mockAssignmentsStore.setSelectedAssignment.mockClear();
 });
 
 describe('SideBar.vue', () => {
@@ -119,38 +111,6 @@ describe('SideBar.vue', () => {
   });
 
   describe('Icon Display', () => {
-    it('should display the toggle button icon (first icon)', () => {
-      const wrapper = mount(SideBar, mountOptions);
-      const toggleBtn = wrapper.find('.sidebar__toggle-btn');
-
-      expect(toggleBtn.exists()).toBe(true);
-      expect(toggleBtn.find('.pi.pi-list').exists()).toBe(true);
-    });
-
-    it('should display the current assignments icon (second icon)', () => {
-      const wrapper = mount(SideBar, mountOptions);
-      const currentIcon = wrapper.find('.sidebar__nav-link.--current');
-
-      expect(currentIcon.exists()).toBe(true);
-      expect(currentIcon.find('.pi.pi-play').exists()).toBe(true);
-    });
-
-    it('should display the upcoming assignments icon (third icon)', () => {
-      const wrapper = mount(SideBar, mountOptions);
-      const upcomingIcon = wrapper.find('.sidebar__nav-link.--upcoming');
-
-      expect(upcomingIcon.exists()).toBe(true);
-      expect(upcomingIcon.find('.pi.pi-clock').exists()).toBe(true);
-    });
-
-    it('should display the past assignments icon (fourth icon)', () => {
-      const wrapper = mount(SideBar, mountOptions);
-      const pastIcon = wrapper.find('.sidebar__nav-link.--past');
-
-      expect(pastIcon.exists()).toBe(true);
-      expect(pastIcon.find('.pi.pi-history').exists()).toBe(true);
-    });
-
     it('should display all 4 icons correctly', () => {
       const wrapper = mount(SideBar, mountOptions);
 
@@ -177,9 +137,11 @@ describe('SideBar.vue', () => {
       const wrapper = mount(SideBar, mountOptions);
 
       await wrapper.find('.sidebar__toggle-btn').trigger('click');
+
       expect(wrapper.find('.sidebar__panel').exists()).toBe(true);
 
       await wrapper.find('.sidebar__toggle-btn').trigger('click');
+
       expect(wrapper.find('.sidebar__panel').exists()).toBe(false);
     });
 
@@ -280,6 +242,7 @@ describe('SideBar.vue', () => {
       const wrapper = mount(SideBar, mountOptions);
 
       await wrapper.find('.sidebar__toggle-btn').trigger('click');
+
       expect(wrapper.find('.sidebar__panel').exists()).toBe(true);
 
       await wrapper.find('.sidebar__panel__backdrop').trigger('click');
@@ -293,6 +256,7 @@ describe('SideBar.vue', () => {
       const wrapper = mount(SideBar, mountOptions);
 
       await wrapper.find('.sidebar__toggle-btn').trigger('click');
+
       expect(wrapper.find('.sidebar__panel').exists()).toBe(true);
 
       await wrapper.find('.assignment-card').trigger('click');
