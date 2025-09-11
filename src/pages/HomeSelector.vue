@@ -48,10 +48,7 @@ const ConsentModal = defineAsyncComponent(() => import('@/components/ConsentModa
 
 const authStore = useAuthStore();
 const { roarfirekit, ssoProvider } = storeToRefs(authStore);
-const permissions = usePermissions();
-
-// Create a computed hasRole function that accesses the current permissions
-const hasRole = computed(() => permissions.value.hasRole);
+const { hasRole } = usePermissions();
 
 const router = useRouter();
 const i18n = useI18n();

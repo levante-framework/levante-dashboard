@@ -213,7 +213,7 @@ function writeConsolidatedCSVs({ allIdentifiers, perLangFlat }, langs) {
       OUTPUT_LANGS.forEach((lang) => row.push(getValue(id, lang)));
       out.push(toCsvLine(row));
     });
-    const file = path.join(consolidatedRoot, `dashboard-translations.csv`);
+    const file = path.join(consolidatedRoot, 'dashboard-translations.csv');
     fs.writeFileSync(file, out.join('\n'));
   }
 
