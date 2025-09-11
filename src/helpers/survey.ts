@@ -170,12 +170,22 @@ export const fetchBuffer = ({
   surveyAudioBuffers,
   setSurveyAudioPlayerBuffers,
 }: FetchBufferParams): void => {
-  // buffer already exists for the given local
+  // If there are no audio files for the locale, skip loading gracefully
+  const urlListMap = audioLinks?.[parsedLocale];
+  if (!urlListMap || Object.keys(urlListMap).length === 0) {
+    // Ensure loading indicator is not left on
+    console.warn('No survey audio files found for locale:', parsedLocale);
+    setSurveyAudioLoading(false);
+    return;
+  }
+
+  // Buffer already exists for the given locale
   if (surveyAudioBuffers[parsedLocale]) {
     return;
   }
+
   setSurveyAudioLoading(true);
-  const bufferLoader = new BufferLoader(context, audioLinks[parsedLocale], (bufferList: BufferList) =>
+  const bufferLoader = new BufferLoader(context, urlListMap, (bufferList: BufferList) =>
     finishedLoading({
       bufferList,
       parsedLocale,
