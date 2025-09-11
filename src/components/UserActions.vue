@@ -9,19 +9,21 @@
     </div>
     <div v-else class="flex gap-2 options-wrapper">
 
-      <label for="site-select">Site:</label>
-      <PvSelect
-        :options="siteOptions"
-        :value="authStore.currentSite"
-        :optionValue="(o) => o.value"
-        :optionLabel="(o) => o.label"
-        class="options-site"
-        @change="handleSiteChange"
-      >
-        <template #value>
-          <i class="pi pi-building"></i>
-        </template>
-      </PvSelect>
+      <div v-if="authStore.shouldUsePermissions">
+        <label for="site-select">Site:</label>
+        <PvSelect
+          :options="siteOptions"
+          :value="authStore.currentSite"
+          :optionValue="(o) => o.value"
+          :optionLabel="(o) => o.label"
+          class="options-site"
+          @change="handleSiteChange"
+        >
+          <template #value>
+            <i class="pi pi-building"></i>
+            </template>
+        </PvSelect>
+      </div>
 
       <!-- Help dropdown -->
       <PvSelect
