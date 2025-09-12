@@ -5,7 +5,7 @@
       "assentTitle": "Assentement",
       "consentTitle": "Consentement",
       "consentUpdatedStatus": "État du consentement mis à jour",
-      "header": "Consent",
+      "header": "Consentement",
       "rejectButton": "Non, me déconnecter",
       "title": "",
       "toastHeader": "Confirmé"
@@ -42,7 +42,14 @@
       "loadingAssignments": "Chargement des affectations",
       "noAssignments": "Vous n'avez aucune affectation!",
       "selectAssignment": "Sélectionnez une affectation",
-      "showOptionalAssignments": "Afficher les affectations facultatives"
+      "showOptionalAssignments": "Afficher les affectations facultatives",
+      "assignments": "Affectations",
+      "current": "Actuel",
+      "past": "Passé",
+      "upcoming": "À venir",
+      "noCurrentAssignmentsFound": "Aucune affectation actuelle trouvée",
+      "noPastAssignmentsFound": "Aucune affectation passée trouvée",
+      "noUpcomingAssignmentsFound": "Aucune affectation à venir trouvée"
     },
     "home-selector": {
       "inactivityLogout": "Vous serez bientôt déconnecté pour des raisons de sécurité. Veuillez cliquer sur « Continuer » si vous souhaitez poursuivre votre session. Sinon, vous serez automatiquement déconnecté dans { timeLeft } secondes.",
