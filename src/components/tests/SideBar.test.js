@@ -138,7 +138,7 @@ describe('SideBar.vue', () => {
       const pastIcon = wrapper.find('.sidebar__nav-link.--past');
 
       expect(pastIcon.exists()).toBe(true);
-      expect(pastIcon.find('.pi.pi-history').exists()).toBe(true);
+      expect(pastIcon.find('.pi.pi-briefcase').exists()).toBe(true);
     });
 
     it('should display all 4 icons correctly', () => {
@@ -148,7 +148,7 @@ describe('SideBar.vue', () => {
 
       expect(wrapper.find('.sidebar__nav-link.--current .pi.pi-play').exists()).toBe(true);
       expect(wrapper.find('.sidebar__nav-link.--upcoming .pi.pi-clock').exists()).toBe(true);
-      expect(wrapper.find('.sidebar__nav-link.--past .pi.pi-history').exists()).toBe(true);
+      expect(wrapper.find('.sidebar__nav-link.--past .pi.pi-briefcase').exists()).toBe(true);
     });
   });
 
