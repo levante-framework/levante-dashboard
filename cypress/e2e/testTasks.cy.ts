@@ -30,15 +30,13 @@ function startTask(tasksRemaining: number) {
       // start task
       cy.wrap(taskTabs.eq(tasksRemaining)).click();
       cy.scrollTo('bottomLeft', { ensureScrollable: false });
-      cy.get('[data-pc-name=tabpanel][data-p-active=true]').children().contains('Click to start').click();
-
-      // enter fullscreen and check that first instruction trial has loaded
-      cy.contains('OK', { timeout: 600000 })
+      cy.get('[data-pc-name=tabpanel][data-p-active=true]')
+        .find('a.game-btn')
         .should('exist')
-        .realClick()
-        .then(() => {
-          cy.contains('OK').should('exist');
-        });
+        .click();
+
+      // Wait for the game content to render
+      cy.get('.jspsych-content-wrapper', { timeout: 600000 }).should('exist');
 
       // return to dashboard
       cy.go('back');
