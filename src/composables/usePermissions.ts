@@ -2,7 +2,8 @@
 import { ref, computed, onMounted, readonly, toValue } from 'vue';
 import { CacheService, PermissionDocument, PermissionService, type Resource, type Action, type Role, type UserRole as CoreUserRole } from '@levante-framework/permissions-core';
 import { useAuthStore } from '@/store/auth';
-import { getAxiosInstance, getBaseDocumentPath } from '@/helpers/query/utils';
+import { getAxiosInstance, getBaseDocumentPath, convertValues } from '@/helpers/query/utils';
+import _mapValues from 'lodash/mapValues';
 import { storeToRefs } from 'pinia';
 
 interface UserData {
@@ -15,17 +16,20 @@ const permissionService = new PermissionService(cache);
 
 export const usePermissions = () => {
   const authStore = useAuthStore();
-  const { isAuthenticated, firebaseUser, userData, shouldUsePermissions } = storeToRefs(authStore);
+  const { isAuthenticated, firebaseUser, userData, shouldUsePermissions } = authStore;
+
+  // console.log('isAuthenticated: ', isAuthenticated);
+  // console.log('firebaseUser: ', firebaseUser.adminFirebaseUser);
 
   const permissionsLoaded = ref(false);
   const currentSite = toValue(authStore.currentSite);
   const user = computed(() => {
-    if (!isAuthenticated.value || !firebaseUser.value?.adminFirebaseUser) return null;
+    if (!isAuthenticated() || !firebaseUser.adminFirebaseUser) return null;
 
     return {
-      uid: firebaseUser.value.adminFirebaseUser.uid,
-      email: firebaseUser.value.adminFirebaseUser.email ?? '',
-      roles: JSON.parse(JSON.stringify((userData.value as UserData)?.roles ?? [])) as CoreUserRole[],
+      uid: firebaseUser.adminFirebaseUser.uid,
+      email: firebaseUser.adminFirebaseUser.email ?? '',
+      roles: JSON.parse(JSON.stringify((userData as UserData)?.roles ?? [])) as CoreUserRole[],
     };
   });
 
@@ -47,21 +51,31 @@ export const usePermissions = () => {
     //   console.error('Failed to load permissions:', error);
     // });
 
-    const data = response.data;
-    console.log('permissions data: ', data);
-    permissionService.loadPermissions(data.matrix as PermissionDocument);
+    const rawData = response.data;
+    console.log('raw permissions data: ', rawData);
+    
+    // Convert Firestore field values to JavaScript values
+    const convertedData = _mapValues(rawData.fields, (value) => convertValues(value));
+    
+    console.log('converted permissions data: ', convertedData);
+    convertedData.lastUpdated = convertedData.updatedAt;
+    const {success, errors } = permissionService.loadPermissions(convertedData as PermissionDocument);
+    console.log('success: ', success);
+    if (!success) {
+      console.error('Failed to load permissions:', errors);
+    }
     permissionsLoaded.value = true;
   };
 
   // Load permissions when component mounts and user is authenticated
   onMounted(() => {
-    if (shouldUsePermissions.value && isAuthenticated.value) {
+    if (shouldUsePermissions && isAuthenticated()) {
       loadPermissions();
     }
   });
 
   const can = (resource: Resource, action: Action): boolean => {
-    if (!shouldUsePermissions.value || !permissionsLoaded.value || !user.value || !currentSite) return false;
+    if (!shouldUsePermissions || !permissionsLoaded.value || !user.value || !currentSite) return false;
     console.log('checking permissions in can for resource: ', resource, 'and action: ', action);
     console.log('user: ', user.value);
     console.log('currentSite: ', currentSite);
@@ -75,13 +89,13 @@ export const usePermissions = () => {
   };
 
   const canGlobal = (resource: Resource, action: Action): boolean => {
-    if (!shouldUsePermissions.value || !permissionsLoaded.value || !user.value) return false;
+    if (!shouldUsePermissions || !permissionsLoaded.value || !user.value) return false;
 
     return permissionService.canPerformGlobalAction(user.value, resource, action);
   };
 
   const hasRole = (role: Role): boolean => {
-    if (!shouldUsePermissions.value || !permissionsLoaded.value || !user.value || !currentSite) return false;
+    if (!shouldUsePermissions || !permissionsLoaded.value || !user.value || !currentSite) return false;
 
     const userRole = permissionService.getUserSiteRole(
       user.value,
@@ -96,7 +110,7 @@ export const usePermissions = () => {
   };
 
   const permissions = computed(() => {
-    if (!shouldUsePermissions.value || !permissionsLoaded.value) return {};
+    if (!shouldUsePermissions || !permissionsLoaded.value) return {};
 
     const resources = ['groups', 'assignments', 'users', 'admins', 'tasks'] as Resource[];
     const actions = ['create', 'read', 'update', 'delete', 'exclude'] as Action[];
