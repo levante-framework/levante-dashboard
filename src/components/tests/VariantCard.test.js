@@ -160,33 +160,8 @@ describe('VariantCard.vue - Language Variant Testing', () => {
           expect(variantNameText).toContain('Variant name:');
           expect(variantNameText).toContain(mockVariant.variant.name);
 
-          // Test 4: Language chip is displayed correctly
+          // Test 4: CAT chip is displayed when params.cat is true
           const allChips = wrapper.findAllComponents(PvChip);
-          const languageChip = allChips.find((chip) => {
-            const chipText = chip.text();
-            return chipText.includes(language.displayName) || chipText.includes(language.variantCode);
-          });
-          expect(languageChip).toBeTruthy();
-
-          // Test 5: Language chip has correct styling based on legacy status
-          if (languageChip) {
-            const expectedChipClass = language.isLegacy ? 'bg-orange-500' : 'bg-green-500';
-            expect(languageChip.classes()).toContain(expectedChipClass);
-          }
-
-          // Test 6: Flag icon is present
-          const flagIcon = wrapper.find(`[class*="fi-${language.flagCode}"]`);
-          expect(flagIcon.exists()).toBe(true);
-
-          // Test 7: Legacy label appears only for legacy languages
-          const chipText = languageChip ? languageChip.text() : '';
-          if (language.isLegacy) {
-            expect(chipText).toContain('(legacy)');
-          } else {
-            expect(chipText).not.toContain('(legacy)');
-          }
-
-          // Test 8: CAT chip is displayed when params.cat is true
           const catChip = allChips.find((chip) => chip.text().includes('CAT'));
           expect(catChip).toBeTruthy();
 

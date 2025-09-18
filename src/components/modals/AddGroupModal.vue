@@ -244,7 +244,7 @@ const { isRefetching: isCheckingOrgName, refetch: doesOrgNameExist } = useOrgNam
 );
 
 watch([isCheckingOrgName, isSubmittingOrg], ([isChecking, isSubmitting]) => {
-  isSubmitBtnDisabled.value = isChecking || isSubmitting;
+  isSubmitBtnDisabled.value = Boolean(isChecking) || Boolean(isSubmitting);
 });
 
 const handleOnClose = () => {
