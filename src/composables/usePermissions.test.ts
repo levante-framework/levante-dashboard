@@ -28,15 +28,17 @@ vi.mock('@levante-framework/permissions-core', () => ({
 // Mock the query utils
 vi.mock('@/helpers/query/utils', () => ({
   getAxiosInstance: vi.fn(() => ({
-    get: vi.fn(() => Promise.resolve({
-      data: {
-        fields: {
-          matrix: { mapValue: { fields: {} } },
-          lastUpdated: { timestampValue: '2023-01-01T00:00:00Z' },
-          updatedAt: { timestampValue: '2023-01-01T00:00:00Z' },
-        }
-      }
-    }))
+    get: vi.fn(() =>
+      Promise.resolve({
+        data: {
+          fields: {
+            matrix: { mapValue: { fields: {} } },
+            lastUpdated: { timestampValue: '2023-01-01T00:00:00Z' },
+            updatedAt: { timestampValue: '2023-01-01T00:00:00Z' },
+          },
+        },
+      }),
+    ),
   })),
   getBaseDocumentPath: vi.fn(() => '/test-path'),
   convertValues: vi.fn((value) => value),
@@ -46,7 +48,7 @@ vi.mock('@/helpers/query/utils', () => ({
 vi.mock('lodash/mapValues', () => ({
   default: vi.fn((obj, fn) => {
     const result = {};
-    Object.keys(obj).forEach(key => {
+    Object.keys(obj).forEach((key) => {
       result[key] = fn(obj[key]);
     });
     return result;
@@ -84,50 +86,56 @@ describe('usePermissions', () => {
 
   describe('when user is not authenticated', () => {
     it('should return false for all permission checks', () => {
-      withSetup(() => {
-        const authStore = useAuthStore(piniaInstance);
-        authStore.isAuthenticated = vi.fn(() => false);
-        authStore.shouldUsePermissions = true;
-        authStore.firebaseUser = { adminFirebaseUser: null };
-        authStore.userData = null;
-        authStore.currentSite = 'test-site';
+      withSetup(
+        () => {
+          const authStore = useAuthStore(piniaInstance);
+          authStore.isAuthenticated = vi.fn(() => false);
+          authStore.shouldUsePermissions = true;
+          authStore.firebaseUser = { adminFirebaseUser: null };
+          authStore.userData = null;
+          authStore.currentSite = 'test-site';
 
-        const { can, canGlobal, hasRole, permissions } = usePermissions();
+          const { can, canGlobal, hasRole, permissions } = usePermissions();
 
-        expect(can('groups', 'read')).toBe(false);
-        expect(canGlobal('users', 'create')).toBe(false);
-        expect(hasRole('admin')).toBe(false);
-        expect(permissions.value).toEqual({});
-      }, {
-        plugins: [[piniaInstance]],
-      });
+          expect(can('groups', 'read')).toBe(false);
+          expect(canGlobal('users', 'create')).toBe(false);
+          expect(hasRole('admin')).toBe(false);
+          expect(permissions.value).toEqual({});
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
     });
   });
 
   describe('when shouldUsePermissions is false', () => {
     it('should return false for all permission checks', () => {
-      withSetup(() => {
-        const authStore = useAuthStore(piniaInstance);
-        authStore.isAuthenticated = vi.fn(() => true);
-        authStore.shouldUsePermissions = false;
-        authStore.firebaseUser = {
-          adminFirebaseUser: {
-            uid: 'test-uid',
-            email: 'test@example.com',
-          },
-        };
-        authStore.userData = { roles: [] };
-        authStore.currentSite = 'test-site';
+      withSetup(
+        () => {
+          const authStore = useAuthStore(piniaInstance);
+          authStore.isAuthenticated = vi.fn(() => true);
+          authStore.shouldUsePermissions = false;
+          authStore.firebaseUser = {
+            adminFirebaseUser: {
+              uid: 'test-uid',
+              email: 'test@example.com',
+            },
+          };
+          authStore.userData = { roles: [] };
+          authStore.currentSite = 'test-site';
 
-        const { can, canGlobal, hasRole, permissions } = usePermissions();
+          const { can, canGlobal, hasRole, permissions } = usePermissions();
 
-        expect(can('groups', 'read')).toBe(false);
-        expect(canGlobal('users', 'create')).toBe(false);
-        expect(hasRole('admin')).toBe(false);
-        expect(permissions.value).toEqual({});
-      }, {
-        plugins: [[piniaInstance]],
-      });
+          expect(can('groups', 'read')).toBe(false);
+          expect(canGlobal('users', 'create')).toBe(false);
+          expect(hasRole('admin')).toBe(false);
+          expect(permissions.value).toEqual({});
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
     });
   });
 
@@ -143,139 +151,167 @@ describe('usePermissions', () => {
           },
         },
         userData: {
-          roles: [
-            { siteId: 'test-site', role: 'admin', siteName: 'Test Site' },
-          ],
+          roles: [{ siteId: 'test-site', role: 'admin', siteName: 'Test Site' }],
         },
         currentSite: 'test-site',
       };
     });
 
     it('should initialize permissions loading state correctly', () => {
-      withSetup(() => {
-        const authStore = useAuthStore(piniaInstance);
-        Object.assign(authStore, mockAuthStore);
+      withSetup(
+        () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, mockAuthStore);
 
-        const { permissionsLoaded } = usePermissions();
+          const { permissionsLoaded } = usePermissions();
 
-        expect(permissionsLoaded.value).toBe(false);
-      }, {
-        plugins: [[piniaInstance]],
-      });
+          expect(permissionsLoaded.value).toBe(false);
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
     });
 
     it('should call permission service methods for site actions', async () => {
       mockPermissionService.canPerformSiteAction.mockReturnValue(true);
 
-      await withSetup(async () => {
-        const authStore = useAuthStore(piniaInstance);
-        Object.assign(authStore, mockAuthStore);
+      await withSetup(
+        async () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, mockAuthStore);
 
-        const { can } = usePermissions();
+          const { can } = usePermissions();
 
-        // Wait for permissions to load (onMounted hook runs automatically)
-        await nextTick();
-        await nextTick(); // Additional tick for async operations
+          // Wait for permissions to load (onMounted hook runs automatically)
+          await nextTick();
+          await nextTick(); // Additional tick for async operations
+        
+        // Wait for async loadPermissions to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-        const result = can('groups', 'read');
+          // Wait for async loadPermissions to complete
+          await new Promise((resolve) => setTimeout(resolve, 100));
 
-        expect(mockPermissionService.canPerformSiteAction).toHaveBeenCalledWith(
-          {
-            uid: 'test-uid',
-            email: 'test@example.com',
-            roles: [{ siteId: 'test-site', role: 'admin', siteName: 'Test Site' }],
-          },
-          'test-site',
-          'groups',
-          'read'
-        );
-        expect(result).toBe(true);
-      }, {
-        plugins: [[piniaInstance]],
-      });
+          const result = can('groups', 'read');
+
+          expect(mockPermissionService.canPerformSiteAction).toHaveBeenCalledWith(
+            {
+              uid: 'test-uid',
+              email: 'test@example.com',
+              roles: [{ siteId: 'test-site', role: 'admin', siteName: 'Test Site' }],
+            },
+            'test-site',
+            'groups',
+            'read',
+          );
+          expect(result).toBe(true);
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
     });
 
     it('should call permission service methods for global actions', async () => {
       mockPermissionService.canPerformGlobalAction.mockReturnValue(true);
 
-      await withSetup(async () => {
-        const authStore = useAuthStore(piniaInstance);
-        Object.assign(authStore, mockAuthStore);
+      await withSetup(
+        async () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, mockAuthStore);
 
-        const { canGlobal } = usePermissions();
+          const { canGlobal } = usePermissions();
 
-        // Wait for permissions to load
-        await nextTick();
-        await nextTick(); // Additional tick for async operations
+          // Wait for permissions to load
+          await nextTick();
+          await nextTick(); // Additional tick for async operations
+        
+        // Wait for async loadPermissions to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-        const result = canGlobal('users', 'create');
+          const result = canGlobal('users', 'create');
 
-        expect(mockPermissionService.canPerformGlobalAction).toHaveBeenCalledWith(
-          {
-            uid: 'test-uid',
-            email: 'test@example.com',
-            roles: [{ siteId: 'test-site', role: 'admin', siteName: 'Test Site' }],
-          },
-          'users',
-          'create'
-        );
-        expect(result).toBe(true);
-      }, {
-        plugins: [[piniaInstance]],
-      });
+          expect(mockPermissionService.canPerformGlobalAction).toHaveBeenCalledWith(
+            {
+              uid: 'test-uid',
+              email: 'test@example.com',
+              roles: [{ siteId: 'test-site', role: 'admin', siteName: 'Test Site' }],
+            },
+            'users',
+            'create',
+          );
+          expect(result).toBe(true);
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
     });
 
     it('should check user roles correctly', async () => {
       mockPermissionService.getUserSiteRole.mockReturnValue('admin');
       mockPermissionService.hasMinimumRole.mockReturnValue(true);
 
-      await withSetup(async () => {
-        const authStore = useAuthStore(piniaInstance);
-        Object.assign(authStore, mockAuthStore);
+      await withSetup(
+        async () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, mockAuthStore);
 
-        const { hasRole } = usePermissions();
+          const { hasRole } = usePermissions();
 
-        // Wait for permissions to load
-        await nextTick();
-        await nextTick(); // Additional tick for async operations
+          // Wait for permissions to load
+          await nextTick();
+          await nextTick(); // Additional tick for async operations
+        
+        // Wait for async loadPermissions to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-        const result = hasRole('admin');
+          const result = hasRole('admin');
 
-        expect(mockPermissionService.getUserSiteRole).toHaveBeenCalledWith(
-          {
-            uid: 'test-uid',
-            email: 'test@example.com',
-            roles: [{ siteId: 'test-site', role: 'admin', siteName: 'Test Site' }],
-          },
-          'test-site'
-        );
-        expect(mockPermissionService.hasMinimumRole).toHaveBeenCalledWith('admin', 'admin');
-        expect(result).toBe(true);
-      }, {
-        plugins: [[piniaInstance]],
-      });
+          expect(mockPermissionService.getUserSiteRole).toHaveBeenCalledWith(
+            {
+              uid: 'test-uid',
+              email: 'test@example.com',
+              roles: [{ siteId: 'test-site', role: 'admin', siteName: 'Test Site' }],
+            },
+            'test-site',
+          );
+          expect(mockPermissionService.hasMinimumRole).toHaveBeenCalledWith('admin', 'admin');
+          expect(result).toBe(true);
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
     });
 
     it('should return false for hasRole when user has no site role', async () => {
       mockPermissionService.getUserSiteRole.mockReturnValue(null);
 
-      await withSetup(async () => {
-        const authStore = useAuthStore(piniaInstance);
-        Object.assign(authStore, mockAuthStore);
+      await withSetup(
+        async () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, mockAuthStore);
 
-        const { hasRole } = usePermissions();
+          const { hasRole } = usePermissions();
 
-        // Wait for permissions to load
-        await nextTick();
-        await nextTick(); // Additional tick for async operations
+          // Wait for permissions to load
+          await nextTick();
+          await nextTick(); // Additional tick for async operations
+        
+        // Wait for async loadPermissions to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-        const result = hasRole('admin');
+          const result = hasRole('admin');
 
-        expect(result).toBe(false);
-        expect(mockPermissionService.hasMinimumRole).not.toHaveBeenCalled();
-      }, {
-        plugins: [[piniaInstance]],
-      });
+          expect(result).toBe(false);
+          expect(mockPermissionService.hasMinimumRole).not.toHaveBeenCalled();
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
     });
 
     it('should compute permissions object correctly when permissions are loaded', async () => {
@@ -283,162 +319,189 @@ describe('usePermissions', () => {
         return resource === 'groups' && action === 'read';
       });
 
-      await withSetup(async () => {
-        const authStore = useAuthStore(piniaInstance);
-        Object.assign(authStore, mockAuthStore);
+      await withSetup(
+        async () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, mockAuthStore);
 
-        const { permissions } = usePermissions();
+          const { permissions } = usePermissions();
 
-        // Wait for permissions to load
-        await nextTick();
-        await nextTick(); // Additional tick for async operations
-        await nextTick(); // Wait for computed to update
+          // Wait for permissions to load
+          await nextTick();
+          await nextTick(); // Additional tick for async operations
+        
+        // Wait for async loadPermissions to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+          await nextTick(); // Wait for computed to update
 
-        const expectedPermissions = {
-          groups: {
-            canCreate: false,
-            canRead: true,
-            canUpdate: false,
-            canDelete: false,
-            canExclude: false,
-          },
-          assignments: {
-            canCreate: false,
-            canRead: false,
-            canUpdate: false,
-            canDelete: false,
-            canExclude: false,
-          },
-          users: {
-            canCreate: false,
-            canRead: false,
-            canUpdate: false,
-            canDelete: false,
-            canExclude: false,
-          },
-          admins: {
-            canCreate: false,
-            canRead: false,
-            canUpdate: false,
-            canDelete: false,
-            canExclude: false,
-          },
-          tasks: {
-            canCreate: false,
-            canRead: false,
-            canUpdate: false,
-            canDelete: false,
-            canExclude: false,
-          },
-        };
+          const expectedPermissions = {
+            groups: {
+              canCreate: false,
+              canRead: true,
+              canUpdate: false,
+              canDelete: false,
+              canExclude: false,
+            },
+            assignments: {
+              canCreate: false,
+              canRead: false,
+              canUpdate: false,
+              canDelete: false,
+              canExclude: false,
+            },
+            users: {
+              canCreate: false,
+              canRead: false,
+              canUpdate: false,
+              canDelete: false,
+              canExclude: false,
+            },
+            admins: {
+              canCreate: false,
+              canRead: false,
+              canUpdate: false,
+              canDelete: false,
+              canExclude: false,
+            },
+            tasks: {
+              canCreate: false,
+              canRead: false,
+              canUpdate: false,
+              canDelete: false,
+              canExclude: false,
+            },
+          };
 
-        expect(permissions.value).toEqual(expectedPermissions);
-      }, {
-        plugins: [[piniaInstance]],
-      });
+          expect(permissions.value).toEqual(expectedPermissions);
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
     });
 
     it('should return empty permissions object when permissions are not loaded', async () => {
-      await withSetup(async () => {
-        const authStore = useAuthStore(piniaInstance);
-        Object.assign(authStore, mockAuthStore);
+      await withSetup(
+        async () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, mockAuthStore);
 
-        const { permissions, permissionsLoaded } = usePermissions();
+          const { permissions, permissionsLoaded } = usePermissions();
 
-        expect(permissionsLoaded.value).toBe(false);
-        expect(permissions.value).toEqual({});
-      }, {
-        plugins: [[piniaInstance]],
-      });
+          expect(permissionsLoaded.value).toBe(false);
+          expect(permissions.value).toEqual({});
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
     });
   });
 
   describe('when currentSite is missing', () => {
     it('should return false for site-specific permission checks', async () => {
-      await withSetup(async () => {
-        const authStore = useAuthStore(piniaInstance);
-        authStore.isAuthenticated = vi.fn(() => true);
-        authStore.shouldUsePermissions = true;
-        authStore.firebaseUser = {
-          adminFirebaseUser: {
-            uid: 'test-uid',
-            email: 'test@example.com',
-          },
-        };
-        authStore.userData = { roles: [] };
-        authStore.currentSite = null;
+      await withSetup(
+        async () => {
+          const authStore = useAuthStore(piniaInstance);
+          authStore.isAuthenticated = vi.fn(() => true);
+          authStore.shouldUsePermissions = true;
+          authStore.firebaseUser = {
+            adminFirebaseUser: {
+              uid: 'test-uid',
+              email: 'test@example.com',
+            },
+          };
+          authStore.userData = { roles: [] };
+          authStore.currentSite = null;
 
-        const { can, hasRole } = usePermissions();
+          const { can, hasRole } = usePermissions();
 
-        // Wait for permissions to load
-        await nextTick();
-        await nextTick(); // Additional tick for async operations
+          // Wait for permissions to load
+          await nextTick();
+          await nextTick(); // Additional tick for async operations
+        
+        // Wait for async loadPermissions to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-        expect(can('groups', 'read')).toBe(false);
-        expect(hasRole('admin')).toBe(false);
-      }, {
-        plugins: [[piniaInstance]],
-      });
+          expect(can('groups', 'read')).toBe(false);
+          expect(hasRole('admin')).toBe(false);
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
     });
 
     it('should still work for global permission checks', async () => {
       mockPermissionService.canPerformGlobalAction.mockReturnValue(true);
 
-      await withSetup(async () => {
-        const authStore = useAuthStore(piniaInstance);
-        authStore.isAuthenticated = vi.fn(() => true);
-        authStore.shouldUsePermissions = true;
-        authStore.firebaseUser = {
-          adminFirebaseUser: {
-            uid: 'test-uid',
-            email: 'test@example.com',
-          },
-        };
-        authStore.userData = { roles: [] };
-        authStore.currentSite = null;
+      await withSetup(
+        async () => {
+          const authStore = useAuthStore(piniaInstance);
+          authStore.isAuthenticated = vi.fn(() => true);
+          authStore.shouldUsePermissions = true;
+          authStore.firebaseUser = {
+            adminFirebaseUser: {
+              uid: 'test-uid',
+              email: 'test@example.com',
+            },
+          };
+          authStore.userData = { roles: [] };
+          authStore.currentSite = null;
 
-        const { canGlobal } = usePermissions();
+          const { canGlobal } = usePermissions();
 
-        // Wait for permissions to load
-        await nextTick();
-        await nextTick(); // Additional tick for async operations
+          // Wait for permissions to load
+          await nextTick();
+          await nextTick(); // Additional tick for async operations
+        
+        // Wait for async loadPermissions to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-        const result = canGlobal('users', 'create');
+          const result = canGlobal('users', 'create');
 
-        expect(result).toBe(true);
-      }, {
-        plugins: [[piniaInstance]],
-      });
+          expect(result).toBe(true);
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
     });
   });
 
   describe('when user data is missing', () => {
     it('should return false for all permission checks', async () => {
-      await withSetup(async () => {
-        const authStore = useAuthStore(piniaInstance);
-        authStore.isAuthenticated = vi.fn(() => true);
-        authStore.shouldUsePermissions = true;
-        authStore.firebaseUser = {
-          adminFirebaseUser: {
-            uid: 'test-uid',
-            email: 'test@example.com',
-          },
-        };
-        authStore.userData = null;
-        authStore.currentSite = 'test-site';
+      await withSetup(
+        async () => {
+          const authStore = useAuthStore(piniaInstance);
+          authStore.isAuthenticated = vi.fn(() => true);
+          authStore.shouldUsePermissions = true;
+          authStore.firebaseUser = {
+            adminFirebaseUser: {
+              uid: 'test-uid',
+              email: 'test@example.com',
+            },
+          };
+          authStore.userData = null;
+          authStore.currentSite = 'test-site';
 
-        const { can, canGlobal, hasRole } = usePermissions();
+          const { can, canGlobal, hasRole } = usePermissions();
 
-        // Wait for permissions to load
-        await nextTick();
-        await nextTick(); // Additional tick for async operations
+          // Wait for permissions to load
+          await nextTick();
+          await nextTick(); // Additional tick for async operations
+        
+        // Wait for async loadPermissions to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-        expect(can('groups', 'read')).toBe(false);
-        expect(canGlobal('users', 'create')).toBe(false);
-        expect(hasRole('admin')).toBe(false);
-      }, {
-        plugins: [[piniaInstance]],
-      });
+          expect(can('groups', 'read')).toBe(false);
+          expect(canGlobal('users', 'create')).toBe(false);
+          expect(hasRole('admin')).toBe(false);
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
     });
   });
 });
