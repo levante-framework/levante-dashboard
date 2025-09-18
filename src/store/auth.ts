@@ -6,7 +6,7 @@ import { AUTH_SSO_PROVIDERS } from '../constants/auth';
 import posthogInstance from '@/plugins/posthog';
 import { logger } from '@/logger';
 import { RoarFirekit } from '@levante-framework/firekit';
-import { type Role } from '@levante-framework/permissions-core';
+import { ref, type Ref } from 'vue';
 
 interface FirebaseUser {
   adminFirebaseUser: User | null;
@@ -17,25 +17,10 @@ interface UserClaims {
     roarUid?: string;
     super_admin?: boolean;
     admin?: boolean;
+    useNewPermissions?: boolean;
     [key: string]: unknown;
   };
   [key: string]: unknown;
-}
-
-interface AuthState {
-  spinner: boolean;
-  firebaseUser: FirebaseUser;
-  roarfirekit: RoarFirekit | null;
-  userData: unknown;
-  userClaims: UserClaims | null;
-  routeToProfile: boolean;
-  ssoProvider: string | null;
-  showOptionalAssessments: boolean;
-  showSideBar: boolean;
-  adminAuthStateListener: Unsubscribe | null;
-  sites: unknown[];
-  currentSite: string | null;
-  shouldUsePermissions: boolean;
 }
 
 interface LoginCredentials {
@@ -48,175 +33,294 @@ interface EmailLinkCredentials {
   emailLink: string;
 }
 
-export const useAuthStore = defineStore('authStore', {
-  state: (): AuthState => {
-    return {
-      spinner: false,
-      firebaseUser: {
-        adminFirebaseUser: null,
-      },
-      roarfirekit: null,
-      userData: null, 
-      userClaims: null,
-      routeToProfile: false,
-      ssoProvider: null,
-      showOptionalAssessments: false,
-      showSideBar: false,
-      adminAuthStateListener: null,
-      sites: [],
-      currentSite: null,
-      shouldUsePermissions: false,
-    };
-  },
-  getters: {
-    uid: (state): string | undefined => {
-      return state.firebaseUser.adminFirebaseUser?.uid;
-    },
-    roarUid: (state): string | undefined => {
-      return state.userClaims?.claims?.roarUid;
-    },
-    email: (state): string | undefined => {
-      return state.firebaseUser.adminFirebaseUser?.email;
-    },
-    isUserAuthedAdmin: (state): boolean => {
-      return Boolean(state.firebaseUser.adminFirebaseUser);
-    },
-    isAuthenticated: (state): boolean => {
-      return Boolean(state.firebaseUser.adminFirebaseUser);
-    },
-    isFirekitInit: (state): boolean => {
-      return state.roarfirekit?.initialized ?? false;
-    },
-    isUserAdmin: (state): boolean => {
-      return Boolean(state.userClaims?.claims?.super_admin || state.userClaims?.claims?.admin);
-    },
-    isUserSuperAdmin: (state): boolean => Boolean(state.userClaims?.claims?.super_admin),
-  },
-  actions: {
-    async initFirekit(): Promise<void> {
+interface UserData {
+  roles: { siteId: string; role: string; siteName: string }[];
+  [key: string]: unknown;
+}
+
+interface SiteInfo {
+  siteId: string;
+  siteName: string;
+}
+
+export const useAuthStore = defineStore(
+  'authStore',
+  () => {
+    // State
+    const adminAuthStateListener: Ref<Unsubscribe | null> = ref(null);
+    const adminOrgs: Ref<unknown | null> = ref(null);
+    const firebaseUser: Ref<FirebaseUser> = ref({ adminFirebaseUser: null });
+    const roarfirekit: Ref<RoarFirekit | null> = ref(null);
+    const routeToProfile: Ref<boolean> = ref(false);
+    const showOptionalAssessments: Ref<boolean> = ref(false);
+    const showSideBar: Ref<boolean> = ref(false);
+    const spinner: Ref<boolean> = ref(false);
+    const ssoProvider: Ref<string | null> = ref(null);
+    const userClaims: Ref<UserClaims | null> = ref(null);
+    const userData: Ref<UserData | null> = ref(null);
+    const sites: Ref<SiteInfo[]> = ref([]);
+    const currentSite: Ref<string | null> = ref(null);
+    const shouldUsePermissions: Ref<boolean> = ref(false);
+
+    // Reset function
+    function $reset(): void {
+      adminAuthStateListener.value?.();
+      adminAuthStateListener.value = null;
+      adminOrgs.value = null;
+      firebaseUser.value = { adminFirebaseUser: null };
+      roarfirekit.value = null;
+      routeToProfile.value = false;
+      showOptionalAssessments.value = false;
+      showSideBar.value = false;
+      spinner.value = false;
+      ssoProvider.value = null;
+      userClaims.value = null;
+      userData.value = null;
+      sites.value = [];
+      currentSite.value = null;
+      shouldUsePermissions.value = false;
+    }
+
+    // Getters
+    function getUserId(): string | undefined {
+      return firebaseUser.value.adminFirebaseUser?.uid;
+    }
+
+    function getUserEmail(): string | undefined {
+      return firebaseUser.value.adminFirebaseUser?.email ?? undefined;
+    }
+
+    function getRoarUid(): string | undefined {
+      return userClaims.value?.claims?.roarUid;
+    }
+
+    function getUid(): string | undefined {
+      return firebaseUser.value.adminFirebaseUser?.uid;
+    }
+
+    function getEmail(): string | undefined {
+      return firebaseUser.value.adminFirebaseUser?.email ?? undefined;
+    }
+
+    function isUserAuthedAdmin(): boolean {
+      return Boolean(firebaseUser.value.adminFirebaseUser);
+    }
+
+    function isAuthenticated(): boolean {
+      return Boolean(firebaseUser.value.adminFirebaseUser);
+    }
+
+    function isFirekitInit(): boolean {
+      return roarfirekit.value?.initialized ?? false;
+    }
+
+    function isUserAdmin(): boolean {
+      return Boolean(userClaims.value?.claims?.super_admin || userClaims.value?.claims?.admin);
+    }
+
+    function isUserSuperAdmin(): boolean {
+      return Boolean(userClaims.value?.claims?.super_admin);
+    }
+
+    // Actions
+    async function initFirekit(): Promise<void> {
       try {
-        this.roarfirekit = await initNewFirekit();
-        this.setAuthStateListeners();
+        roarfirekit.value = await initNewFirekit();
+        setAuthStateListeners();
       } catch (error) {
         // @TODO: Improve error handling as this is a critical error.
         console.error('Error initializing Firekit:', error);
       }
-    },
-    setAuthStateListeners(): void {
-      this.adminAuthStateListener = onAuthStateChanged(
-        this.roarfirekit?.admin.auth ?? null,
-        async (user: User | null) => {
-          if (user) {
-            this.firebaseUser.adminFirebaseUser = user;
-            logger.setUser(user);
-          } else {
-            this.firebaseUser.adminFirebaseUser = null;
-            logger.setUser(null);
+    }
+
+    function setAuthStateListeners(): void {
+      if (roarfirekit.value?.admin?.auth) {
+        adminAuthStateListener.value = onAuthStateChanged(
+          roarfirekit.value.admin.auth as any,
+          async (user: User | null) => {
+            if (user) {
+              firebaseUser.value.adminFirebaseUser = user;
+              logger.setUser({
+                uid: user.uid,
+                email: user.email ?? '',
+              });
+            } else {
+              firebaseUser.value.adminFirebaseUser = null;
+              logger.setUser(null);
+            }
           }
-        },
-      );
-    },
-    async completeAssessment(adminId: string, taskId: string): Promise<void> {
-      await this.roarfirekit?.completeAssessment(adminId, taskId);
-    },
-    async getLegalDoc(docName: string): Promise<unknown> {
-      return await this.roarfirekit?.getLegalDoc(docName);
-    },
-    async logInWithEmailAndPassword({ email, password }: LoginCredentials): Promise<void> {
-      if (this.isFirekitInit) {
-        return this.roarfirekit
+        );
+      }
+    }
+
+    async function completeAssessment(adminId: string, taskId: string): Promise<void> {
+      await roarfirekit.value?.completeAssessment(adminId, taskId);
+    }
+
+    async function getLegalDoc(docName: string): Promise<unknown> {
+      return await roarfirekit.value?.getLegalDoc(docName);
+    }
+
+    async function logInWithEmailAndPassword({ email, password }: LoginCredentials): Promise<void> {
+      if (isFirekitInit()) {
+        return roarfirekit.value
           ?.logInWithEmailAndPassword({ email, password })
           .then(() => {})
           .catch((error) => {
-            console.error('Error signing in:', error);
+            console.error(`Error signing in: ${error}`);
             throw error;
           });
       }
-    },
-    async initiateLoginWithEmailLink({ email }: Pick<LoginCredentials, 'email'>): Promise<void> {
-      if (this.isFirekitInit) {
+    }
+
+    async function initiateLoginWithEmailLink({ email }: Pick<LoginCredentials, 'email'>): Promise<void> {
+      if (isFirekitInit()) {
         const redirectUrl = `${window.location.origin}/auth-email-link`;
-        return this.roarfirekit?.initiateLoginWithEmailLink({ email, redirectUrl }).then(() => {
+
+        return roarfirekit.value?.initiateLoginWithEmailLink({ email, redirectUrl }).then(() => {
           window.localStorage.setItem('emailForSignIn', email);
         });
       }
-    },
-    async signInWithEmailLink({ email, emailLink }: EmailLinkCredentials): Promise<void> {
-      if (this.isFirekitInit) {
-        return this.roarfirekit?.signInWithEmailLink({ email, emailLink }).then(() => {
+    }
+
+    async function signInWithEmailLink({ email, emailLink }: EmailLinkCredentials): Promise<void> {
+      if (isFirekitInit()) {
+        return roarfirekit.value?.signInWithEmailLink({ email, emailLink }).then(() => {
           window.localStorage.removeItem('emailForSignIn');
         });
       }
-    },
-    async signInWithGooglePopup(): Promise<unknown> {
-      if (this.isFirekitInit) {
-        return this.roarfirekit?.signInWithPopup(AUTH_SSO_PROVIDERS.GOOGLE);
+    }
+
+    async function signInWithGooglePopup(): Promise<unknown> {
+      if (isFirekitInit()) {
+        return roarfirekit.value?.signInWithPopup(AUTH_SSO_PROVIDERS.GOOGLE as any);
       }
-    },
-    async signInWithGoogleRedirect(): Promise<void> {
-      return this.roarfirekit?.initiateRedirect(AUTH_SSO_PROVIDERS.GOOGLE);
-    },
-    async initStateFromRedirect(): Promise<unknown> {
-      this.spinner = true;
+    }
+
+    async function signInWithGoogleRedirect(): Promise<void> {
+      return roarfirekit.value?.initiateRedirect(AUTH_SSO_PROVIDERS.GOOGLE as any);
+    }
+
+    async function initStateFromRedirect(): Promise<unknown> {
+      spinner.value = true;
+
       const enableCookiesCallback = (): void => {
         const router = useRouter();
         router.replace({ name: 'EnableCookies' });
       };
-      if (this.isFirekitInit) {
-        return await this.roarfirekit?.signInFromRedirectResult(enableCookiesCallback).then((result) => {
+
+      if (isFirekitInit()) {
+        return await roarfirekit.value?.signInFromRedirectResult(enableCookiesCallback).then((result) => {
           // If the result is null, then no redirect operation was called.
-          if (result !== null) {
-            this.spinner = true;
-          } else {
-            this.spinner = false;
-          }
+          spinner.value = result != null;
         });
       }
-    },
-    async forceIdTokenRefresh(): Promise<void> {
-      await this.roarfirekit?.forceIdTokenRefresh();
-    },
-    async sendMyPasswordResetEmail(): Promise<boolean> {
-      if (this.email) {
-        return (
-          (await this.roarfirekit?.sendPasswordResetEmail(this.email).then(() => {
-            return true;
-          })) ?? false
-        );
-      } else {
-        console.warn('Logged in user does not have an associated email. Unable to send password reset email');
-        return false;
+    }
+
+    async function forceIdTokenRefresh(): Promise<void> {
+      await roarfirekit.value?.forceIdTokenRefresh();
+    }
+
+    async function sendMyPasswordResetEmail(): Promise<boolean> {
+      if (getUserEmail()) {
+        return (await roarfirekit.value?.sendPasswordResetEmail(getUserEmail()!).then(() => true)) ?? false;
       }
-    },
-    async createUsers(userData: unknown): Promise<unknown> {
-      return this.roarfirekit?.createUsers(userData);
-    },
-    async signOut(): Promise<void> {
+
+      console.warn('Logged in user does not have an associated email. Unable to send password reset email');
+      return false;
+    }
+
+    async function createUsers(userData: unknown): Promise<unknown> {
+      return roarfirekit.value?.createUsers(userData as any);
+    }
+
+    async function signOut(): Promise<void> {
       console.log('PostHog Reset (explicit signOut)');
       posthogInstance.reset();
-      if (this.isFirekitInit) {
-        return this.roarfirekit?.signOut();
+
+      if (isFirekitInit()) {
+        return roarfirekit.value?.signOut();
       }
-    },
-    setUserData(userData: { roles: { siteId: string; role: string; siteName: string }[] }): void {
-      this.userData = userData;
-      this.sites = userData.roles.map((role: { siteId: string; role: string; siteName: string }) => ({siteId: role.siteId, siteName: role.siteName}));
-      this.currentSite = userData.roles[0].siteId;
-    },
-    setUserClaims(userClaims: UserClaims | null): void {
-      this.userClaims = userClaims;
-      this.shouldUsePermissions = userClaims?.claims.useNewPermissions ?? false;
-    },
-    setShowSideBar(showSideBar: boolean): void {
-      this.showSideBar = showSideBar;
+    }
+
+    function setUserData(data: UserData): void {
+      userData.value = data;
+      if (data?.roles && data.roles.length > 0) {
+        sites.value = data.roles.map((role: { siteId: string; role: string; siteName: string }) => ({
+          siteId: role.siteId,
+          siteName: role.siteName
+        }));
+        currentSite.value = data.roles[0]?.siteId ?? null;
+      }
+    }
+
+    function setUserClaims(claims: UserClaims | null): void {
+      userClaims.value = claims;
+      shouldUsePermissions.value = Boolean(claims?.claims?.useNewPermissions);
+    }
+
+    function setShowSideBar(show: boolean): void {
+      showSideBar.value = show;
+    }
+
+    return {
+      // State
+      adminAuthStateListener,
+      adminOrgs,
+      firebaseUser,
+      roarfirekit,
+      routeToProfile,
+      showOptionalAssessments,
+      showSideBar,
+      spinner,
+      ssoProvider,
+      userClaims,
+      userData,
+      sites,
+      currentSite,
+      shouldUsePermissions,
+
+      // Getters
+      getUserId,
+      getUserEmail,
+      getRoarUid,
+      getUid,
+      getEmail,
+      isUserAuthedAdmin,
+      isAuthenticated,
+      isFirekitInit,
+      isUserAdmin,
+      isUserSuperAdmin,
+
+      // Actions
+      $reset,
+      completeAssessment,
+      createUsers,
+      forceIdTokenRefresh,
+      getLegalDoc,
+      initFirekit,
+      initiateLoginWithEmailLink,
+      initStateFromRedirect,
+      logInWithEmailAndPassword,
+      sendMyPasswordResetEmail,
+      setAuthStateListeners,
+      setShowSideBar,
+      setUserClaims,
+      setUserData,
+      signInWithEmailLink,
+      signInWithGooglePopup,
+      signInWithGoogleRedirect,
+      signOut,
+    };
+  },
+  {
+    persist: {
+      debug: false,
+      paths: ['firebaseUser', 'ssoProvider'],
+      storage: sessionStorage,
     },
   },
-  persist: {
-    storage: sessionStorage,
-    paths: ['firebaseUser', 'ssoProvider'],
-    debug: false,
-  },
-});
+);
 
 if (import.meta.hot) {
   import.meta.hot.accept(acceptHMRUpdate(useAuthStore, import.meta.hot));
