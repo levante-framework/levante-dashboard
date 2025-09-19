@@ -27,7 +27,7 @@ vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
   })),
 }));
 
-vi.mock('@/composables/queries/useAssignmentExistsQuery', () => ({
+vi.mock('@/composables/queries/useAssignmentByNameQuery', () => ({
   default: vi.fn(() => ({
     refetch: mockDoesAssignmentExist,
   })),

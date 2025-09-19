@@ -4,7 +4,7 @@ import { fetchAssignmentsByNameAndDistricts } from '@/helpers/query/assignments'
 import { useQuery } from '@tanstack/vue-query';
 import { Ref } from 'vue';
 
-export default function useAssignmentExistsQuery(name: Ref<string>, districs: Ref<string[]>) {
+export default function useAssignmentByNameQuery(name: Ref<string>, districs: Ref<string[]>) {
   return useQuery({
     enabled: false,
     queryKey: [USE_ASSIGNMENT_EXISTS_QUERY_KEY, name.value, districs.value],

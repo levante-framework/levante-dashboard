@@ -193,7 +193,7 @@ import { APP_ROUTES } from '@/constants/routes';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { isLevante, normalizeToLowercase } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
-import useAssignmentExistsQuery from '@/composables/queries/useAssignmentExistsQuery';
+import useAssignmentByNameQuery from '@/composables/queries/useAssignmentByNameQuery';
 
 const initialized = ref(false);
 const router = useRouter();
@@ -312,7 +312,7 @@ const state = reactive({
   expectedTime: '',
 });
 
-const { refetch: doesAssignmentExist } = useAssignmentExistsQuery(
+const { refetch: doesAssignmentExist } = useAssignmentByNameQuery(
   toRef(state, 'administrationName'),
   toRef(state, 'districts'),
 );
