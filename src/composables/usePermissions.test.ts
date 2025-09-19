@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { nextTick } from 'vue';
+import { flushPromises } from '@vue/test-utils';
 import { createTestingPinia } from '@pinia/testing';
 import { withSetup } from '@/test-support/withSetup.js';
 import { useAuthStore } from '@/store/auth';
@@ -177,13 +178,10 @@ describe('usePermissions', () => {
 
           // Wait for permissions to load (onMounted hook runs automatically)
           await nextTick();
-          await nextTick(); // Additional tick for async operations
-        
-        // Wait for async loadPermissions to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-          // Wait for async loadPermissions to complete
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          // Wait for all pending promises including loadPermissions
+          await flushPromises();
+          // Additional tick for reactive updates
+          await nextTick();
 
           const result = can('groups', 'read');
 
@@ -217,10 +215,10 @@ describe('usePermissions', () => {
 
           // Wait for permissions to load
           await nextTick();
-          await nextTick(); // Additional tick for async operations
-        
-        // Wait for async loadPermissions to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+          // Wait for all pending promises including loadPermissions
+          await flushPromises();
+          // Additional tick for reactive updates
+          await nextTick();
 
           const result = canGlobal('users', 'create');
 
@@ -254,10 +252,10 @@ describe('usePermissions', () => {
 
           // Wait for permissions to load
           await nextTick();
-          await nextTick(); // Additional tick for async operations
-        
-        // Wait for async loadPermissions to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+          // Wait for all pending promises including loadPermissions
+          await flushPromises();
+          // Additional tick for reactive updates
+          await nextTick();
 
           const result = hasRole('admin');
 
@@ -290,10 +288,10 @@ describe('usePermissions', () => {
 
           // Wait for permissions to load
           await nextTick();
-          await nextTick(); // Additional tick for async operations
-        
-        // Wait for async loadPermissions to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+          // Wait for all pending promises including loadPermissions
+          await flushPromises();
+          // Additional tick for reactive updates
+          await nextTick();
 
           const result = hasRole('admin');
 
@@ -320,10 +318,10 @@ describe('usePermissions', () => {
 
           // Wait for permissions to load
           await nextTick();
-          await nextTick(); // Additional tick for async operations
-        
-        // Wait for async loadPermissions to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+          // Wait for all pending promises including loadPermissions
+          await flushPromises();
+          // Additional tick for reactive updates
+          await nextTick();
           await nextTick(); // Wait for computed to update
 
           const expectedPermissions = {
@@ -410,10 +408,10 @@ describe('usePermissions', () => {
 
           // Wait for permissions to load
           await nextTick();
-          await nextTick(); // Additional tick for async operations
-        
-        // Wait for async loadPermissions to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+          // Wait for all pending promises including loadPermissions
+          await flushPromises();
+          // Additional tick for reactive updates
+          await nextTick();
 
           expect(can('groups', 'read')).toBe(false);
           expect(hasRole('admin')).toBe(false);
@@ -445,10 +443,10 @@ describe('usePermissions', () => {
 
           // Wait for permissions to load
           await nextTick();
-          await nextTick(); // Additional tick for async operations
-        
-        // Wait for async loadPermissions to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+          // Wait for all pending promises including loadPermissions
+          await flushPromises();
+          // Additional tick for reactive updates
+          await nextTick();
 
           const result = canGlobal('users', 'create');
 
@@ -481,10 +479,10 @@ describe('usePermissions', () => {
 
           // Wait for permissions to load
           await nextTick();
-          await nextTick(); // Additional tick for async operations
-        
-        // Wait for async loadPermissions to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+          // Wait for all pending promises including loadPermissions
+          await flushPromises();
+          // Additional tick for reactive updates
+          await nextTick();
 
           expect(can('groups', 'read')).toBe(false);
           expect(canGlobal('users', 'create')).toBe(false);
