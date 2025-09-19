@@ -106,7 +106,7 @@
           :class="`sidebar__nav-link --${ASSIGNMENT_STATUSES.PAST} ${selectedStatusPast ? '--active' : ''}`"
           @click="() => onClickSideBarNavLink(ASSIGNMENT_STATUSES.PAST)"
         >
-          <i class="pi pi-history"></i>
+          <i class="pi pi-briefcase"></i>
         </div>
       </div>
     </div>

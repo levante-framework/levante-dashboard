@@ -118,7 +118,7 @@ describe('SideBar.vue', () => {
 
       expect(wrapper.find('.sidebar__nav-link.--current .pi.pi-play').exists()).toBe(true);
       expect(wrapper.find('.sidebar__nav-link.--upcoming .pi.pi-clock').exists()).toBe(true);
-      expect(wrapper.find('.sidebar__nav-link.--past .pi.pi-history').exists()).toBe(true);
+      expect(wrapper.find('.sidebar__nav-link.--past .pi.pi-briefcase').exists()).toBe(true);
     });
   });
 
