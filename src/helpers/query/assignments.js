@@ -1131,12 +1131,15 @@ export const fetchAssignmentsByNameAndDistricts = async (name, normalizedName, d
       },
     };
 
-    const response = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
-
-    return response.data.filter((data) => data.document);
+    try {
+      const response = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
+      return response.data.filter((data) => data.document);
+    } catch (error) {
+      console.error('Error fetching assignment by name: ', error);
+      return null;
+    }
   });
 
   const results = await Promise.all(queries);
-
-  return results.flat();
+  return Array.isArray(results) ? results.flat() : null;
 };

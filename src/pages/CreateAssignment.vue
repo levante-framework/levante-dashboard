@@ -591,6 +591,15 @@ const submit = async () => {
 
   const { data: assignmentExist } = await doesAssignmentExist();
 
+  if (assignmentExist === null) {
+    return toast.add({
+      severity: TOAST_SEVERITIES.ERROR,
+      summary: 'Error',
+      detail: 'Failed to check for duplicate assignment names. Try again or use a different name.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+  }
+
   if (assignmentExist) {
     return toast.add({
       severity: 'error',

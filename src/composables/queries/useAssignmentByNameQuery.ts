@@ -15,7 +15,7 @@ export default function useAssignmentByNameQuery(name: Ref<string>, districs: Re
 
       const assignments = await fetchAssignmentsByNameAndDistricts(name.value, normalizedName, districs.value);
 
-      return assignments?.length > 0;
+      return Array.isArray(assignments) ? assignments.length > 0 : null;
     },
   });
 }
