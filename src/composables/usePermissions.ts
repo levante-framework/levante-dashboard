@@ -4,7 +4,6 @@ import { CacheService, PermissionDocument, PermissionService, type Resource, typ
 import { useAuthStore } from '@/store/auth';
 import { getAxiosInstance, getBaseDocumentPath, convertValues } from '@/helpers/query/utils';
 import _mapValues from 'lodash/mapValues';
-import { storeToRefs } from 'pinia';
 
 interface UserData {
   roles: CoreUserRole[];
@@ -52,15 +51,13 @@ export const usePermissions = () => {
     // });
 
     const rawData = response.data;
-    console.log('raw permissions data: ', rawData);
     
     // Convert Firestore field values to JavaScript values
     const convertedData = _mapValues(rawData.fields, (value) => convertValues(value));
     
-    console.log('converted permissions data: ', convertedData);
-    convertedData.lastUpdated = convertedData.updatedAt;
+
     const {success, errors } = permissionService.loadPermissions(convertedData as PermissionDocument);
-    console.log('success: ', success);
+
     if (!success) {
       console.error('Failed to load permissions:', errors);
     }
@@ -76,9 +73,6 @@ export const usePermissions = () => {
 
   const can = (resource: Resource, action: Action): boolean => {
     if (!shouldUsePermissions || !permissionsLoaded.value || !user.value || !currentSite) return false;
-    console.log('checking permissions in can for resource: ', resource, 'and action: ', action);
-    console.log('user: ', user.value);
-    console.log('currentSite: ', currentSite);
 
     return permissionService.canPerformSiteAction(
       user.value,
@@ -101,8 +95,6 @@ export const usePermissions = () => {
       user.value,
       currentSite
     );
-
-    console.log('userRole for current site: ', userRole);
 
     if (!userRole) return false;
 

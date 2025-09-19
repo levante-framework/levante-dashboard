@@ -1,13 +1,5 @@
-// This test file verifies the usePermissions composable functionality:
-// - Tests permission checking for site-level and global actions
-// - Validates role checking functionality
-// - Tests computed permissions object
-// - Checks edge cases like unauthenticated users and missing permissions
-// - Uses mocked dependencies for Firebase, auth store, and permission service
-// - Imports required testing utilities from Vitest
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ref, nextTick } from 'vue';
+import { nextTick } from 'vue';
 import { createTestingPinia } from '@pinia/testing';
 import { withSetup } from '@/test-support/withSetup.js';
 import { useAuthStore } from '@/store/auth';
