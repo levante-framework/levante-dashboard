@@ -11,7 +11,7 @@ export default function useAssignmentByNameQuery(name: Ref<string>, districs: Re
     queryFn: async () => {
       const normalizedName = normalizeToLowercase(name.value);
 
-      if (!normalizedName) return false;
+      if (!normalizedName) return null;
 
       const assignments = await fetchAssignmentsByNameAndDistricts(name.value, normalizedName, districs.value);
 
