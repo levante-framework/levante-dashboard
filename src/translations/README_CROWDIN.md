@@ -7,18 +7,16 @@ This dashboard uses Crowdin to manage translations. Locally, translations are ma
 - Automatic detection and inclusion of new locales
 - Fast runtime (no CSV parsing in the browser)
 - Deterministic build outputs and robust validation
-- Simple E2E validation that each locale can log in and navigate
-
 ---
 
 ## Structure
 
 - Crowdin config
   - [`src/translations/crowdin/crowdin.yml`](./crowdin/crowdin.yml)
-- Consolidated CSVs (source-of-truth locally; mirrored to Crowdin)
+- Consolidated CSVs
   - [`src/translations/consolidated/dashboard-translations.csv`](./consolidated/dashboard-translations.csv)
   - [`src/translations/consolidated/components/*-translations.csv`](./consolidated/components/)
-  - Columns: `identifier,label,en-US,es-CO,de,fr-CA,nl,en-GH,de-CH,es-AR`
+  - Columns: `identifier,label,en-US,<other locales>>`
 - Build tools
   - [`src/translations/tools/create-consolidated-translations.js`](./tools/create-consolidated-translations.js) (optional local consolidation)
   - [`src/translations/tools/csv-to-json.js`](./tools/csv-to-json.js) (CSV → per-locale JSON; includes validation and caching)
@@ -165,51 +163,7 @@ Env for tests (via shell or `cypress.env.json`):
 - `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`
 - Optional: `E2E_LOCALES="en,es,de"` to subset
 
-Example `cypress.env.json`:
-```json
-{
-  "E2E_USE_ENV": "TRUE",
-  "E2E_BASE_URL": "https://localhost:5173/signin",
-  "E2E_TEST_EMAIL": "oscar@cardinalfamily.com",
-  "E2E_TEST_PASSWORD": "admin123"
-}
-```
 
-Run headless with seeded users:
-```bash
-# Optional: provide admin credentials for firebase-admin seeding
-export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/serviceAccount.json
-
-npm run dev
-
-E2E_USE_ENV=TRUE \
-E2E_BASE_URL="https://localhost:5173/signin" \
-E2E_TEST_EMAIL="oscar@cardinalfamily.com" \
-E2E_TEST_PASSWORD="admin123" \
-npm run cypress:run-seeded
-```
-
-Implementation details to reduce flakiness:
-- Input fields are typed using `{selectall}{backspace}` + `.type()` (no `clear()`) to avoid detachment on re-renders
-- Buttons are re-queried with `.first()` before clicking
-
----
-
-## Seeding DEV users
-
-Scripts (in [`scripts/`](../../scripts/)):
-- [`seed-dev-user-admin.js`](../../scripts/seed-dev-user-admin.js): uses `firebase-admin` to upsert `users/<uid>` (preferred)
-  - Requires `FIREBASE_ADMIN_CREDENTIALS` (inline JSON) or `GOOGLE_APPLICATION_CREDENTIALS` (file path)
-- [`seed-dev-user.js`](../../scripts/seed-dev-user.js): client sign-in to obtain ID token and write the Firestore doc via REST
-- [`seed-dev-participant.js`](../../scripts/seed-dev-participant.js): sign-up-or-sign-in a participant, then upsert the user doc
-
-Convenience:
-- `npm run cypress:run-seeded` tries admin seed, then client seed, then participant seed, then runs Cypress
-
-Defaults (override via env):
-- `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`
-- `E2E_FIREBASE_PROJECT_ID` (default: `hs-levante-admin-dev`)
-- `E2E_FIREBASE_API_KEY` (default: DEV admin apiKey)
 
 ---
 
