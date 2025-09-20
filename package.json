@@ -4,7 +4,6 @@
   "version": "3.2.9-dev",
   "type": "module",
   "scripts": {
-    "survey:pdf": "node -e \"(async()=>{const {loadSurveyFromFile}=await import('./dist/helpers/surveyLoader.js'); const {generateSurveyPdfFromJson}=await import('./dist/helpers/surveyPdfGenerator.js'); const fp=process.env.SURVEY_JSON||'surveys/demo.json'; const survey=await loadSurveyFromFile(fp); await generateSurveyPdfFromJson(survey,{filename:(process.env.OUTPUT||'survey.pdf')});})().catch(e=>{console.error(e);process.exit(1);})\"",
     "build:dev": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=DEV && vite build",
     "build:prod": "export VITE_LEVANTE=TRUE && vite build",
     "dev": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=DEV && export VITE_EMULATOR=TRUE && vite --force --host",
@@ -30,6 +29,8 @@
     "i18n:crowdin:upload": "crowdin upload sources --config src/translations/crowdin/crowdin.yml",
     "i18n:crowdin:download": "crowdin download --config src/translations/crowdin/crowdin.yml",
     "i18n:csv-to-json": "node src/translations/tools/csv-to-json.js",
+    "i18n:upload:dev": "gsutil -m rsync -r -d -x '^(tools/|README_CROWDIN\\.md$|.*\\.ts$)' src/translations gs://levante-assets-dev/translations/dashboard",
+    "i18n:download-upload:dev": "npm run i18n:download-rebuild && npm run i18n:upload:dev",
     "predev": "sh -c 'if [ -n \"$CROWDIN_API_TOKEN\" ]; then npm run i18n:crowdin:download; fi' && node src/translations/tools/conditional-csv-to-json.js",
     "prebuild": "sh -c 'if [ -n \"$CROWDIN_API_TOKEN\" ]; then npm run i18n:crowdin:download; fi' && node src/translations/tools/conditional-csv-to-json.js",
     "i18n:validate": "node src/translations/tools/validate-csvs.js",
