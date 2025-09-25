@@ -100,9 +100,8 @@ export const userHasSelectedOrgs = (userArray: any[], selections: SelectionItem[
 export const formatDate = (date: Date | number | string | undefined | null): string | undefined =>
   date?.toLocaleString('en-US');
 
-// Create a locale loader with static imports
+
 const loadDateFnsLocale = async (localeCode: string): Promise<any> => {
-  // Map of supported locales with their date-fns import paths
   const localeMap: Record<string, () => Promise<any>> = {
     en: () => import('date-fns/locale/en-US'),
     'en-US': () => import('date-fns/locale/en-US'),
@@ -119,10 +118,8 @@ const loadDateFnsLocale = async (localeCode: string): Promise<any> => {
     pt: () => import('date-fns/locale/pt'),
   };
 
-  // Extract base language code if needed
   const baseLocale = localeCode.split('-')[0].toLowerCase();
 
-  // Try exact match first, then base locale, then always fallback to en-US
   const loader =
     localeMap[localeCode] || localeMap[baseLocale] || localeMap['en-US'] || (() => import('date-fns/locale/en-US'));
 
@@ -166,7 +163,6 @@ export async function formatDateWithLocale(
   const dateObj = date instanceof Date ? date : new Date(date);
   if (isNaN(dateObj.getTime())) return '';
 
-  // Import format function
   const { format } = await import('date-fns');
 
   try {
