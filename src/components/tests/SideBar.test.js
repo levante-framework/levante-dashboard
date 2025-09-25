@@ -8,22 +8,26 @@ import SideBar from '../SideBar.vue';
 
 const i18nMock = vi.fn((key) => {
   const translations = {
-    'participant-sidebar.assignments': 'Assignments',
-    'participant-sidebar.statusCurrent': 'Current',
-    'participant-sidebar.statusUpcoming': 'Upcoming',
-    'participant-sidebar.statusPast': 'Past',
-    'participant-sidebar.noCurrentAssignments': 'No current assignments were found',
-    'participant-sidebar.noUpcomingAssignments': 'No upcoming assignments were found',
-    'participant-sidebar.noPastAssignments': 'No past assignments were found',
+    'participantSidebar.assignments': 'Assignments',
+    'participantSidebar.statusCurrent': 'Current',
+    'participantSidebar.statusUpcoming': 'Upcoming',
+    'participantSidebar.statusPast': 'Past',
+    'participantSidebar.noCurrentAssignments': 'You have no current assignments.',
+    'participantSidebar.noUpcomingAssignments': 'You have no upcoming assignments.',
+    'participantSidebar.noPastAssignments': 'You have no past assignments.',
   };
   return translations[key] || key;
 });
 
-vi.mock('vue-i18n', () => ({
-  useI18n: () => ({
-    t: i18nMock,
-  }),
-}));
+vi.mock('vue-i18n', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    useI18n: () => ({
+      t: i18nMock,
+    }),
+  };
+});
 
 const selectedStatusRef = ref('current');
 const selectedAssignmentRef = ref(null);
