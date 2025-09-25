@@ -141,16 +141,16 @@
       "studentInfo": "Información del estudiante",
       "tasksCompleted": "¡Tareas completadas! ",
       "statusCurrent": "Actual",
-      "statusOpened": "Opened",
+      "statusOpened": "Abierto",
       "statusClose": "Cerrar",
-      "statusClosed": "Closed",
-      "statusOpen": "Open",
+      "statusClosed": "Cerrado",
+      "statusOpen": "Abrir",
       "statusUpcoming": "Próximo",
       "statusPast": "Pasado",
-      "assignments": "Asignaciones",
-      "noCurrentAssignments": "You have no current assignments.",
-      "noUpcomingAssignments": "You have no upcoming assignments.",
-      "noPastAssignments": "You have no past assignments."
+      "assignments": "Actividades",
+      "noCurrentAssignments": "No tienes actividades actuales.",
+      "noUpcomingAssignments": "No tienes actividades pendientes.",
+      "noPastAssignments": "No tienes actividades anteriores."
     },
     "sentry-form": {
       "buttonLabel": "Reportar un problema",
