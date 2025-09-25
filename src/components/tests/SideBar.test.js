@@ -6,6 +6,25 @@ import { ref } from 'vue';
 import { createI18n } from 'vue-i18n';
 import SideBar from '../SideBar.vue';
 
+const i18nMock = vi.fn((key) => {
+  const translations = {
+    'participant-sidebar.assignments': 'Assignments',
+    'participant-sidebar.statusCurrent': 'Current',
+    'participant-sidebar.statusUpcoming': 'Upcoming',
+    'participant-sidebar.statusPast': 'Past',
+    'participant-sidebar.noCurrentAssignments': 'No current assignments were found',
+    'participant-sidebar.noUpcomingAssignments': 'No upcoming assignments were found',
+    'participant-sidebar.noPastAssignments': 'No past assignments were found',
+  };
+  return translations[key] || key;
+});
+
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({
+    t: i18nMock,
+  }),
+}));
+
 const selectedStatusRef = ref('current');
 const selectedAssignmentRef = ref(null);
 const userAssignmentsRef = ref([]);
