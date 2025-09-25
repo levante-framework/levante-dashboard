@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
+import { createI18n } from 'vue-i18n';
 import SideBar from '../SideBar.vue';
 
 const selectedStatusRef = ref('current');
@@ -73,13 +74,41 @@ const getTestAssignments = () => {
   ];
 };
 
+const i18n = createI18n({
+  legacy: false,
+  locale: 'en',
+  messages: {
+    en: {
+      participantSidebar: {
+        assignments: 'Assignments',
+        statusCurrent: 'Current',
+        statusUpcoming: 'Upcoming',
+        statusPast: 'Past',
+        noCurrentAssignments: 'You have no current assignments.',
+        noUpcomingAssignments: 'You have no upcoming assignments.',
+        noPastAssignments: 'You have no past assignments.',
+      },
+    },
+  },
+});
+
 const mountOptions = {
   global: {
-    plugins: [PrimeVue],
+    plugins: [i18n, PrimeVue],
     directives: {
       tooltip: {
         mounted: () => {},
         unmounted: () => {},
+      },
+    },
+    mocks: {
+      $t: (key) => {
+        const messages = {
+          'participantSidebar.noCurrentAssignments': 'You have no current assignments.',
+          'participantSidebar.noUpcomingAssignments': 'You have no upcoming assignments.',
+          'participantSidebar.noPastAssignments': 'You have no past assignments.',
+        };
+        return messages[key] || key;
       },
     },
   },
@@ -278,7 +307,7 @@ describe('SideBar.vue', () => {
       await wrapper.find('.sidebar__toggle-btn').trigger('click');
 
       expect(wrapper.find('.assignment-group__empty').exists()).toBe(true);
-      expect(wrapper.text()).toContain('No current assignments were found');
+      expect(wrapper.text()).toContain('You have no current assignments.');
     });
   });
 });
