@@ -397,7 +397,7 @@ export const orgFetchAll = async (
   selectedDistrict,
   selectedSchool,
   orderBy,
-  isSuperAdmin,
+  isAdmin,
   adminOrgs,
   select,
 ) => {
@@ -412,7 +412,7 @@ export const orgFetchAll = async (
     select,
   });
 
-  if (isSuperAdmin.value) {
+  if (isAdmin.value) {
     try {
       return await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => {
         return mapFields(data);
@@ -431,7 +431,7 @@ export const orgFetchAll = async (
         // Set page limit to max array length in javascript.
         { value: 2 ** 31 - 1 },
         { value: 0 },
-        isSuperAdmin,
+        isAdmin,
         adminOrgs,
         select,
       );
