@@ -451,7 +451,7 @@ async function routeExternalTask(game: Game): Promise<void> {
     window.open(url, '_blank')?.focus();
     await (authStore as any).completeAssessment(selectedAssignment.value.id, game.taskId);
   } else {
-    url += `&participant=${props.userData.assessmentPid}${
+    url += `&participant=${props.userData.assessmentPid}&lng=${locale.value}${
       props.userData.schools?.current?.length ? '&schoolId=' + props.userData.schools.current.join('"%2C"') : ''
     }${props.userData.classes?.current?.length ? '&classId=' + props.userData.classes.current.join('"%2C"') : ''}`;
 
