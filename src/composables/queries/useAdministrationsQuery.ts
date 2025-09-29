@@ -13,7 +13,7 @@ import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
  * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
  * @returns {UseQueryResult} The TanStack query result.
  */
-const useAdministrationsQuery = (administrationIds, queryOptions?: UseQueryOptions): UseQueryReturnType => {
+const useAdministrationsQuery = (administrationIds: string[], queryOptions?: UseQueryOptions): UseQueryReturnType => {
   // Ensure all necessary data is available before enabling the query.
   const conditions = [() => hasArrayEntries(administrationIds)];
   const { isQueryEnabled, options } = computeQueryOverrides(conditions, queryOptions);
