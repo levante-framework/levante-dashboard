@@ -53,10 +53,13 @@
                   :options="filteredOrgData"
                   :multiple="!forParentOrg"
                   :meta-key-selection="false"
-                  option-label="name"
-                  class="w-full"
-                  list-style="max-height:20rem"
+                  :empty-message="isLoadingOrgData ? 'Loading options...' : 'No available options'"
+                  :filter-placeholder="`Search ${activeOrgLabel}`"
                   checkmark
+                  class="w-full"
+                  filter
+                  list-style="max-height:20rem"
+                  option-label="name"
                 >
                 </PvListbox>
               </div>
@@ -218,6 +221,7 @@ const orgHeaders = computed((): Record<string, OrgHeader> => {
 });
 
 const activeIndex = ref(0);
+const activeOrgLabel = computed(() => Object.values(orgHeaders.value)[activeIndex.value]!['header']);
 const activeOrgType = computed(() => Object.keys(orgHeaders.value)[activeIndex.value]!);
 const activeOrgTypeValue = computed<string | number>({
   get() {
@@ -247,9 +251,15 @@ const { isLoading: isLoadingSchools, data: allSchools } = useQuery({
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
-const { data: orgData } = useOrgsTableQuery(activeOrgType, selectedDistrict, selectedSchool, ref(orderByNameASC), {
-  enabled: claimsLoaded,
-});
+const { data: orgData, isLoading: isLoadingOrgData } = useOrgsTableQuery(
+  activeOrgType,
+  selectedDistrict,
+  selectedSchool,
+  ref(orderByNameASC),
+  {
+    enabled: claimsLoaded,
+  },
+);
 
 // reset selections when changing tabs if forParentOrg is true
 watch(activeOrgType, () => {
