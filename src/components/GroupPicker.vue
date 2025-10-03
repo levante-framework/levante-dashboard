@@ -50,13 +50,16 @@
               <div class="card flex justify-content-center">
                 <PvListbox
                   v-model="selectedOrgs[activeOrgType]"
-                  :options="orgData"
+                  :options="filteredOrgData"
                   :multiple="!forParentOrg"
                   :meta-key-selection="false"
-                  option-label="name"
-                  class="w-full"
-                  list-style="max-height:20rem"
+                  :empty-message="isLoadingOrgData ? 'Loading options...' : 'No available options'"
+                  :filter-placeholder="`Search ${activeOrgLabel}`"
                   checkmark
+                  class="w-full"
+                  filter
+                  list-style="max-height:20rem"
+                  option-label="name"
                 >
                 </PvListbox>
               </div>
@@ -111,12 +114,13 @@ import PvTabPanel from 'primevue/tabpanel';
 import PvTabPanels from 'primevue/tabpanels';
 import PvTabs from 'primevue/tabs';
 import { useAuthStore } from '@/store/auth';
-import { orgFetcher, orgFetchAll } from '@/helpers/query/orgs';
+import { orgFetcher } from '@/helpers/query/orgs';
 import { orderByNameASC } from '@/helpers/query/utils';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 import PvFloatLabel from 'primevue/floatlabel';
 import { convertToGroupName } from '@/helpers';
+import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
 
 interface OrgItem {
   id: string;
@@ -153,6 +157,7 @@ interface Emits {
 const initialized = ref<boolean>(false);
 const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
+const { isUserAdmin } = authStore;
 
 const selectedDistrict = ref<string | undefined>(undefined);
 const selectedSchool = ref<string | undefined>(undefined);
@@ -198,7 +203,6 @@ const { isLoading: isLoadingClaims, data: userClaims } = useUserClaimsQuery({
   enabled: initialized,
 });
 
-const isSuperAdmin = computed((): boolean => Boolean(userClaims.value?.claims?.super_admin));
 const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
 
 const orgHeaders = computed((): Record<string, OrgHeader> => {
@@ -217,6 +221,7 @@ const orgHeaders = computed((): Record<string, OrgHeader> => {
 });
 
 const activeIndex = ref(0);
+const activeOrgLabel = computed(() => Object.values(orgHeaders.value)[activeIndex.value]!['header']);
 const activeOrgType = computed(() => Object.keys(orgHeaders.value)[activeIndex.value]!);
 const activeOrgTypeValue = computed<string | number>({
   get() {
@@ -240,27 +245,21 @@ const schoolQueryEnabled = computed((): boolean => {
 
 const { isLoading: isLoadingSchools, data: allSchools } = useQuery({
   queryKey: ['schools', selectedDistrict],
-  queryFn: () => orgFetcher('schools', selectedDistrict, isSuperAdmin, adminOrgs),
+  queryFn: () => orgFetcher('schools', selectedDistrict, ref(isUserAdmin), adminOrgs),
   placeholderData: (previousData) => previousData,
   enabled: schoolQueryEnabled,
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
-const { data: orgData } = useQuery({
-  queryKey: ['orgs', activeOrgType, selectedDistrict, selectedSchool],
-  queryFn: () =>
-    orgFetchAll(activeOrgType, selectedDistrict, selectedSchool, ref(orderByNameASC), isSuperAdmin, adminOrgs, [
-      'id',
-      'name',
-      'districtId',
-      'schoolId',
-      'schools',
-      'classes',
-    ]),
-  placeholderData: (previousData) => previousData,
-  enabled: claimsLoaded,
-  staleTime: 5 * 60 * 1000, // 5 minutes
-});
+const { data: orgData, isLoading: isLoadingOrgData } = useOrgsTableQuery(
+  activeOrgType,
+  selectedDistrict,
+  selectedSchool,
+  ref(orderByNameASC),
+  {
+    enabled: claimsLoaded,
+  },
+);
 
 // reset selections when changing tabs if forParentOrg is true
 watch(activeOrgType, () => {
@@ -306,6 +305,16 @@ watch(allSchools, (newValue) => {
 });
 
 const emit = defineEmits<Emits>();
+
+const filteredOrgData = computed(() => {
+  if (activeOrgType.value !== 'groups') {
+    return orgData.value;
+  }
+
+  return orgData.value?.filter(
+    (org) => org.districtId === selectedDistrict.value || org.parentOrgId === selectedDistrict.value,
+  );
+});
 
 watch(selectedOrgs, (newValue) => {
   emit('selection', newValue);
