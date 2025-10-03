@@ -15,7 +15,7 @@
           </PvTabList>
           <PvTabPanels>
             <PvTabPanel v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">
-              <!-- <div class="grid column-gap-3 mt-2">
+              <div class="grid column-gap-3 mt-2">
                 <div v-if="orgType.id !== 'districts'" class="col-6 md:col-5 lg:col-5 xl:col-5 mt-3">
                   <PvFloatLabel>
                     <PvSelect
@@ -46,7 +46,7 @@
                     <label for="school">Select from school</label>
                   </PvFloatLabel>
                 </div>
-              </div> -->
+              </div>
               <div class="card flex justify-content-center">
                 <PvListbox
                   v-model="selectedOrgs[activeOrgType]"
@@ -157,7 +157,8 @@ interface Emits {
 const initialized = ref<boolean>(false);
 const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
-const { isUserAdmin } = authStore;
+const { isUserAdmin, isUserSuperAdmin } = authStore;
+const isAdmin = computed(() => isUserAdmin() || isUserSuperAdmin());
 
 const selectedDistrict = ref<string | undefined>(undefined);
 const selectedSchool = ref<string | undefined>(undefined);
@@ -235,7 +236,7 @@ const activeOrgTypeValue = computed<string | number>({
 
 const claimsLoaded = computed((): boolean => initialized.value && !isLoadingClaims.value);
 
-const { isLoading: isLoadingDistricts, data: allDistricts } = useDistrictsListQuery({
+const { data: allDistricts, isLoading: isLoadingDistricts } = useDistrictsListQuery({
   enabled: claimsLoaded,
 });
 
@@ -243,9 +244,9 @@ const schoolQueryEnabled = computed((): boolean => {
   return claimsLoaded.value && selectedDistrict.value !== undefined;
 });
 
-const { isLoading: isLoadingSchools, data: allSchools } = useQuery({
+const { data: allSchools, isLoading: isLoadingSchools } = useQuery({
   queryKey: ['schools', selectedDistrict],
-  queryFn: () => orgFetcher('schools', selectedDistrict, ref(isUserAdmin), adminOrgs),
+  queryFn: () => orgFetcher('schools', selectedDistrict, isAdmin, adminOrgs),
   placeholderData: (previousData) => previousData,
   enabled: schoolQueryEnabled,
   staleTime: 5 * 60 * 1000, // 5 minutes
@@ -307,13 +308,17 @@ watch(allSchools, (newValue) => {
 const emit = defineEmits<Emits>();
 
 const filteredOrgData = computed(() => {
+  let data = [];
+
   if (activeOrgType.value !== 'groups') {
-    return orgData.value;
+    data = orgData.value;
+  } else {
+    data = orgData.value?.filter(
+      (org) => org.districtId === selectedDistrict.value || org.parentOrgId === selectedDistrict.value,
+    );
   }
 
-  return orgData.value?.filter(
-    (org) => org.districtId === selectedDistrict.value || org.parentOrgId === selectedDistrict.value,
-  );
+  return data?.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 });
 
 watch(selectedOrgs, (newValue) => {

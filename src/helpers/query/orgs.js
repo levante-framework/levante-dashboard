@@ -256,7 +256,7 @@ export const orgFetcher = async (
 ) => {
   const districtId = toValue(selectedDistrict);
 
-  if (isAdmin) {
+  if (isAdmin.value) {
     const axiosInstance = getAxiosInstance();
     const requestBody = getOrgsRequestBody({
       orgType: orgType,

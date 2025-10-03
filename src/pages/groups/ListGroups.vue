@@ -35,55 +35,55 @@
         </PvTabList>
         <PvTabPanels>
           <PvTabPanel v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">
-          <div class="grid column-gap-3 mt-2">
-            <div
-              v-if="activeOrgType === 'schools' || activeOrgType === 'classes' || activeOrgType === 'groups'"
-              class="col-12 md:col-6 lg:col-3 xl:col-3 mt-3"
-            >
-              <PvFloatLabel>
-                <PvSelect
-                  v-model="selectedDistrict"
-                  input-id="district"
-                  :options="allDistricts"
-                  option-label="name"
-                  option-value="id"
-                  :loading="isLoadingDistricts"
-                  class="w-full"
-                  data-cy="dropdown-parent-district"
-                />
-                <label for="district">Sites</label>
-              </PvFloatLabel>
+            <div class="grid column-gap-3 mt-2">
+              <div
+                v-if="activeOrgType === 'schools' || activeOrgType === 'classes' || activeOrgType === 'groups'"
+                class="col-12 md:col-6 lg:col-3 xl:col-3 mt-3"
+              >
+                <PvFloatLabel>
+                  <PvSelect
+                    v-model="selectedDistrict"
+                    input-id="district"
+                    :options="allDistricts"
+                    option-label="name"
+                    option-value="id"
+                    :loading="isLoadingDistricts"
+                    class="w-full"
+                    data-cy="dropdown-parent-district"
+                  />
+                  <label for="district">Sites</label>
+                </PvFloatLabel>
+              </div>
+              <div v-if="orgType.id === 'classes'" class="col-12 md:col-6 lg:col-3 xl:col-3 mt-3">
+                <PvFloatLabel>
+                  <PvSelect
+                    v-model="selectedSchool"
+                    input-id="school"
+                    :options="allSchools"
+                    option-label="name"
+                    option-value="id"
+                    :loading="isLoadingSchools"
+                    class="w-full"
+                    data-cy="dropdown-parent-school"
+                  />
+                  <label for="school">School</label>
+                </PvFloatLabel>
+              </div>
             </div>
-            <div v-if="orgType.id === 'classes'" class="col-12 md:col-6 lg:col-3 xl:col-3 mt-3">
-              <PvFloatLabel>
-                <PvSelect
-                  v-model="selectedSchool"
-                  input-id="school"
-                  :options="allSchools"
-                  option-label="name"
-                  option-value="id"
-                  :loading="isLoadingSchools"
-                  class="w-full"
-                  data-cy="dropdown-parent-school"
-                />
-                <label for="school">School</label>
-              </PvFloatLabel>
-            </div>
-          </div>
-          <RoarDataTable
-            :key="tableKey"
-            :columns="tableColumns"
-            :data="filteredTableData ?? []"
-            sortable
-            :loading="isTableLoading"
-            :allow-filtering="false"
-            @export-all="exportAll"
-            @selected-org-id="showCode"
-            @export-org-users="(orgId) => exportOrgUsers(orgId)"
-            @edit-button="onEditButtonClick($event)"
-            @assignments-button="onAssignmentsButtonClick($event)"
-          />
-        </PvTabPanel>
+            <RoarDataTable
+              :key="tableKey"
+              :columns="tableColumns"
+              :data="filteredTableData ?? []"
+              sortable
+              :loading="isTableLoading"
+              :allow-filtering="false"
+              @export-all="exportAll"
+              @selected-org-id="showCode"
+              @export-org-users="(orgId) => exportOrgUsers(orgId)"
+              @edit-button="onEditButtonClick($event)"
+              @assignments-button="onAssignmentsButtonClick($event)"
+            />
+          </PvTabPanel>
         </PvTabPanels>
       </PvTabs>
     </section>
@@ -206,7 +206,6 @@ import { orgFetchAll } from '@/helpers/query/orgs';
 import { fetchUsersByOrg, countUsersByOrg } from '@/helpers/query/users';
 import { getAdministrationsByOrg } from '@/helpers/query/administrations';
 import { orderByDefault, exportCsv, fetchDocById } from '@/helpers/query/utils';
-import useUserType from '@/composables/useUserType';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 import useDistrictSchoolsQuery from '@/composables/queries/useDistrictSchoolsQuery';
@@ -260,12 +259,13 @@ const addUsers = () => {
 
 const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
+const { isUserAdmin, isUserSuperAdmin } = authStore;
+const isAdmin = computed(() => isUserAdmin() || isUserSuperAdmin());
 
 const { data: userClaims } = useUserClaimsQuery({
   enabled: initialized,
 });
 
-const { isSuperAdmin } = useUserType(userClaims);
 const adminOrgs = computed(() => userClaims?.value?.claims?.adminOrgs);
 
 const orgHeaders = computed(() => {
@@ -289,7 +289,7 @@ const activeOrgTypeValue = computed({
   set(value) {
     const keys = Object.keys(orgHeaders.value);
     activeIndex.value = keys.indexOf(value);
-  }
+  },
 });
 
 const claimsLoaded = computed(() => !!userClaims?.value?.claims);
@@ -357,14 +357,7 @@ function copyToClipboard(text) {
 }
 
 const exportAll = async () => {
-  const exportData = await orgFetchAll(
-    activeOrgType,
-    selectedDistrict,
-    selectedSchool,
-    orderBy,
-    isSuperAdmin,
-    adminOrgs,
-  );
+  const exportData = await orgFetchAll(activeOrgType, selectedDistrict, selectedSchool, orderBy, isAdmin, adminOrgs);
   exportCsv(exportData, `roar-${activeOrgType.value}.csv`);
 };
 
