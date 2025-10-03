@@ -332,11 +332,6 @@ const computedProgressData = computed(() => {
   const assignmentTableDataAcc = [];
 
   for (const { assignment, user } of assignmentData.value) {
-
-    // console.log('username from user: ', user.username);
-    // console.log('username from assignment: ', assignment.userData.username);
-    // console.log('user: ', user);
-
     const currRow = {
 
       user: {
