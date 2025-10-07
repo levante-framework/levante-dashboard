@@ -21,8 +21,7 @@
           </div>
           <PvButton
             v-if="searchTerm"
-            class="bg-primary text-white border-none border-round pl-3 pr-3 hover:bg-red-900"
-            style="margin-right: 0"
+            class="bg-primary text-white border-none border-round pl-3 pr-3 hover:bg-red-900 ml-2"
             @click="clearSearch"
           >
             <i class="pi pi-times" />
