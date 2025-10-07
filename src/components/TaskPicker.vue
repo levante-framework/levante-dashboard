@@ -14,7 +14,7 @@
               <PvInputText
                 v-model="searchTerm"
                 class="w-full"
-                placeholder="Variant name, Task name, or TaskID"
+                placeholder="Task or Variant name. Ex. 'Stories' or 'adaptive'"
                 data-cy="input-variant-name"
               />
             </PvIconField>
@@ -28,7 +28,7 @@
             <i class="pi pi-times" />
           </PvButton>
         </div>
-        <div v-if="searchTerm.length >= 2">
+        <div v-if="searchTerm.length > 0">
           <div v-if="isSearching">
             <span>Searching...</span>
           </div>
@@ -58,51 +58,50 @@
             </VueDraggableNext>
           </PvScrollPanel>
         </div>
-        <div v-if="searchTerm.length < 2">
-          <PvSelect
-            v-model="currentTask"
-            :options="taskOptions"
-            optionGroupLabel="label"
-            optionGroupChildren="items"
-            option-label="label"
-            option-value="value"
-            class="w-full mb-2"
-            placeholder="Select TaskID"
-          >
-            <template #optiongroup="slotProps">
-              <div class="flex items-center">
-                <div className="select-group-name">
-                  {{ slotProps.option.label }}
+        <div v-else>
+          <PvScrollPanel style="height: 31rem; width: 100%; overflow-y: auto">
+            <div v-if="_isEmpty(groupedTaskSections)">No tasks available.</div>
+            <div v-else class="flex flex-column gap-4 pr-1">
+              <div v-for="section in groupedTaskSections" :key="section.label" class="task-section flex flex-column gap-3">
+                <div class="task-section-title text-lg font-semibold text-900">{{ section.label }}</div>
+                <div
+                  v-for="task in section.tasks"
+                  :key="task.key"
+                  class="task-section-group flex flex-column gap-2 border-round surface-border surface-card p-3"
+                >
+                  <div class="task-section-task-name font-semibold text-base text-800">{{ task.label }}</div>
+                  <div v-if="!task.variants.length" class="task-section-empty text-sm text-600">
+                    <template v-if="task.totalVariantCount === 0">
+                      No variants to show.
+                    </template>
+                    <template v-else>
+                      No variants to show. Make sure 'Show only named variants' is unchecked to view all.
+                      <span v-if="namedOnly" class="text-link ml-1" @click="namedOnly = false">View all</span>
+                    </template>
+                  </div>
+                  <VueDraggableNext
+                    v-else
+                    :list="task.variants"
+                    :reorderable-columns="true"
+                    :group="{ name: 'variants', pull: 'clone', put: false }"
+                    :sort="false"
+                    :move="handleCardMove"
+                  >
+                    <transition-group>
+                      <div
+                        v-for="element in task.variants"
+                        :id="element.id"
+                        :key="element.id"
+                        :data-task-id="element.task.id"
+                        style="cursor: grab"
+                      >
+                        <VariantCard :variant="element" :update-variant="updateVariant" @select="selectCard" />
+                      </div>
+                    </transition-group>
+                  </VueDraggableNext>
                 </div>
               </div>
-            </template>
-          </PvSelect>
-          <PvScrollPanel style="height: 27.75rem; width: 100%; overflow-y: auto">
-            <div v-if="!currentTask">Select a TaskID to display a list of variants.</div>
-            <div v-else-if="!currentVariants.length">
-              No variants to show. Make sure 'Show only named variants' is unchecked to view all.
-              <span class="text-link" @click="namedOnly = false">View all</span>
             </div>
-            <!-- Draggable Zone 1 -->
-            <VueDraggableNext
-              v-model="currentVariants"
-              :reorderable-columns="true"
-              :group="{ name: 'variants', pull: 'clone', put: false }"
-              :sort="false"
-              :move="handleCardMove"
-            >
-              <transition-group>
-                <div
-                  v-for="element in currentVariants"
-                  :id="element.id"
-                  :key="element.id"
-                  :data-task-id="element.task.id"
-                  style="cursor: grab"
-                >
-                  <VariantCard :variant="element" :update-variant="updateVariant" @select="selectCard" />
-                </div>
-              </transition-group>
-            </VueDraggableNext>
           </PvScrollPanel>
         </div>
       </div>
@@ -165,7 +164,6 @@ import _union from 'lodash/union';
 import { VueDraggableNext } from 'vue-draggable-next';
 import { useToast } from 'primevue/usetoast';
 import PvButton from 'primevue/button';
-import PvSelect from 'primevue/select';
 import PvInputText from 'primevue/inputtext';
 import PvPanel from 'primevue/panel';
 import PvScrollPanel from 'primevue/scrollpanel';
@@ -180,7 +178,6 @@ type VariantObject = InstanceType<typeof VariantCard>['$props']['variant'];
 interface TaskData {
   id: string;
   name: string;
-  studentFacingName?: string;
 }
 
 interface VariantCondition {
@@ -218,16 +215,6 @@ interface Variant {
 interface PreExistingAssessmentInfo {
   variantId: string;
   conditions: VariantConditions;
-}
-
-interface TaskOption {
-  label: string;
-  value: string;
-}
-
-interface TaskGroup {
-  label: string;
-  items: TaskOption[];
 }
 
 interface Props {
@@ -273,57 +260,77 @@ const groupedTasks: Record<string, string[]> = {
   Attitudes: ['Survey'],
 };
 
-const taskOptions = computed((): TaskGroup[] => {
-  let remainingTasks = new Set(Object.keys(props.allVariants));
-  let groupedOptions = Object.entries(groupedTasks).map(([groupName, tasks]) => {
-    let groupItems: TaskOption[] = [];
+const namedOnly = ref<boolean>(true);
 
-    tasks.forEach((task) => {
-      const taskKey = Object.keys(props.allVariants).find((entry) => {
-        const variants = props.allVariants[entry];
-        return variants && variants.length > 0 && variants[0]?.task?.name === task;
-      });
+interface TaskWithVariants {
+  key: string;
+  label: string;
+  variants: VariantObject[];
+  totalVariantCount: number;
+}
 
-      if (taskKey) {
-        groupItems.push({
-          label: task,
-          value: taskKey,
-        });
-        remainingTasks.delete(taskKey);
-      }
-    });
+interface TaskSection {
+  label: string;
+  tasks: TaskWithVariants[];
+}
 
-    groupItems.sort((a, b) => a.label.localeCompare(b.label));
+const groupedTaskSections = computed((): TaskSection[] => {
+  const sectionMap = new Map<string, TaskWithVariants[]>();
 
-    if (groupItems.length > 0) {
-      return {
-        label: groupName,
-        items: groupItems,
-      };
-    } else {
-      return null;
+  const resolveSectionLabel = (taskLabel: string, taskKey: string): string => {
+    const entryByLabel = Object.entries(groupedTasks).find(([, tasks]) => tasks.includes(taskLabel));
+    if (entryByLabel) return entryByLabel[0];
+    const entryByKey = Object.entries(groupedTasks).find(([, tasks]) => tasks.includes(taskKey));
+    return entryByKey ? entryByKey[0] : 'Other';
+  };
+
+  Object.entries(props.allVariants).forEach(([taskKey, variants]) => {
+    const allVariants = variants ?? [];
+    const filteredVariants = namedOnly.value ? _filter(allVariants, (variant) => variant.variant.name) : allVariants;
+    const taskLabel = allVariants?.[0]?.task?.name || filteredVariants?.[0]?.task?.name || taskKey;
+    const sectionLabel = resolveSectionLabel(taskLabel, taskKey);
+
+    if (!sectionMap.has(sectionLabel)) {
+      sectionMap.set(sectionLabel, []);
     }
-  });
 
-  // Handle any remaining tasks that don't fit into predefined groups
-  let otherItems: TaskOption[] = Array.from(remainingTasks).map((taskKey) => {
-    const variants = props.allVariants[taskKey];
-    const taskName = variants && variants.length > 0 ? variants[0]?.task?.name : undefined;
-    return {
-      label: taskName ?? taskKey,
-      value: taskKey,
-    };
-  });
-
-  if (otherItems.length > 0) {
-    otherItems.sort((a, b) => a.label.localeCompare(b.label));
-
-    groupedOptions.push({
-      label: 'Other',
-      items: otherItems,
+    sectionMap.get(sectionLabel)?.push({
+      key: taskKey,
+      label: taskLabel,
+      variants: filteredVariants,
+      totalVariantCount: allVariants.length,
     });
-  }
-  return groupedOptions.filter((group): group is TaskGroup => group !== null);
+  });
+
+  const sections: TaskSection[] = [];
+
+  Object.keys(groupedTasks).forEach((label) => {
+    const tasks = sectionMap.get(label);
+    if (!tasks || !tasks.length) return;
+
+    const orderedTasks = tasks.sort((taskA, taskB) => {
+      const desiredOrder = groupedTasks[label];
+      const indexA = desiredOrder.indexOf(taskA.label);
+      const indexB = desiredOrder.indexOf(taskB.label);
+      if (indexA !== indexB) {
+        const safeIndexA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
+        const safeIndexB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
+        return safeIndexA - safeIndexB;
+      }
+      return taskA.label.localeCompare(taskB.label);
+    });
+
+    sections.push({ label, tasks: orderedTasks });
+    sectionMap.delete(label);
+  });
+
+  const remainingSections = Array.from(sectionMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  remainingSections.forEach(([label, tasks]) => {
+    const sortedTasks = tasks.sort((a, b) => a.label.localeCompare(b.label));
+    sections.push({ label, tasks: sortedTasks });
+  });
+
+  return sections;
 });
 
 watch(
@@ -369,20 +376,6 @@ const updateVariant = (variantId: string, conditions: any): void => {
 };
 
 const selectedVariants = ref<VariantObject[]>([]);
-const namedOnly = ref<boolean>(true);
-
-const currentTask = ref<string>(Object.keys(props.allVariants)[0] || '');
-
-const currentVariants = computed((): VariantObject[] => {
-  if (!currentTask.value || !props.allVariants[currentTask.value]) {
-    return [];
-  }
-
-  if (namedOnly.value) {
-    return _filter(props.allVariants[currentTask.value], (variant) => variant.variant.name);
-  }
-  return props.allVariants[currentTask.value];
-});
 
 // Pane handlers
 const tasksPaneOpen = ref<boolean>(true);
@@ -397,11 +390,11 @@ const searchCards = (term: string): void => {
   searchResults.value = [];
 
   Object.values(props.allVariants).forEach((variants) => {
+    console.log('variants: ', variants);
     const matchingVariants = _filter(variants, (variant) => {
+      console.log('variant: ', variant);
       if (
-        _toLower(variant?.id)?.includes(_toLower(term)) ||
         _toLower(variant?.task?.name)?.includes(_toLower(term)) ||
-        _toLower(variant?.task?.studentFacingName).includes(_toLower(term)) ||
         _toLower(variant?.variant?.name)?.includes(_toLower(term))
       ) {
         return true;
@@ -424,10 +417,11 @@ function clearSearch(): void {
 const debounceSearch = _debounce(searchCards, 250);
 
 watch(searchTerm, (term: string) => {
-  if (term.length >= 2) {
+  if (term.length > 0) {
     debounceSearch(term);
   } else {
     searchResults.value = [];
+    isSearching.value = false;
   }
 });
 
@@ -547,9 +541,6 @@ function addChildDefaultCondition(variant: VariantObject): VariantObject {
 }
 </script>
 <style lang="scss">
-.select-group-name {
-  font-style: italic;
-}
 .task-tab {
   height: 100%;
   overflow: auto;
@@ -569,6 +560,13 @@ function addChildDefaultCondition(variant: VariantObject): VariantObject {
   color: var(--text-color-secondary);
   font-weight: bold;
   text-decoration: underline;
+}
+.task-section-group {
+  border: 1px solid var(--surface-d);
+  background-color: var(--surface-card);
+}
+.task-section-empty {
+  font-style: italic;
 }
 .divider {
   // TODO: Figure out how to reference SCSS variable $lg, rather than 992px
