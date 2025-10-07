@@ -14,7 +14,7 @@
               <PvInputText
                 v-model="searchTerm"
                 class="w-full"
-                placeholder="Variant name, Task name, or TaskID"
+                placeholder="Task or Variant name. Ex. 'Stories' or 'adaptive'"
                 data-cy="input-variant-name"
               />
             </PvIconField>
