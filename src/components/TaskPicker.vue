@@ -14,7 +14,7 @@
               <PvInputText
                 v-model="searchTerm"
                 class="w-full"
-                placeholder="Task or Variant name. Ex. 'Stories' or 'adaptive'"
+                placeholder="Variant name, Task name, or TaskID"
                 data-cy="input-variant-name"
               />
             </PvIconField>
@@ -386,15 +386,15 @@ const isSearching = ref<boolean>(false);
 
 const searchCards = (term: string): void => {
   isSearching.value = true;
-  searchResults.value = [];
+  const nextResults: VariantObject[] = [];
+  const normalizedTerm = _toLower(term);
 
   Object.values(props.allVariants).forEach((variants) => {
-    console.log('variants: ', variants);
-    const matchingVariants = _filter(variants, (variant) => {
-      console.log('variant: ', variant);
+    const variantList = variants ?? [];
+    const matchingVariants = _filter(variantList, (variant) => {
       if (
-        _toLower(variant?.task?.name)?.includes(_toLower(term)) ||
-        _toLower(variant?.variant?.name)?.includes(_toLower(term))
+        _toLower(variant?.task?.name ?? '').includes(normalizedTerm) ||
+        _toLower(variant?.variant?.name ?? '').includes(normalizedTerm)
       ) {
         return true;
       }
@@ -402,9 +402,10 @@ const searchCards = (term: string): void => {
       return false;
     });
 
-    searchResults.value.push(...matchingVariants);
+    nextResults.push(...matchingVariants);
   });
 
+  searchResults.value = nextResults;
   isSearching.value = false;
 };
 
@@ -417,6 +418,7 @@ const debounceSearch = _debounce(searchCards, 250);
 
 watch(searchTerm, (term: string) => {
   if (term.length > 0) {
+    isSearching.value = true;
     debounceSearch(term);
   } else {
     searchResults.value = [];
