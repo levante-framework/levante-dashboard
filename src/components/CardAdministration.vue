@@ -189,6 +189,8 @@ import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { isLevante, getTooltip } from '@/helpers';
+import { useQueryClient } from '@tanstack/vue-query';
+import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
 
 interface Assessment {
   taskId: string;
@@ -227,6 +229,7 @@ interface Props {
   showParams: boolean;
   isSuperAdmin: boolean;
   creator?: any;
+  onDeleteAdministration?: (administrationId: string) => void;
 }
 
 interface SpeedDialItem {
@@ -271,6 +274,7 @@ interface ChartOptions {
 }
 
 const router = useRouter();
+const queryClient = useQueryClient();
 
 const props = withDefaults(defineProps<Props>(), {
   creator: {},
@@ -313,14 +317,18 @@ const speedDialItems = computed((): SpeedDialItem[] => {
           message: 'Are you sure you want to delete this administration?',
           icon: 'pi pi-exclamation-triangle',
           accept: async () => {
-            await deleteAdministration(props.id);
+            props?.onDeleteAdministration?.(props?.id);
 
             toast.add({
               severity: TOAST_SEVERITIES.INFO,
               summary: 'Confirmed',
-              detail: `Deleted administration ${props.title}`,
+              detail: `The deletion of ${props.title} is being processed. Please check back in a few minutes.`,
               life: TOAST_DEFAULT_LIFE_DURATION,
             });
+
+            await deleteAdministration(props.id);
+            queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_LIST_QUERY_KEY] });
+            console.log(`Administration ${props.title} deleted successfully`);
           },
           reject: () => {
             toast.add({
