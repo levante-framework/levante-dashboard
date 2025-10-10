@@ -34,7 +34,7 @@
           <div v-else-if="_isEmpty(searchResults)">
             <span>No search results for {{ searchTerm }}</span>
           </div>
-          <PvScrollPanel style="height: 31rem; width: 100%; overflow-y: auto">
+          <PvScrollPanel class="task-picker-scroll-panel" style="height: 31rem; width: 100%; overflow-y: auto">
             <!-- Draggable Zone 3 -->
             <VueDraggableNext
               v-model="searchResults"
@@ -58,11 +58,11 @@
           </PvScrollPanel>
         </div>
         <div v-else>
-          <PvScrollPanel style="height: 31rem; width: 100%; overflow-y: auto">
+          <PvScrollPanel class="task-picker-scroll-panel" style="height: 31rem; width: 100%; overflow-y: auto">
             <div v-if="_isEmpty(groupedTaskSections)">No tasks available.</div>
             <div v-else class="flex flex-column gap-4 pr-1">
               <div v-for="section in groupedTaskSections" :key="section.label" class="task-section flex flex-column gap-3">
-                <div class="task-section-title text-lg font-semibold text-900">{{ section.label }}</div>
+                <div class="task-section-title text-lg font-semibold text-900 underline">{{ section.label }}</div>
                 <div
                   v-for="task in section.tasks"
                   :key="task.key"
@@ -112,7 +112,7 @@
         <div class="panel-title mb-2 text-base">
           Selected Tasks<span class="required-asterisk text-red-500 ml-1">*</span>
         </div>
-        <PvScrollPanel style="height: 32rem; width: 100%; overflow-y: auto">
+        <PvScrollPanel class="task-picker-scroll-panel" style="height: 32rem; width: 100%; overflow-y: auto">
           <!-- Draggable Zone 2 -->
           <VueDraggableNext
             v-model="selectedVariants"
@@ -586,5 +586,8 @@ function addChildDefaultCondition(variant: VariantObject): VariantObject {
 .panel-title {
   font-size: x-large;
   font-weight: bold;
+}
+.task-picker-scroll-panel .p-scrollpanel-bar {
+  opacity: 1;
 }
 </style>
