@@ -163,7 +163,7 @@ const isAtHome = computed((): boolean => {
 const rawActions = computed((): NavbarAction[] => {
   return getNavbarActions({
     isSuperAdmin: isSuperAdmin.value,
-    isAdmin: authStore.isUserAdmin(),
+    isAdmin: authStore.isUserAdmin() || authStore.isUserSuperAdmin(),
     includeHomeLink: !isAtHome.value,
   });
 });

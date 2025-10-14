@@ -21,7 +21,8 @@ const useDistrictsListQuery = (queryOptions?: UseQueryOptions): UseQueryReturnTy
   });
 
   const authStore = useAuthStore();
-  const { isUserAdmin } = authStore;
+  const { isUserAdmin, isUserSuperAdmin } = authStore;
+  const isAdmin = computed(() => isUserAdmin() || isUserSuperAdmin());
 
   // Get admin's administation orgs.
   const administrationOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
@@ -33,7 +34,7 @@ const useDistrictsListQuery = (queryOptions?: UseQueryOptions): UseQueryReturnTy
 
   return useQuery({
     queryKey: [DISTRICTS_LIST_QUERY_KEY],
-    queryFn: () => orgFetcher(FIRESTORE_COLLECTIONS.DISTRICTS, undefined, isUserAdmin(), administrationOrgs),
+    queryFn: () => orgFetcher(FIRESTORE_COLLECTIONS.DISTRICTS, undefined, isAdmin, administrationOrgs),
     enabled: isQueryEnabled,
     ...options,
   });

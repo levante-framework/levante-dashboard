@@ -15,7 +15,7 @@
           </PvTabList>
           <PvTabPanels>
             <PvTabPanel v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">
-              <!-- <div class="grid column-gap-3 mt-2">
+              <div class="grid column-gap-3 mt-2">
                 <div v-if="orgType.id !== 'districts'" class="col-6 md:col-5 lg:col-5 xl:col-5 mt-3">
                   <PvFloatLabel>
                     <PvSelect
@@ -46,17 +46,20 @@
                     <label for="school">Select from school</label>
                   </PvFloatLabel>
                 </div>
-              </div> -->
+              </div>
               <div class="card flex justify-content-center">
                 <PvListbox
                   v-model="selectedOrgs[activeOrgType]"
-                  :options="orgData"
+                  :options="filteredOrgData"
                   :multiple="!forParentOrg"
                   :meta-key-selection="false"
-                  option-label="name"
-                  class="w-full"
-                  list-style="max-height:20rem"
+                  :empty-message="isLoadingOrgData ? 'Loading options...' : 'No available options'"
+                  :filter-placeholder="`Search ${activeOrgLabel}`"
                   checkmark
+                  class="w-full"
+                  filter
+                  list-style="max-height:20rem"
+                  option-label="name"
                 >
                 </PvListbox>
               </div>
@@ -111,12 +114,13 @@ import PvTabPanel from 'primevue/tabpanel';
 import PvTabPanels from 'primevue/tabpanels';
 import PvTabs from 'primevue/tabs';
 import { useAuthStore } from '@/store/auth';
-import { orgFetcher, orgFetchAll } from '@/helpers/query/orgs';
+import { orgFetcher } from '@/helpers/query/orgs';
 import { orderByNameASC } from '@/helpers/query/utils';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 import PvFloatLabel from 'primevue/floatlabel';
 import { convertToGroupName } from '@/helpers';
+import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
 
 interface OrgItem {
   id: string;
@@ -153,6 +157,8 @@ interface Emits {
 const initialized = ref<boolean>(false);
 const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
+const { isUserAdmin, isUserSuperAdmin } = authStore;
+const isAdmin = computed(() => isUserAdmin() || isUserSuperAdmin());
 
 const selectedDistrict = ref<string | undefined>(undefined);
 const selectedSchool = ref<string | undefined>(undefined);
@@ -198,7 +204,6 @@ const { isLoading: isLoadingClaims, data: userClaims } = useUserClaimsQuery({
   enabled: initialized,
 });
 
-const isSuperAdmin = computed((): boolean => Boolean(userClaims.value?.claims?.super_admin));
 const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
 
 const orgHeaders = computed((): Record<string, OrgHeader> => {
@@ -217,6 +222,7 @@ const orgHeaders = computed((): Record<string, OrgHeader> => {
 });
 
 const activeIndex = ref(0);
+const activeOrgLabel = computed(() => Object.values(orgHeaders.value)[activeIndex.value]!['header']);
 const activeOrgType = computed(() => Object.keys(orgHeaders.value)[activeIndex.value]!);
 const activeOrgTypeValue = computed<string | number>({
   get() {
@@ -230,7 +236,7 @@ const activeOrgTypeValue = computed<string | number>({
 
 const claimsLoaded = computed((): boolean => initialized.value && !isLoadingClaims.value);
 
-const { isLoading: isLoadingDistricts, data: allDistricts } = useDistrictsListQuery({
+const { data: allDistricts, isLoading: isLoadingDistricts } = useDistrictsListQuery({
   enabled: claimsLoaded,
 });
 
@@ -238,29 +244,23 @@ const schoolQueryEnabled = computed((): boolean => {
   return claimsLoaded.value && selectedDistrict.value !== undefined;
 });
 
-const { isLoading: isLoadingSchools, data: allSchools } = useQuery({
+const { data: allSchools, isLoading: isLoadingSchools } = useQuery({
   queryKey: ['schools', selectedDistrict],
-  queryFn: () => orgFetcher('schools', selectedDistrict, isSuperAdmin, adminOrgs),
+  queryFn: () => orgFetcher('schools', selectedDistrict, isAdmin, adminOrgs),
   placeholderData: (previousData) => previousData,
   enabled: schoolQueryEnabled,
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
-const { data: orgData } = useQuery({
-  queryKey: ['orgs', activeOrgType, selectedDistrict, selectedSchool],
-  queryFn: () =>
-    orgFetchAll(activeOrgType, selectedDistrict, selectedSchool, ref(orderByNameASC), isSuperAdmin, adminOrgs, [
-      'id',
-      'name',
-      'districtId',
-      'schoolId',
-      'schools',
-      'classes',
-    ]),
-  placeholderData: (previousData) => previousData,
-  enabled: claimsLoaded,
-  staleTime: 5 * 60 * 1000, // 5 minutes
-});
+const { data: orgData, isLoading: isLoadingOrgData } = useOrgsTableQuery(
+  activeOrgType,
+  selectedDistrict,
+  selectedSchool,
+  ref(orderByNameASC),
+  {
+    enabled: claimsLoaded,
+  },
+);
 
 // reset selections when changing tabs if forParentOrg is true
 watch(activeOrgType, () => {
@@ -306,6 +306,20 @@ watch(allSchools, (newValue) => {
 });
 
 const emit = defineEmits<Emits>();
+
+const filteredOrgData = computed(() => {
+  let data = [];
+
+  if (activeOrgType.value !== 'groups') {
+    data = orgData.value;
+  } else {
+    data = orgData.value?.filter(
+      (org) => org.districtId === selectedDistrict.value || org.parentOrgId === selectedDistrict.value,
+    );
+  }
+
+  return data?.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+});
 
 watch(selectedOrgs, (newValue) => {
   emit('selection', newValue);

@@ -1,7 +1,6 @@
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
-import useUserType from '@/composables/useUserType';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { orgPageFetcher } from '@/helpers/query/orgs';
@@ -34,7 +33,8 @@ const useOrgsTableQuery = (
   });
 
   const authStore = useAuthStore();
-  const { isUserAdmin } = authStore;
+  const { isUserAdmin, isUserSuperAdmin } = authStore;
+  const isAdmin = computed(() => isUserAdmin() || isUserSuperAdmin());
 
   // Get admin's administation orgs.
   const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
@@ -63,7 +63,7 @@ const useOrgsTableQuery = (
         orderBy,
         ref(100000),
         ref(0),
-        isUserAdmin(),
+        isAdmin,
         adminOrgs,
         selectFields.value,
       ),

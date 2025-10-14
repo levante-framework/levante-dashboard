@@ -41,7 +41,7 @@ const userInfo = computed<UserInfo | null>(() => {
       displayName: userData?.username || userData?.displayName || null,
       email: authStore?.email || null,
       uid: authStore?.uid || null,
-      isAdmin: authStore.isUserAdmin(),
+      isAdmin: authStore.isUserAdmin() || authStore.isUserSuperAdmin(),
       userType: userData?.userType || null,
       isSuperAdmin: authStore.isUserSuperAdmin(),
     };
