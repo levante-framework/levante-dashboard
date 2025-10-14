@@ -324,11 +324,7 @@ const submitUsers = async () => {
 
       if (idField) normalizedUser.id = user[idField];
       if (userTypeField) {
-        let userTypeValue = user[userTypeField];
-
-        if (typeof userTypeValue === 'string') {
-          userTypeValue = userTypeValue.trim();
-        }
+        const userTypeValue = user[userTypeField];
         // Change 'caregiver' to 'parent' before sending to backend
         normalizedUser.userType = userTypeValue.toLowerCase() === 'caregiver' ? 'parent' : userTypeValue;
       }

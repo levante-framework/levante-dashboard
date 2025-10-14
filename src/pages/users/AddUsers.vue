@@ -727,11 +727,7 @@ async function submitUsers() {
 
         // Ensure the key is exactly 'userType' and handle potential casing issues
         if (userTypeField) {
-          let userTypeValue = user[userTypeField];
-
-          if (typeof userTypeValue === 'string') {
-            userTypeValue = userTypeValue.trim();
-          }
+          const userTypeValue = user[userTypeField];
 
           // Set the key to 'userType' regardless of original casing
           processedUser.userType = userTypeValue;
