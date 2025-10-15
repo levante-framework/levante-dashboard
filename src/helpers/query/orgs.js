@@ -5,6 +5,7 @@ import _flattenDeep from 'lodash/flattenDeep';
 import _isEmpty from 'lodash/isEmpty';
 import _without from 'lodash/without';
 import _zip from 'lodash/zip';
+import _uniqBy from 'lodash/uniqBy';
 import {
   batchGetDocs,
   convertValues,
@@ -278,7 +279,11 @@ export const orgFetcher = async (
       const promises = (adminOrgs.value[orgType] ?? []).map((orgId) => {
         return fetchDocById(orgType, orgId, select);
       });
-      return Promise.all(promises);
+      const districts = await Promise.all(promises);
+      return _uniqBy(
+        districts.filter(Boolean),
+        (district) => district.id,
+      );
     } else if (orgType === 'districts') {
       // First grab all the districts in adminOrgs
       const promises = (adminOrgs.value[orgType] ?? []).map((orgId) => {
