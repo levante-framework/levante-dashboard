@@ -10,7 +10,7 @@ import PvFloatLabel from 'primevue/floatlabel';
 import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { nextTick } from 'vue';
+import { nextTick, ref } from 'vue';
 
 const mockUseUpsertOrgMutation = vi.fn();
 let mockOrgNameExists = false;
@@ -35,6 +35,16 @@ vi.mock('primevue/usetoast', () => ({
   useToast: () => ({
     add: () => vi.fn(),
   }),
+}));
+
+vi.mock('@/store/auth', () => ({
+  useAuthStore: vi.fn(() => ({
+    getUserId: vi.fn(() => 'test-user-id'),
+    $subscribe: vi.fn(),
+    roarfirekit: ref({
+      restConfig: true,
+    }),
+  })),
 }));
 
 const mountOptions = {

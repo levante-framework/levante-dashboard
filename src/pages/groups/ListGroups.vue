@@ -153,6 +153,7 @@ import { orgFetchAll } from '@/helpers/query/orgs';
 import { fetchUsersByOrg, countUsersByOrg } from '@/helpers/query/users';
 import { getAdministrationsByOrg } from '@/helpers/query/administrations';
 import { orderByDefault, exportCsv, fetchDocById } from '@/helpers/query/utils';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import useUserType from '@/composables/useUserType';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
@@ -196,6 +197,21 @@ watch(searchQuery, (newValue) => {
 const clearSearch = () => {
   searchQuery.value = '';
   sanitizedSearchString.value = '';
+};
+
+// Function to fetch user data by UID
+const fetchUserData = async (uid) => {
+  if (!uid) return null;
+  
+  try {
+    console.log(`fetchUserData called with UID: ${uid}`);
+    const userData = await fetchDocById(FIRESTORE_COLLECTIONS.USERS, uid, ['displayName', 'email']);
+    console.log(`fetchUserData result for UID ${uid}:`, userData);
+    return userData;
+  } catch (error) {
+    console.warn(`Failed to fetch user data for UID: ${uid}`, error);
+    return null;
+  }
 };
 const isAddGroupModalVisible = ref(false);
 const isAssignmentsModalVisible = ref(false);
@@ -389,6 +405,14 @@ const tableColumns = computed(() => {
     },
   ];
 
+  // Add Created By column for all org types
+  columns.push({
+    field: 'creatorName',
+    header: 'Created By',
+    dataType: 'string',
+    sort: true,
+  });
+
   if (['districts', 'schools'].includes(activeOrgType.value)) {
     columns.push();
   }
@@ -465,10 +489,24 @@ watchEffect(async () => {
       filteredOrgData.value.map(async (org) => {
         const userCount = await countUsersByOrg(activeOrgType.value, org.id);
         const assignmentCount = getAdministrationsByOrg(org.id, activeOrgType.value, allAdministrations.value).length;
+        
+        // Fetch creator data
+        let creatorName = '--';
+        if (org.createdBy) {
+          const creatorData = await fetchUserData(org.createdBy);
+          if (creatorData) {
+            // Try to get displayName first, then email, then fall back to UID
+            creatorName = creatorData.displayName || 
+                         creatorData.email ||
+                         org.createdBy;
+          }
+        }
+        
         return {
           ...org,
           userCount,
           assignmentCount,
+          creatorName,
           routeParams: {
             orgType: activeOrgType.value,
             orgId: org.id,
