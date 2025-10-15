@@ -204,9 +204,7 @@ const fetchUserData = async (uid) => {
   if (!uid) return null;
   
   try {
-    console.log(`fetchUserData called with UID: ${uid}`);
     const userData = await fetchDocById(FIRESTORE_COLLECTIONS.USERS, uid, ['displayName', 'email']);
-    console.log(`fetchUserData result for UID ${uid}:`, userData);
     return userData;
   } catch (error) {
     console.warn(`Failed to fetch user data for UID: ${uid}`, error);
