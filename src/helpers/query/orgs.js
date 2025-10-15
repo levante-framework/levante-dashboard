@@ -128,6 +128,14 @@ export const getOrgsRequestBody = ({
         },
       });
     }
+  } else if (['groups', 'families'].includes(orgType) && parentDistrict) {
+    filters.push({
+      fieldFilter: {
+        field: { fieldPath: 'districtId' },
+        op: 'EQUAL',
+        value: { stringValue: parentDistrict },
+      },
+    });
   }
 
   if (filters.length > 0) {
