@@ -255,18 +255,8 @@ const { data: existingDistrictsData } = useDistrictsQuery(districtIds, {
 // Fetch the schools assigned to the administration.
 const schoolIds = computed(() => existingAdministrationData.value?.minimalOrgs?.schools ?? []);
 
-console.log('schoolIds:', schoolIds.value);
-watch(schoolIds, (newSchoolIds) => {
-  console.log('schoolIds changed:', newSchoolIds);
-});
-
 const { data: existingSchoolsData } = useSchoolsQuery(schoolIds, {
   enabled: initialized,
-});
-
-console.log('existingSchoolsData:', existingSchoolsData.value);
-watch(existingSchoolsData, (newSchoolsData) => {
-  console.log('existingSchoolsData changed:', newSchoolsData);
 });
 
 // Fetch the classes assigned to the administration.

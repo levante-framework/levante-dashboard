@@ -128,7 +128,7 @@ export const getOrgsRequestBody = ({
         },
       });
     }
-  } else if (['groups', 'families'].includes(orgType) && parentDistrict) {
+  } else if (orgType === 'groups' && parentDistrict) {
     filters.push({
       fieldFilter: {
         field: { fieldPath: 'districtId' },
@@ -397,7 +397,7 @@ export const orgPageFetcher = async (
     const orderDirection = (orderBy?.value ?? orderByDefault)[0].direction;
     let orgs = await Promise.all(promises);
 
-    if (['groups', 'families'].includes(activeOrgType.value) && selectedDistrict.value) {
+    if (activeOrgType.value === 'groups' && selectedDistrict.value) {
       orgs = orgs.filter((org) => org?.districtId === selectedDistrict.value);
     }
 
