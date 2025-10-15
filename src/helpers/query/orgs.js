@@ -395,7 +395,13 @@ export const orgPageFetcher = async (
     const promises = orgIds.map((orgId) => fetchDocById(activeOrgType.value, orgId, select));
     const orderField = (orderBy?.value ?? orderByDefault)[0].field.fieldPath;
     const orderDirection = (orderBy?.value ?? orderByDefault)[0].direction;
-    const orgs = (await Promise.all(promises)).sort((a, b) => {
+    let orgs = await Promise.all(promises);
+
+    if (['groups', 'families'].includes(activeOrgType.value) && selectedDistrict.value) {
+      orgs = orgs.filter((org) => org?.districtId === selectedDistrict.value);
+    }
+
+    orgs = orgs.sort((a, b) => {
       if (orderDirection === 'ASCENDING') return 2 * +(a[orderField] > b[orderField]) - 1;
       if (orderDirection === 'DESCENDING') return 2 * +(b[orderField] > a[orderField]) - 1;
       return 0;

@@ -266,6 +266,14 @@ const { data: orgData } = useQuery({
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
+watch(
+  () => [orgData.value, activeOrgType.value],
+  ([options, orgType]) => {
+    const optionIds = (options ?? []).map((option) => option.id);
+    selectedOrgs[orgType] = selectedOrgs[orgType].filter((org) => optionIds.includes(org.id));
+  },
+);
+
 // reset selections when changing tabs if forParentOrg is true
 watch(activeOrgType, () => {
   if (props.forParentOrg) {
