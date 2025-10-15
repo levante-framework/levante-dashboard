@@ -9,44 +9,30 @@
           </div>
         </template>
 
-        <PvTabs v-if="claimsLoaded" v-model:value="activeOrgTypeValue" lazy class="m-0 p-0 org-tabs">
+        <PvTabs v-model:value="activeOrgTypeValue" lazy class="m-0 p-0 org-tabs">
           <PvTabList>
             <PvTab v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">{{ orgType.header }}</PvTab>
           </PvTabList>
           <PvTabPanels>
             <PvTabPanel v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">
-              <!-- <div class="grid column-gap-3 mt-2">
-                <div v-if="orgType.id !== 'districts'" class="col-6 md:col-5 lg:col-5 xl:col-5 mt-3">
-                  <PvFloatLabel>
-                    <PvSelect
-                      v-model="selectedDistrict"
-                      input-id="district"
-                      :options="allDistricts"
-                      option-label="name"
-                      option-value="id"
-                      :loading="isLoadingDistricts"
-                      class="w-full"
-                      data-cy="dropdown-selected-district"
-                    />
-                    <label for="district">Select from site</label>
-                  </PvFloatLabel>
-                </div>
+              <div class="grid column-gap-3 mt-2">
                 <div v-if="orgType.id === 'classes'" class="col-6 md:col-5 lg:col-5 xl:col-5 mt-3">
                   <PvFloatLabel>
                     <PvSelect
                       v-model="selectedSchool"
-                      input-id="school"
-                      :options="allSchools"
-                      option-label="name"
-                      option-value="id"
                       :loading="isLoadingSchools"
+                      :options="allSchools"
                       class="w-full"
                       data-cy="dropdown-selected-school"
+                      input-id="school"
+                      option-label="name"
+                      option-value="id"
+                      showClear
                     />
                     <label for="school">Select from school</label>
                   </PvFloatLabel>
                 </div>
-              </div> -->
+              </div>
               <div class="card flex justify-content-center">
                 <PvListbox
                   v-model="selectedOrgs[activeOrgType]"
@@ -113,8 +99,6 @@ import PvTabs from 'primevue/tabs';
 import { useAuthStore } from '@/store/auth';
 import { orgFetcher, orgFetchAll } from '@/helpers/query/orgs';
 import { orderByNameASC } from '@/helpers/query/utils';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 import PvFloatLabel from 'primevue/floatlabel';
 import { convertToGroupName } from '@/helpers';
 
@@ -152,9 +136,9 @@ interface Emits {
 
 const initialized = ref<boolean>(false);
 const authStore = useAuthStore();
-const { roarfirekit } = storeToRefs(authStore);
+const { currentSite, roarfirekit, userClaims } = storeToRefs(authStore);
+const { isUserSuperAdmin } = authStore;
 
-const selectedDistrict = ref<string | undefined>(undefined);
 const selectedSchool = ref<string | undefined>(undefined);
 
 const props = withDefaults(defineProps<Props>(), {
@@ -194,11 +178,6 @@ watch(
   { immediate: true, deep: true },
 );
 
-const { isLoading: isLoadingClaims, data: userClaims } = useUserClaimsQuery({
-  enabled: initialized,
-});
-
-const isSuperAdmin = computed((): boolean => Boolean(userClaims.value?.claims?.super_admin));
 const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
 
 const orgHeaders = computed((): Record<string, OrgHeader> => {
@@ -228,28 +207,20 @@ const activeOrgTypeValue = computed<string | number>({
   },
 });
 
-const claimsLoaded = computed((): boolean => initialized.value && !isLoadingClaims.value);
-
-const { isLoading: isLoadingDistricts, data: allDistricts } = useDistrictsListQuery({
-  enabled: claimsLoaded,
-});
-
-const schoolQueryEnabled = computed((): boolean => {
-  return claimsLoaded.value && selectedDistrict.value !== undefined;
-});
+const schoolQueryEnabled = computed((): boolean => currentSite.value !== undefined);
 
 const { isLoading: isLoadingSchools, data: allSchools } = useQuery({
-  queryKey: ['schools', selectedDistrict],
-  queryFn: () => orgFetcher('schools', selectedDistrict, isSuperAdmin, adminOrgs),
+  queryKey: ['schools', currentSite],
+  queryFn: () => orgFetcher('schools', currentSite, ref(isUserSuperAdmin()), adminOrgs),
   placeholderData: (previousData) => previousData,
   enabled: schoolQueryEnabled,
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
 const { data: orgData } = useQuery({
-  queryKey: ['orgs', activeOrgType, selectedDistrict, selectedSchool],
+  queryKey: ['orgs', activeOrgType, currentSite, selectedSchool],
   queryFn: () =>
-    orgFetchAll(activeOrgType, selectedDistrict, selectedSchool, ref(orderByNameASC), isSuperAdmin, adminOrgs, [
+    orgFetchAll(activeOrgType, currentSite, selectedSchool, ref(orderByNameASC), ref(isUserSuperAdmin()), adminOrgs, [
       'id',
       'name',
       'districtId',
@@ -258,7 +229,6 @@ const { data: orgData } = useQuery({
       'classes',
     ]),
   placeholderData: (previousData) => previousData,
-  enabled: claimsLoaded,
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
@@ -295,10 +265,6 @@ unsubscribe = authStore.$subscribe(async (mutation, state) => {
 
 onMounted((): void => {
   if ((roarfirekit.value as any)?.restConfig) init();
-});
-
-watch(allDistricts, (newValue) => {
-  selectedDistrict.value = _get(_head(newValue), 'id');
 });
 
 watch(allSchools, (newValue) => {

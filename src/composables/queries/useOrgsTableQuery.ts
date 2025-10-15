@@ -1,12 +1,9 @@
-import { computed, ref } from 'vue';
+import { computed, Ref, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import _isEmpty from 'lodash/isEmpty';
-import useUserType from '@/composables/useUserType';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { orgPageFetcher } from '@/helpers/query/orgs';
 import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
 import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
 /**
  * Orgs Table query.
  *
@@ -23,34 +20,22 @@ import { useAuthStore } from '@/store/auth';
  * @returns {UseQueryResult} The TanStack query result.
  */
 const useOrgsTableQuery = (
-  activeOrgType,
-  selectedDistrict,
-  selectedSchool,
-  orderBy,
+  activeOrgType: Ref<string>,
+  selectedDistrict: Ref<string>,
+  selectedSchool: Ref<string>,
+  orderBy: Ref<any>,
   queryOptions?: UseQueryOptions,
 ): UseQueryReturnType => {
-  const { data: userClaims } = useUserClaimsQuery({
-    enabled: queryOptions?.enabled ?? true,
-  });
-
   const authStore = useAuthStore();
-  const { isUserAdmin } = authStore;
-
-  // Get admin's administation orgs.
-  const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
-
-  // Ensure all necessary data is loaded before enabling the query.
-  const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
-  const queryConditions = [() => claimsLoaded.value];
-  const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
+  const { adminOrgs } = storeToRefs(authStore);
+  const { isUserSuperAdmin } = authStore;
 
   // Determine select fields based on org type
   const selectFields = computed(() => {
-    const orgType = typeof activeOrgType === 'function' ? activeOrgType() : activeOrgType.value || activeOrgType;
-    if (orgType === 'groups') {
-      return ['id', 'name', 'tags', 'parentOrgId'];
-    }
-    return ['id', 'name', 'tags'];
+    const orgType = activeOrgType.value || activeOrgType;
+    return orgType === 'groups'
+      ? ['id', 'name', 'normalizedName', 'tags', 'parentOrgId']
+      : ['id', 'name', 'normalizedName', 'tags'];
   });
 
   return useQuery({
@@ -63,12 +48,11 @@ const useOrgsTableQuery = (
         orderBy,
         ref(100000),
         ref(0),
-        isUserAdmin(),
+        ref(isUserSuperAdmin()),
         adminOrgs,
         selectFields.value,
       ),
-    enabled: isQueryEnabled,
-    ...options,
+    ...queryOptions,
   });
 };
 

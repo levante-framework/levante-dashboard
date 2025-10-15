@@ -101,12 +101,20 @@ const mapAdministrations = async ({ isSuperAdmin, data, creators, adminOrgs }) =
   return administrations;
 };
 
-export const administrationPageFetcher = async (isSuperAdmin, exhaustiveAdminOrgs, fetchTestData = false, orderBy) => {
+export const administrationPageFetcher = async (
+  selectedDistrictId,
+  isSuperAdmin,
+  exhaustiveAdminOrgs,
+  fetchTestData = false,
+  orderBy,
+) => {
   const authStore = useAuthStore();
   const { roarfirekit } = storeToRefs(authStore);
   const administrationIds = await roarfirekit.value.getAdministrations({
     testData: toValue(fetchTestData),
   });
+
+  const districtId = toValue(selectedDistrictId) !== 'any' ? toValue(selectedDistrictId) : null;
 
   const axiosInstance = getAxiosInstance();
   const documents = administrationIds.map((id) => `${getBaseDocumentPath()}/administrations/${id}`);
@@ -151,12 +159,19 @@ export const administrationPageFetcher = async (isSuperAdmin, exhaustiveAdminOrg
     return acc;
   }, {});
 
-  const administrations = await mapAdministrations({
+  let administrations = await mapAdministrations({
     isSuperAdmin,
     data: administrationData,
     creators: creatorsData,
     adminOrgs: exhaustiveAdminOrgs,
   });
+
+  if (districtId) {
+    administrations = administrations.filter((adm) => {
+      const assignedDistricts = adm?.assignedOrgs?.districts || [];
+      return assignedDistricts.includes(districtId);
+    });
+  }
 
   const orderField = (orderBy?.value ?? orderByDefault)[0].field.fieldPath;
   const orderDirection = (orderBy?.value ?? orderByDefault)[0].direction;

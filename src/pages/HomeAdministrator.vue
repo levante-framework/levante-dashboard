@@ -109,14 +109,14 @@
                     v-for="item in slotProps.items"
                     :id="item.id"
                     :key="item.id"
-                    :title="getTitle(item, isSuperAdmin)"
+                    :title="getTitle(item, isUserSuperAdmin())"
                     :stats="item.stats"
                     :dates="item.dates"
                     :assignees="item.assignedOrgs"
                     :assessments="item.assessments"
                     :public-name="item.publicName ?? item.name"
-                    :show-params="isSuperAdmin"
-                    :is-super-admin="isSuperAdmin"
+                    :show-params="isUserSuperAdmin()"
+                    :is-super-admin="isUserSuperAdmin()"
                     :creator="item.creator"
                     data-cy="h2-card-admin"
                   />
@@ -173,8 +173,8 @@ const filteredAdministrations = ref([]);
 const fetchTestAdministrations = ref(false);
 
 const authStore = useAuthStore();
-
-const { roarfirekit } = storeToRefs(authStore);
+const { currentSite, roarfirekit } = storeToRefs(authStore);
+const { isUserSuperAdmin } = authStore;
 
 let unsubscribeInitializer;
 const init = () => {
@@ -189,12 +189,6 @@ unsubscribeInitializer = authStore.$subscribe(async (mutation, state) => {
 onMounted(() => {
   if (roarfirekit.value.restConfig) init();
 });
-
-const { data: userClaims } = useUserClaimsQuery({
-  enabled: initialized,
-});
-
-const { isSuperAdmin } = useUserType(userClaims);
 
 /**
  * Generate search tokens for autocomplete.
@@ -221,7 +215,7 @@ const {
   isLoading: isLoadingAdministrations,
   isFetching: isFetchingAdministrations,
   data: administrations,
-} = useAdministrationsListQuery(orderBy, fetchTestAdministrations, {
+} = useAdministrationsListQuery(currentSite, orderBy, fetchTestAdministrations, {
   enabled: initialized,
 });
 
@@ -378,7 +372,7 @@ const onSortChange = (event) => {
   const value = event.value.value;
   const sortValue = event.value;
 
-  if (!isSuperAdmin.value && sortValue[0].field.fieldPath === 'name') {
+  if (!isUserSuperAdmin() && value[0].field.fieldPath === 'name') {
     // catches edge case where a partner admin should sort by the public name attribute
     sortField.value = 'publicName';
   } else {

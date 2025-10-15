@@ -117,13 +117,17 @@ import { useAuthStore } from '@/store/auth';
 import { pluralizeFirestoreCollection } from '@/helpers';
 import { fetchOrgByName } from '@/helpers/query/orgs';
 import PvButton from 'primevue/button';
-import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
 import PvDivider from 'primevue/divider';
 import PvFileUpload from 'primevue/fileupload';
 import { useRouter } from 'vue-router';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import { storeToRefs } from 'pinia';
+import { fetchDocById } from '@/helpers/query/utils';
+
 const authStore = useAuthStore();
+const { currentSite } = storeToRefs(authStore);
+const { createUsers } = authStore;
 const toast = useToast();
 const isFileUploaded = ref(false);
 const rawUserFile = ref({});
@@ -155,11 +159,6 @@ const allFields = [
   {
     field: 'cohort',
     header: 'Cohort',
-    dataType: 'string',
-  },
-  {
-    field: 'site',
-    header: 'Site',
     dataType: 'string',
   },
   {
@@ -278,13 +277,12 @@ const onFileUpload = async (event) => {
 
   // Conditional (Either): Cohort OR Site + School
   const hasCohort = allColumns.includes('cohort');
-  const hasSite = allColumns.includes('site');
   const hasSchool = allColumns.includes('school');
-  if (!hasCohort && (!hasSite || !hasSchool)) {
+  if (!hasCohort && !hasSchool) {
     toast.add({
       severity: 'error',
       summary: 'Error: Missing Column',
-      detail: 'Missing required column(s): Cohort OR Site and School',
+      detail: 'Missing required column(s): Cohort OR School',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     return;
@@ -351,7 +349,6 @@ const onFileUpload = async (event) => {
 
     // --- Org Presence Checks (Cohort OR Site+School) ---
     const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
-    const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
     const schoolField = Object.keys(user).find((key) => key.toLowerCase() === 'school');
 
     // Parse and check if arrays are non-empty after splitting and trimming
@@ -362,13 +359,7 @@ const onFileUpload = async (event) => {
         .split(',')
         .map((s) => s.trim())
         .filter((s) => s).length > 0;
-    const hasSite =
-      siteField &&
-      user[siteField] &&
-      user[siteField]
-        .split(',')
-        .map((s) => s.trim())
-        .filter((s) => s).length > 0;
+
     const hasSchool =
       schoolField &&
       user[schoolField] &&
@@ -376,10 +367,6 @@ const onFileUpload = async (event) => {
         .split(',')
         .map((s) => s.trim())
         .filter((s) => s).length > 0;
-
-    if (!hasSite) {
-      missingFields.push('Site');
-    }
 
     if (!hasCohort && !hasSchool) {
       missingFields.push('Cohort OR School');
@@ -480,7 +467,20 @@ async function submitUsers() {
     return;
   }
 
+  if (currentSite.value === 'any') {
+    toast.add({
+      severity: 'warn',
+      summary: 'Warning',
+      detail: 'Please select a site before adding users',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    activeSubmit.value = false;
+    return;
+  }
+
   // Check orgs exist
+  const currentSiteData = await fetchDocById('districts', currentSite);
+
   for (const { user, index } of usersToBeRegistered) {
     try {
       // Find fields case-insensitively
@@ -495,19 +495,22 @@ async function submitUsers() {
             .split(',')
             .map((s) => s.trim())
             .filter((s) => s)
-        : [];
+        : [currentSiteData?.name];
+
       const schools = schoolField
         ? user[schoolField]
             .split(',')
             .map((s) => s.trim())
             .filter((s) => s)
         : [];
+
       const classes = classField
         ? user[classField]
             .split(',')
             .map((s) => s.trim())
             .filter((s) => s)
         : [];
+
       const cohorts = cohortField
         ? user[cohortField]
             .split(',')
@@ -573,11 +576,10 @@ async function submitUsers() {
                 let schoolFound = false;
                 for (const siteName of sites) {
                   try {
-                    const siteId = await getOrgId('districts', siteName);
                     const schoolId = await getOrgId(
                       pluralizeFirestoreCollection(orgType),
                       schoolName,
-                      ref(siteId),
+                      ref(currentSiteData?.id),
                       ref(undefined),
                     );
                     orgInfo.schools.push(schoolId);
@@ -602,12 +604,11 @@ async function submitUsers() {
                 for (const siteName of sites) {
                   for (const schoolName of schools) {
                     try {
-                      const siteId = await getOrgId('districts', siteName);
                       const schoolId = await getOrgId('schools', schoolName);
                       const classId = await getOrgId(
                         pluralizeFirestoreCollection(orgType),
                         className,
-                        ref(siteId),
+                        ref(currentSiteData?.id),
                         ref(schoolId),
                       );
                       orgInfo.classes.push(classId);
@@ -739,7 +740,7 @@ async function submitUsers() {
 
       // This is the most likely place for an error, due to
       // permissions, etc. If so, drop to Catch block
-      const res = await authStore.createUsers(processedUsers);
+      const res = await createUsers(processedUsers);
       const currentRegisteredUsers = res.data.data;
 
       // Update only the newly registered users

@@ -8,12 +8,11 @@
       </div>
     </div>
     <div v-else class="flex gap-2 options-wrapper">
-
-      <div v-if="authStore.shouldUsePermissions">
+      <div v-if="authStore.shouldUsePermissions" class="flex align-items-center gap-2">
         <label for="site-select">Site:</label>
         <PvSelect
           :options="siteOptions"
-          :value="authStore.currentSite"
+          :value="selectedSite?.value"
           :optionValue="(o) => o.value"
           :optionLabel="(o) => o.label"
           class="options-site"
@@ -21,7 +20,8 @@
         >
           <template #value>
             <i class="pi pi-building"></i>
-            </template>
+            {{ selectedSite?.label || 'Select Site' }}
+          </template>
         </PvSelect>
       </div>
 
@@ -56,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import PvButton from 'primevue/button';
 import PvSelect from 'primevue/select';
@@ -78,6 +78,11 @@ interface DropdownChangeEvent {
   value: string;
 }
 
+interface SiteOption {
+  siteId: string;
+  siteName: string;
+}
+
 const authStore = useAuthStore();
 const siteOptions = ref<DropdownOption[]>([]);
 const i18n = useI18n();
@@ -85,15 +90,26 @@ const router = useRouter();
 const { mutate: signOut } = useSignOutMutation();
 const feedbackButton = ref<HTMLButtonElement | null>(null);
 
+const props = defineProps<Props>();
+
 onMounted(() => {
-  siteOptions.value = (authStore.sites as {siteId: string, siteName: string}[]).map((site: {siteId: string, siteName: string}) => ({ label: site.siteName, value: site.siteId }));
+  if (authStore.isUserSuperAdmin()) {
+    siteOptions.value = [{ label: 'All sites', value: 'any' }];
+  } else {
+    siteOptions.value = authStore.sites.map((site: SiteOption) => ({
+      label: site.siteName,
+      value: site.siteId,
+    }));
+  }
 });
+
+const selectedSite = computed<DropdownOption | null>(
+  () => siteOptions.value?.find((siteOption) => siteOption?.value === authStore.currentSite) || null,
+);
 
 const handleSiteChange = (e: DropdownChangeEvent): void => {
   authStore.currentSite = e.value;
 };
-
-const props = defineProps<Props>();
 
 const helpOptions: DropdownOption[] = [
   { label: 'Researcher Documentation', value: 'researcherDocumentation' },
@@ -130,11 +146,16 @@ const handleProfileChange = (e: DropdownChangeEvent): void => {
     }
   }
 }
+
 .nav-user-wrapper {
   display: flex;
   align-items: center;
   outline: 1.2px solid rgba(0, 0, 0, 0.1);
   border-radius: 0.3rem;
   padding: 0.5rem 0.8rem;
+}
+
+.options-site {
+  max-width: 300px;
 }
 </style>

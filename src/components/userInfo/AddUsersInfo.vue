@@ -40,9 +40,6 @@
       <li><b>caregiverId</b> - A unique identifier (id) for the child's caregiver.</li>
       <li><b>teacherId</b> - A unique identifier (id) for the child's teacher.</li>
       <li>
-        <b>site</b><span class="field-marker">*</span> - The name of the site you created from the Add Groups page.
-      </li>
-      <li>
         One of the following<span class="field-marker">*</span>:
         <ul class="nested-list">
           <li><b>cohort</b> - The name of the cohort.</li>
@@ -87,7 +84,7 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
 import PvPanel from 'primevue/panel';
 
 const generateTemplateFile = () => {
-  const headers = ['id', 'userType', 'month', 'year', 'caregiverId', 'teacherId', 'site', 'school', 'class', 'cohort'];
+  const headers = ['id', 'userType', 'month', 'year', 'caregiverId', 'teacherId', 'school', 'class', 'cohort'];
   const csvContent = headers.join(',') + '\n';
   return new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
 };
@@ -105,7 +102,7 @@ const downloadTemplate = () => {
 };
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .info-message-container {
   display: flex;
   background-color: rgb(252, 252, 218);
