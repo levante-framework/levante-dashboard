@@ -39,6 +39,9 @@
       </li>
       <li><b>caregiverId</b> - A unique identifier (id) for the child's caregiver.</li>
       <li><b>teacherId</b> - A unique identifier (id) for the child's teacher.</li>
+      <li v-if="!shouldUsePermissions">
+        <b>site</b><span class="field-marker">*</span> - The name of the site you created from the Add Groups page.
+      </li>
       <li>
         One of the following<span class="field-marker">*</span>:
         <ul class="nested-list">
@@ -70,8 +73,16 @@
     </p>
     <div class="csv-example-image-container">
       <img
+        v-if="!shouldUsePermissions"
         id="add-users-example-image"
         :src="LEVANTE_STATIC_ASSETS_URL + '/add_users_example.png'"
+        alt="Add Users CSV Example "
+        class="csv-example-image"
+      />
+      <img
+        v-else
+        id="add-users-example-image"
+        :src="LEVANTE_STATIC_ASSETS_URL + '/add_users_example_with_permissions.png'"
         alt="Add Users CSV Example "
         class="csv-example-image"
       />
@@ -81,10 +92,21 @@
 
 <script setup>
 import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
+import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
 import PvPanel from 'primevue/panel';
 
+const authStore = useAuthStore();
+const { shouldUsePermissions } = storeToRefs(authStore);
+
 const generateTemplateFile = () => {
-  const headers = ['id', 'userType', 'month', 'year', 'caregiverId', 'teacherId', 'school', 'class', 'cohort'];
+  const headers = ['id', 'userType', 'month', 'year', 'caregiverId', 'teacherId', 'site', 'school', 'class', 'cohort'];
+
+  if (shouldUsePermissions.value) {
+    const siteIndex = headers.indexOf('site');
+    if (siteIndex != -1) headers.splice(siteIndex, 1);
+  }
+
   const csvContent = headers.join(',') + '\n';
   return new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
 };

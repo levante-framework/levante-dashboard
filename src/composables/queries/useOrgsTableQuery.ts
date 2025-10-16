@@ -27,8 +27,10 @@ const useOrgsTableQuery = (
   queryOptions?: UseQueryOptions,
 ): UseQueryReturnType => {
   const authStore = useAuthStore();
-  const { adminOrgs } = storeToRefs(authStore);
+  const { userClaims } = storeToRefs(authStore);
   const { isUserSuperAdmin } = authStore;
+
+  const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
 
   // Determine select fields based on org type
   const selectFields = computed(() => {

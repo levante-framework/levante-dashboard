@@ -1,9 +1,8 @@
-import { computed, type MaybeRefOrGetter } from 'vue';
+import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { orgFetcher } from '@/helpers/query/orgs';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { DISTRICTS_LIST_QUERY_KEY } from '@/constants/queryKeys';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { useAuthStore } from '@/store/auth';
@@ -15,13 +14,8 @@ import { useAuthStore } from '@/store/auth';
  * @returns {UseQueryResult} The TanStack query result.
  */
 const useDistrictsListQuery = (queryOptions?: UseQueryOptions): UseQueryReturnType => {
-  // Fetch the user claims.
-  const { data: userClaims } = useUserClaimsQuery({
-    enabled: queryOptions?.enabled ?? true,
-  });
-
   const authStore = useAuthStore();
-  const { isUserAdmin } = authStore;
+  const { isUserSuperAdmin, userClaims } = authStore;
 
   // Get admin's administation orgs.
   const administrationOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
@@ -33,7 +27,7 @@ const useDistrictsListQuery = (queryOptions?: UseQueryOptions): UseQueryReturnTy
 
   return useQuery({
     queryKey: [DISTRICTS_LIST_QUERY_KEY],
-    queryFn: () => orgFetcher(FIRESTORE_COLLECTIONS.DISTRICTS, undefined, isUserAdmin(), administrationOrgs),
+    queryFn: () => orgFetcher(FIRESTORE_COLLECTIONS.DISTRICTS, undefined, ref(isUserSuperAdmin()), administrationOrgs),
     enabled: isQueryEnabled,
     ...options,
   });

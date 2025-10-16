@@ -36,6 +36,26 @@
         <PvTabPanels>
           <PvTabPanel v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">
             <div class="grid column-gap-3 mt-2">
+              <div
+                v-if="!shouldUsePermissions && orgType.id !== 'districts'"
+                class="col-12 md:col-6 lg:col-3 xl:col-3 mt-3"
+              >
+                <PvFloatLabel>
+                  <PvSelect
+                    v-model="selectedDistrict"
+                    input-id="district"
+                    :options="allDistricts"
+                    option-label="name"
+                    option-value="id"
+                    :loading="isLoadingDistricts"
+                    class="w-full"
+                    data-cy="dropdown-selected-district"
+                    showClear
+                  />
+                  <label for="district">Select site</label>
+                </PvFloatLabel>
+              </div>
+
               <div v-if="orgType.id === 'classes'" class="col-12 md:col-6 lg:col-3 xl:col-3 mt-3">
                 <PvFloatLabel>
                   <PvSelect
@@ -47,8 +67,9 @@
                     :loading="isLoadingSchools"
                     class="w-full"
                     data-cy="dropdown-parent-school"
+                    showClear
                   />
-                  <label for="school">School</label>
+                  <label for="school">Select school</label>
                 </PvFloatLabel>
               </div>
             </div>
@@ -202,9 +223,11 @@ import GroupAssignmentsModal from '@/components/modals/GroupAssignmentsModal.vue
 import PermissionGuard from '@/components/PermissionGuard.vue';
 import { ROLES } from '@/constants/roles';
 import { normalizeToLowercase } from '@/helpers';
+import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 
 const router = useRouter();
 const initialized = ref(false);
+const selectedDistrict = ref(undefined);
 const selectedSchool = ref(undefined);
 const orderBy = ref(orderByDefault);
 let activationCode = ref(null);
@@ -239,10 +262,12 @@ const addUsers = () => {
 };
 
 const authStore = useAuthStore();
-const { adminOrgs, currentSite, roarfirekit, userClaims } = storeToRefs(authStore);
+const { currentSite, roarfirekit, shouldUsePermissions, userClaims } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
 
+const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
 const claimsLoaded = computed(() => !!userClaims.value?.claims);
+const selectedSite = computed(() => (shouldUsePermissions.value ? currentSite.value : selectedDistrict.value));
 
 const orgHeaders = computed(() => {
   return {
@@ -265,11 +290,15 @@ const activeOrgType = computed({
   },
 });
 
-const schoolQueryEnabled = computed(() => {
-  return claimsLoaded.value && !!currentSite.value;
+const { isLoading: isLoadingDistricts, data: allDistricts } = useDistrictsListQuery({
+  enabled: !shouldUsePermissions.value,
 });
 
-const { isLoading: isLoadingSchools, data: allSchools } = useDistrictSchoolsQuery(currentSite, {
+const schoolQueryEnabled = computed(() => {
+  return claimsLoaded.value && !!selectedSite.value;
+});
+
+const { isLoading: isLoadingSchools, data: allSchools } = useDistrictSchoolsQuery(selectedSite, {
   enabled: schoolQueryEnabled,
 });
 
@@ -277,7 +306,7 @@ const {
   isLoading,
   isFetching,
   data: orgData,
-} = useOrgsTableQuery(activeOrgType, currentSite, selectedSchool, orderBy, {
+} = useOrgsTableQuery(activeOrgType, selectedSite, selectedSchool, orderBy, {
   enabled: claimsLoaded,
 });
 
@@ -317,7 +346,7 @@ function copyToClipboard(text) {
 const exportAll = async () => {
   const exportData = await orgFetchAll(
     activeOrgType,
-    currentSite,
+    selectedSite,
     selectedSchool,
     orderBy,
     isUserSuperAdmin(),
@@ -617,7 +646,7 @@ watch(allSchools, (newValue) => {
 });
 
 const tableKey = ref(0);
-watch([currentSite, selectedSchool], () => {
+watch([selectedSite, selectedSchool], () => {
   tableKey.value += 1;
 });
 

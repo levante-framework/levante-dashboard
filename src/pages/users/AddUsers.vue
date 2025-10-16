@@ -126,7 +126,7 @@ import { storeToRefs } from 'pinia';
 import { fetchDocById } from '@/helpers/query/utils';
 
 const authStore = useAuthStore();
-const { currentSite } = storeToRefs(authStore);
+const { currentSite, shouldUsePermissions } = storeToRefs(authStore);
 const { createUsers } = authStore;
 const toast = useToast();
 const isFileUploaded = ref(false);
@@ -172,6 +172,14 @@ const allFields = [
     dataType: 'string',
   },
 ];
+
+if (!shouldUsePermissions.value) {
+  allFields.push({
+    field: 'site',
+    header: 'Site',
+    dataType: 'string',
+  });
+}
 
 // Error Users Table refs
 const errorTable = ref();
@@ -260,6 +268,7 @@ const onFileUpload = async (event) => {
     return userTypeValue && user[userTypeValue].toLowerCase() === 'child';
   });
 
+  // If we have child users, they MUST have month and year
   if (hasChild) {
     const hasMonth = allColumns.includes('month');
     const hasYear = allColumns.includes('year');
@@ -286,6 +295,19 @@ const onFileUpload = async (event) => {
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     return;
+  }
+
+  if (!shouldUsePermissions.value) {
+    const hasSite = allColumns.includes('site');
+
+    if (!hasSite) {
+      return toast.add({
+        severity: 'error',
+        summary: 'Error: Missing Column',
+        detail: 'Missing required column(s): Site',
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+    }
   }
 
   // Check required fields are not empty
@@ -370,6 +392,21 @@ const onFileUpload = async (event) => {
 
     if (!hasCohort && !hasSchool) {
       missingFields.push('Cohort OR School');
+    }
+
+    if (!shouldUsePermissions.value) {
+      const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
+      const hasSite =
+        siteField &&
+        user[siteField] &&
+        user[siteField]
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s).length > 0;
+
+      if (!hasSite) {
+        missingFields.push('Site');
+      }
     }
 
     // --- Aggregate Errors and Add User to Error List if Needed ---
@@ -467,19 +504,23 @@ async function submitUsers() {
     return;
   }
 
-  if (currentSite.value === 'any') {
-    toast.add({
+  if (shouldUsePermissions.value && currentSite.value === 'any') {
+    activeSubmit.value = false;
+
+    return toast.add({
       severity: 'warn',
       summary: 'Warning',
       detail: 'Please select a site before adding users',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
-    activeSubmit.value = false;
-    return;
   }
 
   // Check orgs exist
-  const currentSiteData = await fetchDocById('districts', currentSite);
+  let currentSiteData = null;
+
+  if (shouldUsePermissions.value) {
+    currentSiteData = await fetchDocById('districts', currentSite);
+  }
 
   for (const { user, index } of usersToBeRegistered) {
     try {
@@ -491,11 +532,17 @@ async function submitUsers() {
 
       // Get values using the actual field names and parse as comma-separated arrays
       const sites = siteField
-        ? user[siteField]
+        ? // If csv has site column
+          user[siteField]
             .split(',')
             .map((s) => s.trim())
             .filter((s) => s)
-        : [currentSiteData?.name];
+        : // If NOT, check for usePermissions
+        shouldUsePermissions.value
+        ? // If usePermissions, pass currentSite's data
+          [currentSiteData?.name]
+        : // If NOT, no site was provided
+          [];
 
       const schools = schoolField
         ? user[schoolField]
@@ -576,10 +623,11 @@ async function submitUsers() {
                 let schoolFound = false;
                 for (const siteName of sites) {
                   try {
+                    const siteId = await getOrgId('districts', siteName);
                     const schoolId = await getOrgId(
                       pluralizeFirestoreCollection(orgType),
                       schoolName,
-                      ref(currentSiteData?.id),
+                      ref(siteId),
                       ref(undefined),
                     );
                     orgInfo.schools.push(schoolId);
@@ -604,11 +652,12 @@ async function submitUsers() {
                 for (const siteName of sites) {
                   for (const schoolName of schools) {
                     try {
+                      const siteId = await getOrgId('districts', siteName);
                       const schoolId = await getOrgId('schools', schoolName);
                       const classId = await getOrgId(
                         pluralizeFirestoreCollection(orgType),
                         className,
-                        ref(currentSiteData?.id),
+                        ref(siteId),
                         ref(schoolId),
                       );
                       orgInfo.classes.push(classId);

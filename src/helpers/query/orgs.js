@@ -11,7 +11,6 @@ import {
   fetchDocById,
   getAxiosInstance,
   mapFields,
-  orderByDefault,
   getBaseDocumentPath,
   orderByNameASC,
 } from '@/helpers/query/utils';
@@ -19,15 +18,15 @@ import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 
 export const getOrgsRequestBody = ({
-  orgType,
+  aggregationQuery,
+  orderBy,
   orgNormalizedName,
+  orgType,
+  page,
+  pageLimit,
+  paginate = true,
   parentDistrict,
   parentSchool,
-  orderBy,
-  aggregationQuery,
-  pageLimit,
-  page,
-  paginate = true,
   select = ['id', 'name', 'tags'],
 }) => {
   const requestBody = {
@@ -327,24 +326,34 @@ export const orgPageFetcher = async (
   adminOrgs,
   select = ['id', 'name', 'tags'],
 ) => {
-  const districtId = toValue(selectedDistrict) !== 'any' ? toValue(selectedDistrict) : null;
-
+  const districtId = selectedDistrict.value === 'any' ? null : selectedDistrict.value;
   const axiosInstance = getAxiosInstance();
   const requestBody = getOrgsRequestBody({
-    orgType: activeOrgType.value,
-    parentDistrict: districtId,
-    parentSchool: selectedSchool.value,
     aggregationQuery: false,
     orderBy: orderBy.value,
+    orgType: activeOrgType.value,
+    page: page.value,
     pageLimit: pageLimit.value,
     paginate: true,
-    page: page.value,
+    parentDistrict: districtId,
+    parentSchool: selectedSchool.value,
     select,
   });
 
   try {
     return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => {
-      return mapFields(data);
+      let mappedData = mapFields(data);
+      let filteredData = mappedData;
+
+      if (isSuperAdmin.value) {
+        return mappedData;
+      }
+
+      if (activeOrgType.value === ORG_TYPES.DISTRICTS && adminOrgs.value.districts.length > 0) {
+        filteredData = mappedData?.filter((org) => adminOrgs.value.districts.includes(org?.id));
+      }
+
+      return activeOrgType.value === ORG_TYPES.DISTRICTS || districtId ? filteredData : [];
     });
   } catch (error) {
     console.error('Error fetching orgs', error);
@@ -360,22 +369,32 @@ export const orgFetchAll = async (
   adminOrgs,
   select,
 ) => {
-  const districtId = toValue(selectedDistrict) !== 'any' ? toValue(selectedDistrict) : null;
-
+  const districtId = selectedDistrict.value === 'any' ? null : selectedDistrict.value;
   const axiosInstance = getAxiosInstance();
   const requestBody = getOrgsRequestBody({
-    orgType: activeOrgType.value,
-    parentDistrict: districtId,
-    parentSchool: selectedSchool.value,
     aggregationQuery: false,
     orderBy: orderBy.value,
+    orgType: activeOrgType.value,
     paginate: false,
+    parentDistrict: districtId,
+    parentSchool: selectedSchool.value,
     select,
   });
 
   try {
     return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => {
-      return mapFields(data);
+      let mappedData = mapFields(data);
+      let filteredData = mappedData;
+
+      if (isSuperAdmin.value) {
+        return mappedData;
+      }
+
+      if (activeOrgType.value === ORG_TYPES.DISTRICTS && adminOrgs.value.districts.length > 0) {
+        filteredData = mappedData?.filter((org) => adminOrgs.value.districts.includes(org?.id));
+      }
+
+      return activeOrgType.value === ORG_TYPES.DISTRICTS || districtId ? filteredData : [];
     });
   } catch (error) {
     console.error('Error fetching orgs', error);

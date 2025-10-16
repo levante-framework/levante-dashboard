@@ -16,6 +16,26 @@
           <PvTabPanels>
             <PvTabPanel v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">
               <div class="grid column-gap-3 mt-2">
+                <div
+                  v-if="!shouldUsePermissions && orgType.id !== 'districts'"
+                  class="col-6 md:col-5 lg:col-5 xl:col-5 mt-3"
+                >
+                  <PvFloatLabel>
+                    <PvSelect
+                      v-model="selectedDistrict"
+                      input-id="district"
+                      :options="allDistricts"
+                      option-label="name"
+                      option-value="id"
+                      :loading="isLoadingDistricts"
+                      class="w-full"
+                      data-cy="dropdown-selected-district"
+                      showClear
+                    />
+                    <label for="district">Select site</label>
+                  </PvFloatLabel>
+                </div>
+
                 <div v-if="orgType.id === 'classes'" class="col-6 md:col-5 lg:col-5 xl:col-5 mt-3">
                   <PvFloatLabel>
                     <PvSelect
@@ -29,7 +49,7 @@
                       option-value="id"
                       showClear
                     />
-                    <label for="school">Select from school</label>
+                    <label for="school">Select school</label>
                   </PvFloatLabel>
                 </div>
               </div>
@@ -39,6 +59,7 @@
                   :options="orgData"
                   :multiple="!forParentOrg"
                   :meta-key-selection="false"
+                  :empty-message="isLoadingOrgData ? 'Loading options...' : 'No available options'"
                   option-label="name"
                   class="w-full"
                   list-style="max-height:20rem"
@@ -101,6 +122,7 @@ import { orgFetcher, orgFetchAll } from '@/helpers/query/orgs';
 import { orderByNameASC } from '@/helpers/query/utils';
 import PvFloatLabel from 'primevue/floatlabel';
 import { convertToGroupName } from '@/helpers';
+import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 
 interface OrgItem {
   id: string;
@@ -136,10 +158,13 @@ interface Emits {
 
 const initialized = ref<boolean>(false);
 const authStore = useAuthStore();
-const { currentSite, roarfirekit, userClaims } = storeToRefs(authStore);
+const { currentSite, roarfirekit, shouldUsePermissions, userClaims } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
 
+const selectedDistrict = ref<string | undefined>();
 const selectedSchool = ref<string | undefined>(undefined);
+
+const selectedSite = computed(() => (shouldUsePermissions.value ? currentSite.value : selectedDistrict.value));
 
 const props = withDefaults(defineProps<Props>(), {
   orgs: () => ({
@@ -207,20 +232,24 @@ const activeOrgTypeValue = computed<string | number>({
   },
 });
 
-const schoolQueryEnabled = computed((): boolean => currentSite.value !== undefined);
+const { isLoading: isLoadingDistricts, data: allDistricts } = useDistrictsListQuery({
+  enabled: !shouldUsePermissions.value,
+});
+
+const schoolQueryEnabled = computed((): boolean => selectedSite.value !== undefined);
 
 const { isLoading: isLoadingSchools, data: allSchools } = useQuery({
-  queryKey: ['schools', currentSite],
-  queryFn: () => orgFetcher('schools', currentSite, ref(isUserSuperAdmin()), adminOrgs),
+  queryKey: ['schools', selectedSite],
+  queryFn: () => orgFetcher('schools', selectedSite, ref(isUserSuperAdmin()), adminOrgs),
   placeholderData: (previousData) => previousData,
   enabled: schoolQueryEnabled,
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
-const { data: orgData } = useQuery({
-  queryKey: ['orgs', activeOrgType, currentSite, selectedSchool],
+const { data: orgData, isLoading: isLoadingOrgData } = useQuery({
+  queryKey: ['orgs', activeOrgType, selectedSite, selectedSchool],
   queryFn: () =>
-    orgFetchAll(activeOrgType, currentSite, selectedSchool, ref(orderByNameASC), ref(isUserSuperAdmin()), adminOrgs, [
+    orgFetchAll(activeOrgType, selectedSite, selectedSchool, ref(orderByNameASC), ref(isUserSuperAdmin()), adminOrgs, [
       'id',
       'name',
       'districtId',
