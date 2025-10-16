@@ -48,9 +48,9 @@ const useOrgsTableQuery = (
   const selectFields = computed(() => {
     const orgType = typeof activeOrgType === 'function' ? activeOrgType() : activeOrgType.value || activeOrgType;
     if (orgType === 'groups') {
-      return ['id', 'name', 'tags', 'parentOrgId'];
+      return ['id', 'name', 'tags', 'parentOrgId', 'createdBy'];
     }
-    return ['id', 'name', 'tags'];
+    return ['id', 'name', 'tags', 'createdBy'];
   });
 
   return useQuery({
