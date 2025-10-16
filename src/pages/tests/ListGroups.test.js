@@ -37,6 +37,14 @@ vi.mock('@/store/auth', () => ({
     roarfirekit: ref({
       restConfig: true,
     }),
+    currentSite: ref(null),
+    shouldUsePermissions: ref(false),
+    userClaims: ref({
+      claims: {
+        adminOrgs: ['mock-org-id-1', 'mock-org-id-2'],
+      },
+    }),
+    isUserSuperAdmin: vi.fn(() => false),
   })),
 }));
 
@@ -49,6 +57,36 @@ vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
         },
       },
     },
+  }),
+}));
+
+vi.mock('@/composables/queries/useDistrictsListQuery', () => ({
+  default: () => ({
+    isLoading: ref(false),
+    data: ref([]),
+  }),
+}));
+
+vi.mock('@/composables/queries/useDistrictSchoolsQuery', () => ({
+  default: () => ({
+    isLoading: ref(false),
+    data: ref([]),
+  }),
+}));
+
+vi.mock('@/composables/queries/useOrgsTableQuery', () => ({
+  default: () => ({
+    isLoading: ref(false),
+    isFetching: ref(false),
+    data: ref([]),
+  }),
+}));
+
+vi.mock('@/composables/queries/useAdministrationsListQuery', () => ({
+  useFullAdministrationsListQuery: () => ({
+    isLoading: ref(false),
+    isFetching: ref(false),
+    data: ref([]),
   }),
 }));
 

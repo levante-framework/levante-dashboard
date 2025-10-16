@@ -9,6 +9,8 @@ import ConfirmService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
 
+const mockCurrentSite = 'DlAhRnbOFDnCF5AwEkhB';
+const mockIsUserSuperAdmin = vi.fn();
 const mockAdministration = {
   id: 'DlAhRnbOFDnCF5AwEkhB',
   name: 'Newest assignment',
@@ -116,6 +118,8 @@ describe('HomeAdministrator', () => {
     vi.mock('@/store/auth', () => ({
       useAuthStore: vi.fn(() => ({
         $subscribe: vi.fn(),
+        isUserSuperAdmin: mockIsUserSuperAdmin,
+        currentSite: ref(mockCurrentSite),
         roarfirekit: ref({
           restConfig: true,
         }),
@@ -129,40 +133,6 @@ describe('HomeAdministrator', () => {
           direction: 'ASCENDING',
         },
       ],
-    }));
-
-    vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
-      default: vi.fn(() => ({
-        data: ref({
-          id: 'zbTRSOS70cNGWyu2Ecc4T2aOU2y2',
-          collectionValue: 'userClaims',
-          lastUpdated: 1741677423988,
-          testData: false,
-          claims: {
-            // will evenutally want to mock both
-            // super_admin view and admin view
-            super_admin: true,
-            minimalAdminOrgs: {
-              groups: [],
-              schools: [],
-              districts: [],
-              families: [],
-              classes: [],
-            },
-            adminOrgs: {
-              groups: [],
-              schools: [],
-              families: [],
-              districts: [],
-              classes: [],
-            },
-            roarUid: 'zbTRSOS70cNGWyu2Ecc4T2aOU2y2',
-            assessmentUid: 'mlrlu8rqPYh3IeXKHT83UpVMtzE2',
-            admin: true,
-            adminUid: 'zbTRSOS70cNGWyu2Ecc4T2aOU2y2',
-          },
-        }),
-      })),
     }));
 
     // mocking PvChart since it is used within CardAdministration and throwing errors.

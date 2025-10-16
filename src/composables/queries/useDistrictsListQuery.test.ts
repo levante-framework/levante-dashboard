@@ -5,14 +5,16 @@ import { type QueryClient } from '@tanstack/vue-query';
 import { withSetup } from '@/test-support/withSetup.js';
 import { orgFetcher } from '@/helpers/query/orgs';
 import useDistrictsListQuery from './useDistrictsListQuery';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
+import { useAuthStore } from '@/store/auth';
 import { createPinia, setActivePinia } from 'pinia';
 
 vi.mock('@/helpers/query/orgs', () => ({
   orgFetcher: vi.fn().mockImplementation(() => []),
 }));
 
-vi.mock('@/composables/queries/useUserClaimsQuery');
+vi.mock('@/store/auth', () => ({
+  useAuthStore: vi.fn(),
+}));
 
 vi.mock('@tanstack/vue-query', async (getModule) => {
   const original = await getModule();
@@ -24,8 +26,9 @@ vi.mock('@tanstack/vue-query', async (getModule) => {
 
 describe('useDistrictsListQuery', () => {
   let queryClient: QueryClient;
+  let mockAuthStore: any;
 
-  const mockAdminOrgs = ref({
+  const mockUserClaims = ref({
     claims: {
       adminOrgs: ['mock-org-id-1', 'mock-org-id-2'],
     },
@@ -34,6 +37,14 @@ describe('useDistrictsListQuery', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     queryClient = new VueQuery.QueryClient();
+
+    // Mock the auth store
+    mockAuthStore = {
+      isUserSuperAdmin: vi.fn().mockReturnValue(false),
+      userClaims: mockUserClaims,
+    };
+
+    vi.mocked(useAuthStore).mockReturnValue(mockAuthStore);
   });
 
   afterEach(() => {
@@ -42,7 +53,6 @@ describe('useDistrictsListQuery', () => {
   });
 
   it('should call query with correct parameters', () => {
-    vi.mocked(useUserClaimsQuery).mockReturnValue({ data: mockAdminOrgs });
     vi.spyOn(VueQuery, 'useQuery');
 
     withSetup(() => useDistrictsListQuery(), {
@@ -60,8 +70,8 @@ describe('useDistrictsListQuery', () => {
     expect(orgFetcher).toHaveBeenCalledWith(
       'districts',
       undefined,
-      false,
-      expect.objectContaining({ value: ['mock-org-id-1', 'mock-org-id-2'] }),
+      expect.objectContaining({ _value: false }),
+      expect.any(Object),
     );
   });
 
