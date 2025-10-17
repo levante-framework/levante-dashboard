@@ -124,7 +124,12 @@ import PvFileUpload from 'primevue/fileupload';
 import { useRouter } from 'vue-router';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { logger } from '@/logger';
+import { storeToRefs } from 'pinia';
+import { fetchDocById } from '@/helpers/query/utils';
+
 const authStore = useAuthStore();
+const { currentSite, shouldUsePermissions } = storeToRefs(authStore);
+const { createUsers } = authStore;
 const toast = useToast();
 const isFileUploaded = ref(false);
 const rawUserFile = ref({});
@@ -159,11 +164,6 @@ const allFields = [
     dataType: 'string',
   },
   {
-    field: 'site',
-    header: 'Site',
-    dataType: 'string',
-  },
-  {
     field: 'school',
     header: 'School',
     dataType: 'string',
@@ -174,6 +174,14 @@ const allFields = [
     dataType: 'string',
   },
 ];
+
+if (!shouldUsePermissions.value) {
+  allFields.push({
+    field: 'site',
+    header: 'Site',
+    dataType: 'string',
+  });
+}
 
 // Error Users Table refs
 const errorTable = ref();
@@ -269,6 +277,7 @@ const onFileUpload = async (event) => {
     return userTypeValue && user[userTypeValue].toLowerCase() === 'child';
   });
 
+  // If we have child users, they MUST have month and year
   if (hasChild) {
     const hasMonth = allColumns.includes('month');
     const hasYear = allColumns.includes('year');
@@ -286,16 +295,28 @@ const onFileUpload = async (event) => {
 
   // Conditional (Either): Cohort OR Site + School
   const hasCohort = allColumns.includes('cohort');
-  const hasSite = allColumns.includes('site');
   const hasSchool = allColumns.includes('school');
-  if (!hasCohort && (!hasSite || !hasSchool)) {
+  if (!hasCohort && !hasSchool) {
     toast.add({
       severity: 'error',
       summary: 'Error: Missing Column',
-      detail: 'Missing required column(s): Cohort OR Site and School',
+      detail: 'Missing required column(s): Cohort OR School',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     return;
+  }
+
+  if (!shouldUsePermissions.value) {
+    const hasSite = allColumns.includes('site');
+
+    if (!hasSite) {
+      return toast.add({
+        severity: 'error',
+        summary: 'Error: Missing Column',
+        detail: 'Missing required column(s): Site',
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+    }
   }
 
   // Check required fields are not empty
@@ -359,7 +380,6 @@ const onFileUpload = async (event) => {
 
     // --- Org Presence Checks (Cohort OR Site+School) ---
     const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
-    const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
     const schoolField = Object.keys(user).find((key) => key.toLowerCase() === 'school');
 
     // Parse and check if arrays are non-empty after splitting and trimming
@@ -370,13 +390,7 @@ const onFileUpload = async (event) => {
         .split(',')
         .map((s) => s.trim())
         .filter((s) => s).length > 0;
-    const hasSite =
-      siteField &&
-      user[siteField] &&
-      user[siteField]
-        .split(',')
-        .map((s) => s.trim())
-        .filter((s) => s).length > 0;
+
     const hasSchool =
       schoolField &&
       user[schoolField] &&
@@ -385,12 +399,23 @@ const onFileUpload = async (event) => {
         .map((s) => s.trim())
         .filter((s) => s).length > 0;
 
-    if (!hasSite) {
-      missingFields.push('Site');
-    }
-
     if (!hasCohort && !hasSchool) {
       missingFields.push('Cohort OR School');
+    }
+
+    if (!shouldUsePermissions.value) {
+      const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
+      const hasSite =
+        siteField &&
+        user[siteField] &&
+        user[siteField]
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s).length > 0;
+
+      if (!hasSite) {
+        missingFields.push('Site');
+      }
     }
 
     // --- Aggregate Errors and Add User to Error List if Needed ---
@@ -488,7 +513,24 @@ async function submitUsers() {
     return;
   }
 
+  if (shouldUsePermissions.value && currentSite.value === 'any') {
+    activeSubmit.value = false;
+
+    return toast.add({
+      severity: 'warn',
+      summary: 'Warning',
+      detail: 'Please select a site before adding users',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+  }
+
   // Check orgs exist
+  let currentSiteData = null;
+
+  if (shouldUsePermissions.value) {
+    currentSiteData = await fetchDocById('districts', currentSite);
+  }
+
   for (const { user, index } of usersToBeRegistered) {
     try {
       // Find fields case-insensitively
@@ -499,23 +541,32 @@ async function submitUsers() {
 
       // Get values using the actual field names and parse as comma-separated arrays
       const sites = siteField
-        ? user[siteField]
+        ? // If csv has site column
+          user[siteField]
             .split(',')
             .map((s) => s.trim())
             .filter((s) => s)
-        : [];
+        : // If NOT, check for usePermissions
+        shouldUsePermissions.value
+        ? // If usePermissions, pass currentSite's data
+          [currentSiteData?.name]
+        : // If NOT, no site was provided
+          [];
+
       const schools = schoolField
         ? user[schoolField]
             .split(',')
             .map((s) => s.trim())
             .filter((s) => s)
         : [];
+
       const classes = classField
         ? user[classField]
             .split(',')
             .map((s) => s.trim())
             .filter((s) => s)
         : [];
+
       const cohorts = cohortField
         ? user[cohortField]
             .split(',')
@@ -729,7 +780,6 @@ async function submitUsers() {
         // Ensure the key is exactly 'userType' and handle potential casing issues
         if (userTypeField) {
           const userTypeValue = user[userTypeField];
-
           // Set the key to 'userType' regardless of original casing
           processedUser.userType = userTypeValue;
           // Remove the original field if the casing was different
@@ -748,7 +798,7 @@ async function submitUsers() {
 
       // This is the most likely place for an error, due to
       // permissions, etc. If so, drop to Catch block
-      const res = await authStore.createUsers(processedUsers);
+      const res = await createUsers(processedUsers);
       logger.capture('Admin: Add Users', { processedUsers });
       const currentRegisteredUsers = res.data.data;
 
