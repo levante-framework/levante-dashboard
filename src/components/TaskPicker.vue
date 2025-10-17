@@ -256,7 +256,7 @@ const groupedTasks: Record<string, string[]> = {
   Reasoning: ['Pattern Matching'],
   'Spatial Cognition': ['Shape Rotation'],
   'Social Cognition': ['Stories', 'On Purpose or by Accident?'],
-  Attitudes: ['Survey'],
+  Attitudes: ['Survey', 'Survey Task'],
 };
 
 const namedOnly = ref<boolean>(true);

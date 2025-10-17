@@ -132,7 +132,9 @@
       "sreDescription": "Lies die Sätze so schnell wie möglich und entscheide, ob sie wahr oder falsch sind.",
       "swrDescription": "Die Wörter werden schnell auf dem Bildschirm erscheinen. Entscheide, ob sie echt oder erfunden sind.",
       "hostileAttributionName": "Mit Absicht oder durch Zufall?",
-      "hostileAttributionDescription": "Hör dir die Wörter an und wähle das passende Bild dazu aus."
+      "hostileAttributionDescription": "Hör dir die Wörter an und wähle das passende Bild dazu aus.", 
+      "childSurveyName":  "Gedanken & Gefühle", 
+      "childSurveyDescripion": "Hier geht es um Fragen zu deiner Schulzeit."
     },
     "navbar": {
       "greeting": "Hallo",
