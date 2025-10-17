@@ -29,7 +29,7 @@
           </div>
         </div>
       </div>
-      <PvTabs v-if="claimsLoaded" v-model:value="activeOrgTypeValue" lazy class="mb-7">
+      <PvTabs v-if="claimsLoaded" v-model:value="activeOrgType" lazy class="mb-7">
         <PvTabList>
           <PvTab v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">{{ orgType.header }}</PvTab>
         </PvTabList>
@@ -37,7 +37,7 @@
           <PvTabPanel v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">
             <div class="grid column-gap-3 mt-2">
               <div
-                v-if="activeOrgType === 'schools' || activeOrgType === 'classes' || activeOrgType === 'groups'"
+                v-if="!shouldUsePermissions && orgType.id !== 'districts'"
                 class="col-12 md:col-6 lg:col-3 xl:col-3 mt-3"
               >
                 <PvFloatLabel>
@@ -49,11 +49,13 @@
                     option-value="id"
                     :loading="isLoadingDistricts"
                     class="w-full"
-                    data-cy="dropdown-parent-district"
+                    data-cy="dropdown-selected-district"
+                    showClear
                   />
-                  <label for="district">Sites</label>
+                  <label for="district">Select site</label>
                 </PvFloatLabel>
               </div>
+
               <div v-if="orgType.id === 'classes'" class="col-12 md:col-6 lg:col-3 xl:col-3 mt-3">
                 <PvFloatLabel>
                   <PvSelect
@@ -65,15 +67,16 @@
                     :loading="isLoadingSchools"
                     class="w-full"
                     data-cy="dropdown-parent-school"
+                    showClear
                   />
-                  <label for="school">School</label>
+                  <label for="school">Select school</label>
                 </PvFloatLabel>
               </div>
             </div>
             <RoarDataTable
               :key="tableKey"
               :columns="tableColumns"
-              :data="filteredTableData ?? []"
+              :data="filteredTableData"
               sortable
               :loading="isTableLoading"
               :allow-filtering="false"
@@ -86,6 +89,57 @@
           </PvTabPanel>
         </PvTabPanels>
       </PvTabs>
+    </section>
+    <section class="flex mt-8 justify-content-end">
+      <PvDialog
+        v-model:visible="isDialogVisible"
+        dialog-title="text-primary"
+        :style="{ width: '50rem' }"
+        :draggable="false"
+      >
+        <template #header>
+          <h1 class="text-primary font-bold m-0">Invitation</h1>
+        </template>
+        <p class="font-bold text-lg">Link:</p>
+        <PvInputGroup>
+          <PvInputText
+            style="width: 70%"
+            :value="`https://roar.education/register/?code=${activationCode}`"
+            autocomplete="off"
+            readonly
+          />
+          <PvButton
+            class="bg-primary border-none p-2 text-white hover:bg-red-900 font-normal"
+            @click="copyToClipboard(`https://roar.education/register/?code=${activationCode}`)"
+          >
+            <i class="pi pi-copy p-2"></i>
+          </PvButton>
+        </PvInputGroup>
+        <p class="font-bold text-lg">Code:</p>
+        <PvInputGroup class="mt-3">
+          <PvInputText
+            style="width: 70%"
+            :value="activationCode"
+            autocomplete="off"
+            data-cy="input-text-activation-code"
+            readonly
+          />
+          <PvButton
+            class="bg-primary border-none p-2 text-white hover:bg-red-900"
+            data-cy="button-copy-invitation"
+            @click="copyToClipboard(activationCode)"
+          >
+            <i class="pi pi-copy p-2"></i>
+          </PvButton>
+        </PvInputGroup>
+        <div class="flex justify-content-end">
+          <PvButton
+            class="mt-3 bg-primary border-none border-round p-3 text-white hover:bg-red-900"
+            @click="closeDialog"
+            >Close</PvButton
+          >
+        </div>
+      </PvDialog>
     </section>
   </main>
   <RoarModal
@@ -137,7 +191,9 @@ import { storeToRefs } from 'pinia';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
 import PvButton from 'primevue/button';
+import PvDialog from 'primevue/dialog';
 import PvSelect from 'primevue/select';
+import PvInputGroup from 'primevue/inputgroup';
 import PvInputText from 'primevue/inputtext';
 import PvTab from 'primevue/tab';
 import PvTabList from 'primevue/tablist';
@@ -153,9 +209,6 @@ import { orgFetchAll } from '@/helpers/query/orgs';
 import { fetchUsersByOrg, countUsersByOrg } from '@/helpers/query/users';
 import { getAdministrationsByOrg } from '@/helpers/query/administrations';
 import { orderByDefault, exportCsv, fetchDocById } from '@/helpers/query/utils';
-import useUserType from '@/composables/useUserType';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 import useDistrictSchoolsQuery from '@/composables/queries/useDistrictSchoolsQuery';
 import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
 import { useFullAdministrationsListQuery } from '@/composables/queries/useAdministrationsListQuery';
@@ -169,6 +222,8 @@ import AddGroupModal from '@/components/modals/AddGroupModal.vue';
 import GroupAssignmentsModal from '@/components/modals/GroupAssignmentsModal.vue';
 import PermissionGuard from '@/components/PermissionGuard.vue';
 import { ROLES } from '@/constants/roles';
+import { normalizeToLowercase } from '@/helpers';
+import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 
 const router = useRouter();
 const initialized = ref(false);
@@ -208,14 +263,12 @@ const addUsers = () => {
 };
 
 const authStore = useAuthStore();
-const { roarfirekit } = storeToRefs(authStore);
+const { currentSite, roarfirekit, shouldUsePermissions, userClaims } = storeToRefs(authStore);
+const { isUserSuperAdmin } = authStore;
 
-const { data: userClaims } = useUserClaimsQuery({
-  enabled: initialized,
-});
-
-const { isSuperAdmin } = useUserType(userClaims);
-const adminOrgs = computed(() => userClaims?.value?.claims?.adminOrgs);
+const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
+const claimsLoaded = computed(() => !!userClaims.value?.claims);
+const selectedSite = computed(() => (shouldUsePermissions.value ? currentSite.value : selectedDistrict.value));
 
 const orgHeaders = computed(() => {
   return {
@@ -227,11 +280,8 @@ const orgHeaders = computed(() => {
 });
 
 const activeIndex = ref(0);
-const activeOrgType = computed(() => {
-  return Object.keys(orgHeaders.value)[activeIndex.value];
-});
 
-const activeOrgTypeValue = computed({
+const activeOrgType = computed({
   get() {
     return Object.keys(orgHeaders.value)[activeIndex.value];
   },
@@ -241,17 +291,15 @@ const activeOrgTypeValue = computed({
   },
 });
 
-const claimsLoaded = computed(() => !!userClaims?.value?.claims);
-
 const { isLoading: isLoadingDistricts, data: allDistricts } = useDistrictsListQuery({
-  enabled: claimsLoaded,
+  enabled: !shouldUsePermissions.value,
 });
 
 const schoolQueryEnabled = computed(() => {
-  return claimsLoaded.value && !!selectedDistrict.value;
+  return claimsLoaded.value && !!selectedSite.value;
 });
 
-const { isLoading: isLoadingSchools, data: allSchools } = useDistrictSchoolsQuery(selectedDistrict, {
+const { isLoading: isLoadingSchools, data: allSchools } = useDistrictSchoolsQuery(selectedSite, {
   enabled: schoolQueryEnabled,
 });
 
@@ -259,7 +307,7 @@ const {
   isLoading,
   isFetching,
   data: orgData,
-} = useOrgsTableQuery(activeOrgType, selectedDistrict, selectedSchool, orderBy, {
+} = useOrgsTableQuery(activeOrgType, selectedSite, selectedSchool, orderBy, {
   enabled: claimsLoaded,
 });
 
@@ -275,22 +323,34 @@ const {
 // Extract the full administrations array for getAdministrationsByOrg
 const allAdministrations = computed(() => administrationsData.value?.administrations || []);
 
-// Filtered org data based on selected cohort site
-const filteredOrgData = computed(() => {
-  if (activeOrgType.value !== 'groups' || !selectedDistrict.value || !orgData.value) {
-    return orgData.value;
-  }
-
-  return orgData.value.filter((org) => org.parentOrgId === selectedDistrict.value);
-});
+function copyToClipboard(text) {
+  navigator.clipboard
+    .writeText(text)
+    .then(function () {
+      toast.add({
+        severity: TOAST_SEVERITIES.SUCCESS,
+        summary: 'Hoorah!',
+        detail: 'Your code has been successfully copied to clipboard!',
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+    })
+    .catch(function () {
+      toast.add({
+        severity: TOAST_SEVERITIES.ERROR,
+        summary: 'Error!',
+        detail: 'Your code has not been copied to clipboard! \n Please try again',
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+    });
+}
 
 const exportAll = async () => {
   const exportData = await orgFetchAll(
     activeOrgType,
-    selectedDistrict,
+    selectedSite,
     selectedSchool,
     orderBy,
-    isSuperAdmin,
+    isUserSuperAdmin(),
     adminOrgs,
   );
   exportCsv(exportData, `roar-${activeOrgType.value}.csv`);
@@ -459,7 +519,7 @@ watchEffect(async () => {
   }
 
   // Only process if we have both org data and administrations data
-  if (!filteredOrgData.value || !allAdministrations.value) {
+  if (!orgData.value || !allAdministrations.value) {
     return;
   }
 
@@ -467,7 +527,7 @@ watchEffect(async () => {
 
   try {
     const mappedData = await Promise.all(
-      filteredOrgData.value.map(async (org) => {
+      orgData.value.map(async (org) => {
         const userCount = await countUsersByOrg(activeOrgType.value, org.id);
         const assignmentCount = getAdministrationsByOrg(org.id, activeOrgType.value, allAdministrations.value).length;
 
@@ -519,6 +579,10 @@ const closeAssignmentsModal = () => {
 const closeEditModal = () => {
   isEditModalEnabled.value = false;
   currentEditOrgId.value = null;
+};
+
+const closeDialog = () => {
+  isDialogVisible.value = false;
 };
 
 const updateOrgData = async () => {
@@ -585,38 +649,40 @@ onUnmounted(() => {
   isDialogVisible.value = false;
 });
 
-watchEffect(() => {
-  selectedDistrict.value = _get(_head(allDistricts.value), 'id');
-});
-
 watch(allSchools, (newValue) => {
   selectedSchool.value = _get(_head(newValue), 'id');
 });
 
 const tableKey = ref(0);
-watch([selectedDistrict, selectedSchool], () => {
+watch([selectedSite, selectedSchool], () => {
   tableKey.value += 1;
 });
 
 const filteredTableData = computed(() => {
-  if (!tableData.value || !sanitizedSearchString.value) {
-    return tableData.value;
+  if (searchQuery.value?.trim()?.length > 0) {
+    const normalizedSearchQuery = normalizeToLowercase(searchQuery.value);
+
+    return tableData.value?.filter((item) => {
+      const normalizedItemName = normalizeToLowercase(item?.name || '');
+
+      // Filter by name
+      if (normalizedItemName && normalizedItemName.includes(normalizedSearchQuery)) {
+        return true;
+      }
+
+      // Filter by tags if they exist
+      if (item.tags && Array.isArray(item.tags)) {
+        return item.tags.some((tag) => {
+          const normalizedTag = normalizeToLowercase(tag || '');
+          return normalizedTag.includes(normalizedSearchQuery);
+        });
+      }
+
+      return false;
+    });
   }
 
-  const query = sanitizedSearchString.value.toLowerCase().trim();
-  return tableData.value.filter((item) => {
-    // Filter by name
-    if (item.name && item.name.toLowerCase().includes(query)) {
-      return true;
-    }
-
-    // Filter by tags if they exist
-    if (item.tags && Array.isArray(item.tags)) {
-      return item.tags.some((tag) => tag.toLowerCase().includes(query));
-    }
-
-    return false;
-  });
+  return tableData.value || [];
 });
 </script>
 
