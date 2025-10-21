@@ -149,7 +149,7 @@ import _head from 'lodash/head';
 import _kebabCase from 'lodash/kebabCase';
 import _debounce from 'lodash/debounce';
 import { useAuthStore } from '@/store/auth';
-import { orgFetchAll, orgFetchAllWithCreators } from '@/helpers/query/orgs';
+import { orgFetchAll } from '@/helpers/query/orgs';
 import { fetchUsersByOrg, countUsersByOrg } from '@/helpers/query/users';
 import { getAdministrationsByOrg } from '@/helpers/query/administrations';
 import { orderByDefault, exportCsv, fetchDocById } from '@/helpers/query/utils';
