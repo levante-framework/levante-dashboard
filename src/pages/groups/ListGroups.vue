@@ -153,13 +153,13 @@ import { orgFetchAll } from '@/helpers/query/orgs';
 import { fetchUsersByOrg, countUsersByOrg } from '@/helpers/query/users';
 import { getAdministrationsByOrg } from '@/helpers/query/administrations';
 import { orderByDefault, exportCsv, fetchDocById } from '@/helpers/query/utils';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import useUserType from '@/composables/useUserType';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 import useDistrictSchoolsQuery from '@/composables/queries/useDistrictSchoolsQuery';
 import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
 import { useFullAdministrationsListQuery } from '@/composables/queries/useAdministrationsListQuery';
+import useUsersDataQuery from '@/composables/queries/useUsersDataQuery';
 import EditOrgsForm from '@/components/EditOrgsForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import { CSV_EXPORT_MAX_RECORD_COUNT } from '@/constants/csvExport';
@@ -199,18 +199,6 @@ const clearSearch = () => {
   sanitizedSearchString.value = '';
 };
 
-// Function to fetch user data by UID
-const fetchUserData = async (uid) => {
-  if (!uid) return null;
-  
-  try {
-    const userData = await fetchDocById(FIRESTORE_COLLECTIONS.USERS, uid, ['displayName', 'email']);
-    return userData;
-  } catch (error) {
-    console.warn(`Failed to fetch user data for UID: ${uid}`, error);
-    return null;
-  }
-};
 const isAddGroupModalVisible = ref(false);
 const isAssignmentsModalVisible = ref(false);
 const selectedOrgId = ref('');
@@ -295,6 +283,21 @@ const filteredOrgData = computed(() => {
   }
 
   return orgData.value.filter((org) => org.parentOrgId === selectedDistrict.value);
+});
+
+// Extract unique creator IDs from org data
+const creatorIds = computed(() => {
+  if (!filteredOrgData.value) return [];
+  return [...new Set(
+    filteredOrgData.value
+      .map(org => org.createdBy)
+      .filter(Boolean)
+  )];
+});
+
+// Fetch all creator data in a single batch query
+const { data: creatorsData } = useUsersDataQuery(creatorIds, ['displayName', 'email'], {
+  enabled: computed(() => creatorIds.value.length > 0),
 });
 
 
@@ -469,7 +472,7 @@ const isTableLoading = computed(() => {
 });
 
 watchEffect(async () => {
-  // Wait for both queries to be ready
+  // Wait for all queries to be ready
   if (isLoading.value || isLoadingAdministrations.value) {
     tableData.value = [];
     return;
@@ -483,15 +486,23 @@ watchEffect(async () => {
   isProcessingData.value = true;
 
   try {
+    // Create a map of creator data for quick lookup
+    const creatorsMap = new Map();
+    if (creatorsData.value) {
+      creatorsData.value.forEach(creator => {
+        creatorsMap.set(creator.id, creator);
+      });
+    }
+
     const mappedData = await Promise.all(
       filteredOrgData.value.map(async (org) => {
         const userCount = await countUsersByOrg(activeOrgType.value, org.id);
         const assignmentCount = getAdministrationsByOrg(org.id, activeOrgType.value, allAdministrations.value).length;
         
-        // Fetch creator data
+        // Get creator data from the map
         let creatorName = '--';
         if (org.createdBy) {
-          const creatorData = await fetchUserData(org.createdBy);
+          const creatorData = creatorsMap.get(org.createdBy);
           if (creatorData) {
             // Try to get displayName first, then email, then fall back to UID
             creatorName = creatorData.displayName || 
