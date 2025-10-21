@@ -36,11 +36,7 @@ const useUsersDataQuery = (
 
   return useQuery({
     queryKey: [USERS_DATA_QUERY_KEY, userIdsArray.value, selectFields.value],
-    queryFn: () => {
-      const userIds = userIdsArray.value;
-      const select = selectFields.value;
-      return fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, userIds, select);
-    },
+    queryFn: () => fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, userIdsArray.value, selectFields.value),
     enabled: isQueryEnabled,
     ...options,
   });

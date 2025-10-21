@@ -11,16 +11,12 @@ import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
+import { createAuthStoreMock } from '@/test-support/authStoreMock';
 
-// Mock useAuthStore
+// Mock useAuthStore using common test utility
+const authStoreMock = createAuthStoreMock();
 vi.mock('@/store/auth', () => ({
-  useAuthStore: vi.fn(() => ({
-    getUserId: vi.fn(() => 'test-user-id'),
-    $subscribe: vi.fn(),
-    roarfirekit: ref({
-      restConfig: true,
-    }),
-  })),
+  useAuthStore: vi.fn(() => authStoreMock),
 }));
 
 const mockUseUpsertOrgMutation = vi.fn();
