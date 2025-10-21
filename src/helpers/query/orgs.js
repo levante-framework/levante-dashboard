@@ -10,6 +10,7 @@ import {
   batchGetDocs,
   convertValues,
   fetchDocById,
+  fetchDocumentsById,
   getAxiosInstance,
   mapFields,
   orderByDefault,
@@ -459,6 +460,78 @@ export const orgFetchAll = async (
       return [];
     }
   }
+};
+
+/**
+ * Fetches orgs with creator data populated for createdBy fields.
+ * This extends the existing org fetching pattern to include user data.
+ *
+ * @param {String} activeOrgType – The active org type (district, school, etc.).
+ * @param {String} selectedDistrict – The selected district ID.
+ * @param {String} selectedSchool – The selected school ID.
+ * @param {String} orderBy – The order by field.
+ * @param {Boolean} isSuperAdmin – Whether the user is a super admin.
+ * @param {Object} adminOrgs – The admin's assigned orgs.
+ * @param {Array} select – The fields to select from orgs.
+ * @returns {Promise<Array>} The orgs with creator data populated.
+ */
+export const orgFetchAllWithCreators = async (
+  activeOrgType,
+  selectedDistrict,
+  selectedSchool,
+  orderBy,
+  isSuperAdmin,
+  adminOrgs,
+  select = ['id', 'name', 'tags', 'createdBy'],
+) => {
+  // First, fetch the orgs data
+  const orgs = await orgFetchAll(
+    activeOrgType,
+    selectedDistrict,
+    selectedSchool,
+    orderBy,
+    isSuperAdmin,
+    adminOrgs,
+    select,
+  );
+
+  // Extract unique creator IDs
+  const creatorIds = [...new Set(
+    orgs
+      .map(org => org.createdBy)
+      .filter(Boolean)
+  )];
+
+  if (creatorIds.length === 0) {
+    return orgs;
+  }
+
+  // Fetch creator data in batch
+  const creatorsData = await fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, creatorIds, ['displayName', 'email']);
+
+  // Create a map for quick lookup
+  const creatorsMap = new Map();
+  creatorsData.forEach(creator => {
+    creatorsMap.set(creator.id, creator);
+  });
+
+  // Add creator data to orgs
+  return orgs.map(org => {
+    let creatorName = '--';
+    if (org.createdBy) {
+      const creatorData = creatorsMap.get(org.createdBy);
+      if (creatorData) {
+        creatorName = creatorData.displayName || 
+                     creatorData.email ||
+                     org.createdBy;
+      }
+    }
+    
+    return {
+      ...org,
+      creatorName,
+    };
+  });
 };
 
 /**
