@@ -4,7 +4,7 @@ import _isEmpty from 'lodash/isEmpty';
 import useUserType from '@/composables/useUserType';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
-import { orgFetchAllWithCreators } from '@/helpers/query/orgs';
+import { orgFetchAll } from '@/helpers/query/orgs';
 import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
 import { useAuthStore } from '@/store/auth';
 import type { MaybeRefOrGetter } from 'vue';
@@ -29,9 +29,7 @@ const useOrgsWithCreatorsQuery = (
   orderBy: MaybeRefOrGetter<any>,
   queryOptions?: any,
 ) => {
-  const { data: userClaims } = useUserClaimsQuery({
-    enabled: queryOptions?.enabled ?? true,
-  });
+  const { data: userClaims } = useUserClaimsQuery();
 
   const authStore = useAuthStore();
   const { isUserSuperAdmin } = authStore;
@@ -46,7 +44,7 @@ const useOrgsWithCreatorsQuery = (
 
   // Determine select fields based on org type
   const selectFields = computed(() => {
-    const orgType = typeof activeOrgType === 'function' ? activeOrgType() : activeOrgType.value || activeOrgType;
+    const orgType = typeof activeOrgType === 'function' ? activeOrgType() : (activeOrgType as any).value || activeOrgType;
     if (orgType === 'groups') {
       return ['id', 'name', 'tags', 'parentOrgId', 'createdBy'];
     }
@@ -56,7 +54,7 @@ const useOrgsWithCreatorsQuery = (
   return useQuery({
     queryKey: [ORGS_TABLE_QUERY_KEY, 'withCreators', activeOrgType, selectedDistrict, selectedSchool, orderBy],
     queryFn: () =>
-      orgFetchAllWithCreators(
+      orgFetchAll(
         activeOrgType,
         selectedDistrict,
         selectedSchool,
@@ -64,6 +62,7 @@ const useOrgsWithCreatorsQuery = (
         isUserSuperAdmin(),
         adminOrgs,
         selectFields.value,
+        true, // includeCreators = true
       ),
     enabled: isQueryEnabled,
     ...options,
