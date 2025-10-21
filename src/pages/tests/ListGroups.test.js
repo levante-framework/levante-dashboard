@@ -5,7 +5,6 @@ import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import ListGroups from '../groups/ListGroups.vue';
-import { createAuthStoreMock } from '@/test-support/authStoreMock';
 
 const routerPush = vi.fn();
 
@@ -32,10 +31,13 @@ vi.mock('primevue/usetoast', () => ({
   }),
 }));
 
-// Mock useAuthStore using common test utility
-const authStoreMock = createAuthStoreMock();
 vi.mock('@/store/auth', () => ({
-  useAuthStore: vi.fn(() => authStoreMock),
+  useAuthStore: vi.fn(() => ({
+    $subscribe: vi.fn(),
+    roarfirekit: ref({
+      restConfig: true,
+    }),
+  })),
 }));
 
 vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
