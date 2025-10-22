@@ -6,23 +6,23 @@
 
       <PvDivider />
 
-      <div class="text-gray-500 mb-2 surface-100 border-round p-2">
+      <div class="flex align-items-center gap-3">
         <PvFileUpload
-          name="massUploader[]"
-          custom-upload
-          accept=".csv"
-          class="bg-primary mb-2 p-3 w-2 text-white border-none border-round h-3rem m-0 hover:bg-red-900"
-          auto
-          :show-upload-button="false"
+          :choose-label="
+            isFileUploaded && !errorMissingColumns && !errorUsers.length ? 'Choose Another CSV File' : 'Choose CSV File'
+          "
+          :empty-label="'Test'"
           :show-cancel-button="false"
+          :show-upload-button="false"
+          auto
+          accept=".csv"
+          custom-upload
+          mode="basic"
+          name="addUsersFile[]"
           @uploader="onFileUpload($event)"
-        >
-          <template #empty>
-            <div class="flex justify-center items-center text-gray-500">
-              <p>Click choose or drag your CSV file here to upload.</p>
-            </div>
-          </template>
-        </PvFileUpload>
+        />
+
+        <span v-if="!isFileUploaded" class="text-gray-500">No file chosen</span>
       </div>
 
       <div v-if="isFileUploaded && !errorMissingColumns && !errorUsers.length">
@@ -51,20 +51,20 @@
 
         <div class="submit-container">
           <div v-if="registeredUsers.length" class="button-group">
+            <PvButton label="Continue to Link Users" icon="pi pi-link" @click="router.push({ name: 'Link Users' })" />
             <PvButton
-              label="Continue to Link Users"
-              class="continue-button"
-              icon="pi pi-link"
-              @click="router.push({ name: 'Link Users' })"
+              label="Download Users"
+              icon="pi pi-download"
+              variant="outlined"
+              class="download-button"
+              @click="downloadCSV"
             />
-            <PvButton label="Download Users" class="download-button" icon="pi pi-download" @click="downloadCSV" />
           </div>
           <PvButton
             v-else
-            :label="activeSubmit ? 'Adding Users' : 'Start Adding Users'"
+            :label="activeSubmit ? 'Adding Users' : 'Add Users from Uploaded File'"
             :icon="activeSubmit ? 'pi pi-spin pi-spinner' : ''"
             :disabled="activeSubmit"
-            class="bg-primary mb-2 p-3 w-2 text-white border-none border-round h-3rem m-0 hover:bg-red-900"
             data-testid="start-adding-button"
             @click="submitUsers"
           />
@@ -222,8 +222,8 @@ const onFileUpload = async (event) => {
   registeredUsers.value = []; // Clear any previously registered users
   activeSubmit.value = false; // Reset the submit flag
 
-  // Read the file
-  const file = event.files[0];
+  // Read the file. In case of multiple files, use the last one.
+  const file = event.files[event.files.length - 1];
 
   // Parse the file directly with csvFileToJson
   const parsedData = await csvFileToJson(file);
@@ -969,7 +969,7 @@ const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentScho
 };
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .extra-height {
   min-height: 33vh;
 }
@@ -998,7 +998,7 @@ const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentScho
   display: flex;
   flex-direction: column;
   width: 100%;
-  margin-top: 2rem;
+  margin: 1rem 0 0;
   align-items: flex-start;
 }
 
@@ -1011,27 +1011,10 @@ const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentScho
 }
 
 .download-button {
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  height: 2.5rem;
-  width: auto;
-}
-
-.continue-button {
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  height: 3.5rem;
-  width: auto;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  &:hover {
+    background: var(--primary-color);
+    color: white;
+  }
 }
 
 .error {
@@ -1041,6 +1024,7 @@ const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentScho
 .datatable {
   border: 1px solid var(--surface-d);
   border-radius: 5px;
+  margin: 1rem 0 0;
 }
 
 .error-container {
