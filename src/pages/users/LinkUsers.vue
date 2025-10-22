@@ -3,23 +3,23 @@
     <section class="main-body">
       <LinkUsersInfo />
 
-      <div v-if="!isFileUploaded" class="text-gray-500 mb-2 surface-100 border-round p-2 mt-5">
+      <PvDivider />
+
+      <div class="flex align-items-center gap-3">
         <PvFileUpload
-          name="linkUsersUploader[]"
-          custom-upload
-          accept=".csv"
-          class="bg-primary mb-2 p-3 w-2 text-white border-none border-round h-3rem m-0 hover:bg-red-900"
-          auto
-          :show-upload-button="false"
+          :choose-label="isFileUploaded && !errorUsers.length ? 'Choose Another CSV File' : 'Choose CSV File'"
+          :empty-label="'Test'"
           :show-cancel-button="false"
+          :show-upload-button="false"
+          auto
+          accept=".csv"
+          custom-upload
+          mode="basic"
+          name="linkUsersFile[]"
           @uploader="onFileUpload($event)"
-        >
-          <template #empty>
-            <div class="flex justify-center items-center text-gray-500">
-              <p>Click choose or drag and drop files to here to upload.</p>
-            </div>
-          </template>
-        </PvFileUpload>
+        />
+
+        <span v-if="!isFileUploaded" class="text-gray-500">No file chosen</span>
       </div>
 
       <div v-if="isFileUploaded && !errorUsers.length">
@@ -46,9 +46,8 @@
         <div class="submit-container">
           <PvButton
             :label="activeSubmit ? 'Linking Users' : 'Start Linking'"
-            :icon="activeSubmit ? 'pi pi-spin pi-spinner' : ''"
+            :icon="activeSubmit ? 'pi pi-spin pi-spinner' : 'pi pi-link'"
             :disabled="activeSubmit"
-            class="bg-primary mb-2 p-3 w-2 text-white border-none border-round h-3rem m-0 hover:bg-red-900"
             @click="submitUsers"
           />
         </div>
@@ -94,6 +93,7 @@ import _forEach from 'lodash/forEach';
 import _startCase from 'lodash/startCase';
 import _isEmpty from 'lodash/isEmpty';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import PvDivider from 'primevue/divider';
 
 const authStore = useAuthStore();
 const toast = useToast();
