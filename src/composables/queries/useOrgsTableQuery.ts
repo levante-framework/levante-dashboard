@@ -19,6 +19,8 @@ import type { MaybeRefOrGetter } from 'vue';
  * This extends the existing org fetching pattern to include user data for createdBy fields
  * using a single batch query instead of N+1 queries for better performance.
  *
+ * @TODO: Explore the possibility of removing this query in favour of more granular queries for each org type.
+ *
  * @param {String} activeOrgType – The active org type (district, school, etc.).
  * @param {String} selectedDistrict – The selected district ID.
  * @param {String} selectedSchool – The selected school ID.
