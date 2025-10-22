@@ -341,10 +341,60 @@ export const fetchSubcollection = async (
   }
 };
 
-export const fetchAdminsBySiteId = async (siteId = '', db = FIRESTORE_DATABASES.ADMIN) => {
-  if (typeof siteId !== 'string' || siteId.length <= 0) return [];
-
+export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABASES.ADMIN) => {
   const axiosInstance = getAxiosInstance(db);
+
+  const filters = [
+    {
+      fieldFilter: {
+        field: { fieldPath: 'roles' },
+        op: 'ARRAY_CONTAINS',
+        value: {
+          mapValue: {
+            fields: {
+              siteId: { stringValue: 'any' },
+              role: { stringValue: ROLES.SUPER_ADMIN },
+            },
+          },
+        },
+      },
+    },
+  ];
+
+  if (siteName) {
+    filters.push(
+      {
+        fieldFilter: {
+          field: { fieldPath: 'roles' },
+          op: 'ARRAY_CONTAINS',
+          value: {
+            mapValue: {
+              fields: {
+                siteId: { stringValue: siteId.value },
+                siteName: { stringValue: siteName.value },
+                role: { stringValue: ROLES.ADMIN },
+              },
+            },
+          },
+        },
+      },
+      {
+        fieldFilter: {
+          field: { fieldPath: 'roles' },
+          op: 'ARRAY_CONTAINS',
+          value: {
+            mapValue: {
+              fields: {
+                siteId: { stringValue: siteId.value },
+                siteName: { stringValue: siteName.value },
+                role: { stringValue: ROLES.SITE_ADMIN },
+              },
+            },
+          },
+        },
+      },
+    );
+  }
 
   const requestBody = {
     structuredQuery: {
@@ -352,50 +402,7 @@ export const fetchAdminsBySiteId = async (siteId = '', db = FIRESTORE_DATABASES.
       where: {
         compositeFilter: {
           op: 'OR',
-          filters: [
-            {
-              fieldFilter: {
-                field: { fieldPath: 'roles' },
-                op: 'ARRAY_CONTAINS',
-                value: {
-                  mapValue: {
-                    fields: {
-                      siteId: { stringValue: 'any' },
-                      role: { stringValue: ROLES.SUPER_ADMIN },
-                    },
-                  },
-                },
-              },
-            },
-            {
-              fieldFilter: {
-                field: { fieldPath: 'roles' },
-                op: 'ARRAY_CONTAINS',
-                value: {
-                  mapValue: {
-                    fields: {
-                      siteId: { stringValue: siteId },
-                      role: { stringValue: ROLES.ADMIN },
-                    },
-                  },
-                },
-              },
-            },
-            {
-              fieldFilter: {
-                field: { fieldPath: 'roles' },
-                op: 'ARRAY_CONTAINS',
-                value: {
-                  mapValue: {
-                    fields: {
-                      siteId: { stringValue: siteId },
-                      role: { stringValue: ROLES.SITE_ADMIN },
-                    },
-                  },
-                },
-              },
-            },
-          ],
+          filters,
         },
       },
     },
@@ -415,7 +422,7 @@ export const fetchAdminsBySiteId = async (siteId = '', db = FIRESTORE_DATABASES.
         };
       });
   } catch (error) {
-    console.error('fetchAdminsBySiteId: Error fetching admins by siteId:', error);
+    console.error('fetchAdminsBySite: Error fetching admins by siteId:', error);
     return [];
   }
 };
