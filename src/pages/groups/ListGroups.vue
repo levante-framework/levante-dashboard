@@ -157,7 +157,7 @@ import useUserType from '@/composables/useUserType';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 import useDistrictSchoolsQuery from '@/composables/queries/useDistrictSchoolsQuery';
-import useOrgsWithCreatorsQuery from '@/composables/queries/useOrgsWithCreatorsQuery';
+import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
 import { useFullAdministrationsListQuery } from '@/composables/queries/useAdministrationsListQuery';
 import EditOrgsForm from '@/components/EditOrgsForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
@@ -259,7 +259,7 @@ const {
   isLoading,
   isFetching,
   data: orgData,
-} = useOrgsWithCreatorsQuery(activeOrgType, selectedDistrict, selectedSchool, orderBy, {
+} = useOrgsTableQuery(activeOrgType, selectedDistrict, selectedSchool, orderBy, {
   enabled: claimsLoaded,
 });
 
@@ -387,15 +387,13 @@ const tableColumns = computed(() => {
       pinned: true,
       sort: true,
     },
+    {
+      field: 'creatorName',
+      header: 'Created By',
+      dataType: 'string',
+      sort: true,
+    },
   ];
-
-  // Add Created By column for all org types
-  columns.push({
-    field: 'creatorName',
-    header: 'Created By',
-    dataType: 'string',
-    sort: true,
-  });
 
   if (['districts', 'schools'].includes(activeOrgType.value)) {
     columns.push();
