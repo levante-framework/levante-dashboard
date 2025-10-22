@@ -6,7 +6,6 @@ import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { orgFetchAll } from '@/helpers/query/orgs';
 import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
 import { useAuthStore } from '@/store/auth';
-import type { MaybeRefOrGetter } from 'vue';
 
 /**
  * Orgs Table query.
@@ -24,10 +23,10 @@ import type { MaybeRefOrGetter } from 'vue';
  * @returns {UseQueryResult} The TanStack query result.
  */
 const useOrgsTableQuery = (
-  activeOrgType: MaybeRefOrGetter<string>,
-  selectedDistrict: MaybeRefOrGetter<string | undefined>,
-  selectedSchool: MaybeRefOrGetter<string | undefined>,
-  orderBy: MaybeRefOrGetter<any>,
+  activeOrgType,
+  selectedDistrict,
+  selectedSchool,
+  orderBy,
   queryOptions?: UseQueryOptions,
 ): UseQueryReturnType => {
   const { data: userClaims } = useUserClaimsQuery({
