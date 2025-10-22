@@ -1,7 +1,6 @@
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
-import useUserType from '@/composables/useUserType';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { orgFetchAll } from '@/helpers/query/orgs';
@@ -13,7 +12,7 @@ import type { MaybeRefOrGetter } from 'vue';
  * Orgs Table query.
  *
  * Fetches all orgs assigned to the current user account. This query is intended to be used by the List Orgs page that
- * contains a tabbed data table with orgs (districts, schools, etc.) assigned to the user. 
+ * contains a tabbed data table with orgs (districts, schools, etc.) assigned to the user.
  *
  * @TODO: Explore the possibility of removing this query in favour of more granular queries for each org type.
  *
@@ -24,14 +23,16 @@ import type { MaybeRefOrGetter } from 'vue';
  * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
  * @returns {UseQueryResult} The TanStack query result.
  */
-const useOrgsWithCreatorsQuery = (
+const useOrgsTableQuery = (
   activeOrgType: MaybeRefOrGetter<string>,
   selectedDistrict: MaybeRefOrGetter<string | undefined>,
   selectedSchool: MaybeRefOrGetter<string | undefined>,
   orderBy: MaybeRefOrGetter<any>,
-  queryOptions?: any,
-) => {
-  const { data: userClaims } = useUserClaimsQuery();
+  queryOptions?: UseQueryOptions,
+): UseQueryReturnType => {
+  const { data: userClaims } = useUserClaimsQuery({
+    enabled: queryOptions?.enabled ?? true,
+  });
 
   const authStore = useAuthStore();
   const { isUserSuperAdmin } = authStore;
@@ -71,4 +72,4 @@ const useOrgsWithCreatorsQuery = (
   });
 };
 
-export default useOrgsWithCreatorsQuery;
+export default useOrgsTableQuery;
