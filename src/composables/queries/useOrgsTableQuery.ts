@@ -10,11 +10,10 @@ import { useAuthStore } from '@/store/auth';
 import type { MaybeRefOrGetter } from 'vue';
 
 /**
- * Orgs with creators query.
+ * Orgs Table query.
  *
- * Fetches all orgs assigned to the current user account with creator data populated.
- * This query is intended to be used by the List Orgs page that contains a tabbed data table 
- * with orgs (districts, schools, etc.) assigned to the user, including creator information
+ * Fetches all orgs assigned to the current user account. This query is intended to be used by the List Orgs page that
+ * contains a tabbed data table with orgs (districts, schools, etc.) assigned to the user, including creator information
  * for the createdBy fields to display creator names instead of UIDs.
  *
  * This extends the existing org fetching pattern to include user data for createdBy fields
