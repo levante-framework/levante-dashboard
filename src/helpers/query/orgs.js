@@ -388,40 +388,49 @@ export const orgFetchAll = async (
 
   // Add creator data if requested
   if (includeCreators) {
-    // Extract unique creator IDs
-    const creatorIds = [...new Set(
-      orgs
-        .map(org => org.createdBy)
-        .filter(Boolean)
-    )];
+    try {
+      // Extract unique creator IDs
+      const creatorIds = [...new Set(
+        orgs
+          .map(org => org.createdBy)
+          .filter(Boolean)
+      )];
 
-    if (creatorIds.length > 0) {
-      // Fetch creator data in batch
-      const creatorsData = await fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, creatorIds, ['displayName', 'email']);
-
-      // Create a map for quick lookup
-      const creatorsMap = new Map();
-      creatorsData.forEach(creator => {
-        creatorsMap.set(creator.id, creator);
-      });
-
-      // Add creator data to orgs
-      orgs = orgs.map(org => {
-        let creatorName = '--';
-        if (org.createdBy) {
-          const creatorData = creatorsMap.get(org.createdBy);
-          if (creatorData) {
-            creatorName = creatorData.displayName || 
-                         creatorData.email ||
-                         org.createdBy;
-          }
+      if (creatorIds.length > 0) {
+        // Fetch creator data in batch
+        let creatorsData = [];
+        try {
+          creatorsData = await fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, creatorIds, ['displayName']);
+        } catch (error) {
+          console.error('orgFetchAll: Error fetching creator data from Firestore:', error);
+          creatorsData = [];
         }
-        
-        return {
-          ...org,
-          creatorName,
-        };
-      });
+
+        // Create a map for quick lookup
+        const creatorsMap = new Map();
+        creatorsData.forEach(creator => {
+          creatorsMap.set(creator.id, creator);
+        });
+
+        // Add creator data to orgs
+        orgs = orgs.map(org => {
+          let creatorName = '--';
+          if (org.createdBy) {
+            const creatorData = creatorsMap.get(org.createdBy);
+            if (creatorData) {
+              creatorName = creatorData.displayName || org.createdBy;
+            }
+          }
+          
+          return {
+            ...org,
+            creatorName,
+          };
+        });
+      }
+    } catch (error) {
+      console.error('orgFetchAll: Error fetching creator data:', error);
+      // Continue without creator data if fetching fails
     }
   }
 
