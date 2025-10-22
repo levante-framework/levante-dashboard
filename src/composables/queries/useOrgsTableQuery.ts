@@ -13,11 +13,7 @@ import type { MaybeRefOrGetter } from 'vue';
  * Orgs Table query.
  *
  * Fetches all orgs assigned to the current user account. This query is intended to be used by the List Orgs page that
- * contains a tabbed data table with orgs (districts, schools, etc.) assigned to the user, including creator information
- * for the createdBy fields to display creator names instead of UIDs.
- *
- * This extends the existing org fetching pattern to include user data for createdBy fields
- * using a single batch query instead of N+1 queries for better performance.
+ * contains a tabbed data table with orgs (districts, schools, etc.) assigned to the user. 
  *
  * @TODO: Explore the possibility of removing this query in favour of more granular queries for each org type.
  *
