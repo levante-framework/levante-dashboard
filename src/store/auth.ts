@@ -148,7 +148,7 @@ export const useAuthStore = defineStore(
               firebaseUser.value.adminFirebaseUser = null;
               logger.setUser(null);
             }
-          }
+          },
         );
       }
     }
@@ -248,7 +248,7 @@ export const useAuthStore = defineStore(
       if (data?.roles && data.roles.length > 0) {
         sites.value = data.roles.map((role: { siteId: string; role: string; siteName: string }) => ({
           siteId: role.siteId,
-          siteName: role.siteName
+          siteName: role.siteName,
         }));
         currentSite.value = data.roles[0]?.siteId ?? null;
       }
@@ -316,7 +316,7 @@ export const useAuthStore = defineStore(
   {
     persist: {
       debug: false,
-      paths: ['firebaseUser', 'ssoProvider'],
+      paths: ['currentSite', 'firebaseUser', 'ssoProvider'],
       storage: sessionStorage,
     },
   },
