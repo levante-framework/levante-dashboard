@@ -585,3 +585,75 @@ export const fetchTreeOrgs = async (administrationId, assignedOrgs) => {
 
   return treeTableOrgs;
 };
+
+export const fetchDistricts = async (districts = null) => {
+  const axiosInstance = getAxiosInstance();
+
+  // If districts is null, fetch all districts
+  if (districts === null) {
+    const requestBody = getOrgsRequestBody({
+      orgType: ORG_TYPES.DISTRICTS,
+      aggregationQuery: false,
+      paginate: false,
+      select: ['id', 'name', 'tags'],
+    });
+
+    return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
+  }
+
+  // If districts is an array of objects with siteId, fetch specific districts by ID
+  if (Array.isArray(districts) && districts.length > 0) {
+    const promises = districts.map((district) => {
+      return fetchDocById(ORG_TYPES.DISTRICTS, district.siteId, ['id', 'name', 'tags']);
+    });
+
+    return Promise.all(promises);
+  }
+
+  // If districts is empty array or invalid, return empty array
+  return Promise.resolve([]);
+};
+
+export const fetchSchools = async (districts = null) => {
+  const axiosInstance = getAxiosInstance();
+
+  // If districts is null, fetch all schools
+  if (districts === null) {
+    const requestBody = getOrgsRequestBody({
+      orgType: ORG_TYPES.SCHOOLS,
+      aggregationQuery: false,
+      paginate: false,
+      select: ['id', 'name', 'tags', 'districtId'],
+    });
+
+    return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
+  }
+
+  // If districts is an array of objects with siteId, fetch schools for those districts
+  if (Array.isArray(districts) && districts.length > 0) {
+    const requestBody = getOrgsRequestBody({
+      orgType: ORG_TYPES.SCHOOLS,
+      aggregationQuery: false,
+      paginate: false,
+      select: ['id', 'name', 'tags', 'districtId'],
+    });
+
+    // Add filter for districtId IN the provided district IDs
+    requestBody.structuredQuery.where = {
+      fieldFilter: {
+        field: { fieldPath: 'districtId' },
+        op: 'IN',
+        value: {
+          arrayValue: {
+            values: districts.map((id) => ({ stringValue: id })),
+          },
+        },
+      },
+    };
+
+    return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
+  }
+
+  // If districts is empty array or invalid, return empty array
+  return Promise.resolve([]);
+};

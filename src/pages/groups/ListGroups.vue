@@ -44,7 +44,7 @@
                   <PvSelect
                     v-model="selectedDistrict"
                     input-id="district"
-                    :options="allDistricts"
+                    :options="districtsData"
                     option-label="name"
                     option-value="id"
                     :loading="isLoadingDistricts"
@@ -61,7 +61,7 @@
                   <PvSelect
                     v-model="selectedSchool"
                     input-id="school"
-                    :options="allSchools"
+                    :options="schoolsData"
                     option-label="name"
                     option-value="id"
                     :loading="isLoadingSchools"
@@ -209,7 +209,6 @@ import { orgFetchAll } from '@/helpers/query/orgs';
 import { fetchUsersByOrg, countUsersByOrg } from '@/helpers/query/users';
 import { getAdministrationsByOrg } from '@/helpers/query/administrations';
 import { orderByDefault, exportCsv, fetchDocById } from '@/helpers/query/utils';
-import useDistrictSchoolsQuery from '@/composables/queries/useDistrictSchoolsQuery';
 import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
 import { useFullAdministrationsListQuery } from '@/composables/queries/useAdministrationsListQuery';
 import EditOrgsForm from '@/components/EditOrgsForm.vue';
@@ -223,7 +222,8 @@ import GroupAssignmentsModal from '@/components/modals/GroupAssignmentsModal.vue
 import PermissionGuard from '@/components/PermissionGuard.vue';
 import { ROLES } from '@/constants/roles';
 import { normalizeToLowercase } from '@/helpers';
-import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
+import _useDistrictsQuery from '@/composables/queries/_useDistrictsQuery';
+import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
 
 const router = useRouter();
 const initialized = ref(false);
@@ -291,16 +291,22 @@ const activeOrgType = computed({
   },
 });
 
-const { isLoading: isLoadingDistricts, data: allDistricts } = useDistrictsListQuery({
+const { data: districtsData, isLoading: isLoadingDistricts } = _useDistrictsQuery({
   enabled: !shouldUsePermissions.value,
 });
 
-const schoolQueryEnabled = computed(() => {
-  return claimsLoaded.value && !!selectedSite.value;
+watch(districtsData, (newDistrictsData) => {
+  if (newDistrictsData && !isUserSuperAdmin()) {
+    selectedDistrict.value = _get(_head(newDistrictsData), 'id');
+  }
 });
 
-const { isLoading: isLoadingSchools, data: allSchools } = useDistrictSchoolsQuery(selectedSite, {
-  enabled: schoolQueryEnabled,
+const { data: schoolsData, isLoading: isLoadingSchools } = _useSchoolsQuery(selectedSite);
+
+watch(schoolsData, (newSchoolsData) => {
+  if (newSchoolsData && !isUserSuperAdmin()) {
+    selectedSchool.value = _get(_head(newSchoolsData), 'id');
+  }
 });
 
 const {
@@ -647,10 +653,6 @@ onUnmounted(() => {
   isEditModalEnabled.value = false;
   currentEditOrgId.value = null;
   isDialogVisible.value = false;
-});
-
-watch(allSchools, (newValue) => {
-  selectedSchool.value = _get(_head(newValue), 'id');
 });
 
 const tableKey = ref(0);
