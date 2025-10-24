@@ -401,7 +401,7 @@ export const orgFetchAll = async (
         // Fetch creator data in batch
         let creatorsData = [];
         try {
-          creatorsData = await fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, creatorIds, ['displayName']);
+          creatorsData = await fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, creatorIds, ['displayName', 'name']);
         } catch (error) {
           console.error('orgFetchAll: Error fetching creator data from Firestore:', error);
           creatorsData = [];
@@ -419,7 +419,11 @@ export const orgFetchAll = async (
           if (org.createdBy) {
             const creatorData = creatorsMap.get(org.createdBy);
             if (creatorData) {
-              creatorName = creatorData.displayName || org.createdBy;
+              if (creatorData.displayName) {
+                creatorName = creatorData.displayName;
+              } else if (creatorData.name && creatorData.name.first && creatorData.name.last) {
+                creatorName = `${creatorData.name.first} ${creatorData.name.last}`;
+              }
             }
           }
           
