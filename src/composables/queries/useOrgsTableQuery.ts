@@ -1,4 +1,4 @@
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
@@ -53,7 +53,7 @@ const useOrgsTableQuery = (
         selectedDistrict,
         selectedSchool,
         orderBy,
-        isUserSuperAdmin(),
+        ref(isUserSuperAdmin()),
         adminOrgs,
         selectFields.value,
         true, // includeCreators = true
