@@ -4,70 +4,73 @@
       <!--Upload file section-->
       <AddUsersInfo />
 
-      <PvDivider />
+      <PvDivider class="my-5" />
 
-      <div class="flex align-items-center gap-3">
-        <PvFileUpload
-          :choose-label="
-            isFileUploaded && !errorMissingColumns && !errorUsers.length ? 'Choose Another CSV File' : 'Choose CSV File'
-          "
-          :empty-label="'Test'"
-          :show-cancel-button="false"
-          :show-upload-button="false"
-          auto
-          accept=".csv"
-          custom-upload
-          mode="basic"
-          name="addUsersFile[]"
-          @uploader="onFileUpload($event)"
-        />
+      <div class="m-0 mb-5 p-3 bg-gray-100 border-1 border-gray-200 border-round">
+        <div class="flex align-items-center gap-3">
+          <PvFileUpload
+            :choose-label="
+              isFileUploaded && !errorMissingColumns && !errorUsers.length
+                ? 'Choose Another CSV File'
+                : 'Choose CSV File'
+            "
+            :show-cancel-button="false"
+            :show-upload-button="false"
+            auto
+            accept=".csv"
+            custom-upload
+            mode="basic"
+            name="addUsersFile[]"
+            @uploader="onFileUpload($event)"
+          />
+          <span v-if="isFileUploaded" class="text-gray-500">File: {{ uploadedFile?.name }}</span>
+          <span v-else class="text-gray-500">No file chosen</span>
+        </div>
 
-        <span v-if="!isFileUploaded" class="text-gray-500">No file chosen</span>
-      </div>
+        <div v-if="isFileUploaded && !errorMissingColumns && !errorUsers.length">
+          <PvDataTable
+            ref="dataTable"
+            :value="rawUserFile"
+            show-gridlines
+            :row-hover="true"
+            :resizable-columns="true"
+            paginator
+            :always-show-paginator="false"
+            :rows="10"
+            class="datatable"
+          >
+            <PvColumn v-for="col of allFields" :key="col.field" :field="col.field">
+              <template #header>
+                <div class="col-header">
+                  <b>{{ col.header }}</b>
+                </div>
+              </template>
+              <template #body="{ data, field }">
+                <span>{{ data[field] }}</span>
+              </template>
+            </PvColumn>
+          </PvDataTable>
 
-      <div v-if="isFileUploaded && !errorMissingColumns && !errorUsers.length">
-        <PvDataTable
-          ref="dataTable"
-          :value="rawUserFile"
-          show-gridlines
-          :row-hover="true"
-          :resizable-columns="true"
-          paginator
-          :always-show-paginator="false"
-          :rows="10"
-          class="datatable"
-        >
-          <PvColumn v-for="col of allFields" :key="col.field" :field="col.field">
-            <template #header>
-              <div class="col-header">
-                <b>{{ col.header }}</b>
-              </div>
-            </template>
-            <template #body="{ data, field }">
-              <span>{{ data[field] }}</span>
-            </template>
-          </PvColumn>
-        </PvDataTable>
-
-        <div class="submit-container">
-          <div v-if="registeredUsers.length" class="button-group">
-            <PvButton label="Continue to Link Users" icon="pi pi-link" @click="router.push({ name: 'Link Users' })" />
+          <div class="submit-container">
+            <div v-if="registeredUsers.length" class="button-group">
+              <PvButton label="Continue to Link Users" icon="pi pi-link" @click="router.push({ name: 'Link Users' })" />
+              <PvButton
+                label="Download Users"
+                icon="pi pi-download"
+                variant="outlined"
+                class="download-button"
+                @click="downloadCSV"
+              />
+            </div>
             <PvButton
-              label="Download Users"
-              icon="pi pi-download"
-              variant="outlined"
-              class="download-button"
-              @click="downloadCSV"
+              v-else
+              :label="activeSubmit ? 'Adding Users' : 'Add Users from Uploaded File'"
+              :icon="activeSubmit ? 'pi pi-spin pi-spinner' : ''"
+              :disabled="activeSubmit"
+              data-testid="start-adding-button"
+              @click="submitUsers"
             />
           </div>
-          <PvButton
-            v-else
-            :label="activeSubmit ? 'Adding Users' : 'Add Users from Uploaded File'"
-            :icon="activeSubmit ? 'pi pi-spin pi-spinner' : ''"
-            :disabled="activeSubmit"
-            data-testid="start-adding-button"
-            @click="submitUsers"
-          />
         </div>
       </div>
 
@@ -132,6 +135,7 @@ const { currentSite, shouldUsePermissions } = storeToRefs(authStore);
 const { createUsers } = authStore;
 const toast = useToast();
 const isFileUploaded = ref(false);
+const uploadedFile = ref(null);
 const rawUserFile = ref({});
 const registeredUsers = ref([]);
 
@@ -211,7 +215,7 @@ watch(
 // Functions supporting the uploader
 const onFileUpload = async (event) => {
   // Reset all error states and data
-  rawUserFile.value = {};
+  uploadedFile.value = null;
   errorUsers.value = [];
   errorUserColumns.value = [];
   showErrorTable.value = false;
@@ -224,6 +228,7 @@ const onFileUpload = async (event) => {
 
   // Read the file. In case of multiple files, use the last one.
   const file = event.files[event.files.length - 1];
+  uploadedFile.value = file;
 
   // Parse the file directly with csvFileToJson
   const parsedData = await csvFileToJson(file);
