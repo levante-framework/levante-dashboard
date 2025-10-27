@@ -112,24 +112,19 @@ interface Props {
   isVisible?: boolean;
 }
 
-// Emits
 const emit = defineEmits<Emits>();
 
-// Props
 const props = withDefaults(defineProps<Props>(), {
   data: null,
   isVisible: false,
 });
 
-// Hooks
 const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
 const toast = useToast();
 
-// Queries
 const { data: districtsData } = useDistrictsListQuery();
 
-// Computed
 const districts = computed(
   () => districtsData?.value?.map((district: any) => ({ value: district?.id, label: district?.name })) || [],
 );
@@ -138,7 +133,6 @@ const modalTitle = computed(() => (props?.data ? 'Edit Administrator' : 'Add Adm
 const submitBtnLabel = computed(() => (props?.data ? 'Update Administrator' : 'Add Administrator'));
 const submittingBtnLabel = computed(() => (props?.data ? 'Updating Administrator' : 'Adding Administrator'));
 
-// Refs
 const email = ref<string>('');
 const firstName = ref<string>('');
 const isSubmitting = ref(false);
@@ -183,7 +177,6 @@ watch(
   { immediate: true },
 );
 
-// Helper functions
 function handleOnClose() {
   emit('close');
   resetForm();
