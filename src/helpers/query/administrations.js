@@ -101,6 +101,7 @@ const mapAdministrations = async ({ isSuperAdmin, data, creators, adminOrgs }) =
 
 export const administrationPageFetcher = async (
   selectedDistrictId,
+  shouldUsePermissions,
   isSuperAdmin,
   exhaustiveAdminOrgs,
   fetchTestData = false,
@@ -163,7 +164,7 @@ export const administrationPageFetcher = async (
     adminOrgs: exhaustiveAdminOrgs,
   });
 
-  if (districtId) {
+  if (shouldUsePermissions.value && districtId) {
     administrations = administrations.filter((adm) => {
       const assignedDistricts = adm?.assignedOrgs?.districts || [];
       return assignedDistricts.includes(districtId);

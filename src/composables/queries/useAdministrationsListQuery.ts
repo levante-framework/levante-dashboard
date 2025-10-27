@@ -25,7 +25,7 @@ const useAdministrationsListQuery = (
   queryOptions?: UseQueryOptions,
 ): UseQueryReturnType => {
   const authStore = useAuthStore();
-  const { userClaims } = storeToRefs(authStore);
+  const { shouldUsePermissions, userClaims } = storeToRefs(authStore);
   const { isUserSuperAdmin } = authStore;
 
   // Get admin status and administation orgs.
@@ -48,6 +48,7 @@ const useAdministrationsListQuery = (
     queryFn: async () => {
       const result = await administrationPageFetcher(
         selectedDistrictId,
+        shouldUsePermissions,
         isUserSuperAdmin(),
         exhaustiveAdministrationOrgs,
         testAdministrationsOnly,
