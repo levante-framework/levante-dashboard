@@ -86,6 +86,7 @@
 
 <script lang="ts" setup>
 import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
+import { ROLES } from '@/constants/roles';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { useAuthStore } from '@/store/auth';
 import { Name } from '@levante-framework/firekit/lib/interfaces';
@@ -236,10 +237,23 @@ async function submit() {
   // also their parents.
   const orgs = _cloneDeep(adminOrgs);
 
+  // Setting up roles
+  const roles: { role: string; siteId: string; siteName: string }[] = [];
+
+  selectedDistricts.value?.forEach((selectedDistrict) => {
+    const district = districts.value.find((d: any) => d.value === selectedDistrict);
+
+    roles.push({
+      role: ROLES.SITE_ADMIN,
+      siteId: district?.value,
+      siteName: district?.label,
+    });
+  });
+
   // If props.data, we are updating an existing administrator.
   if (props?.data) {
     return await roarfirekit
-      .value!.updateAdministrator(props?.data?.id, email.value, name, orgs, adminOrgs, isTestData.value)
+      .value!.updateAdministrator(props?.data?.id, email.value, name, roles, orgs, adminOrgs, isTestData.value)
       .then(() => {
         isSubmitting.value = false;
 
