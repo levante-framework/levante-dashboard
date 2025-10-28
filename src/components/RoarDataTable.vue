@@ -429,6 +429,8 @@ import SkeletonTable from '@/components/SkeletonTable.vue';
 import TableScoreTag from '@/components/reports/TableScoreTag.vue';
 import { getTooltip } from '@/helpers';
 import { ROLES } from '@/constants/roles';
+import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
 
 /*
 Using the DataTable
@@ -453,6 +455,9 @@ Array of objects consisting of a field and header at minimum.
       scrolled left-to-right. It is suggested that this only be used on
       the leftmost column.
 */
+const authStore = useAuthStore();
+const { currentSite } = storeToRefs(authStore);
+
 const showControls = ref(false);
 const toggleControls = () => {
   showControls.value = !showControls.value;
@@ -654,12 +659,7 @@ function getFormattedDate(date) {
 }
 
 function getRole(roles) {
-  return (
-    roles
-      ?.filter((value) => ['PEXNEtRwzNleLwxpidaj', 'any'].includes(value?.siteId))
-      // Replace the hard-coded array with [siteId, 'any'] from global state
-      ?.map((value) => value?.role)[0]
-  );
+  return roles?.filter((value) => [currentSite.value, 'any'].includes(value?.siteId))?.map((value) => value?.role)[0];
 }
 
 function getRoleTagIcon(roles) {
