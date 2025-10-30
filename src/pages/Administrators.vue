@@ -22,7 +22,7 @@
         </PvSelect>
       </div>
 
-      <PvButton size="small" @click="openAdministratorModal"><i class="pi pi-plus"></i>Add Administrator</PvButton>
+      <PvButton @click="openAdministratorModal"><i class="pi pi-plus"></i>Add Administrator</PvButton>
     </div>
 
     <div class="m-0 mt-5">
