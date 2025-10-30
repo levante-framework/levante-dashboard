@@ -166,11 +166,11 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
-    path: '/manage-administrators',
-    name: 'ManageAdministrators',
-    component: () => import('@/pages/ManageAdministrators.vue'),
+    path: '/administrators',
+    name: 'Administrators',
+    component: () => import('@/pages/Administrators.vue'),
     meta: {
-      pageTitle: 'Manage Administrators',
+      pageTitle: 'Administrators',
       allowedRoles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
     },
   },
