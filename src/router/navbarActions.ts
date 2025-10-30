@@ -89,6 +89,14 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     project: 'ALL',
     category: 'Users',
   },
+  {
+    title: 'Administrators',
+    icon: 'pi pi-users',
+    buttonLink: { name: 'Administrators' },
+    requiresSuperAdmin: true,
+    project: 'ALL',
+    category: 'Users',
+  },
 ] as const;
 
 interface GetNavbarActionsParams {
