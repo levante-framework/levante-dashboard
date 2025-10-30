@@ -1,9 +1,8 @@
 <template>
   <div class="p-5">
-    <div class="flex gap-2">
+    <div class="flex align-items-center gap-2">
       <div class="flex flex-column flex-1">
-        <h2 class="admin-page-header m-0">Manage Administrators</h2>
-        <p class="m-0 mt-1 text-gray-500">Add, edit, and manage administrators of a site</p>
+        <h2 class="admin-page-header m-0">Administrators</h2>
       </div>
 
       <div v-if="!shouldUsePermissions" class="flex align-items-center gap-2 m-2">
@@ -125,7 +124,7 @@ const tableData = computed(
         const firstName = admin?.name?.first || '';
         const middleName = admin?.name?.middle || '';
         const lastName = admin?.name?.last || '';
-        const fullName = `${firstName} ${middleName} ${lastName}`;
+        const fullName = admin?.name ? `${firstName} ${middleName} ${lastName}` : '--';
 
         return {
           ...admin,
