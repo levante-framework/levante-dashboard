@@ -96,6 +96,7 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     title: 'Administrators',
     icon: 'pi pi-users',
     buttonLink: { name: 'Administrators' },
+    requiresAdmin: true,
     requiresSuperAdmin: true,
     project: 'ALL',
     category: 'Users',
