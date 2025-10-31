@@ -1,4 +1,4 @@
-import { computed, Ref, toValue } from 'vue';
+import { computed, ref, Ref, toValue } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
@@ -49,7 +49,7 @@ const useAdministrationsListQuery = (
       const result = await administrationPageFetcher(
         selectedDistrictId,
         shouldUsePermissions,
-        isUserSuperAdmin(),
+        ref(isUserSuperAdmin()),
         exhaustiveAdministrationOrgs,
         testAdministrationsOnly,
         orderBy,
