@@ -71,8 +71,9 @@ const toast = useToast();
 const administrator = ref(null);
 const isAdministratorModalVisible = ref(false);
 
-// @TODO Replace the following query
-const { data: districtsData } = useDistrictsListQuery();
+const { data: districtsData } = useDistrictsListQuery({
+  enabled: computed(() => !shouldUsePermissions.value),
+});
 
 const siteOptions = computed(() => {
   if (isUserSuperAdmin()) {
