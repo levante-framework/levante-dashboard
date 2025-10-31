@@ -6,6 +6,7 @@ import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { orgFetchAll } from '@/helpers/query/orgs';
 import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
 import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
 
 /**
  * Orgs Table query.
