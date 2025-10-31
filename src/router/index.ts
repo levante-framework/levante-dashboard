@@ -5,6 +5,7 @@ import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { pageTitlesCO, pageTitlesES, pageTitlesUS } from '@/translations/exports';
 import { Role } from '@/types';
+import { storeToRefs } from 'pinia';
 import {
   createRouter,
   createWebHistory,
@@ -171,7 +172,8 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/pages/Administrators.vue'),
     meta: {
       pageTitle: 'Administrators',
-      allowedRoles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
+      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
+      requiresNewPermissions: true,
     },
   },
   {
@@ -314,11 +316,13 @@ const router = createRouter({
 
 router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
   const authStore = useAuthStore();
+  const { shouldUsePermissions, userData } = storeToRefs(authStore);
+  const { isAuthenticated, setShowSideBar } = authStore;
   const allowedUnauthenticatedRoutes = ['AuthEmailLink', 'AuthEmailSent', 'Debug', 'Maintenance', 'SignIn'];
   const inMaintenanceMode = false;
 
   if (NAVBAR_BLACKLIST.includes(to.name)) {
-    authStore.setShowSideBar(false);
+    setShowSideBar(false);
   }
 
   if (inMaintenanceMode && to.name !== 'Maintenance') {
@@ -328,21 +332,17 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   }
 
   // Check if user is signed in. If not, go to signin
-  if (
-    !to.path.includes('__/auth/handler') &&
-    !authStore.isAuthenticated() &&
-    !allowedUnauthenticatedRoutes.includes(to.name)
-  ) {
+  if (!to.path.includes('__/auth/handler') && !isAuthenticated() && !allowedUnauthenticatedRoutes.includes(to.name)) {
     return next({ name: 'SignIn' });
   }
 
   // @TODO
   // If we're gonna keep this solution,
   // we need to think about setting up a max num of tries and an error handler.
-  if (!authStore.userData && !allowedUnauthenticatedRoutes.includes(to.name)) {
+  if (!userData.value && !allowedUnauthenticatedRoutes.includes(to.name)) {
     await new Promise<void>((resolve) => {
       const checkUserData = () => {
-        if (authStore.userData) return resolve();
+        if (userData.value) return resolve();
         setTimeout(checkUserData, 50);
       };
 
@@ -351,10 +351,11 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   }
 
   const allowedRoles = to.meta.allowedRoles as string[];
-  const userRoles = authStore.userData?.roles?.map((role: Role) => role.role) || [ROLES.PARTICIPANT];
+  const userRoles = userData.value?.roles?.map((role: Role) => role.role) || [ROLES.PARTICIPANT];
   const isUserAllowed = allowedRoles.some((allowedRole: string) => userRoles.includes(allowedRole));
+  const requiresNewPermissions: boolean = (to?.meta?.requiresNewPermissions as boolean) || false;
 
-  if (allowedRoles.length && !isUserAllowed) {
+  if ((requiresNewPermissions && !shouldUsePermissions.value) || (allowedRoles.length && !isUserAllowed)) {
     return next({ name: 'Home' });
   }
 
