@@ -3,6 +3,9 @@
     <div class="flex align-items-center gap-2">
       <div class="flex flex-column flex-1">
         <h2 class="admin-page-header m-0">Administrators</h2>
+        <span v-if="currentSiteName" class="flex align-items-center gap-1 m-0 mt-1 text-lg text-gray-500">
+          <i class="pi pi-building"></i>{{ currentSiteName }}
+        </span>
       </div>
 
       <div v-if="!shouldUsePermissions" class="flex align-items-center gap-2 m-2">
@@ -176,6 +179,8 @@ const tableColumns = computed(() => [
     sort: false,
   },
 ]);
+
+const currentSiteName = computed(() => sites.value?.find((site: any) => site.siteId === currentSite.value)?.siteName);
 
 const closeAdministratorModal = () => {
   administrator.value = null;
