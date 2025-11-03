@@ -47,43 +47,66 @@
       </div>
     </div>
 
-    <div class="flex align-items-center gap-2">
-      <div class="w-full m-0 mt-5">
-        <div class="flex flex-column gap-1 w-full">
-          <PvFloatLabel>
-            <PvSelect
-              v-model="selectedDistrict"
-              :options="districts"
-              optionLabel="label"
-              optionValue="value"
-              filter
-              :maxSelectedLabels="3"
-              class="w-full md:w-80"
-            />
-            <label for="site">Site</label>
-          </PvFloatLabel>
-          <small v-if="v$.selectedDistrict.$error" class="p-error">Please select at least one site.</small>
-        </div>
-      </div>
+    <div class="w-full m-0 mt-5">
+      <div class="flex flex-column gap-5">
+        <div v-for="(siteRolePair, index) in siteRolePairs" :key="index" class="flex align-items-center gap-2">
+          <div class="w-full">
+            <div class="flex flex-column gap-1 w-full">
+              <PvFloatLabel>
+                <PvSelect
+                  :id="`site-${index}`"
+                  v-model="siteRolePair.district"
+                  :options="districts"
+                  optionLabel="label"
+                  optionValue="value"
+                  filter
+                  class="w-full"
+                  :data-cy="`select-site-${index}`"
+                />
+                <label :for="`site-${index}`">Site</label>
+              </PvFloatLabel>
+              <small v-if="!siteRolePair.district && v$.$dirty" class="p-error">Site is required.</small>
+            </div>
+          </div>
 
-      <span class="mt-5 text-gray-500"><i class="pi pi-arrow-right"></i></span>
+          <span class="text-gray-500"><i class="pi pi-arrow-right text-sm"></i></span>
 
-      <div class="w-full m-0 mt-5">
-        <div class="flex flex-column gap-1 w-full">
-          <PvFloatLabel>
-            <PvSelect
-              v-model="selectedRole"
-              :options="roleOptions"
-              optionLabel="label"
-              optionValue="value"
-              filter
-              :maxSelectedLabels="3"
-              class="w-full md:w-80"
-            />
-            <label for="selectedRole">Role</label>
-          </PvFloatLabel>
-          <small v-if="v$.selectedRole.$error" class="p-error">Role is required.</small>
+          <div class="w-full">
+            <div class="flex flex-column gap-1 w-full">
+              <PvFloatLabel>
+                <PvSelect
+                  :id="`role-${index}`"
+                  v-model="siteRolePair.role"
+                  :options="roleOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  filter
+                  class="w-full"
+                  :data-cy="`select-role-${index}`"
+                />
+                <label :for="`role-${index}`">Role</label>
+              </PvFloatLabel>
+              <small v-if="!siteRolePair.role && v$.$dirty" class="p-error">Role is required.</small>
+            </div>
+          </div>
+
+          <PvButton
+            v-if="siteRolePairs.length > 1"
+            icon="pi pi-times"
+            class="p-button-danger"
+            variant="link"
+            :data-cy="`remove-site-role-${index}`"
+            @click="removeSiteRolePair(index)"
+          />
         </div>
+
+        <PvButton
+          label="Add Site"
+          icon="pi pi-plus"
+          class="p-button-outlined p-button-secondary w-full md:w-auto"
+          data-cy="add-site-role-button"
+          @click="addSiteRolePair"
+        />
       </div>
     </div>
 
@@ -117,13 +140,50 @@ import PvSelect from 'primevue/select';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 
+interface AdministratorData {
+  id?: string;
+  email?: string;
+  name?: {
+    first?: string;
+    middle?: string;
+    last?: string;
+  };
+  roles?: Array<{
+    role: string;
+    siteId: string;
+    siteName: string;
+  }>;
+  adminOrgs?: {
+    districts?: string[];
+    schools?: string[];
+    classes?: string[];
+    groups?: string[];
+    families?: string[];
+  };
+}
+
+interface DistrictData {
+  id: string;
+  name: string;
+}
+
+interface DistrictOption {
+  value: string;
+  label: string;
+}
+
+interface SiteRolePair {
+  district: string;
+  role: string;
+}
+
 interface Emits {
   (event: 'close'): void;
   (event: 'refetch'): void;
 }
 
 interface Props {
-  data?: any;
+  data?: AdministratorData | null;
   isVisible?: boolean;
 }
 
@@ -141,8 +201,8 @@ const toast = useToast();
 
 const { data: districtsData } = useDistrictsListQuery();
 
-const districts = computed(
-  () => districtsData?.value?.map((district: any) => ({ value: district?.id, label: district?.name })) || [],
+const districts = computed<DistrictOption[]>(
+  () => districtsData?.value?.map((district: DistrictData) => ({ value: district?.id, label: district?.name })) || [],
 );
 
 const modalTitle = computed(() => (props?.data ? 'Edit Administrator' : 'Add Administrator'));
@@ -173,25 +233,22 @@ const isSubmitting = ref(false);
 const isTestData = ref(false);
 const lastName = ref<string>('');
 const middleName = ref<string>('');
-const selectedDistrict = ref<string>('');
-const selectedRole = ref<string>('');
+const siteRolePairs = ref<SiteRolePair[]>([{ district: '', role: '' }]);
 
 const v$ = useVuelidate(
   {
     email: { required },
     firstName: { required },
     lastName: { required },
-    selectedDistrict: { required },
-    selectedRole: { required },
   },
   {
     email,
     firstName,
     lastName,
-    selectedDistrict,
-    selectedRole,
   },
 );
+
+const validateSiteRolePairs = (): boolean => siteRolePairs.value.every((pair) => pair.district && pair.role);
 
 watch(
   () => props.data,
@@ -201,16 +258,29 @@ watch(
       const newMiddleName = newData?.name?.middle;
       const newLastName = newData?.name?.last;
 
-      email.value = newData.email ?? null;
-      firstName.value = newFirstName;
-      lastName.value = newLastName;
-      middleName.value = newMiddleName;
+      email.value = newData.email ?? '';
+      firstName.value = newFirstName ?? '';
+      lastName.value = newLastName ?? '';
+      middleName.value = newMiddleName ?? '';
+
+      if (newData.roles && newData.roles.length > 0) {
+        siteRolePairs.value = newData.roles.map((roleData) => ({
+          district: roleData.siteId,
+          role: roleData.role,
+        }));
+      } else {
+        siteRolePairs.value = [{ district: '', role: '' }];
+      }
     } else {
       resetForm();
     }
   },
   { immediate: true },
 );
+
+function addSiteRolePair() {
+  siteRolePairs.value.push({ district: '', role: '' });
+}
 
 function handleOnClose() {
   emit('close');
@@ -222,13 +292,33 @@ function resetForm() {
   firstName.value = '';
   lastName.value = '';
   middleName.value = '';
-  selectedDistrict.value = '';
-  selectedRole.value = '';
+  siteRolePairs.value = [{ district: '', role: '' }];
 
   isSubmitting.value = false;
 }
 
+function removeSiteRolePair(index: number) {
+  if (siteRolePairs.value.length > 1) {
+    siteRolePairs.value.splice(index, 1);
+  }
+}
+
 async function submit() {
+  const isValid = await v$.value.$validate();
+
+  if (!isValid) {
+    return;
+  }
+
+  if (!validateSiteRolePairs()) {
+    return toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Please select a site and role for all entries.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+  }
+
   isSubmitting.value = true;
 
   if (email.value.trim().length <= 0) {
@@ -259,35 +349,36 @@ async function submit() {
     last: lastName.value,
   };
 
+  const uniqueDistricts = [...new Set(siteRolePairs.value.map((pair) => pair.district))];
+
   const adminOrgs = {
-    districts: [selectedDistrict.value],
+    districts: uniqueDistricts,
     schools: [],
     classes: [],
     groups: [],
     families: [],
   };
 
-  // Build orgs from admin orgs. Orgs should contain all of the admin orgs. And
-  // also their parents.
   const orgs = _cloneDeep(adminOrgs);
 
-  // Setting up roles
   const roles: { role: string; siteId: string; siteName: string }[] = [];
 
-  // selectedDistrict.value?.forEach((selectedDistrict) => {
-  //   const district = districts.value.find((d: any) => d.value === selectedDistrict);
+  siteRolePairs.value.forEach((pair) => {
+    const district = districts.value.find((d: DistrictOption) => d.value === pair.district);
 
-  //   roles.push({
-  //     role: ROLES.SITE_ADMIN,
-  //     siteId: district?.value,
-  //     siteName: district?.label,
-  //   });
-  // });
+    if (district && pair.role) {
+      roles.push({
+        role: pair.role,
+        siteId: district.value,
+        siteName: district.label,
+      });
+    }
+  });
 
   // If props.data, we are updating an existing administrator.
-  if (props?.data) {
+  if (props?.data?.id) {
     return await roarfirekit
-      .value!.updateAdministrator(props?.data?.id, email.value, name, roles, orgs, adminOrgs, isTestData.value)
+      .value!.updateAdministrator(props.data.id, email.value, name, roles, orgs, adminOrgs, isTestData.value)
       .then(() => {
         isSubmitting.value = false;
 
