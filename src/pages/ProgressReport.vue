@@ -24,7 +24,7 @@
             <div>
               <div class="uppercase font-light text-gray-500 text-md">Created by</div>
               <div class="administration-creator">
-                {{ createdByUser }}
+                {{ administrationData.creatorName }}
               </div>
             </div>
           </div>
@@ -294,14 +294,6 @@ const { data: administrationData } = useAdministrationsQuery([props.administrati
   enabled: initialized,
   select: (data) => data[0],
 });
-
-const createdById = computed(() => administrationData?.value?.createdBy);
-
-const { data: userData } = useUserDataQuery(createdById, {
-  enabled: computed(() => !!createdById.value),
-});
-
-const createdByUser = computed(() => userData.value?.name.first ? userData.value.name.first + ' ' + userData.value.name.last : userData.value?.displayName);
 
 const { data: adminStats } = useAdministrationsStatsQuery([props.administrationId], {
   enabled: initialized,
