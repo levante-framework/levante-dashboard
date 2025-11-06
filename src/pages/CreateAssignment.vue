@@ -317,12 +317,7 @@ const rules = {
 
 const v$ = useVuelidate(rules, state);
 
-const minStartDate = computed(() => {
-  if (props.adminId && existingAdministrationData.value?.dateOpened) {
-    return new Date(existingAdministrationData.value.dateOpened);
-  }
-  return new Date();
-});
+const minStartDate = computed(() => new Date());
 
 const minEndDate = computed(() => {
   if (state.dateStarted) {
