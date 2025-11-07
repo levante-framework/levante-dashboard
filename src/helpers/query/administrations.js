@@ -44,6 +44,8 @@ const processBatchStats = async (axiosInstance, statsPaths, batchSize = 5) => {
   return batchStatsDocs;
 };
 
+// TODO: Remove this function. Fields that we want should be passed into the query, not filtered from the whole data of the document on the client side.  
+// Netowrk call should be done in the query function, not here.
 const mapAdministrations = async ({ isSuperAdmin, data, adminOrgs }) => {
   // First format the administration documents
   const administrationData = data
@@ -74,6 +76,7 @@ const mapAdministrations = async ({ isSuperAdmin, data, adminOrgs }) => {
         assignedOrgs,
         // If testData is not defined, default to false when mapping
         testData: a.testData ?? false,
+        creatorName: a.creatorName,
       };
     });
 

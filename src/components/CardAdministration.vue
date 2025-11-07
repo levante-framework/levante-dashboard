@@ -277,7 +277,6 @@ const router = useRouter();
 const queryClient = useQueryClient();
 
 const props = withDefaults(defineProps<Props>(), {
-  creator: {},
   stats: () => ({}),
 });
 
