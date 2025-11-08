@@ -146,6 +146,40 @@ export const fetchAudioLinks = async (surveyType: string): Promise<AudioLinkMap>
   return audioLinkMap;
 };
 
+export async function fetchSurveyDefinition(baseName: string, locale: string | undefined | null) {
+  const requestedLocale = locale?.toLowerCase();
+  const localeCandidates: string[] = [];
+
+  if (requestedLocale) {
+    localeCandidates.push(requestedLocale);
+
+    const baseLanguage = requestedLocale.split('-')[0];
+    if (baseLanguage && baseLanguage !== requestedLocale) {
+      localeCandidates.push(baseLanguage);
+    }
+  }
+
+  localeCandidates.push('default');
+
+  for (const candidate of localeCandidates) {
+    const suffix = candidate === 'default' ? '' : `.${candidate}`;
+    const url = `${LEVANTE_BUCKET_URL}/surveys/${baseName}${suffix}.json`;
+
+    try {
+      const { data } = await axios.get(url);
+      return data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error(`Survey definition not found for ${baseName}`);
+}
+
 export function getParsedLocale(locale: string | undefined | null): string {
   return (locale || '').split('-')?.[0] || 'en';
 }
