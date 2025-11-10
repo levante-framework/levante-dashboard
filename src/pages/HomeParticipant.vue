@@ -105,11 +105,9 @@ import ConsentModal from '@/components/ConsentModal.vue';
 import GameTabs from '@/components/GameTabs.vue';
 import ParticipantSidebar from '@/components/ParticipantSidebar.vue';
 import { useI18n } from 'vue-i18n';
-import axios from 'axios';
-import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
 import { Model, settings } from 'survey-core';
 import { Converter } from 'showdown';
-import { fetchAudioLinks } from '@/helpers/survey';
+import { fetchAudioLinks, fetchSurveyDefinition } from '@/helpers/survey';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useQueryClient, useQuery } from '@tanstack/vue-query';
@@ -447,26 +445,26 @@ const { data: surveyData } = useQuery({
     const userType = userData.value.userType;
 
     if (userType === 'student') {
-      const resSurvey = await axios.get(`${LEVANTE_BUCKET_URL}/surveys/child_survey.json`);
+      const resSurvey = await fetchSurveyDefinition('child_survey', locale.value);
       const resAudio = await fetchAudioLinks('child-survey');
       surveyStore.setAudioLinkMap(resAudio);
       return {
-        general: resSurvey.data,
+        general: resSurvey,
       };
     } else if (userType === 'teacher') {
-      const resGeneral = await axios.get(`${LEVANTE_BUCKET_URL}/surveys/teacher_survey_general.json`);
-      const resClassroom = await axios.get(`${LEVANTE_BUCKET_URL}/surveys/teacher_survey_classroom.json`);
+      const resGeneral = await fetchSurveyDefinition('teacher_survey_general', locale.value);
+      const resClassroom = await fetchSurveyDefinition('teacher_survey_classroom', locale.value);
       return {
-        general: resGeneral.data,
-        specific: resClassroom.data,
+        general: resGeneral,
+        specific: resClassroom,
       };
     } else {
       // parent
-      const resFamily = await axios.get(`${LEVANTE_BUCKET_URL}/surveys/parent_survey_family.json`);
-      const resChild = await axios.get(`${LEVANTE_BUCKET_URL}/surveys/parent_survey_child.json`);
+      const resFamily = await fetchSurveyDefinition('parent_survey_family', locale.value);
+      const resChild = await fetchSurveyDefinition('parent_survey_child', locale.value);
       return {
-        general: resFamily.data,
-        specific: resChild.data,
+        general: resFamily,
+        specific: resChild,
       };
     }
   },
