@@ -208,7 +208,6 @@ export const csvFileToJson = async (file: File): Promise<any[]> => {
     Papa.parse(text, {
       header: true,
       skipEmptyLines: 'greedy',
-      // transformHeader: (header: string): string => header.trim().toLowerCase(),
       transformHeader: (header: string): string => {
         if (header.trim().toLowerCase() === 'id') return 'id';
         return header.trim();
