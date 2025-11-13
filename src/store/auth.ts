@@ -231,7 +231,21 @@ export const useAuthStore = defineStore(
     }
 
     async function createUsers(userData: unknown): Promise<unknown> {
-      return roarfirekit.value?.createUsers(userData as any);
+      const payload = userData && typeof userData === 'object' && 'userData' in userData
+        ? (userData as { userData: unknown; siteId?: string; districtId?: string })
+        : { userData };
+      
+      if (payload.siteId || payload.districtId) {
+        const functions = roarfirekit.value?.admin?.functions;
+        if (functions) {
+          const { getFunctions, httpsCallable } = await import('firebase/functions');
+          const firebaseFunctions = getFunctions(functions.app);
+          const createUsersCallable = httpsCallable(firebaseFunctions, 'createUsers');
+          return createUsersCallable(payload);
+        }
+      }
+      
+      return roarfirekit.value?.createUsers(payload as any);
     }
 
     async function signOut(): Promise<void> {

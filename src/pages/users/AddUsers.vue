@@ -129,6 +129,7 @@ import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { logger } from '@/logger';
 import { storeToRefs } from 'pinia';
 import { fetchDocById } from '@/helpers/query/utils';
+import { validateAddUsersCsv, validateAddUsersSubmit, validateCsvHeaders } from '@levante-framework/levante-zod';
 
 const authStore = useAuthStore();
 const { currentSite, shouldUsePermissions } = storeToRefs(authStore);
@@ -233,7 +234,21 @@ const onFileUpload = async (event) => {
   // Parse the file directly with csvFileToJson
   const parsedData = await csvFileToJson(file);
 
-  parsedData.forEach((user) => {
+  // Filter out completely empty rows
+  const filteredData = parsedData.filter((user) => {
+    if (!user || typeof user !== 'object') return false;
+    const keys = Object.keys(user);
+    if (keys.length === 0) return false;
+    const hasAnyValue = keys.some((key) => {
+      const val = user[key];
+      if (val === null || val === undefined) return false;
+      const strVal = String(val).trim();
+      return strVal !== '';
+    });
+    return hasAnyValue;
+  });
+
+  filteredData.forEach((user) => {
     const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
     if (userTypeField && typeof user[userTypeField] === 'string') {
       user[userTypeField] = user[userTypeField].trim();
@@ -241,7 +256,7 @@ const onFileUpload = async (event) => {
   });
 
   // Check if there's any data
-  if (!parsedData || parsedData.length === 0) {
+  if (!filteredData || filteredData.length === 0) {
     toast.add({
       severity: 'error',
       summary: 'Error: Empty File',
@@ -252,190 +267,89 @@ const onFileUpload = async (event) => {
   }
 
   // Store the parsed data
-  rawUserFile.value = parsedData;
+  rawUserFile.value = filteredData;
 
-  // REGISTRATION
-  // Required: userType
-  // Conditional (child): Month, Year
-  // Conditional (Either): Cohort OR Site + School
-
-  // Get all column names from the first row, case-insensitive check for userType
   const firstRow = toRaw(rawUserFile.value[0]);
-  const allColumns = Object.keys(firstRow).map((col) => col.toLowerCase());
+  const headers = Object.keys(firstRow);
 
-  // Check if userType column exists (case-insensitive)
-  const hasUserType = allColumns.includes('usertype');
-  if (!hasUserType) {
+  const requiredHeaders = ['usertype'];
+  const hasChild = filteredData.some((user) => {
+    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
+    return userTypeField && user[userTypeField]?.toLowerCase() === 'child';
+  });
+
+  if (hasChild) {
+    requiredHeaders.push('month', 'year');
+  }
+
+  const hasCohort = headers.some((col) => col.toLowerCase() === 'cohort');
+  const hasSchool = headers.some((col) => col.toLowerCase() === 'school');
+  if (!hasCohort && !hasSchool) {
+    requiredHeaders.push('cohort', 'school');
+  }
+
+  if (!shouldUsePermissions.value) {
+    requiredHeaders.push('site');
+  }
+
+  const headerValidation = validateCsvHeaders(headers, requiredHeaders);
+  if (!headerValidation.success) {
+    const missingHeaders = headerValidation.errors.map((e) => e.field).join(', ');
     toast.add({
       severity: 'error',
       summary: 'Error: Missing Column',
-      detail: 'Missing required column(s): userType',
+      detail: `Missing required column(s): ${missingHeaders}`,
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     errorMissingColumns.value = true;
     return;
   }
 
-  // Check conditional columns are present
-  const hasChild = rawUserFile.value.some((user) => {
-    const userTypeValue = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-    return userTypeValue && user[userTypeValue].toLowerCase() === 'child';
+  const usersToValidate = filteredData.filter((user) => {
+    const idField = Object.keys(user).find((key) => key.toLowerCase() === 'id');
+    return !idField || !user[idField];
   });
 
-  // If we have child users, they MUST have month and year
-  if (hasChild) {
-    const hasMonth = allColumns.includes('month');
-    const hasYear = allColumns.includes('year');
-    if (!hasMonth || !hasYear) {
-      toast.add({
-        severity: 'error',
-        summary: 'Error: Missing Column',
-        detail: 'Missing required column(s): Month or Year',
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
-      errorMissingColumns.value = true;
-      return;
-    }
-  }
+  const validation = validateAddUsersCsv(usersToValidate);
 
-  // Conditional (Either): Cohort OR Site + School
-  const hasCohort = allColumns.includes('cohort');
-  const hasSchool = allColumns.includes('school');
-  if (!hasCohort && !hasSchool) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Missing Column',
-      detail: 'Missing required column(s): Cohort OR School',
-      life: TOAST_DEFAULT_LIFE_DURATION,
+  const usersWithZodErrors = new Set();
+
+  if (!validation.success) {
+    const errorsByUser = new Map();
+    validation.errors.forEach((error) => {
+      const userIndex = error.row - 1;
+      if (userIndex >= 0 && userIndex < usersToValidate.length) {
+        const user = usersToValidate[userIndex];
+        usersWithZodErrors.add(user);
+        if (!errorsByUser.has(user)) {
+          errorsByUser.set(user, []);
+        }
+        const fieldName = error.field === 'usertype' ? 'userType' : error.field;
+        errorsByUser.get(user).push(`${fieldName}: ${error.message}`);
+      }
     });
-    return;
+    errorsByUser.forEach((errors, user) => {
+      addErrorUser(user, errors.join('; '));
+    });
   }
 
   if (!shouldUsePermissions.value) {
-    const hasSite = allColumns.includes('site');
+    usersToValidate.forEach((user) => {
+      if (usersWithZodErrors.has(user)) return;
 
-    if (!hasSite) {
-      return toast.add({
-        severity: 'error',
-        summary: 'Error: Missing Column',
-        detail: 'Missing required column(s): Site',
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
-    }
-  }
-
-  // Check required fields are not empty
-  const childRequiredInfo = ['usertype', 'month', 'year'];
-  const careGiverRequiredInfo = ['usertype'];
-
-  rawUserFile.value.forEach((user) => {
-    const missingFields = [];
-    const invalidFields = []; // Store fields with invalid format/value
-
-    // Get the actual userType field name (preserving original case)
-    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-    const userTypeValue = userTypeField ? user[userTypeField]?.toLowerCase() : null;
-
-    // --- Field Presence Checks ---
-    if (!userTypeField || !userTypeValue) {
-      missingFields.push('userType');
-    } else {
-      // --- Field Value/Format Validation ---
-      const validUserTypes = ['child', 'teacher', 'caregiver'];
-      if (!validUserTypes.includes(userTypeValue)) {
-        invalidFields.push(`userType must be one of: ${validUserTypes.join(', ')}`);
-      }
-
-      // --- Child Specific Checks ---
-      if (userTypeValue === 'child') {
-        // Check required fields for child
-        childRequiredInfo.forEach((requiredField) => {
-          const actualField = Object.keys(user).find((key) => key.toLowerCase() === requiredField);
-          if (!actualField || !user[actualField]) {
-            missingFields.push(requiredField === 'usertype' ? 'userType' : requiredField);
-          } else {
-            // Validate month and year format if present
-            if (requiredField === 'month') {
-              const monthField = Object.keys(user).find((key) => key.toLowerCase() === 'month');
-              const monthValue = monthField ? parseInt(user[monthField], 10) : NaN;
-              if (isNaN(monthValue) || monthValue < 1 || monthValue > 12) {
-                invalidFields.push('month must be a number between 1 and 12');
-              }
-            }
-            if (requiredField === 'year') {
-              const yearField = Object.keys(user).find((key) => key.toLowerCase() === 'year');
-              const yearValue = yearField ? user[yearField] : '';
-              if (!/^\d{4}$/.test(yearValue)) {
-                // Check if it's exactly 4 digits
-                invalidFields.push('year must be a four-digit number');
-              }
-            }
-          }
-        });
-      } else if (userTypeValue === 'caregiver' || userTypeValue === 'teacher') {
-        // Check required fields for caregiver/teacher
-        careGiverRequiredInfo.forEach((requiredField) => {
-          const actualField = Object.keys(user).find((key) => key.toLowerCase() === requiredField);
-          if (!actualField || !user[actualField]) {
-            missingFields.push(requiredField === 'usertype' ? 'userType' : requiredField);
-          }
-        });
-      }
-    }
-
-    // --- Org Presence Checks (Cohort OR Site+School) ---
-    const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
-    const schoolField = Object.keys(user).find((key) => key.toLowerCase() === 'school');
-
-    // Parse and check if arrays are non-empty after splitting and trimming
-    const hasCohort =
-      cohortField &&
-      user[cohortField] &&
-      user[cohortField]
-        .split(',')
-        .map((s) => s.trim())
-        .filter((s) => s).length > 0;
-
-    const hasSchool =
-      schoolField &&
-      user[schoolField] &&
-      user[schoolField]
-        .split(',')
-        .map((s) => s.trim())
-        .filter((s) => s).length > 0;
-
-    if (!hasCohort && !hasSchool) {
-      missingFields.push('Cohort OR School');
-    }
-
-    if (!shouldUsePermissions.value) {
       const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
-      const hasSite =
-        siteField &&
-        user[siteField] &&
-        user[siteField]
+      const siteValue = siteField ? user[siteField] : null;
+      const hasSite = siteValue && 
+        String(siteValue)
           .split(',')
           .map((s) => s.trim())
           .filter((s) => s).length > 0;
 
       if (!hasSite) {
-        missingFields.push('Site');
+        addErrorUser(user, 'Site: Site is required');
       }
-    }
-
-    // --- Aggregate Errors and Add User to Error List if Needed ---
-    let errorMessages = [];
-    if (missingFields.length > 0) {
-      errorMessages.push(`Missing Field(s): ${missingFields.join(', ')}`);
-    }
-    if (invalidFields.length > 0) {
-      errorMessages.push(`Invalid Field(s): ${invalidFields.join('; ')}`);
-    }
-
-    if (errorMessages.length > 0) {
-      addErrorUser(user, errorMessages.join('. '));
-    }
-  });
+    });
+  }
 
   // --- Post-Loop Error Handling & Success Notification ---
   if (errorUsers.value.length) {
@@ -646,9 +560,8 @@ async function submitUsers() {
                     );
                     orgInfo.schools.push(schoolId);
                     schoolFound = true;
-                    break; // Found valid parent, move to next school
-                  } catch (error) {
-                    // Try next site
+                    break;
+                  } catch {
                     continue;
                   }
                 }
@@ -676,9 +589,8 @@ async function submitUsers() {
                       );
                       orgInfo.classes.push(classId);
                       classFound = true;
-                      break; // Found valid parent, move to next class
-                    } catch (error) {
-                      // Try next site/school combination
+                      break;
+                    } catch {
                       continue;
                     }
                   }
@@ -767,12 +679,8 @@ async function submitUsers() {
     return;
   }
 
-  // TODO: Figure out deadline-exceeded error with 700+ users. (Registration works fine, creates all documents but the client recieves the error)
   const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 700);
 
-  // Begin submit process
-  // Org must be created before users can be created
-  let processedUserCount = 0;
   for (const users of chunkedUsersToBeRegistered) {
     try {
       // Ensure each user has the proper userType field name for the backend
@@ -801,9 +709,50 @@ async function submitUsers() {
         return processedUser;
       });
 
-      // This is the most likely place for an error, due to
-      // permissions, etc. If so, drop to Catch block
-      const res = await createUsers(processedUsers);
+      const submitValidationErrors = [];
+      processedUsers.forEach((processedUser, idx) => {
+        const validation = validateAddUsersSubmit(processedUser);
+        if (!validation.success) {
+          const originalUser = users[idx].user;
+          const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join('; ');
+          submitValidationErrors.push({
+            user: originalUser,
+            index: users[idx].index,
+            error: errorMessages,
+          });
+        }
+      });
+
+      if (submitValidationErrors.length > 0) {
+        if (_isEmpty(errorUserColumns.value)) {
+          errorUserColumns.value = generateColumns(submitValidationErrors[0].user);
+          errorUserColumns.value.unshift({
+            dataType: 'string',
+            field: 'error',
+            header: 'Cause of Error',
+          });
+        }
+
+        submitValidationErrors.forEach(({ user, error }) => {
+          addErrorUser(user, error);
+        });
+
+        showErrorTable.value = true;
+        activeSubmit.value = false;
+        return;
+      }
+
+      const createUsersPayload = {
+        userData: processedUsers,
+      };
+      
+      if (shouldUsePermissions.value && currentSite.value && currentSite.value !== 'any') {
+        createUsersPayload.siteId = currentSite.value;
+      } else if (processedUsers.length > 0 && processedUsers[0].orgIds?.districts?.length > 0) {
+        createUsersPayload.siteId = processedUsers[0].orgIds.districts[0];
+      }
+
+      const res = await createUsers(createUsersPayload);
       logger.capture('Admin: Add Users', { processedUsers });
       const currentRegisteredUsers = res.data.data;
 
@@ -823,8 +772,6 @@ async function submitUsers() {
 
       registeredUsers.value.push(...currentRegisteredUsers);
 
-      // Update the count of processed users
-      processedUserCount += currentRegisteredUsers.length;
       toast.add({
         severity: 'success',
         summary: 'User Creation Successful',
@@ -901,6 +848,25 @@ function downloadCSV() {
 }
 
 function addErrorUser(user, error) {
+  // Check if this user is already in the error list
+  const userKey = JSON.stringify(user);
+  const alreadyExists = errorUsers.value.some((errUser) => {
+    const errUserKey = JSON.stringify({ ...errUser, error: undefined });
+    return errUserKey === userKey;
+  });
+
+  if (alreadyExists) {
+    // Update existing error message
+    const existingIndex = errorUsers.value.findIndex((errUser) => {
+      const errUserKey = JSON.stringify({ ...errUser, error: undefined });
+      return errUserKey === userKey;
+    });
+    if (existingIndex >= 0) {
+      errorUsers.value[existingIndex].error += `; ${error}`;
+    }
+    return;
+  }
+
   // If there are no error users yet, generate the
   //  columns before displaying the table.
   if (_isEmpty(errorUserColumns.value)) {
