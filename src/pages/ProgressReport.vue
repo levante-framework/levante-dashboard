@@ -318,9 +318,6 @@ const pageLimit = ref(10);
 
 const CSV_NOT_ASSIGNED_VALUE = 'Not Assigned';
 
-const levanteTaskSet = new Set(LEVANTE_TASK_IDS);
-const roarTaskSet = new Set(ROAR_TASK_IDS);
-
 const getTaskColumnLabel = (taskId) => {
   if (tasksDictionary.value?.[taskId]?.publicName) {
     return tasksDictionary.value[taskId].publicName;
@@ -340,18 +337,13 @@ const appendTaskProgressColumns = (row, progress = {}) => {
   LEVANTE_TASK_IDS.forEach(addTaskValue);
   ROAR_TASK_IDS.forEach(addTaskValue);
 
-  for (const taskId of Object.keys(progress || {})) {
-    if (levanteTaskSet.has(taskId) || roarTaskSet.has(taskId)) continue;
-    addTaskValue(taskId);
-  }
+  Object.keys(progress || {}).forEach(addTaskValue);
 };
 
 const buildProgressExportRow = (user, progress = {}) => {
   const tableRow = {
-    Email: _get(user, 'email') ?? '',
-    First: _get(user, 'firstName') ?? '',
-    Last: _get(user, 'lastName') ?? '',
-    Grade: _get(user, 'grade') ?? '',
+    Username: _get(user, 'username') ?? '',
+    'User Type': _startCase(_get(user, 'userType') ?? ''),
   };
 
   if (props.orgType === 'district') {
@@ -441,14 +433,14 @@ const resetFilters = () => {
 
 const exportSelected = (selectedRows) => {
   const computedExportData = buildExportData(selectedRows);
-  exportCsv(computedExportData, 'roar-progress-selected.csv');
+  exportCsv(computedExportData, 'progress-selected.csv');
 };
 
 const exportAll = async () => {
   const computedExportData = buildExportData(computedProgressData.value);
   const administrationTitle = administrationData.value?.name ?? 'progress';
   const orgName = orgData.value?.name ?? 'organization';
-  const formattedFileName = `roar-progress-${_kebabCase(administrationTitle)}-${_kebabCase(orgName) || 'org'}.csv`;
+  const formattedFileName = `progress-report-${_kebabCase(administrationTitle)}-${_kebabCase(orgName) || 'org'}.csv`;
   exportCsv(computedExportData, formattedFileName);
 };
 
