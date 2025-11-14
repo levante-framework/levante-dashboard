@@ -413,6 +413,8 @@ const loadingTreeTable = computed((): boolean => {
 const treeTableOrgs = ref<TreeNode[]>([]);
 
 const cloneTreeNodes = (nodes: TreeNode[] = []): TreeNode[] =>
+  // Clone each node so we never mutate the TanStack Query cache when
+  // expanding nodes or adding stats locally.
   nodes.map((node) => ({
     ...node,
     data: { ...node.data },
