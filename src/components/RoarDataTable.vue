@@ -219,9 +219,32 @@
               </div>
               <div v-else-if="col.field === 'id' && _get(colData, 'userType') === 'admin'">--</div>
               <div v-else-if="col.field === 'username' && _get(colData, 'userType') === 'admin'">--</div>
-              <div v-else-if="col.field === 'user.userType'">
-                <span class="user-type-value">{{ _get(colData, col.field) }}</span>
+
+              <div v-else-if="col.field === 'roles'">
+                <PvTag
+                  v-if="getRole(_get(colData, col.field))"
+                  class="role-tag"
+                  rounded
+                  :icon="getRoleTagIcon(_get(colData, col.field))"
+                  :severity="getRoleTagSeverity(_get(colData, col.field))"
+                  :value="getRoleTagLabel(_get(colData, col.field))"
+                />
+                <span v-else>--</span>
               </div>
+
+              <div v-else-if="col.field === 'actions'" class="actions">
+                <PvButton
+                  v-for="action in _get(colData, col.field)"
+                  :key="action['name']"
+                  v-tooltip.top="getTooltip(action['tooltip'])"
+                  :class="`action action--${action['name']}`"
+                  :icon="action['icon']"
+                  variant="link"
+                  @click="action['callback']"
+                >
+                </PvButton>
+              </div>
+
               <div v-else>
                 {{ _get(colData, col.field) }}
               </div>
@@ -405,6 +428,9 @@ import { supportLevelColors, progressTags } from '@/helpers/reports';
 import SkeletonTable from '@/components/SkeletonTable.vue';
 import TableScoreTag from '@/components/reports/TableScoreTag.vue';
 import { getTooltip } from '@/helpers';
+import { ROLES } from '@/constants/roles';
+import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
 
 /*
 Using the DataTable
@@ -429,6 +455,9 @@ Array of objects consisting of a field and header at minimum.
       scrolled left-to-right. It is suggested that this only be used on
       the leftmost column.
 */
+const authStore = useAuthStore();
+const { currentSite } = storeToRefs(authStore);
+
 const showControls = ref(false);
 const toggleControls = () => {
   showControls.value = !showControls.value;
@@ -627,6 +656,46 @@ function getFormattedDate(date) {
     }
   }
   return '';
+}
+
+function getRole(roles) {
+  return roles?.filter((value) => [currentSite.value, 'any'].includes(value?.siteId))?.map((value) => value?.role)[0];
+}
+
+function getRoleTagIcon(roles) {
+  switch (getRole(roles)) {
+    case ROLES.ADMIN:
+    case ROLES.SITE_ADMIN:
+      return 'pi pi-users';
+    case ROLES.SUPER_ADMIN:
+      return 'pi pi-shield';
+    default:
+      return null;
+  }
+}
+
+function getRoleTagSeverity(roles) {
+  switch (getRole(roles)) {
+    case ROLES.ADMIN:
+    case ROLES.SITE_ADMIN:
+      return 'info';
+    case ROLES.SUPER_ADMIN:
+      return 'warn';
+    default:
+      return null;
+  }
+}
+
+function getRoleTagLabel(roles) {
+  switch (getRole(roles)) {
+    case ROLES.ADMIN:
+    case ROLES.SITE_ADMIN:
+      return 'Admin';
+    case ROLES.SUPER_ADMIN:
+      return 'Super Admin';
+    default:
+      return null;
+  }
 }
 
 const onColumnToggle = (selected) => {
@@ -828,5 +897,29 @@ button.p-column-filter-menu-button.p-link:hover {
 
 .user-type-value {
   text-transform: capitalize;
+}
+
+.role-tag {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  font-size: 12px !important;
+  text-transform: capitalize;
+
+  .pi {
+    margin: 0 0.25rem 0 0;
+    font-weight: inherit;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+
+  .action--edit {
+    color: inherit;
+  }
 }
 </style>
