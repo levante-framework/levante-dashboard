@@ -388,12 +388,10 @@ function getAssessment(assessmentId: string): Assessment | undefined {
   return props.assessments.find((assessment) => assessment.taskId.toLowerCase() === assessmentId);
 }
 
-const showTable = ref<boolean>(false);
 const enableQueries = ref<boolean>(false);
 
 onMounted((): void => {
   enableQueries.value = true;
-  showTable.value = !showTable.value;
 });
 
 const isWideScreen = computed((): boolean => {
@@ -413,13 +411,15 @@ const loadingTreeTable = computed((): boolean => {
 });
 
 const treeTableOrgs = ref<TreeNode[]>([]);
-watch(orgs, (newValue) => {
-  treeTableOrgs.value = newValue || [];
-});
-
-watch(showTable, (newValue) => {
-  if (newValue) treeTableOrgs.value = orgs.value || [];
-});
+watch(
+  orgs,
+  (newValue) => {
+    if (newValue) {
+      treeTableOrgs.value = newValue;
+    }
+  },
+  { immediate: true },
+);
 
 const expanding = ref<boolean>(false);
 const onExpand = async (node: TreeNode): Promise<void> => {
