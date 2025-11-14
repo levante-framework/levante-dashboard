@@ -235,6 +235,10 @@ const { isLoading: isLoadingDistricts, data: allDistricts } = useDistrictsListQu
   enabled: claimsLoaded,
 });
 
+watch(allDistricts, (newValue) => {
+  console.log('allDistricts: ', newValue);
+});
+
 // TODO: This deduplication is temporary; update the source queries to emit unique districts.
 const districtOptions = computed(() => _uniqBy(allDistricts.value ?? [], (district) => district.id));
 
