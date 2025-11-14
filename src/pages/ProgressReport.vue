@@ -116,7 +116,7 @@
             data-cy="roar-data-table"
             :allow-filtering="!isLevante"
             :reset-filters="resetFilters"
-            :allow-export="!isLevante"
+            :allow-export="true"
             :allow-column-selection="!isLevante"
             :lazy-pre-sorting="orderBy"
             :show-options-control="false"
@@ -173,6 +173,7 @@ import { useRouter } from 'vue-router';
 import _get from 'lodash/get';
 import _kebabCase from 'lodash/kebabCase';
 import _map from 'lodash/map';
+import _startCase from 'lodash/startCase';
 import PvChart from 'primevue/chart';
 import PvMultiSelect from 'primevue/multiselect';
 import PvSelectButton from 'primevue/selectbutton';
@@ -194,6 +195,7 @@ import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
 import { isLevante, getTooltip } from '@/helpers';
 import { APP_ROUTES } from '@/constants/routes';
 import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
+import { CORE_PROGRESS_TASK_IDS } from '@/constants/coreTasks';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import { isEmpty } from 'lodash';
 import PvFloatLabel from 'primevue/floatlabel';
@@ -321,8 +323,56 @@ const filterSchools = ref([]);
 const filterGrades = ref([]);
 const pageLimit = ref(10);
 
+const CSV_NOT_ASSIGNED_VALUE = 'Not Assigned';
 
+const getTaskColumnLabel = (taskId) => {
+  if (tasksDictionary.value?.[taskId]?.publicName) {
+    return tasksDictionary.value[taskId].publicName;
+  }
+  if (tasksDictionary.value?.[taskId]?.name) {
+    return tasksDictionary.value[taskId].name;
+  }
+  return _startCase(taskId);
+};
 
+const appendTaskProgressColumns = (row, progress = {}) => {
+  for (const taskId of CORE_PROGRESS_TASK_IDS) {
+    const columnLabel = getTaskColumnLabel(taskId);
+    row[columnLabel] = progress?.[taskId]?.value ?? CSV_NOT_ASSIGNED_VALUE;
+  }
+
+  for (const taskId of Object.keys(progress || {})) {
+    if (CORE_PROGRESS_TASK_IDS.includes(taskId)) continue;
+    const columnLabel = getTaskColumnLabel(taskId);
+    row[columnLabel] = progress[taskId]?.value ?? CSV_NOT_ASSIGNED_VALUE;
+  }
+};
+
+const buildProgressExportRow = (user, progress = {}) => {
+  const tableRow = {
+    Email: _get(user, 'email') ?? '',
+    First: _get(user, 'firstName') ?? '',
+    Last: _get(user, 'lastName') ?? '',
+    Grade: _get(user, 'grade') ?? '',
+  };
+
+  if (authStore.isUserSuperAdmin()) {
+    tableRow.PID = _get(user, 'assessmentPid') ?? '';
+  }
+
+  if (props.orgType === 'district') {
+    tableRow.School = _get(user, 'schoolName') ?? '';
+  }
+
+  appendTaskProgressColumns(tableRow, progress);
+
+  return tableRow;
+};
+
+const buildExportData = (rows) => {
+  if (!rows) return [];
+  return _map(rows, ({ user, progress }) => buildProgressExportRow(user, progress));
+};
 
 const computedProgressData = computed(() => {
   if (!assignmentData.value) return [];
@@ -396,54 +446,16 @@ const resetFilters = () => {
 };
 
 const exportSelected = (selectedRows) => {
-  const computedExportData = _map(selectedRows, ({ user, progress }) => {
-    let tableRow = {
-      Email: _get(user, 'email'),
-      First: _get(user, 'firstName'),
-      Last: _get(user, 'lastName'),
-      Grade: _get(user, 'grade'),
-    };
-    if (authStore.isUserSuperAdmin()) {
-      tableRow['PID'] = _get(user, 'assessmentPid');
-    }
-    if (props.orgType === 'district') {
-      tableRow['School'] = _get(user, 'schoolName');
-    }
-    for (const taskId in progress) {
-      tableRow[tasksDictionary.value[taskId]?.publicName ?? taskId] = progress[taskId].value;
-    }
-    return tableRow;
-  });
+  const computedExportData = buildExportData(selectedRows);
   exportCsv(computedExportData, 'roar-progress-selected.csv');
-  return;
 };
 
 const exportAll = async () => {
-  const computedExportData = _map(computedProgressData.value, ({ user, progress }) => {
-    let tableRow = {
-      Email: _get(user, 'email'),
-      First: _get(user, 'firstName'),
-      Last: _get(user, 'lastName'),
-      Grade: _get(user, 'grade'),
-    };
-    if (authStore.isUserSuperAdmin()) {
-      tableRow['PID'] = _get(user, 'assessmentPid');
-    }
-    if (props.orgType === 'district') {
-      tableRow['School'] = _get(user, 'schoolName');
-    }
-    for (const taskId in progress) {
-      tableRow[tasksDictionary.value[taskId]?.publicName ?? taskId] = progress[taskId].value;
-    }
-    return tableRow;
-  });
-  exportCsv(
-    computedExportData,
-    `roar-progress-${_kebabCase(getTitle(administrationData.value, isSuperAdmin.value))}-${_kebabCase(
-      orgData.value.name,
-    )}.csv`,
-  );
-  return;
+  const computedExportData = buildExportData(computedProgressData.value);
+  const administrationTitle = administrationData.value ? getTitle(administrationData.value, isSuperAdmin.value) : 'progress';
+  const orgName = orgData.value?.name ?? 'organization';
+  const formattedFileName = `roar-progress-${_kebabCase(administrationTitle)}-${_kebabCase(orgName) || 'org'}.csv`;
+  exportCsv(computedExportData, formattedFileName);
 };
 
 const progressReportColumns = computed(() => {
