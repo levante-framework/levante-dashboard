@@ -178,24 +178,20 @@ import PvChart from 'primevue/chart';
 import PvMultiSelect from 'primevue/multiselect';
 import PvSelectButton from 'primevue/selectbutton';
 import { useAuthStore } from '@/store/auth';
-import useUserType from '@/composables/useUserType';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
 import useAdministrationsStatsQuery from '@/composables/queries/useAdministrationsStatsQuery';
 import useOrgQuery from '@/composables/queries/useOrgQuery';
 import useDistrictSchoolsQuery from '@/composables/queries/useDistrictSchoolsQuery';
 import useAdministrationAssignmentsQuery from '@/composables/queries/useAdministrationAssignmentsQuery';
 import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
-import useUserDataQuery from '@/composables/queries/useUserDataQuery';
 import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
 import { exportCsv } from '@/helpers/query/utils';
 import { taskDisplayNames, gradeOptions } from '@/helpers/reports';
-import { getTitle } from '@/helpers/query/administrations';
 import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
 import { isLevante, getTooltip } from '@/helpers';
 import { APP_ROUTES } from '@/constants/routes';
 import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
-import { CORE_PROGRESS_TASK_IDS } from '@/constants/coreTasks';
+import { LEVANTE_TASK_IDS, ROAR_TASK_IDS } from '@/constants/coreTasks';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import { isEmpty } from 'lodash';
 import PvFloatLabel from 'primevue/floatlabel';
@@ -227,12 +223,6 @@ const initialized = ref(false);
 const { data: tasksDictionary, isLoading: isLoadingTasksDictionary } = useTasksDictionaryQuery({
   enabled: initialized,
 });
-
-const { data: userClaims, isLoading: isLoadingUserClaims } = useUserClaimsQuery({
-  enabled: initialized,
-});
-
-const { isSuperAdmin } = useUserType(userClaims);
 
 const { data: administrationData, isLoading: isLoadingAdministration } = useAdministrationsQuery([props.administrationId], {
   enabled: initialized,
@@ -274,7 +264,15 @@ const displayOrgType = computed(() => {
   return props.orgType;
 });
 
-const isLoading = computed(() => isLoadingAssignments.value || isLoadingTasksDictionary.value || isLoadingAdministration.value || isLoadingAdminStats.value || isLoadingDistrictSchools.value || isLoadingOrg.value || isLoadingUserClaims.value);
+const isLoading = computed(
+  () =>
+    isLoadingAssignments.value ||
+    isLoadingTasksDictionary.value ||
+    isLoadingAdministration.value ||
+    isLoadingAdminStats.value ||
+    isLoadingDistrictSchools.value ||
+    isLoadingOrg.value,
+);
 
 const reportView = ref({ name: 'Progress Report', constant: true });
 const reportViews = [
@@ -282,12 +280,7 @@ const reportViews = [
   { name: 'Score Report', constant: false },
 ];
 
-const displayName = computed(() => {
-  if (administrationData.value) {
-    return getTitle(administrationData.value, isSuperAdmin.value);
-  }
-  return '';
-});
+const displayName = computed(() => administrationData.value?.name ?? '');
 
 const handleViewChange = () => {
   const { administrationId, orgType, orgId } = props;
@@ -325,6 +318,9 @@ const pageLimit = ref(10);
 
 const CSV_NOT_ASSIGNED_VALUE = 'Not Assigned';
 
+const levanteTaskSet = new Set(LEVANTE_TASK_IDS);
+const roarTaskSet = new Set(ROAR_TASK_IDS);
+
 const getTaskColumnLabel = (taskId) => {
   if (tasksDictionary.value?.[taskId]?.publicName) {
     return tasksDictionary.value[taskId].publicName;
@@ -336,15 +332,17 @@ const getTaskColumnLabel = (taskId) => {
 };
 
 const appendTaskProgressColumns = (row, progress = {}) => {
-  for (const taskId of CORE_PROGRESS_TASK_IDS) {
+  const addTaskValue = (taskId) => {
     const columnLabel = getTaskColumnLabel(taskId);
     row[columnLabel] = progress?.[taskId]?.value ?? CSV_NOT_ASSIGNED_VALUE;
-  }
+  };
+
+  LEVANTE_TASK_IDS.forEach(addTaskValue);
+  ROAR_TASK_IDS.forEach(addTaskValue);
 
   for (const taskId of Object.keys(progress || {})) {
-    if (CORE_PROGRESS_TASK_IDS.includes(taskId)) continue;
-    const columnLabel = getTaskColumnLabel(taskId);
-    row[columnLabel] = progress[taskId]?.value ?? CSV_NOT_ASSIGNED_VALUE;
+    if (levanteTaskSet.has(taskId) || roarTaskSet.has(taskId)) continue;
+    addTaskValue(taskId);
   }
 };
 
@@ -355,10 +353,6 @@ const buildProgressExportRow = (user, progress = {}) => {
     Last: _get(user, 'lastName') ?? '',
     Grade: _get(user, 'grade') ?? '',
   };
-
-  if (authStore.isUserSuperAdmin()) {
-    tableRow.PID = _get(user, 'assessmentPid') ?? '';
-  }
 
   if (props.orgType === 'district') {
     tableRow.School = _get(user, 'schoolName') ?? '';
@@ -452,7 +446,7 @@ const exportSelected = (selectedRows) => {
 
 const exportAll = async () => {
   const computedExportData = buildExportData(computedProgressData.value);
-  const administrationTitle = administrationData.value ? getTitle(administrationData.value, isSuperAdmin.value) : 'progress';
+  const administrationTitle = administrationData.value?.name ?? 'progress';
   const orgName = orgData.value?.name ?? 'organization';
   const formattedFileName = `roar-progress-${_kebabCase(administrationTitle)}-${_kebabCase(orgName) || 'org'}.csv`;
   exportCsv(computedExportData, formattedFileName);
