@@ -206,6 +206,7 @@ import PvProgressBar from 'primevue/progressbar';
 import { useAssignmentsStore } from '@/store/assignments';
 import { ASSIGNMENT_STATUSES } from '@/constants';
 import { getAssignmentStatus } from '@/helpers/assignments';
+import { LEVANTE_TASK_IDS, ROAR_TASK_IDS } from '@/constants/coreTasks';
 
 interface TaskData {
   name: string;
@@ -331,27 +332,9 @@ const getSpecificSurveyProgressClass = computed(() => (loopIndex: number): strin
 
 const { t, locale } = useI18n();
 
-const levanteTasks: string[] = [
-  'intro',
-  'heartsAndFlowers',
-  'egmaMath',
-  'matrixReasoning',
-  'memoryGame',
-  'mentalRotation',
-  'sameDifferentSelection',
-  'theoryOfMind',
-  'trog',
-  'survey',
-  'mefs',
-  'roarInference',
-  'vocab',
-];
+const levanteTasks = LEVANTE_TASK_IDS;
 
-const roarTasks: string[] = [
-  'pa',
-  'swr',
-  'sre',
-];
+const roarTasks = ROAR_TASK_IDS;
 
 const getTaskName = (taskId: string, taskName: string): string => {
   // Translate Levante task names. The task name is not the same as the taskId.
