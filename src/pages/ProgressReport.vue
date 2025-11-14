@@ -191,7 +191,6 @@ import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
 import { isLevante, getTooltip } from '@/helpers';
 import { APP_ROUTES } from '@/constants/routes';
 import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
-import { LEVANTE_TASK_IDS, ROAR_TASK_IDS } from '@/constants/coreTasks';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import { isEmpty } from 'lodash';
 import PvFloatLabel from 'primevue/floatlabel';
@@ -318,6 +317,34 @@ const pageLimit = ref(10);
 
 const CSV_NOT_ASSIGNED_VALUE = 'Not Assigned';
 
+const orderedTaskIds = computed(() => {
+  const taskIds = administrationData.value?.assessments?.map((assessment) => assessment.taskId) ?? [];
+  const sortedTasks = [...taskIds].sort((p1, p2) => {
+    if (Object.keys(taskDisplayNames).includes(p1) && Object.keys(taskDisplayNames).includes(p2)) {
+      return taskDisplayNames[p1].order - taskDisplayNames[p2].order;
+    } else {
+      return -1;
+    }
+  });
+
+  const priorityTasks = ['swr', 'sre', 'pa'];
+  const ordered = [];
+
+  for (const task of priorityTasks) {
+    if (sortedTasks.includes(task)) {
+      ordered.push(task);
+    }
+  }
+
+  for (const task of sortedTasks) {
+    if (!priorityTasks.includes(task)) {
+      ordered.push(task);
+    }
+  }
+
+  return ordered;
+});
+
 const getTaskColumnLabel = (taskId) => {
   if (tasksDictionary.value?.[taskId]?.publicName) {
     return tasksDictionary.value[taskId].publicName;
@@ -334,10 +361,7 @@ const appendTaskProgressColumns = (row, progress = {}) => {
     row[columnLabel] = progress?.[taskId]?.value ?? CSV_NOT_ASSIGNED_VALUE;
   };
 
-  LEVANTE_TASK_IDS.forEach(addTaskValue);
-  ROAR_TASK_IDS.forEach(addTaskValue);
-
-  Object.keys(progress || {}).forEach(addTaskValue);
+  orderedTaskIds.value.forEach(addTaskValue);
 };
 
 const buildProgressExportRow = (user, progress = {}) => {
@@ -447,35 +471,12 @@ const exportAll = async () => {
 const progressReportColumns = computed(() => {
   if (isLoadingTasksDictionary.value || assignmentData.value === undefined) return [];
 
-  const tableColumns = [{ field: 'user.username', header: 'Username', dataType: 'text', sort: true, filter: true },
+  const tableColumns = [
+    { field: 'user.username', header: 'Username', dataType: 'text', sort: true, filter: true },
     { field: 'user.userType', header: 'User Type', dataType: 'text', sort: true, filter: true },
   ];
 
-  const allTaskIds = administrationData.value.assessments?.map((assessment) => assessment.taskId);
-  const sortedTasks = allTaskIds?.sort((p1, p2) => {
-    if (Object.keys(taskDisplayNames).includes(p1) && Object.keys(taskDisplayNames).includes(p2)) {
-      return taskDisplayNames[p1].order - taskDisplayNames[p2].order;
-    } else {
-      return -1;
-    }
-  });
-
-  const priorityTasks = ['swr', 'sre', 'pa'];
-  const orderedTasks = [];
-
-  for (const task of priorityTasks) {
-    if (sortedTasks.includes(task)) {
-      orderedTasks.push(task);
-    }
-  }
-
-  for (const task of sortedTasks) {
-    if (!priorityTasks.includes(task)) {
-      orderedTasks.push(task);
-    }
-  }
-
-  for (const taskId of orderedTasks) {
+  for (const taskId of orderedTaskIds.value) {
     tableColumns.push({
       field: `progress.${taskId}.value`,
       filterField: `progress.${taskId}.tags`,
