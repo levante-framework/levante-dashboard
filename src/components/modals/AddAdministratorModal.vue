@@ -207,10 +207,9 @@ const districts = computed<DistrictOption[]>(
   () => districtsData?.value?.map((district: DistrictData) => ({ value: district?.id, label: district?.name })) || [],
 );
 
-console.log(' isUserSuperAdmin: ', isUserSuperAdmin());
 
 const isEditMode = computed(() => Boolean(props?.data));
-const administratorName = props.data?.name?.first + ' ' + props.data?.name?.middle + ' ' + props.data?.name?.last;
+const administratorName = computed(() => props.data?.name?.first + ' ' + props.data?.name?.middle + ' ' + props.data?.name?.last);
 const modalTitle = computed(() => (isEditMode.value ? 'Update Administrator Roles' : 'Add Administrator'));
 const submitBtnLabel = computed(() => (isEditMode.value ? 'Update Administrator' : 'Add Administrator'));
 const submittingBtnLabel = computed(() => (isEditMode.value ? 'Updating Administrator' : 'Adding Administrator'));
