@@ -3,9 +3,11 @@ import { fetchAdminsBySite } from '@/helpers/query/utils';
 import { useQuery, UseQueryOptions, UseQueryReturnType } from '@tanstack/vue-query';
 import { computed, Ref } from 'vue';
 
+type AdminsQueryOptions = Omit<UseQueryOptions, 'queryKey' | 'queryFn'>;
+
 const useAdminsBySiteQuery = (
   selectedSite: Ref<any>,
-  queryOptions?: UseQueryOptions,
+  queryOptions?: AdminsQueryOptions,
 ): UseQueryReturnType<any, Error> => {
   const siteId = computed(() => selectedSite.value?.value);
   const siteName = computed(() => selectedSite.value?.label);

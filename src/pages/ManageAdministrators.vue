@@ -25,7 +25,7 @@
         </PvSelect>
       </div>
 
-      <PvButton @click="openAdministratorModal"><i class="pi pi-plus"></i>Add Administrator</PvButton>
+      <PvButton @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Administrator</PvButton>
     </div>
 
     <div class="m-0 mt-5">
@@ -46,6 +46,51 @@
       @refetch="adminsRefetch"
     />
 
+    <PvDialog
+      v-model:visible="isRemovalVerificationModalVisible"
+      modal
+      header="Confirm Removal"
+      :style="{ width: '32rem' }"
+      @hide="closeRemovalVerificationModal"
+    >
+      <div class="flex flex-column gap-3">
+        <p class="text-sm text-gray-600">
+          To remove this administrator from the site, type
+          <span class="font-semibold text-gray-900">{{ removalTargetLabel }}</span>
+          and select Remove. This action cannot be undone.
+        </p>
+
+        <div class="flex flex-column gap-2">
+          <label class="text-sm font-medium text-gray-700">Administrator name</label>
+          <PvInputText
+            v-model="removalConfirmationInput"
+            autofocus
+            placeholder="Type administrator name"
+            class="w-full"
+          />
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="flex justify-end gap-2 w-full">
+          <PvButton
+            label="Cancel"
+            class="p-button-text"
+            severity="secondary"
+            :disabled="isRemovingAdministrator"
+            @click="closeRemovalVerificationModal"
+          />
+          <PvButton
+            label="Remove"
+            severity="danger"
+            :loading="isRemovingAdministrator"
+            :disabled="!isRemovalConfirmationValid || isRemovingAdministrator"
+            @click="executeAdministratorRemoval"
+          />
+        </div>
+      </template>
+    </PvDialog>
+
     <PvConfirmDialog :draggable="false" />
   </div>
 </template>
@@ -60,10 +105,69 @@ import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvConfirmDialog from 'primevue/confirmdialog';
+import PvDialog from 'primevue/dialog';
+import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
+
+interface SiteOption {
+  label: string;
+  value: string;
+}
+
+interface DistrictRecord {
+  id: string;
+  name: string;
+}
+
+interface SiteSummary {
+  siteId: string;
+  siteName: string;
+}
+
+interface AdministratorName {
+  first?: string;
+  middle?: string;
+  last?: string;
+}
+
+interface AdministratorRole {
+  role: string;
+  siteId: string;
+  siteName: string;
+}
+
+interface AdministratorOrganizations {
+  districts?: string[];
+  schools?: string[];
+  classes?: string[];
+  groups?: string[];
+  families?: string[];
+}
+
+interface AdministratorRecord {
+  id: string;
+  email?: string;
+  name?: AdministratorName;
+  roles?: AdministratorRole[];
+  adminOrgs?: AdministratorOrganizations;
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
+interface AdministratorAction {
+  name: string;
+  tooltip: string;
+  icon: string;
+  callback: () => void;
+}
+
+interface AdministratorTableRow extends AdministratorRecord {
+  fullName: string;
+  actions: AdministratorAction[];
+}
 
 const authStore = useAuthStore();
 const { currentSite, roarfirekit, shouldUsePermissions, sites } = storeToRefs(authStore);
@@ -71,48 +175,54 @@ const { isUserSuperAdmin } = authStore;
 const confirm = useConfirm();
 const toast = useToast();
 
-const administrator = ref(null);
+const administrator = ref<AdministratorRecord | null>(null);
 const isAdministratorModalVisible = ref(false);
+const isRemovalVerificationModalVisible = ref(false);
+const removalConfirmationInput = ref('');
+const isRemovingAdministrator = ref(false);
 
 const { data: districtsData } = useDistrictsListQuery({
   enabled: computed(() => !shouldUsePermissions.value),
 });
 
-const siteOptions = computed(() => {
+const siteOptions = computed<SiteOption[]>(() => {
   if (isUserSuperAdmin()) {
     // For super admin, use districts data
-    return (
-      districtsData.value?.map((district: any) => ({
-        label: district.name,
-        value: district.id,
-      })) || []
-    );
+    const districtList = (districtsData.value as DistrictRecord[] | undefined) ?? [];
+
+    return districtList.map((district) => ({
+      label: district.name,
+      value: district.id,
+    }));
   } else {
     // For regular admin, use sites from auth store
-    return (
-      sites.value?.map((site: any) => ({
-        label: site.siteName,
-        value: site.siteId,
-      })) || []
-    );
+    const availableSites = (sites.value as SiteSummary[] | undefined) ?? [];
+
+    return availableSites.map((site) => ({
+      label: site.siteName,
+      value: site.siteId,
+    }));
   }
 });
 
 const selectedSite = computed({
-  get: () => siteOptions.value?.find((siteOption) => siteOption?.value === currentSite.value) || null,
-  set: (value) => {
+  get: () => siteOptions.value?.find((siteOption: SiteOption) => siteOption?.value === currentSite.value),
+  set: (value: SiteOption | null) => {
     if (value?.value) {
       currentSite.value = value.value;
     }
   },
 });
 
-watch(siteOptions, (newSiteOptions) => {
-  selectedSite.value = newSiteOptions[0];
-});
+watch(
+  siteOptions,
+  (newSiteOptions: SiteOption[]) => {
+    selectedSite.value = newSiteOptions[0] ?? null;
+  },
+);
 
 const {
-  data: adminsData = [],
+  data: adminsData,
   isLoading: isAdminsLoading,
   isFetching: isAdminsFetching,
   isRefetching: isAdminsRefetching,
@@ -121,40 +231,38 @@ const {
   enabled: computed(() => !!selectedSite.value),
 });
 
-const tableData = computed(
-  () =>
-    adminsData.value
-      ?.map((admin: any) => {
-        const firstName = admin?.name?.first || '';
-        const middleName = admin?.name?.middle || '';
-        const lastName = admin?.name?.last || '';
-        const fullName = admin?.name ? `${firstName} ${middleName} ${lastName}` : '--';
+const tableData = computed<AdministratorTableRow[]>(() => {
+  const admins = (adminsData?.value as AdministratorRecord[] | undefined) ?? [];
 
-        return {
-          ...admin,
-          fullName,
-          actions: [
-            {
-              name: 'edit',
-              tooltip: 'Edit',
-              icon: 'pi pi-pen-to-square',
-              callback: () => onClickEditBtn(admin),
-            },
-            {
-              name: 'remove',
-              tooltip: 'Remove',
-              icon: 'pi pi-trash',
-              callback: () => onClickRemoveBtn(admin),
-            },
-          ],
-        };
-      })
-      ?.sort((a: any, b: any) => {
-        const aCreatedAt = new Date(a.createdAt).getTime() || 0;
-        const bCreatedAt = new Date(b.createdAt).getTime() || 0;
-        return bCreatedAt - aCreatedAt;
-      }),
-);
+  return admins
+    .map((admin) => {
+      const fullName = formatAdministratorName(admin) || '--';
+
+      return {
+        ...admin,
+        fullName,
+        actions: [
+          {
+            name: 'edit',
+            tooltip: 'Edit',
+            icon: 'pi pi-pen-to-square',
+            callback: () => onClickEditBtn(admin),
+          },
+          {
+            name: 'remove',
+            tooltip: 'Remove',
+            icon: 'pi pi-trash',
+            callback: () => onClickRemoveBtn(admin),
+          },
+        ],
+      };
+    })
+    .sort((a, b) => {
+      const aCreatedAt = new Date((a.createdAt as string | undefined) ?? '').getTime() || 0;
+      const bCreatedAt = new Date((b.createdAt as string | undefined) ?? '').getTime() || 0;
+      return bCreatedAt - aCreatedAt;
+    });
+});
 
 const tableColumns = computed(() => [
   {
@@ -180,14 +288,46 @@ const tableColumns = computed(() => [
   },
 ]);
 
-const currentSiteName = computed(() => sites.value?.find((site: any) => site.siteId === currentSite.value)?.siteName);
+const currentSiteName = computed(() => {
+  const availableSites = (sites.value as SiteSummary[] | undefined) ?? [];
+  return availableSites.find((site) => site.siteId === currentSite.value)?.siteName;
+});
 
 const closeAdministratorModal = () => {
   administrator.value = null;
   isAdministratorModalVisible.value = false;
 };
 
-const onClickRemoveBtn = (admin: any) => {
+const removalTargetLabel = computed(() => {
+  if (!administrator.value) {
+    return '';
+  }
+
+  return formatAdministratorName(administrator.value);
+});
+
+const isRemovalConfirmationValid = computed(() => {
+  if (!removalTargetLabel.value) {
+    return false;
+  }
+
+  return (
+    removalTargetLabel.value.trim().toLowerCase() === removalConfirmationInput.value.trim().toLowerCase()
+  );
+});
+
+const openRemovalVerificationModal = () => {
+  removalConfirmationInput.value = '';
+  isRemovalVerificationModalVisible.value = true;
+};
+
+const closeRemovalVerificationModal = () => {
+  removalConfirmationInput.value = '';
+  isRemovalVerificationModalVisible.value = false;
+  administrator.value = null;
+};
+
+const onClickRemoveBtn = (admin: AdministratorRecord) => {
   administrator.value = admin;
 
   confirm.require({
@@ -198,32 +338,7 @@ const onClickRemoveBtn = (admin: any) => {
     rejectLabel: 'No',
     acceptLabel: 'Yes',
     accept: async () => {
-      await roarfirekit
-        .value!.removeAdministratorFromSite(admin.id, selectedSite.value?.value || currentSite.value)
-        .then(() => {
-          administrator.value = null;
-
-          adminsRefetch();
-
-          toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Administrator account removed successfully',
-            life: TOAST_DEFAULT_LIFE_DURATION,
-          });
-        })
-        .catch((error) => {
-          administrator.value = null;
-
-          toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.message,
-            life: TOAST_DEFAULT_LIFE_DURATION,
-          });
-
-          console.error('Error removing administrator from site', error);
-        });
+      openRemovalVerificationModal();
     },
     reject: () => {
       administrator.value = null;
@@ -231,16 +346,72 @@ const onClickRemoveBtn = (admin: any) => {
   });
 };
 
-const handleSiteChange = (e): void => {
+const handleSiteChange = (e: { value: string }): void => {
   currentSite.value = e.value;
 };
 
-const onClickEditBtn = (admin: any) => {
+const onClickEditBtn = (admin: AdministratorRecord) => {
   administrator.value = admin;
-  openAdministratorModal();
-};
-
-const openAdministratorModal = () => {
   isAdministratorModalVisible.value = true;
 };
+
+async function executeAdministratorRemoval() {
+  if (!administrator.value || !isRemovalConfirmationValid.value || isRemovingAdministrator.value) {
+    return;
+  }
+
+  const siteId = selectedSite.value?.value ?? currentSite.value ?? null;
+
+  if (!siteId) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Missing Site',
+      detail: 'Select a site before removing an administrator.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+
+    administrator.value = null;
+    closeRemovalVerificationModal();
+    return;
+  }
+
+  isRemovingAdministrator.value = true;
+
+  try {
+    await roarfirekit
+      .value!.removeAdministratorFromSite(administrator.value.id, siteId);
+
+    adminsRefetch();
+
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Administrator account removed successfully',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unexpected error removing administrator';
+
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: errorMessage,
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+
+    console.error('Error removing administrator from site', error);
+  } finally {
+    administrator.value = null;
+    closeRemovalVerificationModal();
+    isRemovingAdministrator.value = false;
+  }
+}
+
+function formatAdministratorName(admin?: AdministratorRecord | null) {
+  if (!admin?.name) {
+    return '';
+  }
+
+  return [admin.name.first, admin.name.middle, admin.name.last].filter(Boolean).join(' ').trim();
+}
 </script>
