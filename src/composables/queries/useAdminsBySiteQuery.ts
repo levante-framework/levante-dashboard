@@ -1,5 +1,5 @@
 import { ADMINS_QUERY_KEY } from '@/constants/queryKeys';
-import { fetchAdminsBySite } from '@/helpers/query/utils';
+import { fetchAdminsBySite } from '@/helpers/query/administrations';
 import { useQuery, UseQueryOptions, UseQueryReturnType } from '@tanstack/vue-query';
 import { computed, Ref } from 'vue';
 

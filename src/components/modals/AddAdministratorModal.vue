@@ -197,6 +197,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const authStore = useAuthStore();
+const { shouldUsePermissions } = storeToRefs(authStore);
 const { roarfirekit } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
 const toast = useToast();
@@ -448,7 +449,7 @@ async function submit() {
   }
 
   return await roarfirekit
-    .value!.createNewPermissionsAdmin({ email: email.value, name, roles, isTestData: isTestData.value })
+    .value!.createNewPermissionsAdmin({ email: email.value, name, roles, isTestData: isTestData.value, shouldUsePermissions: shouldUsePermissions.value })
     .then(() => {
       isSubmitting.value = false;
 
