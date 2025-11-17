@@ -225,7 +225,6 @@
                   v-if="getRole(_get(colData, col.field))"
                   class="role-tag"
                   rounded
-                  :icon="getRoleTagIcon(_get(colData, col.field))"
                   :severity="getRoleTagSeverity(_get(colData, col.field))"
                   :value="getRoleTagLabel(_get(colData, col.field))"
                 />
@@ -662,25 +661,16 @@ function getRole(roles) {
   return roles?.filter((value) => [currentSite.value, 'any'].includes(value?.siteId))?.map((value) => value?.role)[0];
 }
 
-function getRoleTagIcon(roles) {
-  switch (getRole(roles)) {
-    case ROLES.ADMIN:
-    case ROLES.SITE_ADMIN:
-      return 'pi pi-users';
-    case ROLES.SUPER_ADMIN:
-      return 'pi pi-shield';
-    default:
-      return null;
-  }
-}
-
 function getRoleTagSeverity(roles) {
   switch (getRole(roles)) {
-    case ROLES.ADMIN:
-    case ROLES.SITE_ADMIN:
-      return 'info';
     case ROLES.SUPER_ADMIN:
-      return 'warn';
+        return 'danger';
+    case ROLES.SITE_ADMIN:
+        return 'info';
+    case ROLES.ADMIN:
+        return 'success';
+    case ROLES.RESEARCH_ASSISTANT:
+        return 'warn';
     default:
       return null;
   }
@@ -688,11 +678,14 @@ function getRoleTagSeverity(roles) {
 
 function getRoleTagLabel(roles) {
   switch (getRole(roles)) {
-    case ROLES.ADMIN:
-    case ROLES.SITE_ADMIN:
-      return 'Admin';
     case ROLES.SUPER_ADMIN:
-      return 'Super Admin';
+        return 'Super Admin';
+    case ROLES.SITE_ADMIN:
+        return 'Site Admin';
+    case ROLES.ADMIN:
+        return 'Admin';
+    case ROLES.RESEARCH_ASSISTANT:
+      return 'Research Assistant';
     default:
       return null;
   }

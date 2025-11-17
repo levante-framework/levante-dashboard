@@ -393,6 +393,21 @@ export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABAS
           },
         },
       },
+      {
+        fieldFilter: {
+          field: { fieldPath: 'roles' },
+          op: 'ARRAY_CONTAINS',
+          value: {
+            mapValue: {
+              fields: {
+                siteId: { stringValue: siteId.value },
+                siteName: { stringValue: siteName.value },
+                role: { stringValue: ROLES.RESEARCH_ASSISTANT },
+              },
+            },
+          },
+        },
+      },
     );
   }
 

@@ -205,6 +205,8 @@ const districts = computed<DistrictOption[]>(
   () => districtsData?.value?.map((district: DistrictData) => ({ value: district?.id, label: district?.name })) || [],
 );
 
+console.log(' isUserSuperAdmin: ', isUserSuperAdmin());
+
 const modalTitle = computed(() => (props?.data ? 'Edit Administrator' : 'Add Administrator'));
 const submitBtnLabel = computed(() => (props?.data ? 'Update Administrator' : 'Add Administrator'));
 const submittingBtnLabel = computed(() => (props?.data ? 'Updating Administrator' : 'Adding Administrator'));
@@ -332,17 +334,6 @@ async function submit() {
     });
   }
 
-  if (!props?.data && !(await roarfirekit.value!.isEmailAvailable(email.value))) {
-    isSubmitting.value = false;
-
-    return toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: `Email ${email.value} is already in use. Please enter a different email address.`,
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  }
-
   const name: Name = {
     first: firstName.value,
     middle: middleName.value,
@@ -408,7 +399,7 @@ async function submit() {
   }
 
   return await roarfirekit
-    .value!.createAdministrator(email.value, name, orgs, adminOrgs, isTestData.value)
+    .value!.createNewPermissionsAdmin({email: email.value, name, roles, isTestData: isTestData.value})
     .then(() => {
       isSubmitting.value = false;
 

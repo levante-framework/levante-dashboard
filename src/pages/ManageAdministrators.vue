@@ -39,7 +39,7 @@
       />
     </div>
 
-    <AdministratorModal
+    <AddAdministratorModal
       :data="administrator"
       :is-visible="isAdministratorModalVisible"
       @close="closeAdministratorModal"
@@ -51,7 +51,7 @@
 </template>
 
 <script lang="ts" setup>
-import AdministratorModal from '@/components/modals/AdministratorModal.vue';
+import AddAdministratorModal from '@/components/modals/AddAdministratorModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import useAdminsBySiteQuery from '@/composables/queries/useAdminsBySiteQuery';
 import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
@@ -191,12 +191,12 @@ const onClickRemoveBtn = (admin: any) => {
   administrator.value = admin;
 
   confirm.require({
-    message: 'You are about to remove this administrator from the site.',
+    message: 'You are about to remove this administrator from the site. Are you sure you want to do this?',
     header: 'Remove Administrator from Site',
     icon: 'pi pi-exclamation-triangle',
     rejectClass: 'p-button-secondary p-button-outlined',
-    rejectLabel: 'Cancel',
-    acceptLabel: 'Remove',
+    rejectLabel: 'No',
+    acceptLabel: 'Yes',
     accept: async () => {
       await roarfirekit
         .value!.removeAdministratorFromSite(admin.id, selectedSite.value?.value || currentSite.value)
