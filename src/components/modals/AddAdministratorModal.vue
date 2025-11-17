@@ -197,7 +197,6 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const authStore = useAuthStore();
-const { shouldUsePermissions } = storeToRefs(authStore);
 const { roarfirekit } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
 const toast = useToast();
@@ -419,7 +418,7 @@ async function submit() {
   // If props.data, we are updating an existing administrator.
   if (props?.data?.id) {
     return await roarfirekit
-      .value!.updateAdministrator(props.data.id, email.value, name, roles, orgs, adminOrgs, isTestData.value)
+      .value!.updateAdministrator({ adminUid: props.data.id, email: email.value, name, roles, isTestData: isTestData.value })
       .then(() => {
         isSubmitting.value = false;
 
@@ -449,7 +448,7 @@ async function submit() {
   }
 
   return await roarfirekit
-    .value!.createNewPermissionsAdmin({ email: email.value, name, roles, isTestData: isTestData.value, shouldUsePermissions: shouldUsePermissions.value })
+    .value!.createNewPermissionsAdmin({ email: email.value, name, roles, isTestData: isTestData.value })
     .then(() => {
       isSubmitting.value = false;
 

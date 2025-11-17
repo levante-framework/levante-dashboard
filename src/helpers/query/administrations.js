@@ -10,7 +10,7 @@ import { filterAdminOrgs } from '@/helpers';
 import { FIRESTORE_DATABASES } from '@/constants/firebase';
 import { ROLES } from '@/constants/roles';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
-import { logger } from '@/helpers/logger';
+import { logger } from '@/logger';
 
 export function getTitle(item, isSuperAdmin) {
   if (isSuperAdmin) {
