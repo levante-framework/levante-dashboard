@@ -9,7 +9,7 @@
     <template #header>
       <div class="flex flex-column gap-1">
         <h2 class="m-0 font-bold" data-testid="modalTitle">{{ modalTitle }}</h2>
-        <p v-if="isEditMode" class="m-0 pt-2 text-md text-gray-600">Updating roles for {{ administratorName }}.</p>
+        <p v-if="isEditMode" class="m-0 pt-2 text-md text-gray-600">Updating roles for <span class="font-bold">{{ administratorName }}</span>.</p>
       </div>
     </template>
 
@@ -57,7 +57,7 @@
                 <PvSelect
                   :id="`site-${index}`"
                   v-model="siteRolePair.district"
-                  :options="districts"
+                  :options="getAvailableDistricts(index)"
                   optionLabel="label"
                   optionValue="value"
                   filter
@@ -105,6 +105,7 @@
           label="Add Site"
           icon="pi pi-plus"
           class="p-button-outlined p-button-secondary w-full md:w-auto"
+
           data-cy="add-site-role-button"
           @click="addSiteRolePair"
         />
@@ -115,7 +116,7 @@
       <div class="modal-footer">
         <PvButton class="p-button-secondary p-button-outlined" label="Cancel" @click="handleOnClose"></PvButton>
 
-        <PvButton :disabled="isSubmitting" :label="submitBtnLabel" data-testid="submitBtn" @click="submit">
+        <PvButton :disabled="isSubmitDisabled" :label="submitBtnLabel" data-testid="submitBtn" @click="submit">
           <div v-if="isSubmitting"><i class="pi pi-spinner pi-spin mr-1"></i> {{ submittingBtnLabel }}</div>
         </PvButton>
       </div>
@@ -239,6 +240,7 @@ const isTestData = ref(false);
 const lastName = ref<string>('');
 const middleName = ref<string>('');
 const siteRolePairs = ref<SiteRolePair[]>([{ district: '', role: '' }]);
+const initialSiteRolePairs = ref<SiteRolePair[]>([]);
 
 const v$ = useVuelidate(
   {
@@ -255,6 +257,41 @@ const v$ = useVuelidate(
 
 const validateSiteRolePairs = (): boolean => siteRolePairs.value.every((pair) => pair.district && pair.role);
 
+const hasRoleChanges = computed(() => {
+  if (!isEditMode.value) {
+    return true;
+  }
+
+  const normalizedInitial = normalizeSiteRolePairs(initialSiteRolePairs.value);
+  const normalizedCurrent = normalizeSiteRolePairs(siteRolePairs.value);
+
+  if (normalizedInitial.length !== normalizedCurrent.length) {
+    return true;
+  }
+
+  return normalizedCurrent.some((pair, index) => {
+    const initialPair = normalizedInitial[index];
+
+    if (!initialPair) {
+      return true;
+    }
+
+    return pair.district !== initialPair.district || pair.role !== initialPair.role;
+  });
+});
+
+const isSubmitDisabled = computed(() => {
+  if (isSubmitting.value) {
+    return true;
+  }
+
+  if (isEditMode.value && !hasRoleChanges.value) {
+    return true;
+  }
+
+  return false;
+});
+
 watch(
   () => props.data,
   (newData) => {
@@ -268,13 +305,18 @@ watch(
       lastName.value = newLastName ?? '';
       middleName.value = newMiddleName ?? '';
 
-      if (newData.roles && newData.roles.length > 0) {
-        siteRolePairs.value = newData.roles.map((roleData) => ({
+      const mappedPairs =
+        newData.roles?.map((roleData) => ({
           district: roleData.siteId,
           role: roleData.role,
-        }));
+        })) ?? [];
+
+      if (mappedPairs.length > 0) {
+        siteRolePairs.value = mappedPairs;
+        initialSiteRolePairs.value = _cloneDeep(mappedPairs);
       } else {
         siteRolePairs.value = [{ district: '', role: '' }];
+        initialSiteRolePairs.value = [];
       }
     } else {
       resetForm();
@@ -298,6 +340,7 @@ function resetForm() {
   lastName.value = '';
   middleName.value = '';
   siteRolePairs.value = [{ district: '', role: '' }];
+  initialSiteRolePairs.value = [];
 
   isSubmitting.value = false;
 }
@@ -309,6 +352,10 @@ function removeSiteRolePair(index: number) {
 }
 
 async function submit() {
+  if (isSubmitDisabled.value) {
+    return;
+  }
+
   const isValid = await v$.value.$validate();
 
   if (!isValid) {
@@ -402,7 +449,7 @@ async function submit() {
   }
 
   return await roarfirekit
-    .value!.createNewPermissionsAdmin({email: email.value, name, roles, isTestData: isTestData.value})
+    .value!.createNewPermissionsAdmin({ email: email.value, name, roles, isTestData: isTestData.value })
     .then(() => {
       isSubmitting.value = false;
 
@@ -429,5 +476,23 @@ async function submit() {
 
       console.error('Error creating administrator', error);
     });
+}
+
+function getAvailableDistricts(index: number): DistrictOption[] {
+  const selectedDistricts = siteRolePairs.value
+    .map((pair, pairIndex) => (pairIndex === index ? null : pair.district))
+    .filter((districtId): districtId is string => Boolean(districtId));
+
+  return districts.value.filter(
+    (district) =>
+      siteRolePairs.value[index]?.district === district.value || !selectedDistricts.includes(district.value),
+  );
+}
+
+function normalizeSiteRolePairs(pairs: SiteRolePair[]): SiteRolePair[] {
+  return pairs
+    .filter((pair) => pair.district && pair.role)
+    .map((pair) => ({ ...pair }))
+    .sort((a, b) => a.district.localeCompare(b.district));
 }
 </script>
