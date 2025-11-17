@@ -9,10 +9,11 @@
     <template #header>
       <div class="flex flex-column gap-1">
         <h2 class="m-0 font-bold" data-testid="modalTitle">{{ modalTitle }}</h2>
+        <p v-if="isEditMode" class="m-0 pt-2 text-md text-gray-600">Updating roles for {{ administratorName }}.</p>
       </div>
     </template>
 
-    <div class="flex gap-2 m-0 mt-4">
+    <div v-if="!isEditMode" class="flex gap-2 m-0 mt-4">
       <div class="flex flex-column gap-1 w-full">
         <PvFloatLabel>
           <PvInputText id="first-name" v-model="firstName" class="w-full" data-cy="input-administrator-first-name" />
@@ -37,7 +38,7 @@
       </div>
     </div>
 
-    <div class="w-full m-0 mt-5">
+    <div v-if="!isEditMode" class="w-full m-0 mt-5">
       <div class="flex flex-column gap-1 w-full">
         <PvFloatLabel>
           <PvInputText id="email" v-model="email" class="w-full" data-cy="input-administrator-email" />
@@ -207,9 +208,11 @@ const districts = computed<DistrictOption[]>(
 
 console.log(' isUserSuperAdmin: ', isUserSuperAdmin());
 
-const modalTitle = computed(() => (props?.data ? 'Edit Administrator' : 'Add Administrator'));
-const submitBtnLabel = computed(() => (props?.data ? 'Update Administrator' : 'Add Administrator'));
-const submittingBtnLabel = computed(() => (props?.data ? 'Updating Administrator' : 'Adding Administrator'));
+const isEditMode = computed(() => Boolean(props?.data));
+const administratorName = props.data?.name?.first + ' ' + props.data?.name?.middle + ' ' + props.data?.name?.last;
+const modalTitle = computed(() => (isEditMode.value ? 'Update Administrator Roles' : 'Add Administrator'));
+const submitBtnLabel = computed(() => (isEditMode.value ? 'Update Administrator' : 'Add Administrator'));
+const submittingBtnLabel = computed(() => (isEditMode.value ? 'Updating Administrator' : 'Adding Administrator'));
 const roleOptions = computed(() => {
   return Object.values(ROLES)
     .map((role) => {
