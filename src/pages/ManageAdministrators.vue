@@ -181,9 +181,7 @@ const isRemovalVerificationModalVisible = ref(false);
 const removalConfirmationInput = ref('');
 const isRemovingAdministrator = ref(false);
 
-const { data: districtsData } = useDistrictsListQuery({
-  enabled: computed(() => !shouldUsePermissions.value),
-});
+const { data: districtsData } = useDistrictsListQuery();
 
 const siteOptions = computed<SiteOption[]>(() => {
   if (isUserSuperAdmin()) {

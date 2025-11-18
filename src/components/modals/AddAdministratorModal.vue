@@ -209,7 +209,7 @@ const districts = computed<DistrictOption[]>(
 
 
 const isEditMode = computed(() => Boolean(props?.data));
-const administratorName = computed(() => props.data?.name?.first + ' ' + props.data?.name?.middle + ' ' + props.data?.name?.last);
+const administratorName = computed(() => [props.data?.name?.first, props.data?.name?.middle, props.data?.name?.last].filter(Boolean).join(' ').trim());
 const modalTitle = computed(() => (isEditMode.value ? 'Update Administrator Roles' : 'Add Administrator'));
 const submitBtnLabel = computed(() => (isEditMode.value ? 'Update Administrator' : 'Add Administrator'));
 const submittingBtnLabel = computed(() => (isEditMode.value ? 'Updating Administrator' : 'Adding Administrator'));
