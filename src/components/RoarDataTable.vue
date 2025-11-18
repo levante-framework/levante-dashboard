@@ -406,7 +406,6 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { useToast } from 'primevue/usetoast';
 import PvButton from 'primevue/button';
 import PvDatePicker from 'primevue/datepicker';
 import PvChip from 'primevue/chip';
@@ -517,24 +516,11 @@ const taskFilterOptions = ref([
   },
 ]);
 
-const toast = useToast();
 const selectAll = ref(false);
 const onSelectAll = () => {
   selectAll.value = !selectAll.value;
   if (selectAll.value) {
     selectedRows.value = props.data;
-    const shouldWarn = props.totalRecords > selectedRows.value.length;
-    if (shouldWarn) {
-      toast.add({
-        severity: 'info',
-        summary: 'Rows selected',
-        detail: `You selected ${selectedRows.value.length} rows but there are
-          ${props.totalRecords} total rows in all of this table's pages. If you
-          would like to export all rows, please click the "Export Whole Table"
-          button.`,
-        life: 5000,
-      });
-    }
   } else {
     selectedRows.value = [];
   }
