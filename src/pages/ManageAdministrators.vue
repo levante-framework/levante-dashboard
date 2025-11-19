@@ -8,23 +8,6 @@
         </span>
       </div>
 
-      <div v-if="!shouldUsePermissions" class="flex align-items-center gap-2 m-2">
-        <label for="site-select">Site:</label>
-        <PvSelect
-          :options="siteOptions"
-          :optionValue="(o) => o.value"
-          :optionLabel="(o) => o.label"
-          :value="selectedSite?.value"
-          class="options-site"
-          @change="handleSiteChange"
-        >
-          <template #value>
-            <i class="pi pi-building"></i>
-            {{ selectedSite?.label || 'Select site' }}
-          </template>
-        </PvSelect>
-      </div>
-
       <PvButton @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Administrator</PvButton>
     </div>
 
@@ -107,10 +90,9 @@ import PvButton from 'primevue/button';
 import PvConfirmDialog from 'primevue/confirmdialog';
 import PvDialog from 'primevue/dialog';
 import PvInputText from 'primevue/inputtext';
-import PvSelect from 'primevue/select';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 
 interface SiteOption {
   label: string;
@@ -203,20 +185,8 @@ const siteOptions = computed<SiteOption[]>(() => {
   }
 });
 
-const selectedSite = computed({
-  get: () => siteOptions.value?.find((siteOption: SiteOption) => siteOption?.value === currentSite.value),
-  set: (value: SiteOption | null) => {
-    if (value?.value) {
-      currentSite.value = value.value;
-    }
-  },
-});
-
-watch(
-  siteOptions,
-  (newSiteOptions: SiteOption[]) => {
-    selectedSite.value = newSiteOptions[0] ?? null;
-  },
+const selectedSite = computed<SiteOption | undefined>(() =>
+  siteOptions.value?.find((siteOption: SiteOption) => siteOption?.value === currentSite.value),
 );
 
 const {
@@ -342,10 +312,6 @@ const onClickRemoveBtn = (admin: AdministratorRecord) => {
       administrator.value = null;
     },
   });
-};
-
-const handleSiteChange = (e: { value: string }): void => {
-  currentSite.value = e.value;
 };
 
 const onClickEditBtn = (admin: AdministratorRecord) => {
