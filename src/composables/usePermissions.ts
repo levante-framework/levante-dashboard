@@ -1,5 +1,5 @@
 // composables/usePermissions.ts
-import { ref, computed, onMounted, readonly } from 'vue';
+import { ref, computed, onMounted, readonly, isRef, type Ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { CacheService, PermissionDocument, PermissionService, type Resource, type Action, type Role, type UserRole as CoreUserRole, GroupSubResource, AdminSubResource } from '@levante-framework/permissions-core';
 import { useAuthStore } from '@/store/auth';
@@ -16,8 +16,20 @@ const permissionService = new PermissionService(cache);
 
 export const usePermissions = () => {
   const authStore = useAuthStore();
-  const { isAuthenticated } = authStore;
-  const { firebaseUser, userData, shouldUsePermissions, currentSite } = storeToRefs(authStore);
+  const { isAuthenticated = () => false } = authStore;
+  const storeRefs = storeToRefs(authStore);
+
+  const ensureRef = <T>(candidate: unknown, fallback: T): Ref<T> => {
+    if (isRef(candidate)) {
+      return candidate as Ref<T>;
+    }
+    return ref((candidate ?? fallback) as T);
+  };
+
+  const firebaseUser = storeRefs.firebaseUser ?? ensureRef(authStore.firebaseUser, { adminFirebaseUser: null });
+  const userData = storeRefs.userData ?? ensureRef(authStore.userData, null);
+  const shouldUsePermissions = storeRefs.shouldUsePermissions ?? ensureRef(authStore.shouldUsePermissions, false);
+  const currentSite = storeRefs.currentSite ?? ensureRef(authStore.currentSite, null);
 
   // console.log('isAuthenticated: ', isAuthenticated);
   // console.log('firebaseUser: ', firebaseUser.adminFirebaseUser);
