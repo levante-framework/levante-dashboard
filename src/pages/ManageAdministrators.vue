@@ -176,10 +176,12 @@ const siteOptions = computed<SiteOption[]>(() => {
     // For super admin, use districts data
     const districtList = (districtsData.value as DistrictRecord[] | undefined) ?? [];
 
-    return districtList.map((district) => ({
+    const options = districtList.map((district) => ({
       label: district.name,
       value: district.id,
     }));
+
+    return [{ label: 'All Sites', value: 'all' }, ...options];
   } else {
     // For regular admin, use sites from auth store
     const availableSites = (sites.value as SiteSummary[] | undefined) ?? [];
@@ -191,9 +193,9 @@ const siteOptions = computed<SiteOption[]>(() => {
   }
 });
 
-const selectedSite = computed<SiteOption | undefined>(() =>
-  siteOptions.value?.find((siteOption: SiteOption) => siteOption?.value === currentSite.value),
-);
+const selectedSite = computed<SiteOption | undefined>(() => {
+  return siteOptions.value?.find((siteOption: SiteOption) => siteOption?.value === currentSite.value)
+});
 
 const {
   data: adminsData,

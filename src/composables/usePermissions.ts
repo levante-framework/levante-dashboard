@@ -1,6 +1,6 @@
 // composables/usePermissions.ts
 import { ref, computed, onMounted, readonly, toValue } from 'vue';
-import { CacheService, PermissionDocument, PermissionService, type Resource, type Action, type Role, type UserRole as CoreUserRole, GroupSubResource, AdminSubResource } from '@levante-framework/permissions-core';
+import { CacheService, PermissionDocument, PermissionService, type Resource, type Action, type Role, type UserRole as CoreUserRole, GroupSubResource, AdminSubResource, ROLES } from '@levante-framework/permissions-core';
 import { useAuthStore } from '@/store/auth';
 import { getAxiosInstance, getBaseDocumentPath, convertValues } from '@/helpers/query/utils';
 import _mapValues from 'lodash/mapValues';

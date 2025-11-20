@@ -54,6 +54,7 @@ import { APP_ROUTES } from '@/constants/routes';
 import Badge from 'primevue/badge';
 import UserActions from './UserActions.vue';
 import useUserType from '@/composables/useUserType';
+import { ROLES } from '@/constants/roles';
 
 interface NavbarAction {
   category: string;
@@ -158,7 +159,7 @@ const computedIsBasicView = computed((): boolean => {
 
 const rawActions = computed((): NavbarAction[] => {
   const userRoles = userData.value?.roles || [];
-  const currentRoleObj = userRoles.find((r: { siteId: string; role: string }) => r.siteId === currentSite.value);
+  const currentRoleObj = userRoles.find((r: { siteId: string; role: string }) => (r.siteId === currentSite.value) || r.role === ROLES.SUPER_ADMIN);
 
   return getNavbarActions({
     userRole: currentRoleObj?.role,

@@ -93,15 +93,18 @@ const feedbackButton = ref<HTMLButtonElement | null>(null);
 
 const props = defineProps<Props>();
 
-const { data: districtsData = [] } = useDistrictsListQuery();
+const { data: districtsData = [], isLoading: isLoadingDistricts } = useDistrictsListQuery();
 
 watchEffect(() => {
+  if (isLoadingDistricts.value) {
+    return;
+  }
   if (authStore.isUserSuperAdmin()) {
     const formattedSites = districtsData?.value?.map((district) => ({ label: district?.name, value: district?.id }));
-    siteOptions.value = [{ label: 'All sites', value: 'any' }, ...formattedSites];
+    siteOptions.value = [{ label: 'All Sites', value: 'all' }, ...formattedSites];
   } else {
     siteOptions.value = authStore.sites.map((site: SiteOption) => ({
-      label: site.siteName,
+      label: site.siteName, 
       value: site.siteId,
     }));
   }
