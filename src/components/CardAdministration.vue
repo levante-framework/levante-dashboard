@@ -310,7 +310,8 @@ const administrationStatusBadge = computed((): string => administrationStatus.va
 const speedDialItems = computed((): SpeedDialItem[] => {
   const items: SpeedDialItem[] = [];
 
-  if (isUpcoming.value && hasRole(ROLES.ADMIN)) {
+  // TODO: Change this to admin when edit assignment refactor is complete
+  if (isUpcoming.value && hasRole(ROLES.SUPER_ADMIN)) {
     items.push({
       label: 'Delete',
       icon: 'pi pi-trash',
