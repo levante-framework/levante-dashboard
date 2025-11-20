@@ -224,6 +224,7 @@ import { ROLES } from '@/constants/roles';
 import { normalizeToLowercase } from '@/helpers';
 import _useDistrictsQuery from '@/composables/queries/_useDistrictsQuery';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
+import { usePermissions } from '@/composables/usePermissions';
 
 const router = useRouter();
 const initialized = ref(false);
@@ -265,6 +266,7 @@ const addUsers = () => {
 const authStore = useAuthStore();
 const { currentSite, roarfirekit, shouldUsePermissions, userClaims } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
+const { hasMinimumRole, userRole } = usePermissions();
 
 const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
 const claimsLoaded = computed(() => !!userClaims.value?.claims);
@@ -483,14 +485,16 @@ const tableColumns = computed(() => {
     sort: false,
   });
 
-  columns.push(
-    {
+  if (hasMinimumRole(ROLES.SITE_ADMIN)) {
+    columns.push({
       header: 'Edit',
       button: true,
       eventName: 'edit-button',
       buttonIcon: 'pi pi-pencil',
       sort: false,
-    },
+    });
+  }
+
     // {
     //   header: 'Export Users',
     //   buttonLabel: 'Export Users',
@@ -499,7 +503,6 @@ const tableColumns = computed(() => {
     //   buttonIcon: 'pi pi-download mr-2',
     //   sort: false,
     // },
-  );
 
   return columns;
 });
