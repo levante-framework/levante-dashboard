@@ -7,8 +7,9 @@
           <i class="pi pi-building"></i>{{ currentSiteName }}
         </span>
       </div>
-
-      <PvButton @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Administrator</PvButton>
+      <PermissionGuard :requireRole="ROLES.ADMIN">
+        <PvButton @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Administrator</PvButton>
+      </PermissionGuard>
     </div>
 
     <div class="m-0 mt-5">
@@ -93,6 +94,8 @@ import PvInputText from 'primevue/inputtext';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
+import PermissionGuard from '@/components/PermissionGuard.vue';
+import { ROLES } from '@/constants/roles';
 
 interface SiteOption {
   label: string;

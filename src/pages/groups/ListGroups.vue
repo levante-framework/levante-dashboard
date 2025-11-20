@@ -5,7 +5,7 @@
         <div class="flex flex-column align-items-start mb-2 md:flex-row w-full justify-content-between">
           <div class="flex align-items-center gap-3 mb-4 md:mb-0">
             <div class="admin-page-header mr-4">Groups</div>
-            <PermissionGuard :requireRole="ROLES.RESEARCH_ASSISTANT">
+            <PermissionGuard :requireRole="ROLES.SITE_ADMIN">
               <PvButton
                 class="bg-primary text-white border-none p-2 ml-auto"
                 data-testid="add-group-btn"
