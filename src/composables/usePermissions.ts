@@ -71,6 +71,12 @@ export const usePermissions = () => {
     }
   });
 
+  const userRole = computed<Role | null>(() => {
+    if (!shouldUsePermissions || !permissionsLoaded.value || !user.value || !currentSite) return null;
+
+    return permissionService.getUserSiteRole(user.value, currentSite);
+  });
+
   const can = (resource: Resource, action: Action, subResource?: GroupSubResource | AdminSubResource): boolean => {
     if (!shouldUsePermissions || !permissionsLoaded.value || !user.value || !currentSite) return false;
 
@@ -89,18 +95,13 @@ export const usePermissions = () => {
     return permissionService.canPerformGlobalAction(user.value, resource, action, subResource);
   };
 
-  const hasRole = (role: Role): boolean => {
-    if (!shouldUsePermissions || !permissionsLoaded.value || !user.value || !currentSite) return false;
+  const hasMinimumRole = (role: Role): boolean => {
+    if (!userRole.value) return false;
 
-    const userRole = permissionService.getUserSiteRole(
-      user.value,
-      currentSite
-    );
-
-    if (!userRole) return false;
-
-    return permissionService.hasMinimumRole(userRole, role);
+    return permissionService.hasMinimumRole(userRole.value, role);
   };
+
+  const hasRole = (role: Role): boolean => hasMinimumRole(role);
 
   const permissions = computed(() => {
     if (!shouldUsePermissions || !permissionsLoaded.value) return {};
@@ -126,6 +127,8 @@ export const usePermissions = () => {
     can,
     canGlobal,
     hasRole,
+    hasMinimumRole,
+    userRole,
     permissions,
     permissionsLoaded: readonly(permissionsLoaded),
   };
