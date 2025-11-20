@@ -80,6 +80,8 @@
 </template>
 
 <script lang="ts" setup>
+import { usePermissions } from '@/composables/usePermissions';
+import { AdminSubResource } from '@levante-framework/permissions-core';
 import AddAdministratorModal from '@/components/modals/AddAdministratorModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import useAdminsBySiteQuery from '@/composables/queries/useAdminsBySiteQuery';
@@ -155,8 +157,9 @@ interface AdministratorTableRow extends AdministratorRecord {
 }
 
 const authStore = useAuthStore();
-const { currentSite, roarfirekit, shouldUsePermissions, sites } = storeToRefs(authStore);
+const { currentSite, roarfirekit, sites } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
+const { can } = usePermissions();
 const confirm = useConfirm();
 const toast = useToast();
 
@@ -208,24 +211,32 @@ const tableData = computed<AdministratorTableRow[]>(() => {
   return admins
     .map((admin) => {
       const fullName = formatAdministratorName(admin) || '--';
+      const targetRole = admin.roles?.find((r) => r.siteId === selectedSite.value?.value)?.role as AdminSubResource;
 
+      const actions: AdministratorAction[] = [];
+
+      if (targetRole && can('admins', 'update', targetRole)) {
+        actions.push({
+          name: 'edit',
+          tooltip: 'Edit',
+          icon: 'pi pi-pen-to-square',
+          callback: () => onClickEditBtn(admin),
+        });
+      }
+
+      if (targetRole && can('admins', 'delete', targetRole)) {
+        actions.push({
+          name: 'remove',
+          tooltip: 'Remove',
+          icon: 'pi pi-trash',
+          callback: () => onClickRemoveBtn(admin),
+        });
+      }
+      
       return {
         ...admin,
         fullName,
-        actions: [
-          {
-            name: 'edit',
-            tooltip: 'Edit',
-            icon: 'pi pi-pen-to-square',
-            callback: () => onClickEditBtn(admin),
-          },
-          {
-            name: 'remove',
-            tooltip: 'Remove',
-            icon: 'pi pi-trash',
-            callback: () => onClickRemoveBtn(admin),
-          },
-        ],
+        actions,
       };
     })
     .sort((a, b) => {
@@ -235,29 +246,38 @@ const tableData = computed<AdministratorTableRow[]>(() => {
     });
 });
 
-const tableColumns = computed(() => [
-  {
-    field: 'fullName',
-    header: 'Name',
-    dataType: 'string',
-  },
-  {
-    field: 'email',
-    header: 'Email',
-    dataType: 'string',
-  },
-  {
-    field: 'roles',
-    header: 'Role',
-    dataType: 'string',
-  },
-  {
-    field: 'actions',
-    header: 'Actions',
-    dataType: 'string',
-    sort: false,
-  },
-]);
+const tableColumns = computed(() => {
+  const hasActions = tableData.value.some((row) => row.actions && row.actions.length > 0);
+
+  const columns: { field: string; header: string; dataType: string; sort?: boolean }[] = [
+    {
+      field: 'fullName',
+      header: 'Name',
+      dataType: 'string',
+    },
+    {
+      field: 'email',
+      header: 'Email',
+      dataType: 'string',
+    },
+    {
+      field: 'roles',
+      header: 'Role',
+      dataType: 'string',
+    },
+  ];
+
+  if (hasActions) {
+    columns.push({
+      field: 'actions',
+      header: 'Actions',
+      dataType: 'string',
+      sort: false,
+    });
+  }
+
+  return columns;
+});
 
 const currentSiteName = computed(() => {
   const availableSites = (sites.value as SiteSummary[] | undefined) ?? [];
