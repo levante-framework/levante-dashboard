@@ -101,7 +101,7 @@ watchEffect(() => {
   }
   if (authStore.isUserSuperAdmin()) {
     const formattedSites = districtsData?.value?.map((district) => ({ label: district?.name, value: district?.id }));
-    siteOptions.value = [{ label: 'All Sites', value: 'all' }, ...formattedSites];
+    siteOptions.value = [{ label: 'All Sites', value: 'any' }, ...formattedSites];
   } else {
     siteOptions.value = authStore.sites.map((site: SiteOption) => ({
       label: site.siteName, 

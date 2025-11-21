@@ -7,9 +7,12 @@
           <i class="pi pi-building"></i>{{ currentSiteName }}
         </span>
       </div>
-      <PermissionGuard :requireRole="ROLES.ADMIN">
+      <PermissionGuard v-if="!isAllSitesSelected" :requireRole="ROLES.ADMIN">
         <PvButton @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Administrator</PvButton>
       </PermissionGuard>
+      <PvButton v-else disabled severity="secondary" class="p-button-outlined">
+        <i class="pi pi-ban"></i>Select a site to manage administrators
+      </PvButton>
     </div>
 
     <div class="m-0 mt-5">
@@ -181,7 +184,7 @@ const siteOptions = computed<SiteOption[]>(() => {
       value: district.id,
     }));
 
-    return [{ label: 'All Sites', value: 'all' }, ...options];
+    return [{ label: 'All Sites', value: 'any' }, ...options];
   } else {
     // For regular admin, use sites from auth store
     const availableSites = (sites.value as SiteSummary[] | undefined) ?? [];
@@ -196,6 +199,8 @@ const siteOptions = computed<SiteOption[]>(() => {
 const selectedSite = computed<SiteOption | undefined>(() => {
   return siteOptions.value?.find((siteOption: SiteOption) => siteOption?.value === currentSite.value)
 });
+
+const isAllSitesSelected = computed(() => selectedSite.value?.value === 'any');
 
 const {
   data: adminsData,
@@ -217,7 +222,7 @@ const tableData = computed<AdministratorTableRow[]>(() => {
 
       const actions: AdministratorAction[] = [];
 
-      if (targetRole && can('admins', 'update', targetRole)) {
+      if (!isAllSitesSelected.value && targetRole && can('admins', 'update', targetRole)) {
         actions.push({
           name: 'edit',
           tooltip: 'Edit',
@@ -226,7 +231,7 @@ const tableData = computed<AdministratorTableRow[]>(() => {
         });
       }
 
-      if (targetRole && can('admins', 'delete', targetRole)) {
+      if (!isAllSitesSelected.value && targetRole && can('admins', 'delete', targetRole)) {
         actions.push({
           name: 'remove',
           tooltip: 'Remove',

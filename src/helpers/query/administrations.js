@@ -199,7 +199,7 @@ export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABAS
 
   let requestBody;
 
-  if (siteId.value === 'all') {
+  if (siteId.value === 'any') {
     requestBody = {
       structuredQuery: {
         from: [{ collectionId: FIRESTORE_COLLECTIONS.USERS }],
