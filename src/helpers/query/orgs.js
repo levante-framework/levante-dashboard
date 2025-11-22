@@ -154,7 +154,7 @@ export const orgFetcher = async (
   selectedDistrict,
   isSuperAdmin,
   adminOrgs,
-  select = ['name', 'id', 'tags', 'currentActivationCode'],
+  select = ['name', 'id'],
 ) => {
   const districtId = toValue(selectedDistrict) === 'any' ? null : toValue(selectedDistrict);
 
