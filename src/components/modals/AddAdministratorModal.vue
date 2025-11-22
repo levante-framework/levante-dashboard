@@ -17,7 +17,7 @@
       <div class="flex flex-column gap-1 w-full">
         <PvFloatLabel>
           <PvInputText id="first-name" v-model="firstName" class="w-full" data-cy="input-administrator-first-name" />
-          <label for="first-name">First name</label>
+          <label for="first-name">First name<span class="required-asterisk">*</span></label>
         </PvFloatLabel>
         <small v-if="v$.firstName.$error" class="p-error">First name is required.</small>
       </div>
@@ -32,7 +32,7 @@
       <div class="flex flex-column gap-1 w-full">
         <PvFloatLabel>
           <PvInputText id="last-name" v-model="lastName" class="w-full" data-cy="input-administrator-last-name" />
-          <label for="last-name">Last name</label>
+          <label for="last-name">Last name<span class="required-asterisk">*</span></label>
         </PvFloatLabel>
         <small v-if="v$.lastName.$error" class="p-error">Last name is required.</small>
       </div>
