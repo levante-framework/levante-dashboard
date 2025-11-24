@@ -5,8 +5,13 @@ import _mapValues from 'lodash/mapValues';
 import _without from 'lodash/without';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
+import { AUTH_USER_TYPE } from '@/constants/auth';
 import { convertValues, getAxiosInstance, getBaseDocumentPath, orderByDefault } from './utils';
 import { filterAdminOrgs } from '@/helpers';
+import { FIRESTORE_DATABASES } from '@/constants/firebase';
+import { ROLES } from '@/constants/roles';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { logger } from '@/logger';
 
 export function getTitle(item, isSuperAdmin) {
   if (isSuperAdmin) {
@@ -187,4 +192,123 @@ export const getAdministrationsByOrg = (orgId, orgType, administrations) => {
     const assignedOrgs = administration.assignedOrgs?.[orgType] || [];
     return assignedOrgs.includes(orgId);
   });
+};
+
+export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABASES.ADMIN) => {
+  const axiosInstance = getAxiosInstance(db);
+
+  let requestBody;
+
+  if (siteId.value === 'any') {
+    requestBody = {
+      structuredQuery: {
+        from: [{ collectionId: FIRESTORE_COLLECTIONS.USERS }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: 'userType' },
+            op: 'EQUAL',
+            value: { stringValue: AUTH_USER_TYPE.ADMIN },
+          },
+        },
+      },
+    };
+  } else {
+    const filters = [
+      {
+        fieldFilter: {
+          field: { fieldPath: 'roles' },
+          op: 'ARRAY_CONTAINS',
+          value: {
+            mapValue: {
+              fields: {
+                siteId: { stringValue: 'any' },
+                role: { stringValue: ROLES.SUPER_ADMIN },
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    if (siteName) {
+      filters.push(
+        {
+          fieldFilter: {
+            field: { fieldPath: 'roles' },
+            op: 'ARRAY_CONTAINS',
+            value: {
+              mapValue: {
+                fields: {
+                  siteId: { stringValue: siteId.value },
+                  siteName: { stringValue: siteName.value },
+                  role: { stringValue: ROLES.ADMIN },
+                },
+              },
+            },
+          },
+        },
+        {
+          fieldFilter: {
+            field: { fieldPath: 'roles' },
+            op: 'ARRAY_CONTAINS',
+            value: {
+              mapValue: {
+                fields: {
+                  siteId: { stringValue: siteId.value },
+                  siteName: { stringValue: siteName.value },
+                  role: { stringValue: ROLES.SITE_ADMIN },
+                },
+              },
+            },
+          },
+        },
+        {
+          fieldFilter: {
+            field: { fieldPath: 'roles' },
+            op: 'ARRAY_CONTAINS',
+            value: {
+              mapValue: {
+                fields: {
+                  siteId: { stringValue: siteId.value },
+                  siteName: { stringValue: siteName.value },
+                  role: { stringValue: ROLES.RESEARCH_ASSISTANT },
+                },
+              },
+            },
+          },
+        },
+      );
+    }
+
+    requestBody = {
+      structuredQuery: {
+        from: [{ collectionId: FIRESTORE_COLLECTIONS.USERS }],
+        where: {
+          compositeFilter: {
+            op: 'OR',
+            filters,
+          },
+        },
+      },
+    };
+  }
+
+  try {
+    const response = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
+
+    return response.data
+      .filter((user) => user.document)
+      .map((user) => {
+        const doc = user.document;
+
+        return {
+          id: doc.name.split('/').pop(),
+          ..._mapValues(doc.fields, (value) => convertValues(value)),
+        };
+      });
+  } catch (error) {
+    console.error('fetchAdminsBySite: Error fetching admins by siteId:', error);
+    logger.error(error, { context: { function: 'fetchAdminsBySite', siteId, siteName } });
+    throw error;
+  }
 };
