@@ -15,7 +15,7 @@
           </span>
         </div>
         <PermissionGuard :required-role="ROLES.ADMIN">
-          <PvButton :disabled="isAdminsLoading || isAdminsFetching || isAdminsRefetching || !isAllSitesSelected" @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Administrator</PvButton>
+          <PvButton :disabled="isAdminsLoading || isAdminsFetching || isAdminsRefetching || isAllSitesSelected" @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Administrator</PvButton>
         </PermissionGuard>
       </div>
 

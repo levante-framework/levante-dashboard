@@ -8,7 +8,7 @@
       </div>
     </div>
     <div v-else class="flex gap-2 options-wrapper">
-      <div v-if="authStore.shouldUsePermissions" class="flex align-items-center gap-2">
+      <div v-if="shouldUsePermissions" class="flex align-items-center gap-2">
         <label for="site-select">Site:</label>
         <PvSelect
           :options="siteOptions"
@@ -56,7 +56,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect } from 'vue';
+import { ref, computed, watchEffect, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import PvButton from 'primevue/button';
 import PvSelect from 'primevue/select';
@@ -85,6 +86,10 @@ interface SiteOption {
 }
 
 const authStore = useAuthStore();
+const { shouldUsePermissions } = storeToRefs(authStore);
+watch(shouldUsePermissions, (newVal) => {
+  console.log('shouldUsePermissions: ', newVal);
+}, { immediate: true });
 const siteOptions = ref<DropdownOption[]>([]);
 const i18n = useI18n();
 const router = useRouter();
