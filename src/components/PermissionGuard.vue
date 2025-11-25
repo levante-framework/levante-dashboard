@@ -54,8 +54,6 @@ const hasPermission = computed(() => {
   }
 
   if (props.requiredRole) {
-    console.log('requiredRole: ', props.requiredRole);
-    console.log('hasRole: ', hasRole(props.requiredRole));
     return hasRole(props.requiredRole);
   }
 

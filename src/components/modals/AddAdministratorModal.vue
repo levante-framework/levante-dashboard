@@ -228,6 +228,7 @@ const hasRoleChanges = computed(() => {
 });
 
 const isSubmitDisabled = computed(() => {
+  if (!currentSiteInfo.value) return true;
   if (isSubmitting.value) {
     return true;
   }
@@ -293,15 +294,6 @@ async function submit() {
       severity: 'error',
       summary: 'Error',
       detail: 'Please select a role.',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  }
-
-  if (!currentSiteInfo.value) {
-    return toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'No site selected. Please select a site first.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   }

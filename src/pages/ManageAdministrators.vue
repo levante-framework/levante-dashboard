@@ -173,13 +173,10 @@ const {
   refetch: adminsRefetch,
 } = useAdminsBySiteQuery();
 
-const isPageLoading = ref(true);
-
-watch(
-  () => permissionsLoaded.value && (currentSite.value ? !isAdminsLoading.value : true),
-  (ready) => { if (ready) isPageLoading.value = false; },
-  { immediate: true }
-);
+const isPageLoading = computed(() => {
+  if (!permissionsLoaded.value) return true;
+  return currentSite.value && isAdminsLoading.value;
+});
 
 const currentUserId = computed(() => authStore.getUid());
 
