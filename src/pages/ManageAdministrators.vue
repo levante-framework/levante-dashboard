@@ -27,6 +27,7 @@
           :columns="tableColumns"
           :data="tableData"
           :loading="isAdminsLoading || isAdminsFetching || isAdminsRefetching"
+          :row-class="getRowClass"
         />
       </div>
 
@@ -147,6 +148,7 @@ interface AdministratorAction {
 interface AdministratorTableRow extends AdministratorRecord {
   fullName: string;
   actions: AdministratorAction[];
+  isCurrentUser: boolean;
 }
 
 const authStore = useAuthStore();
@@ -179,17 +181,25 @@ watch(
   { immediate: true }
 );
 
+const currentUserId = computed(() => authStore.getUid());
+const currentRoarUid = computed(() => authStore.getRoarUid());
+const currentUserEmail = computed(() => authStore.getUserEmail());
+
 const tableData = computed<AdministratorTableRow[]>(() => {
   const admins = (adminsData?.value as AdministratorRecord[] | undefined) ?? [];
 
   return admins
     .map((admin) => {
-      const fullName = formatAdministratorName(admin) || '--';
+      const baseName = formatAdministratorName(admin) || '--';
       const targetRole = admin.roles?.find((r) => r.siteId === currentSite.value)?.role as AdminSubResource;
+      const isCurrentUser = admin.id === currentUserId.value || 
+        admin.id === currentRoarUid.value || 
+        admin.email === currentUserEmail.value;
+      const fullName = isCurrentUser ? `${baseName} (You)` : baseName;
 
       const actions: AdministratorAction[] = [];
 
-      if (!isAllSitesSelected.value && targetRole && can('admins', 'update', targetRole)) {
+      if (!isCurrentUser && !isAllSitesSelected.value && targetRole && can('admins', 'update', targetRole)) {
         actions.push({
           name: 'edit',
           tooltip: 'Edit',
@@ -198,7 +208,7 @@ const tableData = computed<AdministratorTableRow[]>(() => {
         });
       }
 
-      if (!isAllSitesSelected.value && targetRole && can('admins', 'delete', targetRole)) {
+      if (!isCurrentUser && !isAllSitesSelected.value && targetRole && can('admins', 'delete', targetRole)) {
         actions.push({
           name: 'remove',
           tooltip: 'Remove',
@@ -211,6 +221,7 @@ const tableData = computed<AdministratorTableRow[]>(() => {
         ...admin,
         fullName,
         actions,
+        isCurrentUser,
       };
     })
     .sort((a, b) => {
@@ -370,5 +381,9 @@ function formatAdministratorName(admin?: AdministratorRecord | null) {
   }
 
   return [admin.name.first, admin.name.middle, admin.name.last].filter(Boolean).join(' ').trim();
+}
+
+function getRowClass(data: AdministratorTableRow) {
+  return data.isCurrentUser ? 'current-user-row' : '';
 }
 </script>
