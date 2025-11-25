@@ -320,8 +320,8 @@ async function submit() {
   const roles: { role: string; siteId: string; siteName: string }[] = [
     {
       role: selectedRole.value,
-      siteId: currentSiteInfo.value.siteId,
-      siteName: currentSiteInfo.value.siteName,
+      siteId: currentSiteInfo.value!.siteId,
+      siteName: currentSiteInfo.value!.siteName,
     },
   ];
 
