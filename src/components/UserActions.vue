@@ -12,16 +12,12 @@
         <label for="site-select">Site:</label>
         <PvSelect
           :options="siteOptions"
-          :value="selectedSite?.value"
+          :value="currentSite"
           :optionValue="(o) => o.value"
           :optionLabel="(o) => o.label"
           class="options-site"
           @change="handleSiteChange"
         >
-          <template #value>
-            <i class="pi pi-building"></i>
-            {{ selectedSite?.label || 'Select site' }}
-          </template>
         </PvSelect>
       </div>
 
@@ -86,7 +82,7 @@ interface SiteOption {
 }
 
 const authStore = useAuthStore();
-const { shouldUsePermissions } = storeToRefs(authStore);
+const { shouldUsePermissions, currentSite } = storeToRefs(authStore);
 watch(shouldUsePermissions, (newVal) => {
   console.log('shouldUsePermissions: ', newVal);
 }, { immediate: true });
@@ -104,7 +100,9 @@ watchEffect(() => {
   if (isLoadingDistricts.value) {
     return;
   }
+  console.log('siteoptions: ', siteOptions.value);
   if (authStore.isUserSuperAdmin()) {
+    console.log('districtsData: ', districtsData.value);
     const formattedSites = districtsData?.value?.map((district) => ({ label: district?.name, value: district?.id }));
     siteOptions.value = [{ label: 'All Sites', value: 'any' }, ...formattedSites];
   } else {
@@ -114,10 +112,6 @@ watchEffect(() => {
     }));
   }
 });
-
-const selectedSite = computed<DropdownOption | null>(
-  () => siteOptions.value?.find((siteOption) => siteOption?.value === authStore.currentSite) || null,
-);
 
 const handleSiteChange = (e: DropdownChangeEvent): void => {
   authStore.currentSite = e.value;

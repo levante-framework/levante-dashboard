@@ -168,12 +168,6 @@ export const orgFetcher = async (
       select: select,
     });
 
-    if (orgType === 'districts') {
-      console.log(`Fetching ${orgType}`);
-    } else if (orgType === 'schools') {
-      console.log(`Fetching ${orgType} for ${districtId}`);
-    }
-
     return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
   } else {
     if (['groups', 'families'].includes(orgType)) {

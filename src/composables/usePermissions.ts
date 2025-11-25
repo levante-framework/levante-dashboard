@@ -83,12 +83,7 @@ export const usePermissions = () => {
   };
 
   const hasMinimumRole = (role: Role): boolean => {
-    console.log('userRole: ', userRole.value);
     if (!userRole.value) return false;
-
-    console.log('userRole: ', userRole.value);
-    console.log('role: ', role);
-    console.log('hasMinimumRole: ', permissionService.hasMinimumRole(userRole.value, role));
 
     return permissionService.hasMinimumRole(userRole.value, role);
   };

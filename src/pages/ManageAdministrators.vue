@@ -108,16 +108,6 @@ import { computed, ref, watch } from 'vue';
 import PermissionGuard from '@/components/PermissionGuard.vue';
 import { ROLES } from '@/constants/roles';
 
-interface SiteOption {
-  label: string;
-  value: string;
-}
-
-interface DistrictRecord {
-  id: string;
-  name: string;
-}
-
 interface SiteSummary {
   siteId: string;
   siteName: string;
@@ -167,7 +157,6 @@ interface AdministratorTableRow extends AdministratorRecord {
 
 const authStore = useAuthStore();
 const { currentSite, roarfirekit, sites } = storeToRefs(authStore);
-const { isUserSuperAdmin } = authStore;
 const { can, permissionsLoaded } = usePermissions();
 const confirm = useConfirm();
 const toast = useToast();
@@ -178,35 +167,7 @@ const isRemovalVerificationModalVisible = ref(false);
 const removalConfirmationInput = ref('');
 const isRemovingAdministrator = ref(false);
 
-const { data: districtsData, isLoading: isDistrictsLoading } = useDistrictsListQuery();
-
-const siteOptions = computed<SiteOption[]>(() => {
-  if (isUserSuperAdmin()) {
-    // For super admin, use districts data
-    const districtList = (districtsData.value as DistrictRecord[] | undefined) ?? [];
-
-    const options = districtList.map((district) => ({
-      label: district.name,
-      value: district.id,
-    }));
-
-    return [{ label: 'All Sites', value: 'any' }, ...options];
-  } else {
-    // For regular admin, use sites from auth store
-    const availableSites = (sites.value as SiteSummary[] | undefined) ?? [];
-
-    return availableSites.map((site) => ({
-      label: site.siteName,
-      value: site.siteId,
-    }));
-  }
-});
-
-const selectedSite = computed<SiteOption | undefined>(() => {
-  return siteOptions.value?.find((siteOption: SiteOption) => siteOption?.value === currentSite.value)
-});
-
-const isAllSitesSelected = computed(() => selectedSite.value?.value === 'any');
+const isAllSitesSelected = computed(() => currentSite.value === 'any');
 
 const {
   data: adminsData,
@@ -214,14 +175,14 @@ const {
   isFetching: isAdminsFetching,
   isRefetching: isAdminsRefetching,
   refetch: adminsRefetch,
-} = useAdminsBySiteQuery(selectedSite, {
-  enabled: computed(() => !!selectedSite.value),
+} = useAdminsBySiteQuery(currentSite, {
+  enabled: currentSite.value && sites.value.length > 0,
 });
 
 const isPageLoading = ref(true);
 
 watch(
-  () => permissionsLoaded.value && !isDistrictsLoading.value && (selectedSite.value ? !isAdminsLoading.value : true),
+  () => permissionsLoaded.value && (currentSite.value ? !isAdminsLoading.value : true),
   (ready) => { if (ready) isPageLoading.value = false; },
   { immediate: true }
 );
@@ -232,7 +193,7 @@ const tableData = computed<AdministratorTableRow[]>(() => {
   return admins
     .map((admin) => {
       const fullName = formatAdministratorName(admin) || '--';
-      const targetRole = admin.roles?.find((r) => r.siteId === selectedSite.value?.value)?.role as AdminSubResource;
+      const targetRole = admin.roles?.find((r) => r.siteId === currentSite.value)?.role as AdminSubResource;
 
       const actions: AdministratorAction[] = [];
 
@@ -368,7 +329,7 @@ async function executeAdministratorRemoval() {
     return;
   }
 
-  const siteId = selectedSite.value?.value ?? currentSite.value ?? null;
+  const siteId = currentSite.value;
 
   if (!siteId) {
     toast.add({
