@@ -12,12 +12,15 @@
         <label for="site-select">Site:</label>
         <PvSelect
           :options="siteOptions"
-          :value="currentSite"
+          :modelValue="currentSite"
           :optionValue="(o) => o.value"
           :optionLabel="(o) => o.label"
           class="options-site"
           @change="handleSiteChange"
         >
+          <template #value>
+            <span>{{ currentSiteName || 'Select a site' }}</span>
+          </template>
         </PvSelect>
       </div>
 
@@ -52,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import PvButton from 'primevue/button';
@@ -82,11 +85,7 @@ interface SiteOption {
 }
 
 const authStore = useAuthStore();
-const { shouldUsePermissions, currentSite } = storeToRefs(authStore);
-watch(shouldUsePermissions, (newVal) => {
-  console.log('shouldUsePermissions: ', newVal);
-}, { immediate: true });
-const siteOptions = ref<DropdownOption[]>([]);
+const { shouldUsePermissions, currentSite, currentSiteName } = storeToRefs(authStore);
 const i18n = useI18n();
 const router = useRouter();
 const { mutate: signOut } = useSignOutMutation();
@@ -96,25 +95,29 @@ const props = defineProps<Props>();
 
 const { data: districtsData = [], isLoading: isLoadingDistricts } = useDistrictsListQuery();
 
-watchEffect(() => {
-  if (isLoadingDistricts.value) {
-    return;
-  }
-  console.log('siteoptions: ', siteOptions.value);
+const siteOptions = computed<DropdownOption[]>(() => {
   if (authStore.isUserSuperAdmin()) {
-    console.log('districtsData: ', districtsData.value);
-    const formattedSites = districtsData?.value?.map((district) => ({ label: district?.name, value: district?.id }));
-    siteOptions.value = [{ label: 'All Sites', value: 'any' }, ...formattedSites];
-  } else {
-    siteOptions.value = authStore.sites.map((site: SiteOption) => ({
-      label: site.siteName, 
-      value: site.siteId,
+    if (isLoadingDistricts.value || !districtsData?.value) {
+      if (currentSite.value && currentSiteName.value) {
+        return [{ label: currentSiteName.value, value: currentSite.value }];
+      }
+      return [];
+    }
+    const formattedSites = districtsData.value.map((district: { name: string; id: string }) => ({ 
+      label: district?.name, 
+      value: district?.id 
     }));
+    return [{ label: 'All Sites', value: 'any' }, ...formattedSites];
   }
+  return authStore.sites.map((site: SiteOption) => ({
+    label: site.siteName, 
+    value: site.siteId,
+  }));
 });
 
 const handleSiteChange = (e: DropdownChangeEvent): void => {
-  authStore.currentSite = e.value;
+  const selectedOption = siteOptions.value.find((opt) => opt.value === e.value);
+  authStore.setCurrentSite(e.value, selectedOption?.label ?? null);
 };
 
 const helpOptions: DropdownOption[] = [

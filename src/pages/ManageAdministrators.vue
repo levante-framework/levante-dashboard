@@ -94,7 +94,6 @@ import AddAdministratorModal from '@/components/modals/AddAdministratorModal.vue
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import useAdminsBySiteQuery from '@/composables/queries/useAdminsBySiteQuery';
-import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
@@ -107,11 +106,6 @@ import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 import PermissionGuard from '@/components/PermissionGuard.vue';
 import { ROLES } from '@/constants/roles';
-
-interface SiteSummary {
-  siteId: string;
-  siteName: string;
-}
 
 interface AdministratorName {
   first?: string;
@@ -156,7 +150,7 @@ interface AdministratorTableRow extends AdministratorRecord {
 }
 
 const authStore = useAuthStore();
-const { currentSite, roarfirekit, sites } = storeToRefs(authStore);
+const { currentSite, currentSiteName, roarfirekit } = storeToRefs(authStore);
 const { can, permissionsLoaded } = usePermissions();
 const confirm = useConfirm();
 const toast = useToast();
@@ -175,9 +169,7 @@ const {
   isFetching: isAdminsFetching,
   isRefetching: isAdminsRefetching,
   refetch: adminsRefetch,
-} = useAdminsBySiteQuery(currentSite, {
-  enabled: currentSite.value && sites.value.length > 0,
-});
+} = useAdminsBySiteQuery();
 
 const isPageLoading = ref(true);
 
@@ -261,10 +253,6 @@ const tableColumns = computed(() => {
   return columns;
 });
 
-const currentSiteName = computed(() => {
-  const availableSites = (sites.value as SiteSummary[] | undefined) ?? [];
-  return availableSites.find((site) => site.siteId === currentSite.value)?.siteName;
-});
 
 const closeAdministratorModal = () => {
   administrator.value = null;

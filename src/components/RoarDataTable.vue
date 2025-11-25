@@ -488,7 +488,7 @@ const selectedColumns = ref(props.columns);
 const computedColumns = computed(() => {
   return _map(selectedColumns.value, (col) => {
     return _find(props.columns, (pcol) => pcol.header === col.header);
-  });
+  }).filter(Boolean);
 });
 const currentSort = ref([]);
 const selectedRows = ref([]);

@@ -1,28 +1,25 @@
 import { ADMINS_QUERY_KEY } from '@/constants/queryKeys';
 import { fetchAdminsBySite } from '@/helpers/query/administrations';
 import { useQuery, UseQueryOptions, UseQueryReturnType } from '@tanstack/vue-query';
-import { computed, Ref } from 'vue';
+import { computed } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 
 type AdminsQueryOptions = Omit<UseQueryOptions, 'queryKey' | 'queryFn'>;
 
-const useAdminsBySiteQuery = (
-  selectedSite: Ref<any>,
-  queryOptions?: AdminsQueryOptions,
-): UseQueryReturnType<any, Error> => {
+const useAdminsBySiteQuery = (queryOptions?: AdminsQueryOptions): UseQueryReturnType<any, Error> => {
   const authStore = useAuthStore();
-  const { sites } = storeToRefs(authStore);
-  const siteId = computed(() => selectedSite.value);
-  const siteName = computed(() => sites?.value?.find((site: { siteId: string }) => site.siteId === siteId.value)?.siteName);
+  const { currentSite, currentSiteName } = storeToRefs(authStore);
 
-console.log('sites in useAdminsBySiteQuery: ', sites.value);
-console.log('siteId in useAdminsBySiteQuery: ', siteId.value);
-console.log('siteName in useAdminsBySiteQuery: ', siteName.value);
+  const isQueryEnabled = computed(() => {
+    if (currentSite.value === 'any') return true;
+    return Boolean(currentSite.value && currentSiteName.value);
+  });
 
   return useQuery({
-    queryKey: [ADMINS_QUERY_KEY, siteId, siteName],
-    queryFn: async () => await fetchAdminsBySite(siteId, siteName),
+    queryKey: [ADMINS_QUERY_KEY, currentSite, currentSiteName],
+    queryFn: async () => await fetchAdminsBySite(currentSite, currentSiteName),
+    enabled: isQueryEnabled,
     ...queryOptions,
   });
 };
