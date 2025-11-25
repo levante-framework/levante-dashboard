@@ -182,8 +182,6 @@ watch(
 );
 
 const currentUserId = computed(() => authStore.getUid());
-const currentRoarUid = computed(() => authStore.getRoarUid());
-const currentUserEmail = computed(() => authStore.getUserEmail());
 
 const tableData = computed<AdministratorTableRow[]>(() => {
   const admins = (adminsData?.value as AdministratorRecord[] | undefined) ?? [];
@@ -192,9 +190,7 @@ const tableData = computed<AdministratorTableRow[]>(() => {
     .map((admin) => {
       const baseName = formatAdministratorName(admin) || '--';
       const targetRole = admin.roles?.find((r) => r.siteId === currentSite.value)?.role as AdminSubResource;
-      const isCurrentUser = admin.id === currentUserId.value || 
-        admin.id === currentRoarUid.value || 
-        admin.email === currentUserEmail.value;
+      const isCurrentUser = admin.id === currentUserId.value
       const fullName = isCurrentUser ? `${baseName} (You)` : baseName;
 
       const actions: AdministratorAction[] = [];
