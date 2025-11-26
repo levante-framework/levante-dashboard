@@ -243,25 +243,39 @@ export const orgFetchAll = async (
   includeCreators = false,
 ) => {
   const districtId = selectedDistrict.value === 'any' ? null : selectedDistrict.value;
-  const axiosInstance = getAxiosInstance();
-  const requestBody = getOrgsRequestBody({
-    aggregationQuery: false,
-    orderBy: orderBy.value,
-    orgType: activeOrgType.value,
-    paginate: false,
-    parentDistrict: districtId,
-    parentSchool: selectedSchool.value,
-    select,
-  });
 
   let orgs;
+
+  // When a specific site is selected, only fetch that one site
+  if (activeOrgType.value === ORG_TYPES.DISTRICTS && districtId) {
     try {
-    orgs = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => {
-      return mapFields(data);
+      const district = await fetchDocById(ORG_TYPES.DISTRICTS, districtId, select);
+      orgs = district ? [district] : [];
+    } catch (error) {
+      console.error('orgFetchAll: Error fetching district by ID:', error);
+      return [];
+    }
+  } else {
+    // Otherwise, fetch all sites (only available to super admins)
+    const axiosInstance = getAxiosInstance();
+    const requestBody = getOrgsRequestBody({
+      aggregationQuery: false,
+      orderBy: orderBy.value,
+      orgType: activeOrgType.value,
+      paginate: false,
+      parentDistrict: districtId,
+      parentSchool: selectedSchool.value,
+      select,
     });
-  } catch (error) {
-    console.error('orgFetchAll: Error fetching orgs:', error);
-    return [];
+
+    try {
+      orgs = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => {
+        return mapFields(data);
+      });
+    } catch (error) {
+      console.error('orgFetchAll: Error fetching orgs:', error);
+      return [];
+    }
   }
 
   // @TODO: Add admin's name to group documents to avoid extra queries
