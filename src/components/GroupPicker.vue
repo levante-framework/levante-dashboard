@@ -82,15 +82,15 @@
         </template>
         <PvScrollPanel style="width: 100%; height: 26rem">
           <div v-for="orgKey in Object.keys(selectedOrgs)" :key="orgKey">
-            <div v-if="selectedOrgs[orgKey].length > 0">
+            <div v-if="selectedOrgs[orgKey as keyof OrgCollection]?.length > 0">
               <b>{{ _capitalize(convertToGroupName(orgKey)) }}:</b>
               <PvChip
-                v-for="org in selectedOrgs[orgKey]"
+                v-for="org in selectedOrgs[orgKey as keyof OrgCollection]"
                 :key="org.id"
                 class="m-1 surface-200 p-2 text-black border-round"
                 removable
                 :label="org.name"
-                @remove="remove(org, orgKey)"
+                @remove="remove(org, orgKey as keyof OrgCollection)"
               />
             </div>
           </div>
@@ -119,11 +119,12 @@ import PvTabPanel from 'primevue/tabpanel';
 import PvTabPanels from 'primevue/tabpanels';
 import PvTabs from 'primevue/tabs';
 import { useAuthStore } from '@/store/auth';
-import { orgFetcher, orgFetchAll } from '@/helpers/query/orgs';
-import { orderByNameASC } from '@/helpers/query/utils';
+import { orgFetcher } from '@/helpers/query/orgs';
+import { orderByDefault } from '@/helpers/query/utils';
 import PvFloatLabel from 'primevue/floatlabel';
 import { convertToGroupName } from '@/helpers';
 import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
+import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
 
 interface OrgItem {
   id: string;
@@ -236,7 +237,9 @@ const activeOrgTypeValue = computed<string | number>({
 const { isLoading: isLoadingDistricts, data: allDistricts } = useDistrictsListQuery();
 
 // TODO: This deduplication is temporary; update the source queries to emit unique districts.
-const districtOptions = computed(() => _uniqBy(allDistricts.value ?? [], (district) => district.id));
+const districtOptions = computed(() =>
+  _uniqBy(allDistricts.value ?? [], (district: { id: string }) => district.id),
+);
 
 const schoolQueryEnabled = computed((): boolean => selectedSite.value !== undefined);
 
@@ -248,26 +251,23 @@ const { isLoading: isLoadingSchools, data: allSchools } = useQuery({
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
-const { data: orgData, isLoading: isLoadingOrgData } = useQuery({
-  queryKey: ['orgs', activeOrgType, selectedSite, selectedSchool],
-  queryFn: () =>
-    orgFetchAll(activeOrgType, selectedSite, selectedSchool, ref(orderByNameASC), [
-      'id',
-      'name',
-      'districtId',
-      'schoolId',
-      'schools',
-      'classes',
-    ]),
-  placeholderData: (previousData) => previousData,
-  staleTime: 5 * 60 * 1000, // 5 minutes
-});
+const orderBy = ref(orderByDefault);
+const { data: orgData, isLoading: isLoadingOrgData } = useOrgsTableQuery(
+  activeOrgType,
+  selectedSite,
+  selectedSchool,
+  orderBy,
+  false, // includeCreators = false for GroupPicker
+);
 
 watch(
-  () => [orgData.value, activeOrgType.value],
+  () => [orgData.value, activeOrgType.value] as const,
   ([options, orgType]) => {
-    const optionIds = (options ?? []).map((option) => option.id);
-    selectedOrgs[orgType] = selectedOrgs[orgType].filter((org) => optionIds.includes(org.id));
+    const optionIds = (options ?? []).map((option: OrgItem) => option.id);
+    const key = orgType as keyof OrgCollection;
+    if (selectedOrgs[key]) {
+      selectedOrgs[key] = selectedOrgs[key].filter((org: OrgItem) => optionIds.includes(org.id));
+    }
   },
 );
 
@@ -286,7 +286,7 @@ watch(activeOrgType, () => {
 const remove = (org: OrgItem, orgKey: keyof OrgCollection): void => {
   const rawSelectedOrgs = toRaw(selectedOrgs);
   if (Array.isArray(rawSelectedOrgs[orgKey])) {
-    selectedOrgs[orgKey] = selectedOrgs[orgKey].filter((_org) => _org.id !== org.id);
+    selectedOrgs[orgKey] = (selectedOrgs[orgKey] ?? []).filter((_org) => _org.id !== org.id);
   } else {
     selectedOrgs[orgKey] = [];
   }
