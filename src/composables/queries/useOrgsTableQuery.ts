@@ -1,12 +1,8 @@
-import { computed, ref } from 'vue';
-import { useQuery } from '@tanstack/vue-query';
-import _isEmpty from 'lodash/isEmpty';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
+import { computed, Ref } from 'vue';
+import { useQuery, UseQueryOptions, UseQueryReturnType } from '@tanstack/vue-query';
 import { orgFetchAll } from '@/helpers/query/orgs';
 import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
-import { useAuthStore } from '@/store/auth';
-import { storeToRefs } from 'pinia';
+import { ORG_TYPES } from '@/constants/orgTypes';
 
 /**
  * Orgs Table query.
@@ -14,7 +10,7 @@ import { storeToRefs } from 'pinia';
  * Fetches all orgs assigned to the current user account. This query is intended to be used by the List Orgs page that
  * contains a tabbed data table with orgs (districts, schools, etc.) assigned to the user.
  *
- * @TODO: Explore the possibility of removing this query in favour of more granular queries for each org type.
+ * Firestore rules handle permission filtering, so no client-side filtering is needed.
  *
  * @param {String} activeOrgType – The active org type (district, school, etc.).
  * @param {String} selectedDistrict – The selected district ID.
@@ -27,23 +23,15 @@ const useOrgsTableQuery = (
   activeOrgType: Ref<string>,
   selectedDistrict: Ref<string>,
   selectedSchool: Ref<string>,
-  orderBy: Ref<any>,
+  orderBy: Ref<string>,
   queryOptions?: UseQueryOptions,
-): UseQueryReturnType => {
-  const authStore = useAuthStore();
-  const { userClaims } = storeToRefs(authStore);
-  const { isUserSuperAdmin } = authStore;
-
-  const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
-
-  // Determine select fields based on org type
-  const selectFields = computed(() => {
-    const orgType =
-      typeof activeOrgType === 'function' ? activeOrgType() : (activeOrgType as any).value || activeOrgType;
-    if (orgType === 'groups') {
+): UseQueryReturnType<unknown, Error> => {
+  const selectFields = computed<string[]>(() => {
+    const orgType = activeOrgType.value;
+    if (orgType === ORG_TYPES.GROUPS) {
       return ['id', 'name', 'tags', 'parentOrgId', 'createdBy'];
     }
-    return ['id', 'name', 'tags', 'createdBy'];
+    return ['id', 'name', 'tags', 'createdBy'] as const;
   });
 
   return useQuery({
@@ -54,8 +42,6 @@ const useOrgsTableQuery = (
         selectedDistrict,
         selectedSchool,
         orderBy,
-        ref(isUserSuperAdmin()),
-        adminOrgs,
         selectFields.value,
         true, // includeCreators = true
       ),

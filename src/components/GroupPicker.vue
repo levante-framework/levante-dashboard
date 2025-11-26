@@ -251,7 +251,7 @@ const { isLoading: isLoadingSchools, data: allSchools } = useQuery({
 const { data: orgData, isLoading: isLoadingOrgData } = useQuery({
   queryKey: ['orgs', activeOrgType, selectedSite, selectedSchool],
   queryFn: () =>
-    orgFetchAll(activeOrgType, selectedSite, selectedSchool, ref(orderByNameASC), ref(isUserSuperAdmin()), adminOrgs, [
+    orgFetchAll(activeOrgType, selectedSite, selectedSchool, ref(orderByNameASC), [
       'id',
       'name',
       'districtId',
