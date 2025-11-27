@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeMount, onMounted, ref, defineAsyncComponent } from 'vue';
+import { computed, onBeforeMount, onMounted, ref, defineAsyncComponent, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
@@ -77,7 +77,19 @@ const pageTitle = computed(() => {
   return 'Levante';
 });
 
-const loadSessionTimeoutHandler = computed(() => isAuthStoreReady.value && authStore.isAuthenticated());
+const shouldShowSidebar = computed(() => {
+  if (route.name !== 'Home') return false;
+  
+  const claims = authStore.userClaims?.claims;
+  if (!claims) return false;
+  if (claims.super_admin) return false;
+  
+  return true;
+});
+
+watch([route, () => authStore.userClaims], () => {
+  authStore.setShowSideBar(shouldShowSidebar.value);
+}, { immediate: true });
 
 onBeforeMount(async () => {
   await authStore.initFirekit();
@@ -89,9 +101,6 @@ onBeforeMount(async () => {
     if (authStore.getUserId()) {
       const userClaims = await fetchDocById('userClaims', authStore.getUserId());
       authStore.setUserClaims(userClaims);
-
-      const showSideBar = !userClaims?.claims?.super_admin && !userClaims?.claims?.admin;
-      authStore.setShowSideBar(showSideBar);
     }
 
     if (authStore.getUserId()) {
