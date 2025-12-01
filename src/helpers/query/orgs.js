@@ -170,7 +170,7 @@ export const orgFetcher = async (
 
     return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
   } else {
-    if (['groups', 'families'].includes(orgType)) {
+    if (orgType === 'groups') {
       const promises = (adminOrgs.value[orgType] ?? []).map((orgId) => {
         return fetchDocById(orgType, orgId, select);
       });
