@@ -149,7 +149,9 @@ const modalTitle = computed(() => (isEditMode.value ? 'Update Administrator Role
 const submitBtnLabel = computed(() => (isEditMode.value ? 'Update Administrator' : 'Add Administrator'));
 const submittingBtnLabel = computed(() => (isEditMode.value ? 'Updating Administrator' : 'Adding Administrator'));
 const roleOptions = computed(() => {
-  const action = isEditMode.value ? 'update' : 'create';
+  // Always use 'create' permission - the question is "can I assign this role to someone?"
+  // The edit button visibility already gates who we can edit (based on their current role)
+  const action = 'create';
 
   return Object.values(ROLES)
     .map((role) => {
