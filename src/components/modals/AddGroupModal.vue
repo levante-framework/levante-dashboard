@@ -111,7 +111,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { useAuthStore } from '@/store/auth';
 import { ROLES } from '@/constants/roles';
 import { useQueryClient } from '@tanstack/vue-query';
-import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
+import { DISTRICTS_QUERY_KEY, ORGS_TABLE_QUERY_KEY, SCHOOLS_QUERY_KEY } from '@/constants/queryKeys';
 
 interface OrgType {
   firestoreCollection: string;
@@ -400,6 +400,8 @@ const submit = async () => {
       });
 
       queryClient.invalidateQueries({ queryKey: [ORGS_TABLE_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [DISTRICTS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [SCHOOLS_QUERY_KEY] });
 
       handleOnClose();
     },
