@@ -340,8 +340,6 @@ const submit = async () => {
     });
   }
 
-  console.log('parentDistrict: ', parentDistrict.value);
-
   const data = {
     name: orgName.value,
     normalizedName: normalizeToLowercase(orgName.value),
@@ -388,8 +386,6 @@ const submit = async () => {
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   }
-
-  console.log('parsed data: ', parsedData);
 
   upsertOrg(parsedData as CreateOrgType, {
     onSuccess: () => {

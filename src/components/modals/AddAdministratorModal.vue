@@ -293,7 +293,6 @@ async function submit() {
     middle: middleName.value,
     last: lastName.value,
   };
-  console.log('currentSiteName', currentSiteName.value);
 
   const roles: { role: string; siteId: string; siteName: string }[] = [
     {
