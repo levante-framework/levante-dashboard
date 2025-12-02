@@ -264,7 +264,7 @@ async function submit() {
 
   const isValid = await v$.value.$validate();
 
-  if (!isValid) {
+  if (!isValid && !isEditMode.value) {
     return;
   }
 
