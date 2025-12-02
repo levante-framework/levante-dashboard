@@ -265,7 +265,14 @@ async function submit() {
   const isValid = await v$.value.$validate();
 
   if (!isValid && !isEditMode.value) {
-    return;
+    isSubmitting.value = false;
+
+    return toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Missing required fields.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
   }
 
   if (!selectedRole.value) {
@@ -278,17 +285,6 @@ async function submit() {
   }
 
   isSubmitting.value = true;
-
-  if (email.value.trim().length <= 0) {
-    isSubmitting.value = false;
-
-    return toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Email address is required',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  }
 
   const name: Name = {
     first: firstName.value,
