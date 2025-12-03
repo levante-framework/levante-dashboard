@@ -7,7 +7,7 @@
             {{ title }}
           </h2>
           <small class="m-0 ml-1">
-            — Created by <span class="font-bold">{{ props.creatorName || "--" }}</span></small
+            — Created by <span class="font-bold">{{ props.creatorName }}</span></small
           >
         </div>
         <div v-if="speedDialItems.length > 0" class="flex justify-content-end w-3">
@@ -230,7 +230,7 @@ interface Props {
   assessments: Assessment[];
   showParams: boolean;
   isSuperAdmin: boolean;
-  creatorName: string;
+  creatorName?: string;
   onDeleteAdministration?: (administrationId: string) => void;
 }
 
@@ -279,6 +279,8 @@ const router = useRouter();
 const queryClient = useQueryClient();
 
 const props = withDefaults(defineProps<Props>(), {
+  creatorName: '--',
+  onDeleteAdministration: () => {},
   stats: () => ({}),
 });
 
