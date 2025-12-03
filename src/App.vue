@@ -45,6 +45,8 @@ import NavBar from '@/components/NavBar.vue';
 import { NAVBAR_BLACKLIST } from './constants';
 import SideBar from '@/components/SideBar.vue';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
+import { usePermissions } from '@/composables/usePermissions';
+import { ROLES } from '@/constants/roles';
 
 // const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>
@@ -56,6 +58,7 @@ const showDevtools = ref(false);
 
 const authStore = useAuthStore();
 const route = useRoute();
+const { hasRole } = usePermissions();
 
 // Initialize page event tracking for global analytics
 usePageEventTracking();
@@ -80,15 +83,11 @@ const pageTitle = computed(() => {
 const shouldShowSidebar = computed(() => {
   if (route.name !== 'Home') return false;
   
-  const claims = authStore.userClaims?.claims;
-  if (!claims) return false;
-  if (claims.super_admin) return false;
-  
-  return true;
+  return hasRole(ROLES.PARTICIPANT);
 });
 
-watch([route, () => authStore.userClaims], () => {
-  authStore.setShowSideBar(shouldShowSidebar.value);
+watch(shouldShowSidebar, (value) => {
+  authStore.setShowSideBar(value);
 }, { immediate: true });
 
 onBeforeMount(async () => {
