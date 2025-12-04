@@ -230,7 +230,7 @@ interface Props {
   assessments: Assessment[];
   showParams: boolean;
   isSuperAdmin: boolean;
-  creatorName?: string;
+  creatorName: string;
   onDeleteAdministration?: (administrationId: string) => void;
 }
 
