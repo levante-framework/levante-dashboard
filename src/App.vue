@@ -14,12 +14,10 @@
     <!-- Dynamic Favicon -->
     <link rel="icon" :href="`/favicon-levante.ico`" />
   </Head>
-  <div v-if="isAuthStoreReady" :class="`${authStore.showSideBar ? 'app app--sidebar' : 'app'}`">
+  <div v-if="isAuthStoreReady" class="app">
     <PvToast position="bottom-center" />
 
     <NavBar v-if="typeof $route.name === 'string' && !NAVBAR_BLACKLIST.includes($route.name)" />
-
-    <SideBar v-if="authStore.showSideBar" />
 
     <router-view :key="$route.fullPath" />
 
@@ -33,7 +31,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeMount, onMounted, ref, defineAsyncComponent, watch } from 'vue';
+import { computed, onBeforeMount, onMounted, ref, defineAsyncComponent } from 'vue';
 import { useRoute } from 'vue-router';
 import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
@@ -43,10 +41,7 @@ import { i18n } from '@/translations/i18n';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import NavBar from '@/components/NavBar.vue';
 import { NAVBAR_BLACKLIST } from './constants';
-import SideBar from '@/components/SideBar.vue';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
-import { usePermissions } from '@/composables/usePermissions';
-import { ROLES } from '@/constants/roles';
 
 // const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>
@@ -58,7 +53,6 @@ const showDevtools = ref(false);
 
 const authStore = useAuthStore();
 const route = useRoute();
-const { hasRole } = usePermissions();
 
 // Initialize page event tracking for global analytics
 usePageEventTracking();
@@ -79,16 +73,6 @@ const pageTitle = computed(() => {
   }
   return 'Levante';
 });
-
-const shouldShowSidebar = computed(() => {
-  if (route.name !== 'Home') return false;
-  
-  return hasRole(ROLES.PARTICIPANT);
-});
-
-watch(shouldShowSidebar, (value) => {
-  authStore.setShowSideBar(value);
-}, { immediate: true });
 
 onBeforeMount(async () => {
   await authStore.initFirekit();
