@@ -7,7 +7,7 @@
             {{ title }}
           </h2>
           <small class="m-0 ml-1">
-            — Created by <span class="font-bold">{{ props.creatorName || "--" }}</span></small
+            — Created by <span class="font-bold">{{ props.creatorName }}</span></small
           >
         </div>
         <div v-if="speedDialItems.length > 0" class="flex justify-content-end w-3">
@@ -279,6 +279,8 @@ const router = useRouter();
 const queryClient = useQueryClient();
 
 const props = withDefaults(defineProps<Props>(), {
+  creatorName: '--',
+  onDeleteAdministration: () => {},
   stats: () => ({}),
 });
 
@@ -346,18 +348,18 @@ const speedDialItems = computed((): SpeedDialItem[] => {
       },
     });
   }
-
-  items.push({
-    label: 'Edit',
-    icon: 'pi pi-pencil',
-    command: () => {
-      router.push({
-        name: 'EditAssignment',
-        params: { adminId: props.id },
-      });
-    },
-  });
-
+  if (hasRole(ROLES.ADMIN)) {
+    items.push({
+      label: 'Edit',
+      icon: 'pi pi-pencil',
+      command: () => {
+        router.push({
+          name: 'EditAssignment',
+          params: { adminId: props.id },
+        });
+      },
+    });
+  }
   return items;
 });
 

@@ -64,9 +64,10 @@
             </div>
             <PvButton
               v-else
+              v-tooltip.bottom="isAllSitesSelected ? 'Please select a specific site to add users' : ''"
               :label="activeSubmit ? 'Adding Users' : 'Add Users from Uploaded File'"
               :icon="activeSubmit ? 'pi pi-spin pi-spinner' : ''"
-              :disabled="activeSubmit"
+              :disabled="activeSubmit || isAllSitesSelected"
               data-testid="start-adding-button"
               @click="submitUsers"
             />
@@ -106,7 +107,7 @@
 </template>
 
 <script setup>
-import { ref, toRaw, watch, nextTick } from 'vue';
+import { ref, toRaw, watch, nextTick, computed } from 'vue';
 import { csvFileToJson, normalizeToLowercase } from '@/helpers';
 import _cloneDeep from 'lodash/cloneDeep';
 import _forEach from 'lodash/forEach';
@@ -128,12 +129,14 @@ import { useRouter } from 'vue-router';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { logger } from '@/logger';
 import { storeToRefs } from 'pinia';
-import { fetchDocById } from '@/helpers/query/utils';
 
 const authStore = useAuthStore();
-const { currentSite, shouldUsePermissions } = storeToRefs(authStore);
+const { currentSite, currentSiteName, shouldUsePermissions } = storeToRefs(authStore);
 const { createUsers } = authStore;
 const toast = useToast();
+
+const isAllSitesSelected = computed(() => shouldUsePermissions.value && currentSite.value === 'any');
+
 const isFileUploaded = ref(false);
 const uploadedFile = ref(null);
 const rawUserFile = ref({});
@@ -179,13 +182,6 @@ const allFields = [
   },
 ];
 
-if (!shouldUsePermissions.value) {
-  allFields.push({
-    field: 'site',
-    header: 'Site',
-    dataType: 'string',
-  });
-}
 
 // Error Users Table refs
 const errorTable = ref();
@@ -311,19 +307,6 @@ const onFileUpload = async (event) => {
     return;
   }
 
-  if (!shouldUsePermissions.value) {
-    const hasSite = allColumns.includes('site');
-
-    if (!hasSite) {
-      return toast.add({
-        severity: 'error',
-        summary: 'Error: Missing Column',
-        detail: 'Missing required column(s): Site',
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
-    }
-  }
-
   // Check required fields are not empty
   const childRequiredInfo = ['usertype', 'month', 'year'];
   const careGiverRequiredInfo = ['usertype'];
@@ -406,21 +389,6 @@ const onFileUpload = async (event) => {
 
     if (!hasCohort && !hasSchool) {
       missingFields.push('Cohort OR School');
-    }
-
-    if (!shouldUsePermissions.value) {
-      const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
-      const hasSite =
-        siteField &&
-        user[siteField] &&
-        user[siteField]
-          .split(',')
-          .map((s) => s.trim())
-          .filter((s) => s).length > 0;
-
-      if (!hasSite) {
-        missingFields.push('Site');
-      }
     }
 
     // --- Aggregate Errors and Add User to Error List if Needed ---
@@ -518,45 +486,15 @@ async function submitUsers() {
     return;
   }
 
-  if (shouldUsePermissions.value && currentSite.value === 'any') {
-    activeSubmit.value = false;
-
-    return toast.add({
-      severity: 'warn',
-      summary: 'Warning',
-      detail: 'Please select a site before adding users',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  }
-
-  // Check orgs exist
-  let currentSiteData = null;
-
-  if (shouldUsePermissions.value) {
-    currentSiteData = await fetchDocById('districts', currentSite);
-  }
-
   for (const { user, index } of usersToBeRegistered) {
     try {
       // Find fields case-insensitively
-      const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
       const schoolField = Object.keys(user).find((key) => key.toLowerCase() === 'school');
       const classField = Object.keys(user).find((key) => key.toLowerCase() === 'class');
       const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
 
       // Get values using the actual field names and parse as comma-separated arrays
-      const sites = siteField
-        ? // If csv has site column
-          user[siteField]
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => s)
-        : // If NOT, check for usePermissions
-        shouldUsePermissions.value
-        ? // If usePermissions, pass currentSite's data
-          [currentSiteData?.name]
-        : // If NOT, no site was provided
-          [];
+      const sites = [currentSiteName.value];
 
       const schools = schoolField
         ? user[schoolField]
@@ -648,6 +586,7 @@ async function submitUsers() {
                     schoolFound = true;
                     break; // Found valid parent, move to next school
                   } catch (error) {
+                    console.error('Error getting school ID: ', error);
                     // Try next site
                     continue;
                   }

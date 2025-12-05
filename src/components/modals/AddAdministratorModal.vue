@@ -81,7 +81,6 @@
 
 <script lang="ts" setup>
 import { usePermissions } from '@/composables/usePermissions';
-import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 import { ROLES } from '@/constants/roles';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { useAuthStore } from '@/store/auth';
@@ -120,16 +119,6 @@ interface AdministratorData {
   };
 }
 
-interface DistrictData {
-  id: string;
-  name: string;
-}
-
-interface DistrictOption {
-  value: string;
-  label: string;
-}
-
 interface Emits {
   (event: 'close'): void;
   (event: 'refetch'): void;
@@ -148,22 +137,10 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const authStore = useAuthStore();
-const { roarfirekit, currentSite, sites } = storeToRefs(authStore);
+const { roarfirekit, currentSite, currentSiteName } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
 const { can } = usePermissions();
 const toast = useToast();
-
-const { data: districtsData } = useDistrictsListQuery();
-
-
-
-const currentSiteInfo = computed(() => {
-  const siteFromSites = sites.value.find((site) => site.siteId === currentSite.value);
-  if (siteFromSites) {
-    return { siteId: siteFromSites.siteId, siteName: siteFromSites.siteName };
-  }
-  return null;
-});
 
 
 const isEditMode = computed(() => Boolean(props?.data));
@@ -172,7 +149,9 @@ const modalTitle = computed(() => (isEditMode.value ? 'Update Administrator Role
 const submitBtnLabel = computed(() => (isEditMode.value ? 'Update Administrator' : 'Add Administrator'));
 const submittingBtnLabel = computed(() => (isEditMode.value ? 'Updating Administrator' : 'Adding Administrator'));
 const roleOptions = computed(() => {
-  const action = isEditMode.value ? 'update' : 'create';
+  // Always use 'create' permission - the question is "can I assign this role to someone?"
+  // The edit button visibility already gates who we can edit (based on their current role)
+  const action = 'create';
 
   return Object.values(ROLES)
     .map((role) => {
@@ -228,7 +207,7 @@ const hasRoleChanges = computed(() => {
 });
 
 const isSubmitDisabled = computed(() => {
-  if (!currentSiteInfo.value) return true;
+
   if (isSubmitting.value) {
     return true;
   }
@@ -285,8 +264,15 @@ async function submit() {
 
   const isValid = await v$.value.$validate();
 
-  if (!isValid) {
-    return;
+  if (!isValid && !isEditMode.value) {
+    isSubmitting.value = false;
+
+    return toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Missing required fields.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
   }
 
   if (!selectedRole.value) {
@@ -300,17 +286,6 @@ async function submit() {
 
   isSubmitting.value = true;
 
-  if (email.value.trim().length <= 0) {
-    isSubmitting.value = false;
-
-    return toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Email address is required',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  }
-
   const name: Name = {
     first: firstName.value,
     middle: middleName.value,
@@ -320,8 +295,8 @@ async function submit() {
   const roles: { role: string; siteId: string; siteName: string }[] = [
     {
       role: selectedRole.value,
-      siteId: currentSiteInfo.value!.siteId,
-      siteName: currentSiteInfo.value!.siteName,
+      siteId: currentSite.value!,
+      siteName: currentSiteName.value!,
     },
   ];
 
