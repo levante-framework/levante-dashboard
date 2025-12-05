@@ -8,6 +8,11 @@
   left: 0;
   z-index: 20;
 
+  &.has-sidebar {
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+  }
+
   nav {
     display: flex;
     align-items: center;

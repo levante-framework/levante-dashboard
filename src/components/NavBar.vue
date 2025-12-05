@@ -1,5 +1,5 @@
 <template>
-  <header id="site-header" class="navbar-container">
+  <header id="site-header" class="navbar-container" :class="{ 'has-sidebar': hasSidebar }">
     <nav class="flex flex-row align-items-center justify-content-between w-full">
       <div id="navBarRightEnd" class="flex flex-row align-items-center justify-content-start w-full gap-1">
         <div class="flex align-items-center justify-content-center w-full">
@@ -43,7 +43,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, type Ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvMenubar from 'primevue/menubar';
@@ -73,6 +73,7 @@ interface MenuItem {
 }
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 const { roarfirekit, userData, currentSite } = storeToRefs(authStore);
 const { userRole } = usePermissions();
@@ -149,6 +150,10 @@ const computedIsBasicView = computed((): boolean => {
     return true;
   }
   return false;
+});
+
+const hasSidebar = computed((): boolean => {
+  return userRole.value === ROLES.PARTICIPANT && route.name === 'Home';
 });
 
 const rawActions = computed((): NavbarAction[] => {
