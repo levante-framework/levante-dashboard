@@ -382,7 +382,7 @@ const submitUsers = async () => {
       return;
     }
 
-    await authStore.roarfirekit.linkUsers(normalizedUsers);
+    await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: authStore.currentSite });
     isFileUploaded.value = false;
 
     toast.add({

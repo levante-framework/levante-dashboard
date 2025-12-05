@@ -7,7 +7,6 @@ import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
 import { AUTH_USER_TYPE } from '@/constants/auth';
 import { convertValues, getAxiosInstance, getBaseDocumentPath, orderByDefault } from './utils';
-import { filterAdminOrgs } from '@/helpers';
 import { FIRESTORE_DATABASES } from '@/constants/firebase';
 import { ROLES } from '@/constants/roles';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
@@ -49,9 +48,9 @@ const processBatchStats = async (axiosInstance, statsPaths, batchSize = 5) => {
   return batchStatsDocs;
 };
 
-// TODO: Remove this function. Fields that we want should be passed into the query, not filtered from the whole data of the document on the client side.  
+// TODO: Remove this function. Fields that we want should be passed into the query, not filtered from the whole data of the document on the client side.
 // Netowrk call should be done in the query function, not here.
-const mapAdministrations = async ({ isSuperAdmin, data, adminOrgs }) => {
+const mapAdministrations = async (data) => {
   // First format the administration documents
   const administrationData = data
     .map((a) => a.data)
@@ -63,10 +62,6 @@ const mapAdministrations = async ({ isSuperAdmin, data, adminOrgs }) => {
         groups: a.groups,
         families: a.families,
       };
-
-      if (!isSuperAdmin.value) {
-        assignedOrgs = filterAdminOrgs(adminOrgs.value, assignedOrgs);
-      }
 
       return {
         id: a.id,
@@ -120,7 +115,6 @@ export const administrationPageFetcher = async (
     testData: toValue(fetchTestData),
   });
 
-  const districtId = toValue(selectedDistrictId) === 'any' ? null : toValue(selectedDistrictId);
   const axiosInstance = getAxiosInstance();
   const documents = administrationIds.map((id) => `${getBaseDocumentPath()}/administrations/${id}`);
 
@@ -149,18 +143,7 @@ export const administrationPageFetcher = async (
     undefined,
   );
 
-  let administrations = await mapAdministrations({
-    isSuperAdmin,
-    data: administrationData,
-    adminOrgs: exhaustiveAdminOrgs,
-  });
-
-  if (shouldUsePermissions.value && districtId) {
-    administrations = administrations.filter((adm) => {
-      const assignedDistricts = adm?.assignedOrgs?.districts || [];
-      return assignedDistricts.includes(districtId);
-    });
-  }
+  let administrations = await mapAdministrations(administrationData);
 
   const orderField = (orderBy?.value ?? orderByDefault)[0].field.fieldPath;
   const orderDirection = (orderBy?.value ?? orderByDefault)[0].direction;

@@ -64,9 +64,10 @@
             </div>
             <PvButton
               v-else
+              v-tooltip.bottom="isAllSitesSelected ? 'Please select a specific site to add users' : ''"
               :label="activeSubmit ? 'Adding Users' : 'Add Users from Uploaded File'"
               :icon="activeSubmit ? 'pi pi-spin pi-spinner' : ''"
-              :disabled="activeSubmit"
+              :disabled="activeSubmit || isAllSitesSelected"
               data-testid="start-adding-button"
               @click="submitUsers"
             />
@@ -106,7 +107,7 @@
 </template>
 
 <script setup>
-import { ref, toRaw, watch, nextTick } from 'vue';
+import { ref, toRaw, watch, nextTick, computed } from 'vue';
 import { csvFileToJson, normalizeToLowercase } from '@/helpers';
 import _cloneDeep from 'lodash/cloneDeep';
 import _forEach from 'lodash/forEach';
@@ -128,13 +129,15 @@ import { useRouter } from 'vue-router';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { logger } from '@/logger';
 import { storeToRefs } from 'pinia';
-import { fetchDocById } from '@/helpers/query/utils';
 import { validateAddUsersCsv, validateAddUsersSubmit, validateCsvHeaders } from '@levante-framework/levante-zod';
 
 const authStore = useAuthStore();
-const { currentSite, shouldUsePermissions } = storeToRefs(authStore);
+const { currentSite, currentSiteName, shouldUsePermissions } = storeToRefs(authStore);
 const { createUsers } = authStore;
 const toast = useToast();
+
+const isAllSitesSelected = computed(() => shouldUsePermissions.value && currentSite.value === 'any');
+
 const isFileUploaded = ref(false);
 const uploadedFile = ref(null);
 const rawUserFile = ref({});
@@ -180,13 +183,6 @@ const allFields = [
   },
 ];
 
-if (!shouldUsePermissions.value) {
-  allFields.push({
-    field: 'site',
-    header: 'Site',
-    dataType: 'string',
-  });
-}
 
 // Error Users Table refs
 const errorTable = ref();
@@ -339,7 +335,7 @@ const onFileUpload = async (event) => {
 
       const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
       const siteValue = siteField ? user[siteField] : null;
-      const hasSite = siteValue && 
+      const hasSite = siteValue &&
         String(siteValue)
           .split(',')
           .map((s) => s.trim())
@@ -432,45 +428,15 @@ async function submitUsers() {
     return;
   }
 
-  if (shouldUsePermissions.value && currentSite.value === 'any') {
-    activeSubmit.value = false;
-
-    return toast.add({
-      severity: 'warn',
-      summary: 'Warning',
-      detail: 'Please select a site before adding users',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  }
-
-  // Check orgs exist
-  let currentSiteData = null;
-
-  if (shouldUsePermissions.value) {
-    currentSiteData = await fetchDocById('districts', currentSite);
-  }
-
   for (const { user, index } of usersToBeRegistered) {
     try {
       // Find fields case-insensitively
-      const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
       const schoolField = Object.keys(user).find((key) => key.toLowerCase() === 'school');
       const classField = Object.keys(user).find((key) => key.toLowerCase() === 'class');
       const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
 
       // Get values using the actual field names and parse as comma-separated arrays
-      const sites = siteField
-        ? // If csv has site column
-          user[siteField]
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => s)
-        : // If NOT, check for usePermissions
-        shouldUsePermissions.value
-        ? // If usePermissions, pass currentSite's data
-          [currentSiteData?.name]
-        : // If NOT, no site was provided
-          [];
+      const sites = [currentSiteName.value];
 
       const schools = schoolField
         ? user[schoolField]
@@ -745,7 +711,7 @@ async function submitUsers() {
       const createUsersPayload = {
         userData: processedUsers,
       };
-      
+
       if (shouldUsePermissions.value && currentSite.value && currentSite.value !== 'any') {
         createUsersPayload.siteId = currentSite.value;
       } else if (processedUsers.length > 0 && processedUsers[0].orgIds?.districts?.length > 0) {
