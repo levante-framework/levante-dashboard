@@ -309,9 +309,10 @@ const state = reactive({
   expectedTime: '',
 });
 
-const { refetch: doesAssignmentExist } = useAssignmentByNameQuery(
+const { refetch: refetchAssignmentByName } = useAssignmentByNameQuery(
   toRef(state, 'administrationName'),
   toRef(state, 'districts'),
+  props.adminId,
 );
 
 const rules = {
@@ -566,26 +567,17 @@ const submit = async () => {
 
   if (props.adminId) {
     args.administrationId = props.adminId;
-  } else {
-    const { data: assignmentExist } = await doesAssignmentExist();
+  }
 
-    if (assignmentExist === null) {
-      return toast.add({
-        severity: TOAST_SEVERITIES.ERROR,
-        summary: 'Error',
-        detail: 'Failed to check for duplicate assignment names. Try again or use a different name.',
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
-    }
+  const { data: assignmentExists } = await refetchAssignmentByName();
 
-    if (assignmentExist) {
-      return toast.add({
-        severity: 'error',
-        summary: 'Assignment Creation Error',
-        detail: 'An assignment with that name already exists.',
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
-    }
+  if (assignmentExists) {
+    return toast.add({
+      severity: 'error',
+      summary: 'Assignment Creation Error',
+      detail: 'An assignment with that name already exists.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
   }
 
   upsertAdministration(args, {
