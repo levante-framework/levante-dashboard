@@ -193,7 +193,7 @@ import { APP_ROUTES } from '@/constants/routes';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { isLevante, normalizeToLowercase } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
-import useAssignmentByNameQuery from '@/composables/queries/useAssignmentByNameQuery';
+import useAssignmentExistsQuery from '@/composables/queries/useAssignmentExistsQuery';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
 
 const initialized = ref(false);
@@ -309,7 +309,7 @@ const state = reactive({
   expectedTime: '',
 });
 
-const { refetch: refetchAssignmentByName } = useAssignmentByNameQuery(
+const { refetch: refetchAssignmentExists } = useAssignmentExistsQuery(
   toRef(state, 'administrationName'),
   toRef(state, 'districts'),
   props.adminId,
@@ -569,7 +569,7 @@ const submit = async () => {
     args.administrationId = props.adminId;
   }
 
-  const { data: assignmentExists } = await refetchAssignmentByName();
+  const { data: assignmentExists } = await refetchAssignmentExists();
 
   if (assignmentExists) {
     return toast.add({

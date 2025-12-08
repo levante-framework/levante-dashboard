@@ -1153,5 +1153,5 @@ export const fetchAssignmentsByNameAndDistricts = async (name, normalizedName, d
   });
 
   const results = await Promise.all(queries);
-  return Array.isArray(results) ? results.flat() : [];
+  return Array.isArray(results) ? results.flat() : null;
 };
