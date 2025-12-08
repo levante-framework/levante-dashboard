@@ -36,13 +36,13 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
     category: 'Assignments',
   },
-  {
-    title: 'Manage Tasks',
-    icon: 'pi pi-pencil',
-    buttonLink: { name: 'ManageTasksVariants' },
-    allowedRoles: [ROLES.SUPER_ADMIN],
-    category: 'Assignments',
-  },
+  // {
+  //   title: 'Manage Tasks',
+  //   icon: 'pi pi-pencil',
+  //   buttonLink: { name: 'ManageTasksVariants' },
+  //   allowedRoles: [ROLES.SUPER_ADMIN],
+  //   category: 'Assignments',
+  // },
   // TO DO: REMOVE USER "ACTIONS" AFTER NAMING 3 IS COMPLETE
   {
     title: 'Add Users',
