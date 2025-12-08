@@ -1,5 +1,7 @@
 <template>
-  <main class="container main">
+  <LevanteSpinner v-if="props.adminId && !isFormPopulated" fullscreen />
+
+  <main v-else class="container main">
     <section class="main-body">
       <div class="flex flex-column mb-5">
         <div class="flex justify-content-between mb-2">
@@ -195,8 +197,10 @@ import { isLevante, normalizeToLowercase } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
 import useAssignmentExistsQuery from '@/composables/queries/useAssignmentExistsQuery';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
 
 const initialized = ref(false);
+const isFormPopulated = ref(false);
 const router = useRouter();
 const toast = useToast();
 const queryClient = useQueryClient();
@@ -651,6 +655,8 @@ watch([existingAdministrationData, allVariants], ([adminInfo, allVariantInfo]) =
     if (state.consent === 'No Consent') {
       noConsent.value = state.consent;
     }
+
+    isFormPopulated.value = true;
   }
 });
 </script>
