@@ -429,6 +429,138 @@ const scrollToError = (elementId) => {
   }, 100);
 };
 
+const hasAssignmentChanges = () => {
+  const original = existingAdministrationData.value;
+  const current = state;
+
+  // Compare name
+  if (current.administrationName !== original.name) {
+    return true;
+  }
+
+  // Compare dates - normalize to compare only date part (ignore time)
+  const normalizeDate = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  };
+
+  const originalStartDate = normalizeDate(original.dateOpened);
+  const currentStartDate = normalizeDate(current.dateStarted);
+  if (originalStartDate !== currentStartDate) {
+    return true;
+  }
+
+  const originalEndDate = normalizeDate(original.dateClosed);
+  const currentEndDate = normalizeDate(current.dateClosed);
+  if (originalEndDate !== currentEndDate) {
+    return true;
+  }
+
+  // Compare sequential
+  if (current.sequential !== original.sequential) {
+    return true;
+  }
+
+  // Compare testData
+  if (isTestData.value !== original.testData) {
+    return true;
+  }
+
+  // Compare legal/consent fields
+  const originalConsent = original.legal?.consent ?? null;
+  const originalAssent = original.legal?.assent ?? null;
+  const originalAmount = original.legal?.amount ?? '';
+  const originalExpectedTime = original.legal?.expectedTime ?? '';
+
+  if (current.consent !== originalConsent) {
+    return true;
+  }
+  if (current.assent !== originalAssent) {
+    return true;
+  }
+  if (current.amount !== originalAmount) {
+    return true;
+  }
+  if (current.expectedTime !== originalExpectedTime) {
+    return true;
+  }
+
+  // Compare orgs - extract IDs and sort for comparison
+  const getOrgIds = (orgs) => {
+    return toRaw(orgs)
+      .map((org) => org.id)
+      .sort();
+  };
+
+  const originalOrgs = original.minimalOrgs ?? {};
+  const currentDistricts = getOrgIds(current.districts);
+  const currentSchools = getOrgIds(current.schools);
+  const currentClasses = getOrgIds(current.classes);
+  const currentGroups = getOrgIds(current.groups);
+
+  const originalDistricts = (originalOrgs.districts ?? []).slice().sort();
+  const originalSchools = (originalOrgs.schools ?? []).slice().sort();
+  const originalClasses = (originalOrgs.classes ?? []).slice().sort();
+  const originalGroups = (originalOrgs.groups ?? []).slice().sort();
+
+  if (!_isEqual(currentDistricts, originalDistricts)) {
+    return true;
+  }
+  if (!_isEqual(currentSchools, originalSchools)) {
+    return true;
+  }
+  if (!_isEqual(currentClasses, originalClasses)) {
+    return true;
+  }
+  if (!_isEqual(currentGroups, originalGroups)) {
+    return true;
+  }
+
+  // Compare assessments/variants
+  const normalizeAssessment = (assessment) => {
+    return {
+      taskId: assessment.taskId,
+      variantId: assessment.variantId,
+      params: removeNull(assessment.params ?? {}),
+      conditions: assessment.conditions ? removeNull(assessment.conditions) : undefined,
+    };
+  };
+
+  const currentAssessments = variants.value
+    .map((variant) => {
+      return normalizeAssessment({
+        taskId: variant.task.id,
+        variantId: variant.variant.id,
+        params: toRaw(variant.variant.params),
+        conditions: toRaw(variant.variant.conditions),
+      });
+    })
+    .sort((a, b) => {
+      if (a.taskId !== b.taskId) return a.taskId.localeCompare(b.taskId);
+      if (a.variantId !== b.variantId) return (a.variantId || '').localeCompare(b.variantId || '');
+      return JSON.stringify(a.params).localeCompare(JSON.stringify(b.params));
+    });
+
+  const originalAssessments = (original.assessments ?? []).map(normalizeAssessment).sort((a, b) => {
+    if (a.taskId !== b.taskId) return a.taskId.localeCompare(b.taskId);
+    if (a.variantId !== b.variantId) return (a.variantId || '').localeCompare(b.variantId || '');
+    return JSON.stringify(a.params).localeCompare(JSON.stringify(b.params));
+  });
+
+  if (currentAssessments.length !== originalAssessments.length) {
+    return true;
+  }
+
+  for (let i = 0; i < currentAssessments.length; i++) {
+    if (!_isEqual(currentAssessments[i], originalAssessments[i])) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 const submit = async () => {
   console.log('Submit function called');
   submitted.value = true;
@@ -571,6 +703,16 @@ const submit = async () => {
 
   if (props.adminId) {
     args.administrationId = props.adminId;
+  }
+
+  if (!hasAssignmentChanges()) {
+    toast.add({
+      severity: TOAST_SEVERITIES.WARN,
+      summary: 'No assignment change was detected.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+
+    return router.push({ path: APP_ROUTES.HOME });
   }
 
   const { data: assignmentExists } = await refetchAssignmentExists();
