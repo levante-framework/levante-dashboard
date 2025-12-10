@@ -433,6 +433,9 @@ const hasAssignmentChanges = () => {
   const original = existingAdministrationData.value;
   const current = state;
 
+  // If no original data exists (new assignment), there are always changes
+  if (!original) return true;
+
   // Compare name
   if (current.administrationName !== original.name) {
     return true;
