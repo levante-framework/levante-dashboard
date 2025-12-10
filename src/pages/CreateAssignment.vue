@@ -467,25 +467,6 @@ const hasAssignmentChanges = () => {
     return true;
   }
 
-  // Compare legal/consent fields
-  const originalConsent = original.legal?.consent ?? null;
-  const originalAssent = original.legal?.assent ?? null;
-  const originalAmount = original.legal?.amount ?? '';
-  const originalExpectedTime = original.legal?.expectedTime ?? '';
-
-  if (current.consent !== originalConsent) {
-    return true;
-  }
-  if (current.assent !== originalAssent) {
-    return true;
-  }
-  if (current.amount !== originalAmount) {
-    return true;
-  }
-  if (current.expectedTime !== originalExpectedTime) {
-    return true;
-  }
-
   // Compare orgs - extract IDs and sort for comparison
   const getOrgIds = (orgs) => {
     return toRaw(orgs)
