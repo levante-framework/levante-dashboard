@@ -56,7 +56,7 @@
                 <div class="roar-game-title font-bold">
                   {{ getTaskName(game.taskId, game.taskData.name) }}
                 </div>
-                <div class="roar-game-description mr-2 flex-grow-1">
+                <div class="roar-game-description">
                   <p>
                     {{ getTaskDescription(game.taskId, game.taskData.description) }}
                   </p>
@@ -110,7 +110,7 @@
                   </div>
                 </div>
 
-                <div class="flex flex-column mt-auto">
+                <div class="flex flex-column">
                   <div class="roar-game-meta">
                     <PvTag
                       v-for="(items, metaIndex) in game.taskData.meta"
@@ -168,12 +168,12 @@
                 <img
                   v-if="game.taskData.image"
                   :src="game.taskData.image"
-                  style="width: 100%; object-fit: contain; height: 300px"
+                  style="width: 100%; object-fit: contain; height: auto"
                 />
                 <img
                   v-else
                   src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png"
-                  style="width: 100%; object-fit: contain; height: 300px"
+                  style="width: 100%; object-fit: contain; height: auto"
                 />
               </div>
             </div>
@@ -399,7 +399,6 @@ const getRoutePath = (taskId: string, variantURL?: string, taskURL?: string): st
   }
 };
 
-
 const currentGameId = computed((): string | undefined => {
   return _get(
     _find(props.games, (game) => {
@@ -504,27 +503,24 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   display: flex;
   flex-direction: row;
   width: 100%;
-  min-height: 400px;
   border-radius: 10px;
 }
 
 .roar-game-image {
-  flex: 0 0 35%;
+  flex: 0 0 25%;
   display: flex;
-  align-items: center;
   justify-content: center;
 }
 
 .roar-game-content {
-  flex: 0 0 65%;
+  flex: 0 0 75%;
   padding-right: 2rem;
   display: flex;
   flex-direction: column;
 }
 
 .roar-game-description {
-  margin-bottom: 1rem;
-  flex-grow: 1;
+  margin-bottom: 0.5rem;
 }
 
 .roar-game-footer {
