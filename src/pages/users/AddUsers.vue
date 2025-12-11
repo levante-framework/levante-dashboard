@@ -662,39 +662,6 @@ async function submitUsers() {
         return processedUser;
       });
 
-      const submitValidationErrors = [];
-      processedUsers.forEach((processedUser, idx) => {
-        const validation = validateAddUsersSubmit(processedUser);
-        if (!validation.success) {
-          const originalUser = users[idx].user;
-          const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join('; ');
-          submitValidationErrors.push({
-            user: originalUser,
-            index: users[idx].index,
-            error: errorMessages,
-          });
-        }
-      });
-
-      if (submitValidationErrors.length > 0) {
-        if (_isEmpty(errorUserColumns.value)) {
-          errorUserColumns.value = generateColumns(submitValidationErrors[0].user);
-          errorUserColumns.value.unshift({
-            dataType: 'string',
-            field: 'error',
-            header: 'Cause of Error',
-          });
-        }
-
-        submitValidationErrors.forEach(({ user, error }) => {
-          addErrorUser(user, error);
-        });
-
-        showErrorTable.value = true;
-        activeSubmit.value = false;
-        return;
-      }
-
       const createUsersPayload = {
         users: processedUsers,
       };

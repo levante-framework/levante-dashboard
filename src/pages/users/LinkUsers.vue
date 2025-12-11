@@ -352,36 +352,6 @@ const submitUsers = async () => {
       return normalizedUser;
     });
 
-    const submitValidationErrors = [];
-    normalizedUsers.forEach((normalizedUser, idx) => {
-      const validation = validateLinkUsersSubmit(normalizedUser);
-      if (!validation.success) {
-        const originalUser = rawUserFile.value[idx];
-        const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join('; ');
-        submitValidationErrors.push({
-          user: originalUser,
-          error: errorMessages,
-        });
-      }
-    });
-
-    if (submitValidationErrors.length > 0) {
-      if (_isEmpty(errorUserColumns.value)) {
-        errorUserColumns.value = generateColumns(submitValidationErrors[0].user);
-        errorUserColumns.value.unshift({
-          dataType: 'string',
-          field: 'error',
-          header: 'Cause of Error',
-        });
-      }
-      submitValidationErrors.forEach(({ user, error }) => {
-        addErrorUser(user, error);
-      });
-      showErrorTable.value = true;
-      activeSubmit.value = false;
-      return;
-    }
-
     await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: authStore.currentSite });
     isFileUploaded.value = false;
 
