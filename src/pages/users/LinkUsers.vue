@@ -96,7 +96,7 @@ import _startCase from 'lodash/startCase';
 import _isEmpty from 'lodash/isEmpty';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import PvDivider from 'primevue/divider';
-import { validateLinkUsersCsv, validateLinkUsersSubmit, validateCsvHeaders } from '@levante-framework/levante-zod';
+import { validateLinkUsersCsv, validateCsvHeaders } from '@levante-framework/levante-zod';
 
 const authStore = useAuthStore();
 const toast = useToast();
@@ -228,10 +228,12 @@ const onFileUpload = async (event) => {
 
 const validateUsers = (usersWithZodErrors = new Set()) => {
   errorUsers.value = [];
-  const userMap = new Map(toRaw(rawUserFile.value).map((user) => {
-    const idField = Object.keys(user).find((key) => key.toLowerCase() === 'id');
-    return [idField ? user[idField].toString() : '', user];
-  }));
+  const userMap = new Map(
+    toRaw(rawUserFile.value).map((user) => {
+      const idField = Object.keys(user).find((key) => key.toLowerCase() === 'id');
+      return [idField ? user[idField].toString() : '', user];
+    }),
+  );
 
   rawUserFile.value.forEach((user) => {
     if (usersWithZodErrors.has(user)) return;
