@@ -696,7 +696,7 @@ async function submitUsers() {
       }
 
       const createUsersPayload = {
-        userData: processedUsers,
+        users: processedUsers,
       };
 
       if (shouldUsePermissions.value && currentSite.value && currentSite.value !== 'any') {
