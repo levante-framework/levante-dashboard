@@ -183,7 +183,6 @@ const allFields = [
   },
 ];
 
-
 // Error Users Table refs
 const errorTable = ref();
 const errorUsers = ref([]);
@@ -230,21 +229,7 @@ const onFileUpload = async (event) => {
   // Parse the file directly with csvFileToJson
   const parsedData = await csvFileToJson(file);
 
-  // Filter out completely empty rows
-  const filteredData = parsedData.filter((user) => {
-    if (!user || typeof user !== 'object') return false;
-    const keys = Object.keys(user);
-    if (keys.length === 0) return false;
-    const hasAnyValue = keys.some((key) => {
-      const val = user[key];
-      if (val === null || val === undefined) return false;
-      const strVal = String(val).trim();
-      return strVal !== '';
-    });
-    return hasAnyValue;
-  });
-
-  filteredData.forEach((user) => {
+  parsedData.forEach((user) => {
     const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
     if (userTypeField && typeof user[userTypeField] === 'string') {
       user[userTypeField] = user[userTypeField].trim();
@@ -252,7 +237,7 @@ const onFileUpload = async (event) => {
   });
 
   // Check if there's any data
-  if (!filteredData || filteredData.length === 0) {
+  if (!parsedData || parsedData.length === 0) {
     toast.add({
       severity: 'error',
       summary: 'Error: Empty File',
@@ -263,13 +248,14 @@ const onFileUpload = async (event) => {
   }
 
   // Store the parsed data
-  rawUserFile.value = filteredData;
+  rawUserFile.value = parsedData;
 
   const firstRow = toRaw(rawUserFile.value[0]);
   const headers = Object.keys(firstRow);
+  const lowerCaseHeaders = headers.map((col) => col.toLowerCase());
 
   const requiredHeaders = ['usertype'];
-  const hasChild = filteredData.some((user) => {
+  const hasChild = parsedData.some((user) => {
     const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
     return userTypeField && user[userTypeField]?.toLowerCase() === 'child';
   });
@@ -278,8 +264,8 @@ const onFileUpload = async (event) => {
     requiredHeaders.push('month', 'year');
   }
 
-  const hasCohort = headers.some((col) => col.toLowerCase() === 'cohort');
-  const hasSchool = headers.some((col) => col.toLowerCase() === 'school');
+  const hasCohort = lowerCaseHeaders.includes('cohort');
+  const hasSchool = lowerCaseHeaders.includes('school');
   if (!hasCohort && !hasSchool) {
     requiredHeaders.push('cohort', 'school');
   }
@@ -288,7 +274,7 @@ const onFileUpload = async (event) => {
     requiredHeaders.push('site');
   }
 
-  const headerValidation = validateCsvHeaders(headers, requiredHeaders);
+  const headerValidation = validateCsvHeaders(lowerCaseHeaders, requiredHeaders);
   if (!headerValidation.success) {
     const missingHeaders = headerValidation.errors.map((e) => e.field).join(', ');
     toast.add({
@@ -301,7 +287,7 @@ const onFileUpload = async (event) => {
     return;
   }
 
-  const usersToValidate = filteredData.filter((user) => {
+  const usersToValidate = parsedData.filter((user) => {
     const idField = Object.keys(user).find((key) => key.toLowerCase() === 'id');
     return !idField || !user[idField];
   });
@@ -335,7 +321,8 @@ const onFileUpload = async (event) => {
 
       const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
       const siteValue = siteField ? user[siteField] : null;
-      const hasSite = siteValue &&
+      const hasSite =
+        siteValue &&
         String(siteValue)
           .split(',')
           .map((s) => s.trim())
@@ -644,7 +631,7 @@ async function submitUsers() {
     activeSubmit.value = false;
     return;
   }
-
+  // TODO: Figure out deadline-exceeded error with 700+ users. (Registration works fine, creates all documents but the client recieves the error)
   const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 700);
 
   for (const users of chunkedUsersToBeRegistered) {
@@ -884,13 +871,14 @@ const orgIds = {
  */
 const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentSchool = ref(null)) => {
   const normalizedOrgName = normalizeToLowercase(orgName);
-  
+
   // For schools and classes, include parent IDs in cache key to avoid cross-site conflicts
   const parentDistrictId = parentDistrict?.value?.id || null;
   const parentSchoolId = parentSchool?.value?.id || null;
-  const cacheKey = parentDistrictId || parentSchoolId 
-    ? `${normalizedOrgName}__${parentDistrictId || ''}__${parentSchoolId || ''}` 
-    : normalizedOrgName;
+  const cacheKey =
+    parentDistrictId || parentSchoolId
+      ? `${normalizedOrgName}__${parentDistrictId || ''}__${parentSchoolId || ''}`
+      : normalizedOrgName;
 
   if (orgIds[orgType][cacheKey]) return orgIds[orgType][cacheKey];
 
