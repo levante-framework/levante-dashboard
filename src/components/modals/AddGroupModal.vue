@@ -246,7 +246,11 @@ const resetForm = () => {
   v$.value.$reset();
 };
 
-const parseCreateOrgData = (data: CreateOrgType) => {
+const parseCreateOrgData = (data: CreateOrgType, siteId: string) => {
+  if (siteId?.trim()?.length <= 0) {
+    throw new Error('SiteId is required to parse data for upserting orgs');
+  }
+
   let formatted;
   let parsed;
 
@@ -257,6 +261,7 @@ const parseCreateOrgData = (data: CreateOrgType) => {
     tags,
     type,
     createdBy,
+    siteId,
   };
 
   switch (type) {
@@ -379,7 +384,7 @@ const submit = async () => {
   let parsedData: unknown;
 
   try {
-    parsedData = parseCreateOrgData(data);
+    parsedData = parseCreateOrgData(data, authStore.currentSite!);
   } catch (error) {
     isSubmitBtnDisabled.value = false;
     return toast.add({
