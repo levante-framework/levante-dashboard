@@ -28,6 +28,14 @@
         </div>
 
         <div v-if="isFileUploaded && !errorMissingColumns && !errorUsers.length">
+          <div v-if="hasMultipleSites" class="mt-3 mb-4 p-3 bg-yellow-100 border-1 border-yellow-300 border-round">
+            <div class="flex align-items-center gap-2">
+              <i class="pi pi-exclamation-triangle text-yellow-600"></i>
+              <span class="text-yellow-800 font-semibold">
+                Multiple sites detected. Users will only be created for the currently selected site.
+              </span>
+            </div>
+          </div>
           <PvDataTable
             ref="dataTable"
             :value="rawUserFile"
@@ -129,7 +137,7 @@ import { useRouter } from 'vue-router';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { logger } from '@/logger';
 import { storeToRefs } from 'pinia';
-import { validateAddUsersCsv, validateAddUsersSubmit, validateCsvHeaders } from '@levante-framework/levante-zod';
+import { validateAddUsersFileUpload } from '@levante-framework/levante-zod';
 
 const authStore = useAuthStore();
 const { currentSite, currentSiteName, shouldUsePermissions } = storeToRefs(authStore);
@@ -142,6 +150,7 @@ const isFileUploaded = ref(false);
 const uploadedFile = ref(null);
 const rawUserFile = ref({});
 const registeredUsers = ref([]);
+const hasMultipleSites = ref(false);
 
 // Primary Table & Dropdown refs
 const dataTable = ref();
@@ -210,7 +219,6 @@ watch(
 
 // Functions supporting the uploader
 const onFileUpload = async (event) => {
-  // Reset all error states and data
   uploadedFile.value = null;
   errorUsers.value = [];
   errorUserColumns.value = [];
@@ -218,25 +226,16 @@ const onFileUpload = async (event) => {
   errorMessage.value = '';
   errorTable.value = null;
   errorMissingColumns.value = false;
-  isFileUploaded.value = false; // Reset the file uploaded state
-  registeredUsers.value = []; // Clear any previously registered users
-  activeSubmit.value = false; // Reset the submit flag
+  isFileUploaded.value = false;
+  registeredUsers.value = [];
+  activeSubmit.value = false;
+  hasMultipleSites.value = false;
 
-  // Read the file. In case of multiple files, use the last one.
   const file = event.files[event.files.length - 1];
   uploadedFile.value = file;
 
-  // Parse the file directly with csvFileToJson
   const parsedData = await csvFileToJson(file);
 
-  parsedData.forEach((user) => {
-    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-    if (userTypeField && typeof user[userTypeField] === 'string') {
-      user[userTypeField] = user[userTypeField].trim();
-    }
-  });
-
-  // Check if there's any data
   if (!parsedData || parsedData.length === 0) {
     toast.add({
       severity: 'error',
@@ -247,36 +246,10 @@ const onFileUpload = async (event) => {
     return;
   }
 
-  // Store the parsed data
-  rawUserFile.value = parsedData;
+  const validation = validateAddUsersFileUpload(parsedData, shouldUsePermissions.value);
 
-  const firstRow = toRaw(rawUserFile.value[0]);
-  const headers = Object.keys(firstRow);
-  const lowerCaseHeaders = headers.map((col) => col.toLowerCase());
-
-  const requiredHeaders = ['usertype'];
-  const hasChild = parsedData.some((user) => {
-    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-    return userTypeField && user[userTypeField]?.toLowerCase() === 'child';
-  });
-
-  if (hasChild) {
-    requiredHeaders.push('month', 'year');
-  }
-
-  const hasCohort = lowerCaseHeaders.includes('cohort');
-  const hasSchool = lowerCaseHeaders.includes('school');
-  if (!hasCohort && !hasSchool) {
-    requiredHeaders.push('cohort', 'school');
-  }
-
-  if (!shouldUsePermissions.value) {
-    requiredHeaders.push('site');
-  }
-
-  const headerValidation = validateCsvHeaders(lowerCaseHeaders, requiredHeaders);
-  if (!headerValidation.success) {
-    const missingHeaders = headerValidation.errors.map((e) => e.field).join(', ');
+  if (validation.headerErrors && validation.headerErrors.length > 0) {
+    const missingHeaders = validation.headerErrors.map((e) => e.field).join(', ');
     toast.add({
       severity: 'error',
       summary: 'Error: Missing Column',
@@ -287,62 +260,19 @@ const onFileUpload = async (event) => {
     return;
   }
 
-  const usersToValidate = parsedData.filter((user) => {
-    const idField = Object.keys(user).find((key) => key.toLowerCase() === 'id');
-    return !idField || !user[idField];
-  });
+  rawUserFile.value = validation.data;
+  hasMultipleSites.value = validation.hasMultipleSites;
 
-  const validation = validateAddUsersCsv(usersToValidate);
-
-  const usersWithZodErrors = new Set();
-
-  if (!validation.success) {
-    const errorsByUser = new Map();
-    validation.errors.forEach((error) => {
-      const userIndex = error.row - 1;
-      if (userIndex >= 0 && userIndex < usersToValidate.length) {
-        const user = usersToValidate[userIndex];
-        usersWithZodErrors.add(user);
-        if (!errorsByUser.has(user)) {
-          errorsByUser.set(user, []);
-        }
-        const fieldName = error.field === 'usertype' ? 'userType' : error.field;
-        errorsByUser.get(user).push(`${fieldName}: ${error.message}`);
-      }
+  if (validation.errors.length > 0) {
+    validation.errors.forEach(({ user, error }) => {
+      addErrorUser(user, error);
     });
-    errorsByUser.forEach((errors, user) => {
-      addErrorUser(user, errors.join('; '));
-    });
-  }
-
-  if (!shouldUsePermissions.value) {
-    usersToValidate.forEach((user) => {
-      if (usersWithZodErrors.has(user)) return;
-
-      const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
-      const siteValue = siteField ? user[siteField] : null;
-      const hasSite =
-        siteValue &&
-        String(siteValue)
-          .split(',')
-          .map((s) => s.trim())
-          .filter((s) => s).length > 0;
-
-      if (!hasSite) {
-        addErrorUser(user, 'Site: Site is required');
-      }
-    });
-  }
-
-  // --- Post-Loop Error Handling & Success Notification ---
-  if (errorUsers.value.length) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Errors. See below for details.', // Updated summary
+      summary: 'Validation Errors. See below for details.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   } else {
-    // Only set isFileUploaded to true if there are NO errors at all
     isFileUploaded.value = true;
     errorMissingColumns.value = false;
     showErrorTable.value = false;
@@ -422,7 +352,6 @@ async function submitUsers() {
       const classField = Object.keys(user).find((key) => key.toLowerCase() === 'class');
       const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
 
-      // Get values using the actual field names and parse as comma-separated arrays
       const sites = [currentSiteName.value];
 
       const schools = schoolField
@@ -445,32 +374,6 @@ async function submitUsers() {
             .map((s) => s.trim())
             .filter((s) => s)
         : [];
-
-      // At least, one site is required for every user
-      if (sites.length <= 0) {
-        toast.add({
-          severity: 'error',
-          summary: 'Required field missing',
-          detail: 'At least, one site is required for every user.',
-          life: TOAST_DEFAULT_LIFE_DURATION,
-        });
-
-        activeSubmit.value = false;
-        return;
-      }
-
-      // At least, one school or cohort is required for every user
-      if (schools.length <= 0 && cohorts.length <= 0) {
-        toast.add({
-          severity: 'error',
-          summary: 'Required field missing',
-          detail: 'At least, one school or cohort is required for every user.',
-          life: TOAST_DEFAULT_LIFE_DURATION,
-        });
-
-        activeSubmit.value = false;
-        return;
-      }
 
       const orgNameMap = {
         site: sites,
