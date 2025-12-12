@@ -1,5 +1,7 @@
 <template>
-  <LevanteSpinner v-if="props.adminId && !isFormPopulated" fullscreen />
+  <div v-if="props.adminId && !isFormPopulated" class="levante-spinner-wrapper">
+    <LevanteSpinner />
+  </div>
 
   <main v-else class="container main">
     <section class="main-body">
@@ -951,5 +953,18 @@ watch([existingAdministrationData, allVariants], ([adminInfo, allVariantInfo]) =
   100% {
     background-color: transparent;
   }
+}
+
+.levante-spinner-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
 }
 </style>
