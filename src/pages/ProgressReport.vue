@@ -36,7 +36,6 @@
               <div>
                 <div class="uppercase font-light text-gray-500 text-md">Created by</div>
                 <div class="administration-creator">
-                  <!-- {{ administrationData.creatorName }} -->
                   {{ creatorName }}
                 </div>
               </div>

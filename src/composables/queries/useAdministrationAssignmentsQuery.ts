@@ -1,6 +1,6 @@
 import { type MaybeRefOrGetter } from 'vue';
 import { toValue } from 'vue';
-import { useQuery } from '@tanstack/vue-query';
+import { useQuery, UseQueryReturnType } from '@tanstack/vue-query';
 import { useAuthStore } from '@/store/auth';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { assignmentFetchAll } from '@/helpers/query/assignments';
