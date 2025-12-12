@@ -270,7 +270,7 @@ const {
 });
 
 const creatorName = computed(() => {
-  return administrationData.value?.creatorName ?? '';
+  return administrationData.value.creatorName;
 });
 
 const displayOrgType = computed(() => {
@@ -299,7 +299,7 @@ const reportViews = [
   { name: 'Score Report', constant: false },
 ];
 
-const assignmentDisplayName = computed(() => administrationData.value?.name ?? '');
+const assignmentDisplayName = computed(() => administrationData.value.name);
 
 const handleViewChange = () => {
   const { administrationId, orgType, orgId } = props;
