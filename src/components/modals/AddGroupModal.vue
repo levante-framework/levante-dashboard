@@ -246,11 +246,7 @@ const resetForm = () => {
   v$.value.$reset();
 };
 
-const parseCreateOrgData = (data: CreateOrgType, siteId: string) => {
-  if (siteId?.trim()?.length <= 0) {
-    throw new Error('SiteId is required to parse data for upserting orgs');
-  }
-
+const parseCreateOrgData = (data: CreateOrgType) => {
   let formatted;
   let parsed;
 
@@ -261,7 +257,6 @@ const parseCreateOrgData = (data: CreateOrgType, siteId: string) => {
     tags,
     type,
     createdBy,
-    siteId,
   };
 
   switch (type) {
@@ -363,12 +358,12 @@ const submit = async () => {
 
   if (orgNameExists) {
     const errorTitle = `${orgTypeLabel.value} Creation Error`;
-    let errorMessage: string;
+    let errorMessage = `${orgTypeLabel.value} with name ${orgName.value} already exists.`;
 
     if (orgType.value?.singular === SINGULAR_ORG_TYPES.DISTRICTS) {
-      errorMessage = `${orgTypeLabel.value} with name ${orgName.value} already exists. ${orgTypeLabel.value} names must be unique.`;
+      errorMessage += ` ${orgTypeLabel.value} names must be unique.`;
     } else {
-      errorMessage = `${orgTypeLabel.value} with name ${orgName.value} already exists. ${orgTypeLabel.value} names must be unique within a site.`;
+      errorMessage += ` ${orgTypeLabel.value} names must be unique within a site.`;
     }
 
     isSubmitBtnDisabled.value = false;
@@ -384,7 +379,8 @@ const submit = async () => {
   let parsedData: unknown;
 
   try {
-    parsedData = parseCreateOrgData(data, authStore.currentSite!);
+    parsedData = parseCreateOrgData(data);
+    parsedData = { ...(parsedData as CreateOrgType), siteId: authStore.currentSite };
   } catch (error) {
     isSubmitBtnDisabled.value = false;
     return toast.add({
