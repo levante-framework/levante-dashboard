@@ -538,8 +538,8 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   gap: 0.75rem;
   margin: 0;
   padding: 1rem;
-  background: transparent;
-  border: 1px solid var(--surface-200);
+  background: white;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
   border-radius: 0.5rem;
   font-weight: 700;
   font-size: 1.125rem;
@@ -548,6 +548,7 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   user-select: none;
   min-width: 300px;
   box-sizing: border-box;
+  transition: box-shadow 0.2s ease-in-out;
 
   // Reset button defaults
   &[disabled] {
@@ -570,24 +571,27 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   }
 
   &:hover {
-    background: var(--surface-200);
+    box-shadow: 3px 3px 7px rgba(0, 0, 0, 0.2);
   }
 
   &.--disabled {
     cursor: not-allowed;
-    border: 1px solid rgba(var(--bright-yellow-rgb), 0.3);
+    box-shadow: none;
+    border: 2px solid rgba(var(--bright-yellow-rgb), 0.3);
+    background: rgba(var(--bright-yellow-rgb), 0.2);
 
     .pi {
       background: var(--bright-yellow);
     }
 
     &:hover {
-      background: transparent;
+      background: rgba(var(--bright-yellow-rgb), 0.2);
     }
   }
 
   &.--completed {
-    border: none;
+    box-shadow: none;
+    border: 2px solid rgba(var(--bright-green-rgb), 0.2);
     background: rgba(var(--bright-green-rgb), 0.1);
 
     .pi {
@@ -600,7 +604,9 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   }
 
   &.--incomplete {
-    border: none;
+    cursor: not-allowed;
+    box-shadow: none;
+    border: 2px solid rgba(var(--bright-red-rgb), 0.2);
     background: rgba(var(--bright-red-rgb), 0.1);
 
     .pi {
