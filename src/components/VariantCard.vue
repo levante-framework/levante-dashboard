@@ -365,7 +365,7 @@ const formattedAssignedConditions = computed((): string => {
       }
 
       // Special case for 'child' to pluralize correctly as 'Children' instead of 'Childs'
-      if (entry.field === 'userType' && valueStr.toLowerCase() === 'child') {
+      if (entry.field === 'userType' && displayValue.toLowerCase() === 'child') {
         return entry.op === 'EQUAL' ? 'Children' : 'Not Children';
       }
 
