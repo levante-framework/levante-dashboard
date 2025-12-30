@@ -41,6 +41,7 @@ coverage
 # Other
 .vite/*
 .firebase/
+.cursor/mcp.json
 
 # Sentry Config File
 .env.sentry-build-plugin
