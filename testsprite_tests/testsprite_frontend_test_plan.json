@@ -1,0 +1,424 @@
+[
+  {
+    "id": "TC001",
+    "title": "Email/Password Sign-In Success",
+    "description": "Verify that users can sign in successfully using valid email and password credentials via Firebase Auth.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /signin page."
+      },
+      {
+        "type": "action",
+        "description": "Input valid email and password credentials."
+      },
+      {
+        "type": "action",
+        "description": "Click the sign-in button."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is authenticated and redirected away from /signin."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify landing page matches user role (participant or admin)."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Google SSO Sign-In Success",
+    "description": "Verify that users can authenticate successfully with Google Single Sign-On.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /signin page."
+      },
+      {
+        "type": "action",
+        "description": "Select Google SSO authentication option."
+      },
+      {
+        "type": "action",
+        "description": "Complete Google authentication flow."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is authenticated and redirected away from /signin."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify landing page corresponds to authenticated user role."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Email Link Sign-In Flow Success",
+    "description": "Verify that users can sign in via email link authentication flow and are routed correctly post-login.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /signin and request email link authentication."
+      },
+      {
+        "type": "action",
+        "description": "Receive email with sign-in link and click on it."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is authenticated upon link visit."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user redirected to role-appropriate landing page."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Sign-In Form Validation for Email/Password",
+    "description": "Verify sign-in form validates email format, password non-empty, and displays appropriate error messages.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /signin page."
+      },
+      {
+        "type": "action",
+        "description": "Input invalid email format and any password."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to submit the sign-in form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error message for invalid email format is displayed."
+      },
+      {
+        "type": "action",
+        "description": "Input valid email and leave password empty."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to submit the form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error message for missing password is displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Sign-In Failure with Incorrect Credentials",
+    "description": "Verify that sign-in fails with incorrect email/password and proper error messages are shown.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /signin page."
+      },
+      {
+        "type": "action",
+        "description": "Input a registered email with incorrect password."
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sign-in is rejected with an error message indicating authentication failure."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Participant Dashboard Assignment Selection",
+    "description": "Verify participants can view assignments, select one, and tasks are rendered correctly with task tabs.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Sign in as participant and navigate to participant home page."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify list of available assignments is displayed."
+      },
+      {
+        "type": "action",
+        "description": "Select a specific assignment."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify tasks related to the assignment are loaded and rendered with correct tabs."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI components for tasks (GameTabs, ParticipantSidebar) are displayed and functional."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Participant Survey Experience with Locale and Audio",
+    "description": "Verify that surveys load locale-specific text, play audio for the locale correctly, and progress saves/restores during sessions.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Sign in as participant with non-default locale set."
+      },
+      {
+        "type": "action",
+        "description": "Start a survey task."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify survey text is loaded according to user locale."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify corresponding audio for survey survey items plays and uses fallback if audio missing."
+      },
+      {
+        "type": "action",
+        "description": "Partially complete the survey and leave."
+      },
+      {
+        "type": "action",
+        "description": "Resume survey in a new session."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify previously entered progress is restored accurately."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Admin User and Organization Management UI",
+    "description": "Verify that administrators can list groups, list users, add users, and create assignments via the admin interface.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Sign in as administrator and navigate to admin landing page."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to groups listing page."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify groups are listed correctly."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to users listing page."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify users are displayed with correct roles and organization info."
+      },
+      {
+        "type": "action",
+        "description": "Access add user page and input user details with roles."
+      },
+      {
+        "type": "action",
+        "description": "Submit new user creation."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify new user is added and visible in the users list."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to create assignment page, enter all required fields, and submit."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the assignment is created and appears in assignment lists."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Admin Management Error Handling",
+    "description": "Verify that validation errors are shown when required data is missing or invalid during user creation and assignment creation.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Go to add user interface and submit without user email."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error about missing email is displayed."
+      },
+      {
+        "type": "action",
+        "description": "Go to create assignment form and submit with missing required fields."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error messages are shown for missing assignment data."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Post-Login Route Guarding",
+    "description": "Verify that users cannot access restricted routes for other roles and are redirected appropriately based on their authenticated user role.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Sign in as participant."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access admin routes via URL."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is redirected back to participant landing page or an error page."
+      },
+      {
+        "type": "action",
+        "description": "Sign in as administrator."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access participant routes via URL."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is redirected to admin landing or error page."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Translation File Loading and Rendering",
+    "description": "Verify that CSV-based Crowdin translation files compile correctly into modular JSON locale files and are reflected correctly in UI components.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger translation build process from CSV inputs."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify modular JSON locale files are generated without errors."
+      },
+      {
+        "type": "action",
+        "description": "Load application with locale set to a non-default language."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI components display translated text correctly."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no missing translation keys appear in the UI."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Survey Audio Fallback when Locale Audio Missing",
+    "description": "Verify that the survey audio playback falls back to default locale audio if the current locale audio file is not available.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Sign in as participant with a locale lacking specific survey audio."
+      },
+      {
+        "type": "action",
+        "description": "Start a survey item that requires audio playback."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify audio plays using default locale fallback file."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Survey Progress Persistence During Intermittent Sessions",
+    "description": "Verify that survey progress is saved if user loses connectivity or leaves mid-survey and seamlessly restored on return.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Start survey as participant and answer several questions."
+      },
+      {
+        "type": "action",
+        "description": "Simulate network disconnect or close browser tab."
+      },
+      {
+        "type": "action",
+        "description": "Re-login and resume survey."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify previous answers and progress are correctly restored."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Invalid User Access After Logout",
+    "description": "Verify accessing any restricted page after logout redirects to /signin and clears session data.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as any user."
+      },
+      {
+        "type": "action",
+        "description": "Logout successfully."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to navigate directly using URL to participant or admin pages."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is redirected to /signin page."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no residual session or cached data is accessible."
+      }
+    ]
+  }
+]
