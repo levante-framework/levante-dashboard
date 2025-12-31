@@ -1,0 +1,19 @@
+{
+  "status": "init",
+  "scope": "codebase",
+  "type": "frontend",
+  "localEndpoint": "http://localhost:5173/",
+  "serverPort": 42831,
+  "executionArgs": {
+    "projectName": "levante-dashboard",
+    "projectPath": "/home/david/levante/levante-dashboard",
+    "testIds": [
+      "TC001"
+    ],
+    "additionalInstruction": "Do not run; already executed. Only ensure report files are generated under testsprite_tests/ (raw_report.md and testsprite-mcp-test-report.md) based on the last run. If missing, explain how to generate them without rerunning.",
+    "envs": {
+      "API_KEY": "sk-user-4FK3hlstgGOBQz5JrBVH81vBRgQPXkX29spFEFa-RtGpz0Rsn-iUL5BfS0nunZRbRmx9TzKSHdarNv4GrOQQeBTx_EmNznK3turBMIIC6vc_ou_t4TnbdWyLcXP-c324rSw"
+    }
+  },
+  "proxy": "http://4e5bf718-6a3c-41cd-8042-b41a13992c08:HxYQkUarK9mHlKy2IWJ9DpZ4rP3NRe5m@tun.testsprite.com:8080"
+}

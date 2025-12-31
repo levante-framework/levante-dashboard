@@ -1,0 +1,26 @@
+name: dev-login
+description: Verify admin login to hs-levante-admin-dev
+env:
+  EMAIL: "david81@stanford.edu"
+  PASSWORD: "${KEEP}"
+  TARGET_URL: "https://hs-levante-admin-dev.web.app/signin"
+  STAGE_BASE_URL: "${STAGE_BASE_URL}"
+test:
+  steps:
+    - name: open-dev-site
+      visit: "${TARGET_URL}"
+    - name: enter-credentials
+      actions:
+        - type: fill
+          selector: '[data-cy="input-username-email"]'
+          value: "${EMAIL}"
+        - type: fill
+          selector: '[data-cy="input-password"]'
+          value: "${PASSWORD}"
+        - type: click
+          selector: '[data-cy="submit-sign-in-with-password"]'
+    - name: await-dashboard
+      expect:
+        - selector: '[data-testid="nav-bar"]'
+          timeout: 15000
+          visible: true

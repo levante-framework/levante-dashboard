@@ -1,0 +1,66 @@
+{
+  "tech_stack": [
+    "TypeScript/JavaScript",
+    "Vue 3 + Vite",
+    "Pinia",
+    "Vue Router",
+    "PrimeVue",
+    "Tailwind/PrimeFlex",
+    "TanStack Vue Query",
+    "Firebase (Auth/Firestore) via Firekit",
+    "Vitest + Cypress"
+  ],
+  "features": [
+    {
+      "name": "Authentication & sign-in (email/password, Google SSO, email link)",
+      "description": "Participant/admin sign-in flows using Firebase Auth via Firekit, with different routes for password vs SSO and optional email-link flow.",
+      "files": [
+        "src/pages/SignIn.vue",
+        "src/components/auth/SignIn.vue",
+        "src/store/auth.js",
+        "src/router/index.ts"
+      ]
+    },
+    {
+      "name": "Participant home & assignments",
+      "description": "Participant dashboard selects an assignment and renders tasks/tabs; supports optional assessments and sequential flow.",
+      "files": [
+        "src/pages/HomeParticipant.vue",
+        "src/store/assignments.js",
+        "src/components/GameTabs.vue",
+        "src/components/ParticipantSidebar.vue"
+      ]
+    },
+    {
+      "name": "Survey experience (SurveyJS) with locale and audio",
+      "description": "Loads survey definitions from GCS, initializes SurveyJS, restores/saves progress, and loads student survey audio by locale with fallbacks.",
+      "files": [
+        "src/pages/HomeParticipant.vue",
+        "src/helpers/surveyInitialization.ts",
+        "src/helpers/survey.ts",
+        "src/store/survey.js"
+      ]
+    },
+    {
+      "name": "Organizations & user management (admin)",
+      "description": "Admin UI for listing groups/users, creating assignments, and managing users/roles.",
+      "files": [
+        "src/pages/groups/ListGroups.vue",
+        "src/pages/users/ListUsers.vue",
+        "src/pages/users/AddUsers.vue",
+        "src/pages/CreateAssignment.vue"
+      ]
+    },
+    {
+      "name": "Translations / i18n pipeline",
+      "description": "CSV-based translation pipeline (Crowdin) generates modular JSON locale files and component translations used at runtime.",
+      "files": [
+        "src/translations/i18n.ts",
+        "src/translations/composables/useModularI18n.ts",
+        "src/translations/tools/download-and-rebuild.js",
+        "src/translations/tools/create-consolidated-translations.js"
+      ]
+    }
+  ]
+}
+
