@@ -1,5 +1,5 @@
 <template>
-  <header id="site-header" class="navbar-container">
+  <header id="site-header" class="navbar-container" data-testid="nav-bar">
     <nav class="flex flex-row align-items-center justify-content-between w-full">
       <div id="navBarRightEnd" class="flex flex-row align-items-center justify-content-start w-full gap-1">
         <div class="flex align-items-center justify-content-center w-full">
@@ -19,7 +19,11 @@
             </template>
 
             <template #item="{ item, props, hasSubmenu, root }">
-              <a class="flex items-center" v-bind="props.action">
+              <a
+                class="flex items-center"
+                :data-cy="item?.label ? `nav-${item.label.toLowerCase().replaceAll(' ', '-')}` : undefined"
+                v-bind="props.action"
+              >
                 <i v-if="item.icon" :class="['mr-2', item.icon]"></i>
                 <span>{{ item.label }}</span>
                 <Badge

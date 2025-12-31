@@ -21,6 +21,10 @@
             :options="orgTypes"
             class="w-full"
             data-cy="dropdown-org-type"
+            :pt="{
+              root: { 'data-cy': 'dropdown-org-type', 'data-testid': 'dropdown-org-type' },
+              label: { 'data-cy': 'dropdown-org-type-label' },
+            }"
             input-id="orgType"
             option-label="label"
             show-clear
@@ -72,7 +76,13 @@
 
       <div class="flex flex-column gap-1 w-full">
         <PvFloatLabel>
-          <PvInputText id="orgName" v-model="orgName" class="w-full" data-cy="input-org-name" />
+          <PvInputText
+            id="orgName"
+            v-model="orgName"
+            class="w-full"
+            data-cy="input-org-name"
+            :pt="{ root: { 'data-cy': 'input-org-name', 'data-testid': 'input-org-name' } }"
+          />
           <label for="orgName">{{ orgTypeLabel }} Name<span class="required-asterisk">*</span></label>
         </PvFloatLabel>
         <small v-if="v$.orgName.$error" class="p-error">Please supply a name.</small>
@@ -103,7 +113,7 @@
 import _capitalize from 'lodash/capitalize';
 import _union from 'lodash/union';
 import _without from 'lodash/without';
-import { computed, ref, toRaw, watch } from 'vue';
+import { computed, nextTick, ref, toRaw, watch } from 'vue';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { normalizeToLowercase } from '@/helpers';
 import { required, requiredIf } from '@vuelidate/validators';
@@ -190,6 +200,22 @@ const orgTypes = computed(() => {
     return false;
   });
 });
+
+watch(
+  () => props.isVisible,
+  async (isVisible) => {
+    if (!isVisible) {
+      return;
+    }
+
+    if (!orgType.value && orgTypes.value.length > 0) {
+      orgType.value = orgTypes.value[0];
+    }
+
+    await nextTick();
+    document.getElementById('orgName')?.focus();
+  },
+);
 
 const parentDistrict = ref<SelectedOrg | undefined>(undefined);
 const parentSchool = ref<SelectedOrg | undefined>(undefined);

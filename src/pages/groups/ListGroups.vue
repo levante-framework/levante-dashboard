@@ -4,7 +4,7 @@
       <div class="flex flex-column mb-5">
         <div class="flex flex-column align-items-start mb-2 md:flex-row w-full justify-content-between">
           <div class="flex align-items-center gap-3 mb-4 md:mb-0">
-            <div class="admin-page-header mr-4">Groups</div>
+            <div class="admin-page-header mr-4" data-testid="groups-page-title">Groups</div>
             <PermissionGuard :requireRole="ROLES.RESEARCH_ASSISTANT">
               <PvButton
                 class="bg-primary text-white border-none p-2 ml-auto"
@@ -24,11 +24,18 @@
             <span class="p-input-icon-left p-input-icon-right">
               <i v-if="!searchQuery" class="pi pi-search" />
               <i v-if="searchQuery" class="pi pi-times cursor-pointer" @click="clearSearch" />
-              <PvInputText v-model="searchQuery" placeholder="Search groups" class="ml-2 p-inputtext-sm" />
+              <PvInputText
+                v-model="searchQuery"
+                placeholder="Search groups"
+                class="ml-2 p-inputtext-sm"
+                data-testid="search-groups-input"
+                data-cy="search-groups-input"
+              />
             </span>
           </div>
         </div>
       </div>
+      <div v-if="claimsLoaded && !isTableLoading" class="sr-only" data-testid="groups-page-ready">ready</div>
       <PvTabs v-if="claimsLoaded" v-model:value="activeOrgType" lazy class="mb-7">
         <PvTabList>
           <PvTab v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">{{ orgType.header }}</PvTab>

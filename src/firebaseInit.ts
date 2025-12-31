@@ -3,7 +3,20 @@ import levanteFirebaseConfig from './config/firebaseLevante';
 import { isLevante } from './helpers';
 import firebaseJSON from '../firebase.json';
 
-const emulatorConfig = import.meta.env.VITE_EMULATOR ? firebaseJSON.emulators : undefined;
+const emulatorConfig = (() => {
+  if (!import.meta.env.VITE_EMULATOR) return undefined;
+
+  const base = firebaseJSON.emulators;
+  const proxyPort = Number(import.meta.env.VITE_EMULATOR_PROXY_PORT as string);
+  if (!Number.isFinite(proxyPort) || proxyPort <= 0) return base;
+
+  return {
+    ...base,
+    auth: { ...(base as any).auth, port: proxyPort },
+    firestore: { ...(base as any).firestore, port: proxyPort },
+    functions: { ...(base as any).functions, port: proxyPort },
+  };
+})();
 
 const roarConfig = levanteFirebaseConfig;
 

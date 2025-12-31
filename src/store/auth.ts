@@ -1,5 +1,5 @@
 import { acceptHMRUpdate, defineStore } from 'pinia';
-import { onAuthStateChanged, User, Unsubscribe } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, User, Unsubscribe } from 'firebase/auth';
 import { useRouter } from 'vue-router';
 import { initNewFirekit } from '../firebaseInit';
 import { AUTH_SSO_PROVIDERS } from '../constants/auth';
@@ -7,6 +7,7 @@ import posthogInstance from '@/plugins/posthog';
 import { logger } from '@/logger';
 import { RoarFirekit } from '@levante-framework/firekit';
 import { ref, type Ref } from 'vue';
+import { isEmulator } from '@/helpers';
 
 interface FirebaseUser {
   adminFirebaseUser: User | null;
@@ -163,13 +164,21 @@ export const useAuthStore = defineStore(
 
     async function logInWithEmailAndPassword({ email, password }: LoginCredentials): Promise<void> {
       if (isFirekitInit()) {
-        return roarfirekit.value
-          ?.logInWithEmailAndPassword({ email, password })
-          .then(() => {})
-          .catch((error) => {
-            console.error(`Error signing in: ${error}`);
+        if (isEmulator && roarfirekit.value?.admin?.auth) {
+          try {
+            await signInWithEmailAndPassword(roarfirekit.value.admin.auth as any, email, password);
+          } catch (error) {
+            console.error(`Error signing in (emulator direct auth): ${error}`);
             throw error;
-          });
+          }
+
+          return;
+        }
+
+        return roarfirekit.value?.logInWithEmailAndPassword({ email, password }).catch((error) => {
+          console.error(`Error signing in: ${error}`);
+          throw error;
+        });
       }
     }
 

@@ -46,46 +46,41 @@ async def run_test():
                 pass
 
         # Interact with the page elements to simulate user flow
-        # -> Fill username and password fields with provided credentials.
+ 
+        # -> Input username and password using the specified selectors and submit the form.
         frame = context.pages[-1]
-        # Fill username or email input with provided username 
         elem = frame.locator('xpath=html/body/div/div/div/section/section/section/div[2]/form/div/div/input').nth(0)
         await page.wait_for_timeout(3000); await elem.fill('student@levante.test')
-        # -> Click the 'Go!' button to submit the sign-in form.
+        
+
+        # -> Input password into the password field and click the submit button to sign in.
         frame = context.pages[-1]
-        # Click 'Go!' button to submit sign-in form 
+        elem = frame.locator('xpath=html/body/div/div/div/section/section/section/div[2]/form/div[2]/div/div/input').nth(0)
+        await page.wait_for_timeout(3000); await elem.fill('Cardinal_81')
+        
+
+        frame = context.pages[-1]
         elem = frame.locator('xpath=html/body/div/div/div/section/section/section/div[2]/form/button').nth(0)
-        await page.wait_for_timeout(3000); await elem.click(timeout=5000) 
-        # -> Try to interact with the language dropdown to see if selecting a language is required before signing in.
-        frame = context.pages[-1]
-        elem = frame.locator('xpath=html/body/div/div/div/section/section/section/div/div/div[2]/span').nth(0)
         await page.wait_for_timeout(3000); await elem.click(timeout=5000)
         
 
-        # -> Select 'English (United States)' from the language dropdown and then click the 'Go!' button to attempt sign-in again.
-        frame = context.pages[-1]
-        elem = frame.locator('xpath=html/body/div[3]/div/ul/li').nth(0)
-        await page.wait_for_timeout(3000); await elem.click(timeout=5000)
-        
-
-        # -> Check if the 'Are you an Admin? Click here to Sign in.' link (index 8) leads to an alternative sign-in method or page that might allow successful authentication.
+        # -> Click the 'Are you an Admin? Click here to Sign in.' link to switch to admin sign-in.
         frame = context.pages[-1]
         elem = frame.locator('xpath=html/body/div/div/div/section/section/section[2]/p/span').nth(0)
         await page.wait_for_timeout(3000); await elem.click(timeout=5000)
         
 
-        # -> Attempt to sign in using the 'Continue with Google*' button to verify if Google SSO authentication works.
-        frame = context.pages[-1]
-        elem = frame.locator('xpath=html/body/div/div/div/section/section/section[3]/div/button').nth(0)
-        await page.wait_for_timeout(3000); await elem.click(timeout=5000)
+        # -> Try to reload the page or navigate back to /signin to attempt admin sign-in again.
+        await page.goto('http://localhost:5173/signin', timeout=10000)
+        await asyncio.sleep(3)
         
 
         # --> Assertions to verify final state
         frame = context.pages[-1]
         try:
-            await expect(frame.locator('text=Successful Sign In Confirmation')).to_be_visible(timeout=1000)
+            await expect(frame.locator('text=Group creation successful!')).to_be_visible(timeout=1000)
         except AssertionError:
-            raise AssertionError('Test case failed: User could not sign in successfully using valid email and password credentials via Firebase Auth as per the test plan.')
+            raise AssertionError("Test plan execution failed: The admin was unable to create a new Site group from the Groups page as expected.")
         await asyncio.sleep(5)
 
     finally:

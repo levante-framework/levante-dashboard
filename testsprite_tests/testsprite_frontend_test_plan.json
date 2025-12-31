@@ -420,5 +420,47 @@
         "description": "Verify no residual session or cached data is accessible."
       }
     ]
+  },
+  {
+    "id": "TC101",
+    "title": "Researcher Workflow: Add Site Group",
+    "description": "From README_RESEARCHERS.md Step 1: Add Groups. Verify an admin can create a new Site group from the Groups page.",
+    "category": "functional",
+    "priority": "High",
+    "code": "import asyncio\nimport os\nimport re\nimport time\nfrom playwright.async_api import async_playwright, expect\n\nasync def run_test():\n    email = os.environ.get('EMAIL')\n    password = os.environ.get('PASSWORD')\n    if not email or not password:\n        raise RuntimeError('Missing EMAIL/PASSWORD in environment')\n\n    group_name = f\"testsprite-site-{int(time.time())}\"\n\n    async with async_playwright() as p:\n        browser = await p.chromium.launch(\n            headless=True,\n            args=[\n                '--window-size=1280,720',\n                '--disable-dev-shm-usage',\n                '--ipc=host',\n                '--single-process',\n            ],\n        )\n        context = await browser.new_context()\n        page = await context.new_page()\n\n        await page.goto('http://localhost:5173/signin', wait_until='domcontentloaded', timeout=30000)\n\n        await page.locator('[data-cy=\"input-username-email\"]').fill(email)\n        await page.locator('[data-cy=\"input-password\"]').fill(password)\n        await page.locator('[data-cy=\"submit-sign-in-with-password\"]').click()\n\n        await page.locator('[data-testid=\"nav-bar\"]').wait_for(state='visible', timeout=30000)\n        await expect(page).not_to_have_url(re.compile(r'.*/signin$'), timeout=30000)\n\n        await page.locator('[data-cy=\"nav-groups\"]').click()\n        try:\n            await page.wait_for_url('**/list-groups', timeout=30000)\n        except Exception:\n            pass\n\n        # Page may not fully render tables on emulator if claims docs are missing; still allow modal.\n        try:\n            await page.locator('[data-testid=\"groups-page-ready\"]').wait_for(state='visible', timeout=60000)\n        except Exception:\n            pass\n\n        await page.locator('[data-testid=\"add-group-btn\"]').click()\n        await page.locator('[data-testid=\"modalTitle\"]').wait_for(state='visible', timeout=20000)\n\n        # Best-effort: ensure org type is \"Site\".\n        try:\n            await page.locator('[data-testid=\"dropdown-org-type\"]').click(timeout=2000)\n            site_option = page.get_by_role('option', name=re.compile(r'^\\s*Site\\s*$', re.I))\n            if await site_option.count():\n                await site_option.first.click(timeout=5000)\n        except Exception:\n            pass\n\n        await page.locator('[data-cy=\"input-org-name\"]').fill(group_name)\n        await page.locator('[data-testid=\"submitBtn\"]').click()\n\n        # Wait for modal close\n        try:\n            await page.locator('[data-testid=\"modalTitle\"]').wait_for(state='hidden', timeout=30000)\n        except Exception:\n            pass\n\n        # Verify by searching\n        await page.goto('http://localhost:5173/list-groups', wait_until='domcontentloaded', timeout=30000)\n        try:\n            await page.locator('[data-testid=\"groups-page-ready\"]').wait_for(state='visible', timeout=60000)\n        except Exception:\n            pass\n\n        await page.locator('[data-cy=\"search-groups-input\"]').fill(group_name)\n        await expect(page.get_by_text(group_name)).to_be_visible(timeout=20000)\n\n        await context.close()\n        await browser.close()\n\nasyncio.run(run_test())\n",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /signin. Sign in using ONLY these selectors: [data-cy=\"input-username-email\"], [data-cy=\"input-password\"], then click [data-cy=\"submit-sign-in-with-password\"]. Do NOT use XPath selectors."
+      },
+      {
+        "type": "action",
+        "description": "Wait for post-login UI: [data-testid=\"nav-bar\"] is visible. Then either navigate directly to /list-groups OR click the Groups nav item via [data-cy=\"nav-groups\"]. Prefer [data-cy=\"nav-groups\"]."
+      },
+      {
+        "type": "action",
+        "description": "On /list-groups, wait for [data-testid=\"groups-page-ready\"] to be present before interacting with the page."
+      },
+      {
+        "type": "action",
+        "description": "Click Add Group button: [data-testid=\"add-group-btn\"]. Verify modal title [data-testid=\"modalTitle\"] is visible."
+      },
+      {
+        "type": "action",
+        "description": "In the Add Group modal, the Group Type should already default to \"Site\". If it is not already \"Site\", open Group Type dropdown and select the option with visible text exactly \"Site\"."
+      },
+      {
+        "type": "action",
+        "description": "Enter a UNIQUE site name into [data-cy=\"input-org-name\"] (must be unique across sites). Use a prefix like \"e2e-site-testsprite-\" plus a timestamp. Do NOT click in the groups table when entering the name."
+      },
+      {
+        "type": "action",
+        "description": "Submit the modal by clicking [data-testid=\"submitBtn\"]."
+      },
+      {
+        "type": "assertion",
+        "description": "Do NOT rely on toast timing. Verify the modal closes (modalTitle not visible). Then reload /list-groups and find the group by typing the created name into the search input with placeholder \"Search groups\" and verify the group name is visible in results."
+      }
+    ]
   }
 ]
