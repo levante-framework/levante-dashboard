@@ -10,10 +10,6 @@
     "testIds": [
       "TC001"
     ],
-    "additionalInstruction": "Do not run; already executed. Only ensure report files are generated under testsprite_tests/ (raw_report.md and testsprite-mcp-test-report.md) based on the last run. If missing, explain how to generate them without rerunning.",
-    "envs": {
-      "API_KEY": "sk-user-4FK3hlstgGOBQz5JrBVH81vBRgQPXkX29spFEFa-RtGpz0Rsn-iUL5BfS0nunZRbRmx9TzKSHdarNv4GrOQQeBTx_EmNznK3turBMIIC6vc_ou_t4TnbdWyLcXP-c324rSw"
-    }
-  },
-  "proxy": "http://4e5bf718-6a3c-41cd-8042-b41a13992c08:HxYQkUarK9mHlKy2IWJ9DpZ4rP3NRe5m@tun.testsprite.com:8080"
+    "additionalInstruction": "Generate and execute ONLY a single frontend test for the scenario file testsprite/scenarios/dev-login.yaml. Do not visit localhost first; test must start by visiting the hosted TARGET_URL. Use these selectors: [data-cy=\"input-username-email\"], [data-cy=\"input-password\"], [data-cy=\"submit-sign-in-with-password\"]. Password must be read from an environment variable at runtime (do not embed or log it). After login, assert [data-testid=\"nav-bar\"] is visible."
+  }
 }
