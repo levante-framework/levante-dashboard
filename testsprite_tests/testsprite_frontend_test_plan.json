@@ -12,19 +12,19 @@
       },
       {
         "type": "action",
-        "description": "Input valid email and password credentials."
+        "description": "Fill [data-cy=\"input-username-email\"] with the provided username and fill [data-cy=\"input-password\"] with the provided password."
       },
       {
         "type": "action",
-        "description": "Click the sign-in button."
+        "description": "Click [data-cy=\"submit-sign-in-with-password\"]."
       },
       {
         "type": "assertion",
-        "description": "Verify user is authenticated and redirected away from /signin."
+        "description": "Verify user is authenticated: [data-testid=\"nav-bar\"] is visible and the app is no longer on /signin."
       },
       {
         "type": "assertion",
-        "description": "Verify landing page matches user role (participant or admin)."
+        "description": "Verify a post-login landing page is shown (role-appropriate content is visible)."
       }
     ]
   },
