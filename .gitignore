@@ -46,6 +46,8 @@ coverage
 
 # TestSprite (contains transient secrets during local runs)
 testsprite_tests/tmp/config.json
+testsprite_tests/tmp/test_results.json
+testsprite_tests/tmp/raw_report.md
 
 # Sentry Config File
 .env.sentry-build-plugin
