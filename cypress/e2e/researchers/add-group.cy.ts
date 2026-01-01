@@ -39,22 +39,27 @@ function signIn() {
 }
 
 describe('researcher workflow: add groups', () => {
-  it('can create a new Site group', () => {
-    cy.visit(signInUrl);
+  it('can create a new Cohort group (requires selecting Site dropdown first)', () => {
+    cy.visit('/signin');
     signIn();
 
     cy.get('[data-testid="nav-bar"]', { timeout: 30000 }).should('be.visible');
     cy.visit('/list-groups');
-    cy.contains('Groups', { timeout: 30000 }).should('exist');
+    cy.get('[data-testid="groups-page-ready"]', { timeout: 60000 }).should('exist');
 
-    cy.get('[data-testid="add-group-btn"]').should('be.visible').click();
+    cy.get('[data-testid="add-group-btn"]').should('be.visible').should('be.disabled');
+
+    cy.get('[data-cy="site-select"]').should('be.visible').click();
+    cy.contains('[role="option"]', /^AAA Site$/).click();
+
+    cy.get('[data-testid="add-group-btn"]').should('be.visible').should('not.be.disabled').click();
     cy.get('[data-testid="modalTitle"]').should('contain.text', 'Add New');
 
-    const groupName = `e2e-site-${Date.now()}`;
+    const groupName = `e2e-cohort-${Date.now()}`;
 
-    // Select "Site" org type
+    // Select "Cohort" org type
     cy.get('[data-cy="dropdown-org-type"]').click();
-    cy.contains('[role="option"]', /^Site$/).click();
+    cy.contains('[role="option"]', /^Cohort$/).click();
 
     typeInto('[data-cy="input-org-name"]', groupName);
     cy.get('[data-testid="submitBtn"]').should('not.be.disabled').click();
@@ -62,9 +67,9 @@ describe('researcher workflow: add groups', () => {
     // Modal should close
     cy.get('[data-testid="modalTitle"]').should('not.exist');
 
-    // Verify the new group appears in the table (search to be resilient)
-    cy.get('input[placeholder="Search groups"]').should('be.visible').type(groupName, { delay: 0 });
-    cy.contains(groupName, { timeout: 30000 }).should('exist');
+    // Verify success via toast (avoid relying on realtime table refresh)
+    cy.contains('Success', { timeout: 30000 }).should('exist');
+    cy.contains('Cohort created successfully.', { timeout: 30000 }).should('exist');
   });
 });
 

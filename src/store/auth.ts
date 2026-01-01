@@ -180,6 +180,8 @@ export const useAuthStore = defineStore(
           throw error;
         });
       }
+
+      throw new Error('Firekit not initialized');
     }
 
     async function initiateLoginWithEmailLink({ email }: Pick<LoginCredentials, 'email'>): Promise<void> {
@@ -190,6 +192,8 @@ export const useAuthStore = defineStore(
           window.localStorage.setItem('emailForSignIn', email);
         });
       }
+
+      throw new Error('Firekit not initialized');
     }
 
     async function signInWithEmailLink({ email, emailLink }: EmailLinkCredentials): Promise<void> {
@@ -198,16 +202,24 @@ export const useAuthStore = defineStore(
           window.localStorage.removeItem('emailForSignIn');
         });
       }
+
+      throw new Error('Firekit not initialized');
     }
 
     async function signInWithGooglePopup(): Promise<unknown> {
       if (isFirekitInit()) {
         return roarfirekit.value?.signInWithPopup(AUTH_SSO_PROVIDERS.GOOGLE as any);
       }
+
+      throw new Error('Firekit not initialized');
     }
 
     async function signInWithGoogleRedirect(): Promise<void> {
-      return roarfirekit.value?.initiateRedirect(AUTH_SSO_PROVIDERS.GOOGLE as any);
+      if (isFirekitInit()) {
+        return roarfirekit.value?.initiateRedirect(AUTH_SSO_PROVIDERS.GOOGLE as any);
+      }
+
+      throw new Error('Firekit not initialized');
     }
 
     async function initStateFromRedirect(): Promise<unknown> {

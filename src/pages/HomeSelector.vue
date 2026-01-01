@@ -1,16 +1,16 @@
 <template>
-  <div v-if="isLoading">
+  <div v-if="isLoading" data-testid="home-selector-loading">
     <div class="text-center col-full">
       <LevanteSpinner fullscreen />
     </div>
   </div>
 
-  <div v-else-if="authStore.shouldUsePermissions">
+  <div v-else-if="authStore.shouldUsePermissions" data-testid="home-selector-ready">
     <HomeAdministrator v-if="hasRole(ROLES.RESEARCH_ASSISTANT)" />
     <HomeParticipant v-else/>
   </div>
 
-  <div v-else>
+  <div v-else data-testid="home-selector-ready">
     <HomeParticipant v-if="isParticipant" />
     <HomeAdministrator v-else-if="isAdminUser" />
   </div>

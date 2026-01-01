@@ -8,6 +8,7 @@
       <div class="m-0 mb-5 p-3 bg-gray-100 border-1 border-gray-200 border-round">
         <div class="flex align-items-center gap-3">
           <PvFileUpload
+            data-cy="upload-link-users-csv"
             :choose-label="isFileUploaded && !errorUsers.length ? 'Choose Another CSV File' : 'Choose CSV File'"
             :empty-label="'Test'"
             :show-cancel-button="false"
@@ -49,6 +50,7 @@
               :label="activeSubmit ? 'Linking Users' : 'Start Linking'"
               :icon="activeSubmit ? 'pi pi-spin pi-spinner' : 'pi pi-link'"
               :disabled="activeSubmit"
+              data-cy="button-start-linking-users"
               @click="submitUsers"
             />
           </div>

@@ -55,6 +55,7 @@
               </div>
               <div class="card flex justify-content-center">
                 <PvListbox
+                  data-cy="group-picker-listbox"
                   v-model="selectedOrgs[activeOrgType]"
                   :options="orgData"
                   :multiple="!forParentOrg"

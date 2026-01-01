@@ -37,6 +37,8 @@
     "i18n:safety-check": "node src/translations/tools/translation-safety-check.js",
     "i18n:add-locale": "node src/translations/tools/add-locale-column.js",
     "i18n:sync": "npm run i18n:consolidate && npm run i18n:crowdin:upload && npm run i18n:crowdin:download && npm run i18n:csv-to-json && npm run i18n:validate"
+    ,
+    "docs:sync:researcher": "node scripts/sync-researcher-docs.mjs"
   },
   "dependencies": {
     "@bdelab/roar-pa": "2.2.4",
@@ -97,7 +99,6 @@
   "devDependencies": {
     "@pinia/testing": "^0.1.7",
     "@testing-library/vue": "^8.1.0",
-    "@testsprite/testsprite-mcp": "^0.0.18",
     "@types/lodash": "^4.14.196",
     "@types/node": "^24.2.1",
     "@typescript-eslint/eslint-plugin": "^8.32.1",

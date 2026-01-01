@@ -1,11 +1,11 @@
 <template>
-  <div>
+  <div data-testid="home-participant">
     <div v-if="!initialized || isLoading || isFetching">
       <LevanteSpinner fullscreen />
     </div>
 
     <div v-else-if="!hasAssignments">
-      <div class="col-full text-center py-8">
+      <div class="col-full text-center py-8" data-testid="home-participant-no-assignments">
         <h1>{{ $t('homeParticipant.noAssignments') }}</h1>
         <p class="text-center">
           {{ $t('homeParticipant.contactAdministrator') }}
@@ -20,7 +20,7 @@
     </div>
 
     <div v-else>
-      <div class="assignment">
+      <div class="assignment" data-testid="home-participant-has-assignments">
         <div class="assignment__header">
           <PvTag
             :value="t(`participantSidebar.status${capitalize(getAssignmentStatus(selectedAssignment))}`)"
