@@ -1,4 +1,0 @@
-id,userType,month,year,cohort,caregiverId,teacherId,email,password,uid
-"e2e_child_1767298937048","child","5","2017","e2e-cohort-1767298937048","e2e_caregiver_1767298937048","e2e_teacher_1767298937048","4s7x5lkpcl@levante.com","7s15dj3m6p","jCRtIFGTEVy3jAAIJqHN"
-"e2e_caregiver_1767298937048","caregiver","5","2017","e2e-cohort-1767298937048","","","jeyfc7aqsr@levante.com","cyp6wzc4zh","SQskgIKWISMPpfLL3gx5"
-"e2e_teacher_1767298937048","teacher","5","2017","e2e-cohort-1767298937048","","","3d9vnw701w@levante.com","u91w13ofet","z0jWbC38nDx5KcSuqmJW"
