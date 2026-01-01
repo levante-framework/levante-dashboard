@@ -123,8 +123,8 @@ E2E tests simulate real user interactions and test complete workflows.
 ```bash
 E2E_USE_ENV=TRUE \
 E2E_APP_URL='https://hs-levante-admin-dev.web.app' \
-E2E_TEST_EMAIL='david81+test@stanford.edu' \
-E2E_TEST_PASSWORD='levante1' \
+E2E_TEST_EMAIL='...' \
+E2E_TEST_PASSWORD='...' \
 npx cypress run --e2e --spec cypress/e2e/researchers/researcher-full-workflow.cy.ts
 ```
 
