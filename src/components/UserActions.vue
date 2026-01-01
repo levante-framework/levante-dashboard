@@ -25,6 +25,7 @@
       <div v-if="shouldUsePermissions" class="flex align-items-center gap-2">
         <label for="site-select">Site:</label>
         <PvSelect
+          data-cy="site-select"
           :options="siteOptions"
           :modelValue="currentSite"
           :optionValue="(o) => o.value"
