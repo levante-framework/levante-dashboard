@@ -14,7 +14,9 @@
             @click="checkForCapsLock"
           />
         </div>
-        <small v-if="invalid" class="p-error block mt-3">{{ $t('authSignIn.incorrectEmailOrPassword') }}</small>
+        <small v-if="invalid" class="p-error block mt-3" data-cy="sign-in-error">
+          {{ $t('authSignIn.incorrectEmailOrPassword') }}
+        </small>
       </div>
       <div class="field mt-2 mb-5">
         <div>

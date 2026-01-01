@@ -9,6 +9,7 @@
       <div class="m-0 mb-5 p-3 bg-gray-100 border-1 border-gray-200 border-round">
         <div class="flex align-items-center gap-3">
           <PvFileUpload
+            data-cy="upload-add-users-csv"
             :choose-label="
               isFileUploaded && !errorMissingColumns && !errorUsers.length
                 ? 'Choose Another CSV File'
@@ -53,8 +54,14 @@
 
           <div class="submit-container">
             <div v-if="registeredUsers.length" class="button-group">
-              <PvButton label="Continue to Link Users" icon="pi pi-link" @click="router.push({ name: 'Link Users' })" />
               <PvButton
+                data-cy="button-continue-to-link-users"
+                label="Continue to Link Users"
+                icon="pi pi-link"
+                @click="router.push({ name: 'Link Users' })"
+              />
+              <PvButton
+                data-cy="button-download-users"
                 label="Download Users"
                 icon="pi pi-download"
                 variant="outlined"
@@ -68,6 +75,7 @@
               :label="activeSubmit ? 'Adding Users' : 'Add Users from Uploaded File'"
               :icon="activeSubmit ? 'pi pi-spin pi-spinner' : ''"
               :disabled="activeSubmit || isAllSitesSelected"
+              data-cy="button-add-users-from-file"
               data-testid="start-adding-button"
               @click="submitUsers"
             />

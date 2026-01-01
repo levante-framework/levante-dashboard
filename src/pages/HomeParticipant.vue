@@ -1,5 +1,5 @@
 <template>
-  <div class="app app--sidebar">
+  <div class="app app--sidebar" data-testid="home-participant">
     <SideBar />
     <div>
       <div v-if="!initialized || isLoading || isFetching">
@@ -7,7 +7,7 @@
       </div>
 
       <div v-else-if="!hasAssignments">
-        <div class="col-full text-center py-8">
+        <div class="col-full text-center py-8" data-testid="home-participant-no-assignments">
           <h1>{{ $t('homeParticipant.noAssignments') }}</h1>
           <p class="text-center">
             {{ $t('homeParticipant.contactAdministrator') }}
@@ -22,7 +22,7 @@
       </div>
 
       <div v-else>
-        <div class="assignment">
+        <div class="assignment" data-testid="home-participant-has-assignments">
         <div class="assignment__header">
           <PvTag
             :value="t(`participantSidebar.status${capitalize(getAssignmentStatus(selectedAssignment))}`)"
@@ -75,7 +75,6 @@
           </div>
         </div>
       </div>
-    </div>
     </div>
   </div>
   <ConsentModal

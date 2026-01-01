@@ -34,6 +34,7 @@
 
             <PvListbox
               v-model="selectedOrgs[activeHeader]"
+              data-cy="group-picker-listbox"
               checkmark
               multiple
               option-label="name"
