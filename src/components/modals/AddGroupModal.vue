@@ -262,6 +262,24 @@ const { mutate: upsertOrg, isPending: isSubmittingOrg } = useUpsertOrgMutation()
 
 const { data: districts, loading: isLoadingDistricts } = useDistrictsListQuery();
 
+watch(
+  () => [props.isVisible, parentOrgRequired.value, authStore.shouldUsePermissions, authStore.currentSite, districts?.value],
+  ([isVisible, isParentRequired, shouldUsePermissions, currentSiteId, districtsValue]) => {
+    if (!isVisible) return;
+    if (!isParentRequired) return;
+    if (!shouldUsePermissions) return;
+    if (!currentSiteId || currentSiteId === 'any') return;
+    if (parentDistrict.value) return;
+    if (!Array.isArray(districtsValue) || districtsValue.length === 0) return;
+
+    const match = districtsValue.find((d) => d?.id === currentSiteId);
+    if (match?.id) {
+      parentDistrict.value = { id: match.id, name: match.name, tags: match.tags ?? [] };
+    }
+  },
+  { immediate: true },
+);
+
 const { isFetching: isFetchingSchools, data: schools } = useDistrictSchoolsQuery(selectedDistrict, {
   enabled: schoolQueryEnabled,
 });

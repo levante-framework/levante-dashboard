@@ -9,6 +9,8 @@
               <PvButton
                 class="bg-primary text-white border-none p-2 ml-auto"
                 data-testid="add-group-btn"
+                data-cy="add-group-btn"
+                :disabled="isAddGroupDisabled"
                 @click="isAddGroupModalVisible = true"
                 >Add Group</PvButton
               >
@@ -272,6 +274,12 @@ const addUsers = () => {
 const authStore = useAuthStore();
 const { currentSite, roarfirekit, shouldUsePermissions, userClaims } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
+
+const isAddGroupDisabled = computed(() => {
+  if (!shouldUsePermissions.value) return false;
+  return !currentSite.value || currentSite.value === 'any';
+});
+
 
 const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
 const claimsLoaded = computed(() => !!userClaims.value?.claims);

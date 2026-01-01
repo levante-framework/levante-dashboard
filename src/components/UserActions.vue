@@ -11,6 +11,7 @@
       <div v-if="authStore.shouldUsePermissions" class="flex align-items-center gap-2">
         <label for="site-select">Site:</label>
         <PvSelect
+          data-cy="site-select"
           :options="siteOptions"
           :value="selectedSite?.value"
           :optionValue="(o) => o.value"
