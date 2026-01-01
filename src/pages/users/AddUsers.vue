@@ -136,11 +136,10 @@ import { useRouter } from 'vue-router';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { logger } from '@/logger';
 import { storeToRefs } from 'pinia';
-import { fetchDocById } from '@/helpers/query/utils';
 
 const authStore = useAuthStore();
 const { currentSite, shouldUsePermissions } = storeToRefs(authStore);
-const { createUsers } = authStore;
+const { createUsersWithSite } = authStore;
 const toast = useToast();
 const isFileUploaded = ref(false);
 const uploadedFile = ref(null);
@@ -538,11 +537,7 @@ async function submitUsers() {
   }
 
   // Check orgs exist
-  let currentSiteData = null;
-
-  if (shouldUsePermissions.value) {
-    currentSiteData = await fetchDocById('districts', currentSite);
-  }
+  // In permissions mode, we use currentSite.value directly (district/site id).
 
   for (const { user, index } of usersToBeRegistered) {
     try {
@@ -561,8 +556,8 @@ async function submitUsers() {
             .filter((s) => s)
         : // If NOT, check for usePermissions
         shouldUsePermissions.value
-        ? // If usePermissions, pass currentSite's data
-          [currentSiteData?.name]
+        ? // If usePermissions, pass currentSite id directly (backend requires siteId/districtId)
+          [currentSite.value]
         : // If NOT, no site was provided
           [];
 
@@ -645,7 +640,10 @@ async function submitUsers() {
                 let schoolFound = false;
                 for (const siteName of sites) {
                   try {
-                    const siteId = await getOrgId('districts', siteName);
+                    const siteId =
+                      shouldUsePermissions.value && siteName === currentSite.value
+                        ? currentSite.value
+                        : await getOrgId('districts', siteName);
                     const schoolId = await getOrgId(
                       pluralizeFirestoreCollection(orgType),
                       schoolName,
@@ -655,7 +653,7 @@ async function submitUsers() {
                     orgInfo.schools.push(schoolId);
                     schoolFound = true;
                     break; // Found valid parent, move to next school
-                  } catch (error) {
+                  } catch {
                     // Try next site
                     continue;
                   }
@@ -674,7 +672,10 @@ async function submitUsers() {
                 for (const siteName of sites) {
                   for (const schoolName of schools) {
                     try {
-                      const siteId = await getOrgId('districts', siteName);
+                      const siteId =
+                        shouldUsePermissions.value && siteName === currentSite.value
+                          ? currentSite.value
+                          : await getOrgId('districts', siteName);
                       const schoolId = await getOrgId('schools', schoolName, ref({ id: siteId }), ref(undefined));
                       const classId = await getOrgId(
                         pluralizeFirestoreCollection(orgType),
@@ -685,7 +686,7 @@ async function submitUsers() {
                       orgInfo.classes.push(classId);
                       classFound = true;
                       break; // Found valid parent, move to next class
-                    } catch (error) {
+                    } catch {
                       // Try next site/school combination
                       continue;
                     }
@@ -708,13 +709,17 @@ async function submitUsers() {
               }
             } else if (orgType === 'site') {
               for (const siteName of orgNames) {
-                const siteId = await getOrgId(
-                  pluralizeFirestoreCollection('districts'),
-                  siteName,
-                  ref(undefined),
-                  ref(undefined),
-                );
-                orgInfo.sites.push(siteId);
+                if (shouldUsePermissions.value && siteName === currentSite.value) {
+                  orgInfo.sites.push(currentSite.value);
+                } else {
+                  const siteId = await getOrgId(
+                    pluralizeFirestoreCollection('districts'),
+                    siteName,
+                    ref(undefined),
+                    ref(undefined),
+                  );
+                  orgInfo.sites.push(siteId);
+                }
               }
             }
           } catch (error) {
@@ -780,7 +785,6 @@ async function submitUsers() {
 
   // Begin submit process
   // Org must be created before users can be created
-  let processedUserCount = 0;
   for (const users of chunkedUsersToBeRegistered) {
     try {
       // Ensure each user has the proper userType field name for the backend
@@ -800,18 +804,44 @@ async function submitUsers() {
             delete processedUser[userTypeField];
           }
 
-          // *** Add check to convert 'caregiver' value to 'parent' ***
-          if (typeof userTypeValue === 'string' && userTypeValue.toLowerCase() === 'caregiver') {
-            processedUser.userType = 'parent';
-          }
+          // Keep userType values as-is (e.g. "caregiver") to match backend expectations.
         }
+
+        // Backend expects parentId, not caregiverId.
+        if (processedUser.caregiverId && !processedUser.parentId) {
+          processedUser.parentId = processedUser.caregiverId;
+          delete processedUser.caregiverId;
+        }
+
+        // Ensure required backend fields exist to avoid undefined access.
+        if (!processedUser.orgIds) {
+          processedUser.orgIds = { districts: [], schools: [], classes: [], groups: [], families: [] };
+        } else if (!processedUser.orgIds.families) {
+          processedUser.orgIds.families = [];
+        }
+        if (processedUser.isTestData === undefined) processedUser.isTestData = true;
+
+        // In permissions mode, the backend callable may require a top-level siteId/districtId.
+        if (shouldUsePermissions.value && currentSite.value && currentSite.value !== 'any') {
+          processedUser.districtId = currentSite.value;
+          processedUser.siteId = currentSite.value;
+        }
+
+        // Some backend paths assume these are arrays.
+        processedUser.orgIds.districts ??= [];
+        processedUser.orgIds.schools ??= [];
+        processedUser.orgIds.classes ??= [];
+        processedUser.orgIds.groups ??= [];
 
         return processedUser;
       });
 
       // This is the most likely place for an error, due to
       // permissions, etc. If so, drop to Catch block
-      const res = await createUsers(processedUsers);
+      const res = await createUsersWithSite(processedUsers, {
+        siteId: shouldUsePermissions.value ? (currentSite.value ?? undefined) : undefined,
+        districtId: shouldUsePermissions.value ? (currentSite.value ?? undefined) : undefined,
+      });
       logger.capture('Admin: Add Users', { processedUsers });
       const currentRegisteredUsers = res.data.data;
 
@@ -831,8 +861,6 @@ async function submitUsers() {
 
       registeredUsers.value.push(...currentRegisteredUsers);
 
-      // Update the count of processed users
-      processedUserCount += currentRegisteredUsers.length;
       toast.add({
         severity: 'success',
         summary: 'User Creation Successful',

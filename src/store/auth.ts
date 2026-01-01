@@ -1,5 +1,6 @@
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { onAuthStateChanged, signInWithEmailAndPassword, User, Unsubscribe } from 'firebase/auth';
+import { httpsCallable } from 'firebase/functions';
 import { useRouter } from 'vue-router';
 import { initNewFirekit } from '../firebaseInit';
 import { AUTH_SSO_PROVIDERS } from '../constants/auth';
@@ -255,6 +256,28 @@ export const useAuthStore = defineStore(
       return roarfirekit.value?.createUsers(userData as any);
     }
 
+    async function createUsersWithSite(
+      userData: unknown,
+      opts: { siteId?: string; districtId?: string },
+    ): Promise<unknown> {
+      if (!isFirekitInit()) throw new Error('Firekit not initialized');
+      if (!opts.siteId && !opts.districtId) return await createUsers(userData);
+
+      const functions = (roarfirekit.value as any)?.admin?.functions;
+      if (!functions) return await createUsers(userData);
+
+      const cloudCreateUsers = httpsCallable(functions, 'createUsers');
+      return await cloudCreateUsers({
+        userData,
+        // Some deployments expect plural ids (arrays) and will `.map()` them.
+        siteIds: opts.siteId ? [opts.siteId] : [],
+        districtIds: opts.districtId ? [opts.districtId] : [],
+        // Keep singulars too for backwards compatibility.
+        siteId: opts.siteId,
+        districtId: opts.districtId,
+      });
+    }
+
     async function signOut(): Promise<void> {
       console.log('PostHog Reset (explicit signOut)');
       posthogInstance.reset();
@@ -321,6 +344,7 @@ export const useAuthStore = defineStore(
       $reset,
       completeAssessment,
       createUsers,
+      createUsersWithSite,
       forceIdTokenRefresh,
       getLegalDoc,
       initFirekit,
