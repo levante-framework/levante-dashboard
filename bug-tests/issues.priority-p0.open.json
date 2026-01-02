@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-01-02T01:19:33.380Z",
+  "project": {
+    "org": "levante-framework",
+    "number": 1
+  },
+  "repo": {
+    "owner": "levante-framework",
+    "name": "levante-dashboard"
+  },
+  "filters": {
+    "priority": "P0",
+    "state": "open",
+    "type": "Bug"
+  },
+  "counts": {
+    "total": 4
+  },
+  "issues": [
+    {
+      "number": 746,
+      "title": "[Bug]  Incomplete surveys on open assignments appearing as \"Past\" and unavailable",
+      "state": "open",
+      "html_url": "https://github.com/levante-framework/levante-dashboard/issues/746",
+      "repo": "levante-framework/levante-dashboard",
+      "priority": "P0",
+      "updated_at": "2025-12-18T17:42:22Z"
+    },
+    {
+      "number": 737,
+      "title": "[Bug]  PERMISSIONS Prohibit identical class names within site",
+      "state": "open",
+      "html_url": "https://github.com/levante-framework/levante-dashboard/issues/737",
+      "repo": "levante-framework/levante-dashboard",
+      "priority": "P0",
+      "updated_at": "2025-12-12T18:16:17Z"
+    },
+    {
+      "number": 735,
+      "title": "[Bug] PERMISSIONS Progress report is blank for some users",
+      "state": "open",
+      "html_url": "https://github.com/levante-framework/levante-dashboard/issues/735",
+      "repo": "levante-framework/levante-dashboard",
+      "priority": "P0",
+      "updated_at": "2025-12-12T17:01:06Z"
+    },
+    {
+      "number": 733,
+      "title": "[Bug] PERMISSIONS SuperAdmins cannot create sites",
+      "state": "open",
+      "html_url": "https://github.com/levante-framework/levante-dashboard/issues/733",
+      "repo": "levante-framework/levante-dashboard",
+      "priority": "P0",
+      "updated_at": "2025-12-11T12:48:11Z"
+    }
+  ]
+}

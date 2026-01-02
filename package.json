@@ -38,7 +38,17 @@
     "i18n:add-locale": "node src/translations/tools/add-locale-column.js",
     "i18n:sync": "npm run i18n:consolidate && npm run i18n:crowdin:upload && npm run i18n:crowdin:download && npm run i18n:csv-to-json && npm run i18n:validate"
     ,
-    "docs:sync:researcher": "node scripts/sync-researcher-docs.mjs"
+    "docs:sync:researcher": "node scripts/sync-researcher-docs.mjs",
+    "bugtests:fetch:p0": "node scripts/bug-tests/fetch-project-priority-bugs.mjs --project-org levante-framework --project-number 1 --priority P0 --state open --out bug-tests/issues.priority-p0.open.json",
+    "bugtests:fetch:p1": "node scripts/bug-tests/fetch-project-priority-bugs.mjs --project-org levante-framework --project-number 1 --priority P1 --state open --out bug-tests/issues.priority-p1.open.json",
+    "bugtests:scaffold:p0": "node scripts/bug-tests/scaffold-bug-specs.mjs --in bug-tests/issues.priority-p0.open.json --out-dir cypress/e2e/researchers/bugs",
+    "bugtests:scaffold:p1": "node scripts/bug-tests/scaffold-bug-specs.mjs --in bug-tests/issues.priority-p1.open.json --out-dir cypress/e2e/researchers/bugs",
+    "bugtests:scaffold:p0p1": "echo \"Deprecated: use bugtests:scaffold:p0 then bugtests:scaffold:p1\" && exit 1",
+    "bugtests:run:closed": "npx cypress run --browser chrome --e2e --spec 'cypress/e2e/researchers/bugs/gh-*-closed.cy.ts'",
+    "bugtests:run:open": "CYPRESS_E2E_RUN_OPEN_BUGS=true npx cypress run --browser chrome --e2e --spec 'cypress/e2e/researchers/bugs/gh-*-open.cy.ts'",
+    "e2e:researchers": "bash scripts/e2e-researchers.sh",
+    "bugtests:run:closed:local": "E2E_SPEC='cypress/e2e/researchers/bugs/gh-*-closed.cy.ts' bash scripts/e2e-researchers.sh",
+    "bugtests:run:open:local": "CYPRESS_E2E_RUN_OPEN_BUGS=true E2E_SPEC='cypress/e2e/researchers/bugs/gh-*-open.cy.ts' bash scripts/e2e-researchers.sh"
   },
   "dependencies": {
     "@bdelab/roar-pa": "2.2.4",
