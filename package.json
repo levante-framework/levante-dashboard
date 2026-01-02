@@ -41,7 +41,7 @@
     "docs:sync:researcher": "node scripts/sync-researcher-docs.mjs",
     "e2e:init:site": "node scripts/e2e-init/reset-site.mjs --yes",
     "e2e:init:ai-tests": "node scripts/e2e-init/reset-site.mjs --yes --site-name ai-tests --project-id hs-levante-admin-dev --out bug-tests/site.ai-tests.json",
-    "e2e:seed:ai-tests": "CYPRESS_E2E_SITE_NAME=ai-tests bash scripts/e2e-researchers.sh --spec cypress/e2e/researchers/researcher-full-workflow.cy.ts",
+    "e2e:seed:ai-tests": "CYPRESS_E2E_SITE_NAME=ai-tests bash scripts/e2e-researchers.sh --spec cypress/e2e/researchers/tasks/researcher-full-workflow.cy.ts",
     "e2e:bootstrap:ai-tests": "npm run e2e:init:ai-tests && npm run e2e:seed:ai-tests",
     "bugtests:fetch:p0": "node scripts/bug-tests/fetch-project-priority-bugs.mjs --project-org levante-framework --project-number 1 --priority P0 --state open --out bug-tests/issues.priority-p0.open.json",
     "bugtests:fetch:p1": "node scripts/bug-tests/fetch-project-priority-bugs.mjs --project-org levante-framework --project-number 1 --priority P1 --state open --out bug-tests/issues.priority-p1.open.json",

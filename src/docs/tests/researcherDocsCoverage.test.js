@@ -19,7 +19,7 @@ describe('README_RESEARCHERS.md coverage', () => {
 
   it('has an E2E spec that exercises the documented workflow end-to-end', () => {
     expect(testsReadme, 'README_TESTS documents researcher workflow spec').toContain(
-      'cypress/e2e/researchers/researcher-full-workflow.cy.ts',
+      'cypress/e2e/researchers/tasks/researcher-full-workflow.cy.ts',
     );
   });
 });

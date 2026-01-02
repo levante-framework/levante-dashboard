@@ -105,7 +105,7 @@ E2E tests simulate real user interactions and test complete workflows.
   - `E2E_TEST_EMAIL`: Test user email
   - `E2E_TEST_PASSWORD`: Test user password
 
-##### [`researcher-full-workflow.cy.ts`](cypress/e2e/researchers/researcher-full-workflow.cy.ts)
+##### [`researcher-full-workflow.cy.ts`](cypress/e2e/researchers/tasks/researcher-full-workflow.cy.ts)
 
 - **Purpose**: Exercises the researcher setup workflow described in `README_RESEARCHERS.md`: create a cohort, upload users CSV, link users, create an assignment.
 - **Runs against**: Hosted or local (hosted recommended for CI-like stability).
@@ -125,7 +125,7 @@ E2E_USE_ENV=TRUE \
 E2E_APP_URL='https://hs-levante-admin-dev.web.app' \
 E2E_TEST_EMAIL='...' \
 E2E_TEST_PASSWORD='...' \
-npx cypress run --e2e --spec cypress/e2e/researchers/researcher-full-workflow.cy.ts
+npx cypress run --e2e --spec cypress/e2e/researchers/tasks/researcher-full-workflow.cy.ts
 ```
 
    - For add-group test, set       E2E_APP_URL='https://hs-levante-admin-dev.web.app'

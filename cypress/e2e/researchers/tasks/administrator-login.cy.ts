@@ -1,4 +1,4 @@
-import { ignoreKnownHostedUncaughtExceptions, signInWithPassword } from './_helpers';
+import { ignoreKnownHostedUncaughtExceptions, signInWithPassword } from '../_helpers';
 
 const email: string = (Cypress.env('E2E_TEST_EMAIL') as string) || 'student@levante.test';
 const password: string = (Cypress.env('E2E_TEST_PASSWORD') as string) || 'student123';

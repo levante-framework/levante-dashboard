@@ -41,7 +41,7 @@ function signIn() {
 
 describe('researcher workflow: add groups', () => {
   it('can create a new Cohort group (requires selecting Site dropdown first)', () => {
-    cy.visit('/signin');
+    cy.visit(signInUrl);
     signIn();
 
     cy.get('[data-testid="nav-bar"]', { timeout: 30000 }).should('be.visible');
