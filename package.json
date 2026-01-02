@@ -51,6 +51,8 @@
     "bugtests:run:closed": "npx cypress run --browser chrome --e2e --spec 'cypress/e2e/researchers/bugs/gh-*-closed.cy.ts'",
     "bugtests:run:open": "CYPRESS_E2E_RUN_OPEN_BUGS=true npx cypress run --browser chrome --e2e --spec 'cypress/e2e/researchers/bugs/gh-*-open.cy.ts'",
     "e2e:researchers": "bash scripts/e2e-researchers.sh",
+    "e2e:researcher-docs:video": "npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/researcher-docs-website.cy.ts --config baseUrl=https://researcher.levante-network.org,video=true",
+    "e2e:researcher-docs:scenario:video": "bash scripts/e2e-researchers.sh --spec cypress/e2e/researchers/tasks/researcher-docs-scenario.cy.ts",
     "bugtests:run:closed:local": "E2E_SPEC='cypress/e2e/researchers/bugs/gh-*-closed.cy.ts' bash scripts/e2e-researchers.sh",
     "bugtests:run:open:local": "CYPRESS_E2E_RUN_OPEN_BUGS=true E2E_SPEC='cypress/e2e/researchers/bugs/gh-*-open.cy.ts' bash scripts/e2e-researchers.sh"
   },
