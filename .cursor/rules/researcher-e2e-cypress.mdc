@@ -1,0 +1,62 @@
+---
+description: Researcher Cypress E2E context: how to run, how it’s structured, and what env/seeding is expected.
+globs:
+  - cypress/**/*
+  - scripts/e2e-*
+  - README_TESTS.md
+alwaysApply: false
+---
+
+This repo uses Cypress E2E tests for the “researcher/admin” UI.
+
+## Test suite structure
+
+- `cypress/e2e/researchers/tasks/`: stable user-visible workflows that should always pass as part of the suite.
+- `cypress/e2e/researchers/bugs/`: repro specs for known/open bugs (often expected to fail until fixed).
+
+Keep bug repros minimal and deterministic; keep tasks focused on user outcomes.
+
+## Running locally (single command, one terminal)
+
+Most researcher E2E specs expect a running dev server at `http://localhost:5173`.
+Use the wrapper script (starts Vite, runs Cypress, then cleans up):
+
+- `npm run e2e:researchers`
+- `npm run e2e:researcher-docs:video`
+- `npm run e2e:researcher-docs:scenario:video`
+- For a single spec: `bash scripts/e2e-researchers.sh --spec <path>`
+
+Artifacts:
+- Videos: `cypress/videos/`
+- Screenshots: `cypress/screenshots/`
+
+This repo is configured to preserve artifacts between runs (no auto-trashing), and video is enabled by default for E2E.
+
+## Environment variables
+
+Cypress env is plumbed from `.env`/process env (preferred for DEV) via `cypress.config.ts`.
+Common variables:
+
+- `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`: login for a researcher/admin user in DEV (or use `DEV_LOGIN`/`DEV_PASSWORD`).
+- `E2E_SITE_NAME`: which site to select after login (often `ai-tests`).
+- `E2E_RUN_OPEN_BUGS`: gate for running open bug repros when they are conditionally skipped.
+- `E2E_VIDEO`: override video recording from wrapper scripts (defaults true).
+
+Optional “seeded admin accounts” for `ai-tests`:
+- `E2E_AI_ADMIN_EMAIL`, `E2E_AI_ADMIN_PASSWORD`
+- `E2E_AI_SITE_ADMIN_EMAIL`, `E2E_AI_SITE_ADMIN_PASSWORD`
+
+## Clean test site (“ai-tests”) bootstrap
+
+There is a Firebase-admin-backed reset script:
+- `scripts/e2e-init/reset-site.mjs`
+
+It can delete + recreate the `ai-tests` site for a clean slate (and optionally create/reset `ai-admin` + `ai-site-admin` accounts).
+
+Use the npm scripts documented in `README_TESTS.md` (search for “ai-tests”).
+
+## Known gotchas / reliability guidance
+
+- If Cypress reports it can’t verify `baseUrl`, the dev server isn’t running. Prefer the wrapper scripts.
+- Some UI states are eventually consistent (e.g., newly created assignments might take time to appear on the home list).
+- Don’t “hide” real app errors with `uncaught:exception` unless the spec is explicitly intended as a smoke test for a hosted site.
