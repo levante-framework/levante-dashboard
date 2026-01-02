@@ -103,8 +103,9 @@ describe('GH#719 [CLOSED] Assignment cards show "See Details" even if stats are 
     signIn();
 
     // Select a site (permissions mode requires this to render admin pages reliably).
+    const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'AAA Site';
     cy.get('[data-cy="site-select"]', { timeout: 90000 }).should('be.visible').click();
-    cy.contains('[role="option"]', new RegExp(`^${escapeRegExp('AAA Site')}$`), { timeout: 60000 }).click();
+    cy.contains('[role="option"]', new RegExp(`^${escapeRegExp(siteName)}$`), { timeout: 60000 }).click();
     assertCurrentSiteSelected();
 
     // Home page: assignment cards should render.

@@ -248,6 +248,48 @@ npx cypress run
 npx cypress run --spec "cypress/e2e/testTasks.cy.ts"
 ```
 
+### Researcher E2E: clean `ai-tests` site (DEV)
+
+We use a dedicated Site named **`ai-tests`** for repeatable researcher/admin E2E runs.
+
+#### Prereqs (one-time)
+
+- **Cypress login creds**: set `E2E_TEST_EMAIL` and `E2E_TEST_PASSWORD` in `.env` (DEV user).
+- **Firestore admin auth** (for the reset script): `scripts/e2e-init/reset-site.mjs` uses `firebase-admin` and requires
+  Application Default Credentials. Examples:
+
+```bash
+# Option A: gcloud (preferred if you have it)
+gcloud auth application-default login
+
+# Option B: service account json
+export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json
+```
+
+#### Bootstrap (reset + seed)
+
+```bash
+npm run e2e:bootstrap:ai-tests
+```
+
+This does:
+- **Reset**: deletes any existing `ai-tests` Site (and dependent `schools/classes/cohorts`), then recreates it.
+- **Seed**: runs the existing researcher workflow spec against `ai-tests` to create a cohort + users + assignment.
+
+#### Run researcher tests against `ai-tests`
+
+All researcher specs can be pointed at a site via `E2E_SITE_NAME`:
+
+```bash
+CYPRESS_E2E_SITE_NAME=ai-tests npm run bugtests:run:open:local
+```
+
+#### Artifacts (videos/screenshots)
+
+Artifacts are kept between runs (we do **not** trash assets before runs):
+- `cypress/videos/`
+- `cypress/screenshots/`
+
 ### Environment-Specific Test Commands
 
 ```bash

@@ -113,8 +113,9 @@ describe('researcher README workflow (hosted): assignment task conditions', () =
     signIn();
 
     // Select site (required for permissions mode)
+    const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'AAA Site';
     cy.get('[data-cy="site-select"]', { timeout: 90000 }).should('be.visible').click();
-    cy.contains('[role="option"]', new RegExp(`^${escapeRegExp('AAA Site')}$`), { timeout: 60000 }).click();
+    cy.contains('[role="option"]', new RegExp(`^${escapeRegExp(siteName)}$`), { timeout: 60000 }).click();
     assertCurrentSiteSelected();
 
     // Create a cohort (group) to assign to.
