@@ -282,6 +282,15 @@ const routes: Array<RouteRecordRaw> = [
       allowedRoles: [],
     },
   },
+  {
+    path: '/testing-results',
+    name: 'TestingResults',
+    component: () => import('../pages/testing/TestingResults.vue'),
+    meta: {
+      pageTitle: 'E2E Results',
+      allowedRoles: [ROLES.SUPER_ADMIN],
+    },
+  },
 ];
 
 const scrollBehavior: RouterScrollBehavior = (to, from, savedPosition) => {

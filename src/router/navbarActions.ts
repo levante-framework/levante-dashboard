@@ -52,6 +52,14 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     project: 'ALL',
     category: 'Assignments',
   },
+  {
+    title: 'E2E Results',
+    icon: 'pi pi-list-check',
+    buttonLink: { name: 'TestingResults' },
+    requiresSuperAdmin: true,
+    project: 'ALL',
+    category: 'Assignments',
+  },
   // TO DO: REMOVE USER "ACTIONS" AFTER NAMING 3 IS COMPLETE
   {
     title: 'Add Users',

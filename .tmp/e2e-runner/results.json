@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "updatedAt": "2026-01-02T20:59:00.707Z",
+    "bucket": "levante-performance-dev",
+    "objectPath": "test-results/levante-dashboard-e2e-results.json"
+  },
+  "byId": {
+    "gh-0719-closed": {
+      "result": "fail",
+      "lastRunAt": "2026-01-02T20:59:00.707Z",
+      "lastRunRunId": "dbe7c5b9-3816-45ad-846b-d29f1ab418b3",
+      "lastRunCommand": "npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/bugs/gh-0719-closed.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev.web.app},video=true",
+      "lastExitCode": 1
+    }
+  }
+}
