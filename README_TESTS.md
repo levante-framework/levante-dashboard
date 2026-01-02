@@ -255,6 +255,9 @@ We use a dedicated Site named **`ai-tests`** for repeatable researcher/admin E2E
 #### Prereqs (one-time)
 
 - **Cypress login creds**: set `E2E_TEST_EMAIL` and `E2E_TEST_PASSWORD` in `.env` (DEV user).
+- **AI admin creds (optional)**:
+  - `E2E_AI_ADMIN_EMAIL` / `E2E_AI_ADMIN_PASSWORD` (role: `admin`)
+  - `E2E_AI_SITE_ADMIN_EMAIL` / `E2E_AI_SITE_ADMIN_PASSWORD` (role: `site_admin`)
 - **Firestore admin auth** (for the reset script): `scripts/e2e-init/reset-site.mjs` uses `firebase-admin` and requires
   Application Default Credentials. Examples:
 
@@ -274,7 +277,18 @@ npm run e2e:bootstrap:ai-tests
 
 This does:
 - **Reset**: deletes any existing `ai-tests` Site (and dependent `schools/classes/cohorts`), then recreates it.
+- **Admin users**: creates two admin accounts for the site (if enabled):
+  - **`ai-admin`** (role: `admin`) via `E2E_AI_ADMIN_EMAIL` / `E2E_AI_ADMIN_PASSWORD`
+  - **`ai-site-admin`** (role: `site_admin`) via `E2E_AI_SITE_ADMIN_EMAIL` / `E2E_AI_SITE_ADMIN_PASSWORD`
 - **Seed**: runs the existing researcher workflow spec against `ai-tests` to create a cohort + users + assignment.
+
+Notes:
+- If you run bootstrap with admin creation enabled, you must provide **both passwords** (or the reset step will fail).
+- If you only want to reset the site without creating admin users, run:
+
+```bash
+node scripts/e2e-init/reset-site.mjs --yes --site-name ai-tests --project-id hs-levante-admin-dev --no-admin
+```
 
 #### Run researcher tests against `ai-tests`
 
