@@ -2,6 +2,7 @@
 import 'dotenv/config';
 
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -13,6 +14,11 @@ function parseArgs(argv) {
     out: 'bug-tests/site.ai-tests.json',
     yes: false,
     force: false,
+    createAdminUsers: true,
+    adminEmail: process.env.E2E_AI_ADMIN_EMAIL || 'ai-admin@levante.test',
+    adminPassword: process.env.E2E_AI_ADMIN_PASSWORD,
+    siteAdminEmail: process.env.E2E_AI_SITE_ADMIN_EMAIL || 'ai-site-admin@levante.test',
+    siteAdminPassword: process.env.E2E_AI_SITE_ADMIN_PASSWORD,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -22,6 +28,11 @@ function parseArgs(argv) {
     else if (a === '--out') args.out = argv[++i];
     else if (a === '--yes') args.yes = true;
     else if (a === '--force') args.force = true;
+    else if (a === '--no-admin') args.createAdminUsers = false;
+    else if (a === '--admin-email') args.adminEmail = argv[++i];
+    else if (a === '--admin-password') args.adminPassword = argv[++i];
+    else if (a === '--site-admin-email') args.siteAdminEmail = argv[++i];
+    else if (a === '--site-admin-password') args.siteAdminPassword = argv[++i];
   }
 
   return args;
@@ -62,6 +73,76 @@ async function deleteAllForDistrict(db, districtId) {
 
   await writer.close();
   return deleteCount;
+}
+
+async function resetAdminUser({ projectId, districtId, siteName, email, password, role, force }) {
+  if (!role) throw new Error('Missing role for admin user');
+  if (!email) throw new Error('Missing admin email');
+  if (!password) throw new Error('Missing admin password');
+
+  // Guard: don't allow destructive admin ops on arbitrary accounts unless explicitly forced.
+  const safeEmail = email.toLowerCase().includes('ai-') || email.toLowerCase().endsWith('@levante.test');
+  if (!safeEmail && !force) {
+    throw new Error(`Refusing to delete/recreate non-e2e admin user "${email}". Use --force to override.`);
+  }
+
+  const auth = getAuth();
+  let existingUid = null;
+  try {
+    const u = await auth.getUserByEmail(email);
+    existingUid = u.uid;
+  } catch (e) {
+    // ignore not-found
+  }
+
+  if (existingUid) {
+    await auth.deleteUser(existingUid);
+  }
+
+  const created = await auth.createUser({
+    email,
+    password,
+    displayName: email.split('@')[0],
+    emailVerified: true,
+  });
+
+  const db = getFirestore();
+  const uid = created.uid;
+
+  await db.collection('users').doc(uid).set(
+    {
+      email,
+      name: { first: 'AI', middle: '', last: 'Admin' },
+      displayName: email.split('@')[0],
+      roles: [{ siteId: districtId, siteName, role }],
+      testData: true,
+      updatedAt: FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  const orgs = { districts: [districtId], schools: [], classes: [], groups: [], families: [] };
+  await db.collection('userClaims').doc(uid).set(
+    {
+      claims: {
+        super_admin: false,
+        admin: true,
+        useNewPermissions: true,
+        roarUid: uid,
+        adminUid: uid,
+        adminOrgs: orgs,
+        minimalAdminOrgs: orgs,
+      },
+      testData: true,
+      lastUpdated: Date.now(),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  console.log(`[e2e-init] created ${role} user (${email}) for site "${siteName}" (uid=${uid}) in ${projectId}`);
+  return { uid, email };
 }
 
 async function main() {
@@ -131,6 +212,29 @@ async function main() {
     normalizedName,
     createdAt: new Date().toISOString(),
   };
+
+  if (args.createAdminUsers) {
+    const admin = await resetAdminUser({
+      projectId,
+      districtId: districtRef.id,
+      siteName,
+      email: args.adminEmail,
+      password: args.adminPassword,
+      role: 'admin',
+      force: args.force,
+    });
+    const siteAdmin = await resetAdminUser({
+      projectId,
+      districtId: districtRef.id,
+      siteName,
+      email: args.siteAdminEmail,
+      password: args.siteAdminPassword,
+      role: 'site_admin',
+      force: args.force,
+    });
+    payload.aiAdmin = { uid: admin.uid, email: admin.email, role: 'admin' };
+    payload.aiSiteAdmin = { uid: siteAdmin.uid, email: siteAdmin.email, role: 'site_admin' };
+  }
 
   const outPath = path.resolve(process.cwd(), args.out);
   await fs.mkdir(path.dirname(outPath), { recursive: true });
