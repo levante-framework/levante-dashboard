@@ -70,6 +70,7 @@ export default defineConfig({
       E2E_APP_URL: process.env.E2E_APP_URL,
       E2E_TEST_EMAIL: process.env.E2E_TEST_EMAIL || process.env.DEV_LOGIN,
       E2E_TEST_PASSWORD: process.env.E2E_TEST_PASSWORD || process.env.DEV_PASSWORD,
+      E2E_SITE_NAME: process.env.E2E_SITE_NAME || process.env.CYPRESS_E2E_SITE_NAME,
       E2E_SKIP_LOGIN: process.env.E2E_SKIP_LOGIN,
       E2E_LOCALES: process.env.E2E_LOCALES,
       E2E_RUN_OPEN_BUGS: process.env.E2E_RUN_OPEN_BUGS || process.env.CYPRESS_E2E_RUN_OPEN_BUGS,

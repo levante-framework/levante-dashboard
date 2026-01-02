@@ -6,13 +6,14 @@ import {
 
 const email: string = (Cypress.env('E2E_TEST_EMAIL') as string) || 'student@levante.test';
 const password: string = (Cypress.env('E2E_TEST_PASSWORD') as string) || 'student123';
+const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'AAA Site';
 
 describe('researcher docs: monitor completion', () => {
   it('can find an assignment and open See Details (Progress Report)', () => {
     ignoreKnownHostedUncaughtExceptions();
 
     signInWithPassword({ email, password });
-    selectSite('AAA Site');
+    selectSite(siteName);
 
     // Docs: Assignments → View Assignment (this is Home in our app), then “See details”.
     cy.visit('/');

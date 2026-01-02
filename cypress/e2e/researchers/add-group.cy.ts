@@ -12,6 +12,7 @@ const defaultPassword = 'student123';
 const signInUrl: string = useEnvFlag ? (Cypress.env('E2E_BASE_URL') as string) || defaultSignInUrl : defaultSignInUrl;
 const email: string = useEnvFlag ? (Cypress.env('E2E_TEST_EMAIL') as string) || defaultEmail : defaultEmail;
 const password: string = useEnvFlag ? (Cypress.env('E2E_TEST_PASSWORD') as string) || defaultPassword : defaultPassword;
+const siteName: string = ((Cypress.env('E2E_SITE_NAME') as string) || 'AAA Site') as string;
 
 function typeInto(selector: string, value: string, opts: Partial<Cypress.TypeOptions> = {}) {
   cy.get(selector)
@@ -50,7 +51,7 @@ describe('researcher workflow: add groups', () => {
     cy.get('[data-testid="add-group-btn"]').should('be.visible').should('be.disabled');
 
     cy.get('[data-cy="site-select"]').should('be.visible').click();
-    cy.contains('[role="option"]', /^AAA Site$/).click();
+    cy.contains('[role="option"]', new RegExp(`^${siteName.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&')}$`)).click();
 
     cy.get('[data-testid="add-group-btn"]').should('be.visible').should('not.be.disabled').click();
     cy.get('[data-testid="modalTitle"]').should('contain.text', 'Add New');
