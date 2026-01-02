@@ -25,10 +25,15 @@ export function signInWithPassword(params: { email: string; password: string }) 
   cy.get('[data-cy="submit-sign-in-with-password"]').click();
 
   cy.wait('@signInWithPassword', { timeout: 60000 }).then((interception) => {
+    const requestUrl = interception.request.url;
+    const requestBody = interception.request.body as { email?: string } | undefined;
+    const requestEmail = requestBody?.email;
     const status = interception.response?.statusCode;
     if (status && status >= 400) {
       throw new Error(
-        `Firebase signInWithPassword failed: HTTP ${status} body=${JSON.stringify(interception.response?.body)}`,
+        `Firebase signInWithPassword failed: HTTP ${status} url=${requestUrl} expectedEmail=${params.email} requestEmail=${requestEmail} body=${JSON.stringify(
+          interception.response?.body,
+        )}`,
       );
     }
   });
