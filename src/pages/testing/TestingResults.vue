@@ -80,7 +80,36 @@
 
             <div class="flex flex-column gap-1">
               <div class="uppercase text-xs text-gray-500">Last log tail</div>
-              <pre class="text-xs bg-gray-900 text-gray-100 rounded p-3 overflow-auto" style="max-height: 18rem">{{
+              <div class="flex gap-3 items-center">
+                <a
+                  v-if="runnerKind === 'local' && resultsStore.byId[selectedRow.id]?.lastRunRunId"
+                  class="text-primary underline text-sm"
+                  :href="`/__e2e/log?runId=${encodeURIComponent(resultsStore.byId[selectedRow.id].lastRunRunId)}`"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open full log
+                </a>
+                <a
+                  v-if="runnerKind === 'local' && resultsStore.byId[selectedRow.id]?.lastVideoUrl"
+                  class="text-primary underline text-sm"
+                  :href="resultsStore.byId[selectedRow.id].lastVideoUrl"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open video
+                </a>
+                <a
+                  v-else-if="runnerKind === 'local' && resultsStore.byId[selectedRow.id]?.lastRunRunId"
+                  class="text-primary underline text-sm"
+                  :href="`/__e2e/video?runId=${encodeURIComponent(resultsStore.byId[selectedRow.id].lastRunRunId)}`"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open video
+                </a>
+              </div>
+              <pre class="text-sm bg-gray-900 text-gray-100 rounded p-3 overflow-auto" style="max-height: 18rem">{{
                 resultsStore.byId[selectedRow.id]?.lastLogTail ?? '—'
               }}</pre>
               <div v-if="resultsStore.byId[selectedRow.id]?.lastLogPath" class="text-xs text-gray-500 break-all">
@@ -113,7 +142,7 @@
                     <div class="flex items-center gap-2">
                       <PvButton
                         icon="pi pi-play"
-                        class="bg-primary text-white border-none"
+                        class="!bg-sky-600 hover:!bg-sky-700 !text-white !border-none"
                         :loading="Boolean(running[row.id])"
                         :disabled="!runnerAvailable || Boolean(running[row.id]) || (runnerKind === 'remote' && !canRunNow)"
                         @click="runTest(row)"
@@ -173,7 +202,7 @@
                     <div class="flex items-center gap-2">
                       <PvButton
                         icon="pi pi-play"
-                        class="bg-primary text-white border-none"
+                        class="!bg-sky-600 hover:!bg-sky-700 !text-white !border-none"
                         :loading="Boolean(running[row.id])"
                         :disabled="!runnerAvailable || Boolean(running[row.id]) || (runnerKind === 'remote' && !canRunNow)"
                         @click="runTest(row)"
@@ -247,12 +276,19 @@ const bugRows = computed(() => rows.value.filter((r) => r.category === 'bugs'));
 const taskRows = computed(() => rows.value.filter((r) => r.category === 'tasks'));
 
 function detailsButtonClass(id) {
-  const isClosed = issueStateById.value[id] === 'closed';
   const result = resultsStore.byId[id]?.result ?? 'unknown';
 
-  if (isClosed && result === 'pass') return 'bg-green-50 text-green-800 border border-green-300';
-  if (isClosed && result === 'fail') return 'bg-red-50 text-red-800 border border-red-300';
-  return 'bg-amber-50 text-amber-900 border border-amber-300';
+  const category = e2eCatalog.find((e) => e.id === id)?.category;
+  if (category === 'tasks') {
+    if (result === 'pass') return 'details-btn details-btn--closed-pass';
+    if (result === 'fail') return 'details-btn details-btn--closed-fail';
+    return 'details-btn details-btn--other';
+  }
+
+  const isClosed = issueStateById.value[id] === 'closed';
+  if (isClosed && result === 'pass') return 'details-btn details-btn--closed-pass';
+  if (isClosed && result === 'fail') return 'details-btn details-btn--closed-fail';
+  return 'details-btn details-btn--other';
 }
 
 function formatLastRun(lastRunAt) {
@@ -396,10 +432,14 @@ async function runTest(row) {
     } else {
       await refreshRemoteResults();
     }
+    const toastSeverity =
+      runnerKind.value === 'local' ? (finished.exitCode === 0 ? 'success' : 'error') : 'success';
+    const toastSummary =
+      runnerKind.value === 'local' ? (finished.exitCode === 0 ? 'Run passed' : 'Run failed') : 'Run queued';
 
     toast.add({
-      severity: 'success',
-      summary: runnerKind.value === 'local' ? 'Run complete' : 'Run queued',
+      severity: toastSeverity,
+      summary: toastSummary,
       detail: `${row.name}`,
       life: 3500,
     });
@@ -522,3 +562,26 @@ onMounted(async () => {
 });
 </script>
 
+<style scoped>
+.details-btn {
+  border-width: 1px;
+}
+
+.details-btn--closed-pass {
+  background: #ecfdf5; /* green-50 */
+  border-color: #86efac; /* green-300 */
+  color: #166534; /* green-800 */
+}
+
+.details-btn--closed-fail {
+  background: #fef2f2; /* red-50 */
+  border-color: #fca5a5; /* red-300 */
+  color: #991b1b; /* red-800 */
+}
+
+.details-btn--other {
+  background: #fffbeb; /* amber-50 */
+  border-color: #fcd34d; /* amber-300 */
+  color: #92400e; /* amber-900 */
+}
+</style>

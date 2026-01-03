@@ -66,6 +66,7 @@ export default defineConfig({
     trashAssetsBeforeRuns: false,
     excludeSpecPattern: ['**/locales*.cy.ts'],
     env: {
+      E2E_USE_SESSION: process.env.E2E_USE_SESSION || process.env.CYPRESS_E2E_USE_SESSION,
       E2E_BASE_URL: process.env.E2E_BASE_URL || 'http://localhost:5173/signin',
       E2E_APP_URL: process.env.E2E_APP_URL,
       E2E_TEST_EMAIL: process.env.E2E_TEST_EMAIL || process.env.DEV_LOGIN,
