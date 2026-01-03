@@ -9,6 +9,9 @@ export interface E2EStoredResult {
   lastRunByEmail?: string;
   lastRunCommand?: string;
   lastRunRunId?: string;
+  lastRunUrl?: string;
+  lastRunBaseUrl?: string;
+  lastRunGitRef?: string;
   lastExitCode?: number;
   lastLogPath?: string;
   lastLogTail?: string;

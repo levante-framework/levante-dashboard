@@ -114,7 +114,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/auth-email-link',
     name: 'AuthEmailLink',
-    beforeRouteLeave: [removeQueryParams, removeHash],
+    beforeEnter: [removeQueryParams, removeHash],
     component: () => import('../components/auth/AuthEmailLink.vue'),
     meta: {
       pageTitle: 'Email Link Authentication',
@@ -330,22 +330,27 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   const { isAuthenticated } = authStore;
   const allowedUnauthenticatedRoutes = ['AuthEmailLink', 'AuthEmailSent', 'Debug', 'Maintenance', 'SignIn'];
   const inMaintenanceMode = false;
+  const toName = typeof to.name === 'string' ? to.name : '';
 
-  if (inMaintenanceMode && to.name !== 'Maintenance') {
+  if (toName && (NAVBAR_BLACKLIST as readonly string[]).includes(toName)) {
+    authStore.setShowSideBar(false);
+  }
+
+  if (inMaintenanceMode && toName !== 'Maintenance') {
     return next({ name: 'Maintenance' });
-  } else if (!inMaintenanceMode && to.name === 'Maintenance') {
+  } else if (!inMaintenanceMode && toName === 'Maintenance') {
     return next({ name: 'Home' });
   }
 
   // Check if user is signed in. If not, go to signin
-  if (!to.path.includes('__/auth/handler') && !isAuthenticated() && !allowedUnauthenticatedRoutes.includes(to.name)) {
+  if (!to.path.includes('__/auth/handler') && !isAuthenticated() && !allowedUnauthenticatedRoutes.includes(toName)) {
     return next({ name: 'SignIn' });
   }
 
   // @TODO
   // If we're gonna keep this solution,
   // we need to think about setting up a max num of tries and an error handler.
-  if (!userData.value && !allowedUnauthenticatedRoutes.includes(to.name)) {
+  if (!userData.value && !allowedUnauthenticatedRoutes.includes(toName)) {
     await new Promise<void>((resolve) => {
       const checkUserData = () => {
         if (userData.value) return resolve();

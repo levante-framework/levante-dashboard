@@ -104,6 +104,10 @@ export const useAuthStore = defineStore(
       return firebaseUser.value.adminFirebaseUser?.email ?? undefined;
     }
 
+    async function getIdToken(): Promise<string | undefined> {
+      return await firebaseUser.value.adminFirebaseUser?.getIdToken();
+    }
+
     function isUserAuthedAdmin(): boolean {
       return Boolean(firebaseUser.value.adminFirebaseUser);
     }
@@ -324,6 +328,7 @@ export const useAuthStore = defineStore(
 
       // Getters
       getEmail,
+      getIdToken,
       getRoarUid,
       getUid,
       getUserEmail,

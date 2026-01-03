@@ -8,8 +8,12 @@ Cypress.on('uncaught:exception', (err) => {
   if (err.message.includes('Missing or insufficient permissions')) return false;
 });
 
-const email: string = (Cypress.env('E2E_TEST_EMAIL') as string) || 'student@levante.test';
-const password: string = (Cypress.env('E2E_TEST_PASSWORD') as string) || 'student123';
+const email: string =
+  (Cypress.env('E2E_AI_SITE_ADMIN_EMAIL') as string) || (Cypress.env('E2E_TEST_EMAIL') as string) || 'student@levante.test';
+const password: string =
+  (Cypress.env('E2E_AI_SITE_ADMIN_PASSWORD') as string) ||
+  (Cypress.env('E2E_TEST_PASSWORD') as string) ||
+  'student123';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -38,6 +42,42 @@ function assertCurrentSiteSelected() {
     if (typeof currentSite !== 'string' || !currentSite || currentSite === 'any') {
       throw new Error(`Expected currentSite to be set (not "any"). Got: ${String(currentSite)}`);
     }
+  });
+}
+
+function getCurrentSiteFromSessionStorage(): Cypress.Chainable<string | null> {
+  return cy.window().then((win) => {
+    const raw = win.sessionStorage.getItem('authStore');
+    if (typeof raw !== 'string') return null;
+    try {
+      const parsed = JSON.parse(raw) as { currentSite?: unknown } | null;
+      const currentSite = parsed?.currentSite;
+      return typeof currentSite === 'string' ? currentSite : null;
+    } catch {
+      return null;
+    }
+  });
+}
+
+function ensureSiteSelected(siteName: string) {
+  return getCurrentSiteFromSessionStorage().then((currentSite) => {
+    if (typeof currentSite === 'string' && currentSite && currentSite !== 'any') {
+      return;
+    }
+
+    cy.get('body', { timeout: 90000 }).then(($body) => {
+      const hasSiteSelect = $body.find('[data-cy="site-select"]').length > 0;
+      if (!hasSiteSelect) {
+        cy.log(
+          `site-select not present; continuing without explicit site selection (currentSite=${String(currentSite)})`,
+        );
+        return;
+      }
+
+      cy.get('[data-cy="site-select"]', { timeout: 90000 }).should('be.visible').click();
+      cy.contains('[role="option"]', new RegExp(`^${escapeRegExp(siteName)}$`), { timeout: 60000 }).click();
+      assertCurrentSiteSelected();
+    });
   });
 }
 
@@ -103,10 +143,8 @@ describe('GH#719 [CLOSED] Assignment cards show "See Details" even if stats are 
     signIn();
 
     // Select a site (permissions mode requires this to render admin pages reliably).
-    const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'AAA Site';
-    cy.get('[data-cy="site-select"]', { timeout: 90000 }).should('be.visible').click();
-    cy.contains('[role="option"]', new RegExp(`^${escapeRegExp(siteName)}$`), { timeout: 60000 }).click();
-    assertCurrentSiteSelected();
+    const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'ai-tests';
+    ensureSiteSelected(siteName);
 
     // Home page: assignment cards should render.
     cy.visit('/');

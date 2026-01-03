@@ -1,0 +1,15 @@
+{
+  "name": "levante-dashboard-functions",
+  "private": true,
+  "type": "commonjs",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^6.0.1"
+  }
+}
+
