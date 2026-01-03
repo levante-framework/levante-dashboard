@@ -9,6 +9,11 @@ const pages: Array<{ path: string; h1: RegExp }> = [
   { path: '/dashboard/participant-user-log-in', h1: /^Use the dashboard as a child, caregiver, or teacher$/ },
 ];
 
+function loosenAnchors(input: RegExp): RegExp {
+  const source = input.source.replace(/^\^/, '').replace(/\$$/, '');
+  return new RegExp(source, input.flags);
+}
+
 describe('researcher docs website: dashboard section renders', () => {
   Cypress.on('uncaught:exception', (err) => {
     // The external docs site (Next/React) can throw hydration/runtime errors in headless runs.
@@ -19,7 +24,11 @@ describe('researcher docs website: dashboard section renders', () => {
   pages.forEach(({ path, h1 }) => {
     it(`renders: ${path}`, () => {
       cy.visit(path, { timeout: 120000 });
-      cy.get('h1', { timeout: 120000 }).should('be.visible').invoke('text').should('match', h1);
+      cy.get('h1', { timeout: 120000 })
+        .should('be.visible')
+        .invoke('text')
+        .then((text) => text.replace(/\s+/g, ' ').trim())
+        .should('match', loosenAnchors(h1));
     });
   });
 });

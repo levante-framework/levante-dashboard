@@ -91,7 +91,7 @@ describe('GH#737 [OPEN] PERMISSIONS Prohibit identical class names within site',
 
     cy.visit('/signin');
     signInWithPassword({ email, password });
-    selectSite(((Cypress.env('E2E_SITE_NAME') as string) || 'AAA Site') as string);
+    selectSite(((Cypress.env('E2E_SITE_NAME') as string) || 'ai-tests') as string);
 
     cy.visit('/list-groups');
     cy.get('[data-testid="groups-page-ready"]', { timeout: 60000 }).should('exist');

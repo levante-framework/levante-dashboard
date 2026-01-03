@@ -3,9 +3,15 @@ import { assert } from 'chai';
 
 import { ignoreKnownHostedUncaughtExceptions, selectSite, signInWithPassword } from '../_helpers';
 
-const email: string = (Cypress.env('E2E_TEST_EMAIL') as string) || 'student@levante.test';
-const password: string = (Cypress.env('E2E_TEST_PASSWORD') as string) || 'student123';
-const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'AAA Site';
+const email: string =
+  (Cypress.env('E2E_AI_SITE_ADMIN_EMAIL') as string) ||
+  (Cypress.env('E2E_TEST_EMAIL') as string) ||
+  'student@levante.test';
+const password: string =
+  (Cypress.env('E2E_AI_SITE_ADMIN_PASSWORD') as string) ||
+  (Cypress.env('E2E_TEST_PASSWORD') as string) ||
+  'student123';
+const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'ai-tests';
 
 function typeInto(selector: string, value: string, opts: Partial<Cypress.TypeOptions> = {}) {
   cy.get(selector)
@@ -59,9 +65,16 @@ function extractAdministrationIdFromUpsertResponse(body: unknown): string | null
   if (!isRecord(body)) return null;
 
   const candidates: unknown[] = [body.id, body.administrationId, body.data, body.result];
-  if (isRecord(body.data)) candidates.push(body.data.id, body.data.administrationId);
-  if (isRecord(body.result)) candidates.push(body.result.id, body.result.administrationId, body.result.data);
-  if (isRecord(body.result?.data)) candidates.push(body.result.data.id, body.result.data.administrationId);
+
+  const data = body.data;
+  if (isRecord(data)) candidates.push(data.id, data.administrationId);
+
+  const result = body.result;
+  if (isRecord(result)) {
+    candidates.push(result.id, result.administrationId, result.data);
+    const resultData = result.data;
+    if (isRecord(resultData)) candidates.push(resultData.id, resultData.administrationId);
+  }
 
   for (const c of candidates) {
     if (typeof c === 'string' && c.trim()) return c;

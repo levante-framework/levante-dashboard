@@ -7,7 +7,7 @@ const siteAdminEmail: string =
   (Cypress.env('E2E_AI_SITE_ADMIN_EMAIL') as string) || (Cypress.env('E2E_TEST_EMAIL') as string) || 'student@levante.test';
 const siteAdminPassword: string =
   (Cypress.env('E2E_AI_SITE_ADMIN_PASSWORD') as string) || (Cypress.env('E2E_TEST_PASSWORD') as string) || 'student123';
-const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'AAA Site';
+const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'ai-tests';
 
 function failOn403ForProgressReportRequests() {
   const forbiddenRequests: Array<{ url: string; status: number }> = [];

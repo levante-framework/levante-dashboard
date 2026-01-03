@@ -54,6 +54,97 @@ function e2eRunnerPlugin() {
     return dir;
   }
 
+  function parseSpecBasename(command) {
+    try {
+      const m = String(command || '').match(/--spec\s+([^\s]+)/);
+      if (!m) return null;
+      const specPath = m[1];
+      return path.basename(specPath);
+    } catch {
+      return null;
+    }
+  }
+
+  function findLatestVideoForSpec(specBasename) {
+    try {
+      if (!specBasename) return null;
+      const videosDir = path.join(process.cwd(), 'cypress', 'videos');
+      if (!fs.existsSync(videosDir)) return null;
+      const files = fs.readdirSync(videosDir);
+      const candidates = files
+        .filter((f) => f.startsWith(specBasename) && f.endsWith('.mp4'))
+        .map((f) => {
+          const full = path.join(videosDir, f);
+          const stat = fs.statSync(full);
+          return { full, mtimeMs: stat.mtimeMs };
+        })
+        .sort((a, b) => b.mtimeMs - a.mtimeMs);
+      return candidates[0]?.full ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  function ensureCanonicalVideosDir() {
+    const dir = path.join(process.cwd(), 'cypress', 'videos', '_canonical');
+    fs.mkdirSync(dir, { recursive: true });
+    return dir;
+  }
+
+  function canonicalVideoPathForId(id) {
+    return path.join(ensureCanonicalVideosDir(), `${id}.mp4`);
+  }
+
+  function deleteSpecVideos(specBasename) {
+    try {
+      if (!specBasename) return;
+      const videosDir = path.join(process.cwd(), 'cypress', 'videos');
+      if (!fs.existsSync(videosDir)) return;
+      for (const f of fs.readdirSync(videosDir)) {
+        if (!f.startsWith(specBasename) || !f.endsWith('.mp4')) continue;
+        try {
+          fs.unlinkSync(path.join(videosDir, f));
+        } catch {
+          // ignore
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  function finalizeCanonicalVideo({ runId, id, specBasename, attempt = 0 }) {
+    const maxAttempts = 10;
+    const delayMs = 400;
+    const src = findLatestVideoForSpec(specBasename);
+    if (!src && attempt < maxAttempts) {
+      setTimeout(() => finalizeCanonicalVideo({ runId, id, specBasename, attempt: attempt + 1 }), delayMs);
+      return;
+    }
+    if (!src || !fs.existsSync(src)) return;
+
+    const canonicalPath = canonicalVideoPathForId(id);
+    try {
+      fs.copyFileSync(src, canonicalPath);
+      deleteSpecVideos(specBasename);
+    } catch {
+      return;
+    }
+
+    const existingRun = runs.get(runId);
+    if (existingRun) runs.set(runId, { ...existingRun, videoPath: canonicalPath });
+
+    cachedResults = cachedResults && typeof cachedResults === 'object' ? cachedResults : { meta: {}, byId: {} };
+    cachedResults.byId = cachedResults.byId && typeof cachedResults.byId === 'object' ? cachedResults.byId : {};
+    cachedResults.meta = cachedResults.meta && typeof cachedResults.meta === 'object' ? cachedResults.meta : {};
+    cachedResults.byId[id] = {
+      ...(cachedResults.byId[id] ?? {}),
+      lastVideoPath: canonicalPath,
+      lastVideoUrl: `/__e2e/video?id=${encodeURIComponent(id)}`,
+    };
+    saveLocalResults(cachedResults);
+  }
+
   function readTail(filePath, maxBytes = 12000) {
     try {
       if (!fs.existsSync(filePath)) return '';
@@ -166,6 +257,7 @@ function e2eRunnerPlugin() {
           const logDir = ensureLogDir();
           const logPath = path.join(logDir, `${runId}.log`);
           const logStream = fs.createWriteStream(logPath, { flags: 'a' });
+          const specBasename = parseSpecBasename(command);
 
           const proc = child.spawn('bash', ['-lc', command], {
             cwd: process.cwd(),
@@ -177,11 +269,13 @@ function e2eRunnerPlugin() {
             runId,
             id,
             command,
+            specBasename,
             startedAt,
             finishedAt: null,
             exitCode: null,
             status: 'running',
             logPath,
+            videoPath: null,
           });
 
           proc.stdout.on('data', (d) => logStream.write(d));
@@ -192,11 +286,13 @@ function e2eRunnerPlugin() {
             if (!existing) return;
             const finishedAt = new Date().toISOString();
             const exitCode = typeof code === 'number' ? code : 1;
+            const videoPath = null;
             runs.set(runId, {
               ...existing,
               status: 'finished',
               exitCode,
               finishedAt,
+              videoPath,
             });
 
             // Update cached results and attempt to upload to bucket for persistence.
@@ -223,6 +319,9 @@ function e2eRunnerPlugin() {
             cachedResults.meta.lastUploadOk = Boolean(up.ok);
             cachedResults.meta.lastUploadError = up.ok ? null : up.error;
             saveLocalResults(cachedResults);
+
+            // Canonicalize video (overwrite one canonical mp4 per test id).
+            finalizeCanonicalVideo({ runId, id: existing.id, specBasename: existing.specBasename });
           });
 
           return sendJson(res, 200, { runId });
@@ -239,6 +338,73 @@ function e2eRunnerPlugin() {
         const run = runs.get(runId);
         if (!run) return sendJson(res, 404, { error: 'Unknown runId' });
         return sendJson(res, 200, run);
+      });
+
+      server.middlewares.use('/__e2e/log', async (req, res, next) => {
+        if (req.method !== 'GET') return next();
+        const url = new URL(req.url ?? '', 'http://localhost');
+        const runId = url.searchParams.get('runId');
+        if (!runId) {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'text/plain');
+          return res.end('Missing runId');
+        }
+        const run = runs.get(runId);
+        const logPath = run?.logPath;
+        if (!logPath || !fs.existsSync(logPath)) {
+          res.statusCode = 404;
+          res.setHeader('Content-Type', 'text/plain');
+          return res.end('Log not found');
+        }
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        return fs.createReadStream(logPath).pipe(res);
+      });
+
+      server.middlewares.use('/__e2e/video', async (req, res, next) => {
+        if (req.method !== 'GET') return next();
+        const url = new URL(req.url ?? '', 'http://localhost');
+        const id = url.searchParams.get('id');
+        const runId = url.searchParams.get('runId');
+        if (!id && !runId) {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'text/plain');
+          return res.end('Missing id or runId');
+        }
+
+        let videoPath = null;
+        if (id) {
+          const rec = cachedResults.byId?.[id];
+          videoPath = typeof rec?.lastVideoPath === 'string' ? rec.lastVideoPath : canonicalVideoPathForId(id);
+        } else if (runId) {
+          const run = runs.get(runId);
+          videoPath = run?.videoPath ?? null;
+          if (!videoPath) {
+            for (const rec of Object.values(cachedResults.byId ?? {})) {
+              if (rec?.lastRunRunId === runId && typeof rec?.lastVideoPath === 'string') {
+                videoPath = rec.lastVideoPath;
+                break;
+              }
+            }
+          }
+          if (!videoPath && run?.specBasename) {
+            // Last-chance: find the newest video for this spec and canonicalize it.
+            finalizeCanonicalVideo({ runId, id: run.id, specBasename: run.specBasename });
+            const canonicalPath = canonicalVideoPathForId(run.id);
+            if (fs.existsSync(canonicalPath)) videoPath = canonicalPath;
+          }
+        }
+
+        if (!videoPath || !fs.existsSync(videoPath)) {
+          // UI prefers to show "No video" rather than a broken link.
+          // Returning 200 keeps the UX simple even if video recording is disabled.
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'text/plain');
+          return res.end('No video');
+        }
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'video/mp4');
+        return fs.createReadStream(videoPath).pipe(res);
       });
     },
   };

@@ -15,6 +15,8 @@ export interface E2EStoredResult {
   lastExitCode?: number;
   lastLogPath?: string;
   lastLogTail?: string;
+  lastVideoPath?: string;
+  lastVideoUrl?: string;
 }
 
 export const useE2EResultsStore = defineStore('e2eResults', {

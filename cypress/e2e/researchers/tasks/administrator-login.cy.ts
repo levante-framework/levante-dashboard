@@ -1,7 +1,13 @@
 import { ignoreKnownHostedUncaughtExceptions, signInWithPassword } from '../_helpers';
 
-const email: string = (Cypress.env('E2E_TEST_EMAIL') as string) || 'student@levante.test';
-const password: string = (Cypress.env('E2E_TEST_PASSWORD') as string) || 'student123';
+const email: string =
+  (Cypress.env('E2E_AI_SITE_ADMIN_EMAIL') as string) ||
+  (Cypress.env('E2E_TEST_EMAIL') as string) ||
+  'student@levante.test';
+const password: string =
+  (Cypress.env('E2E_AI_SITE_ADMIN_PASSWORD') as string) ||
+  (Cypress.env('E2E_TEST_PASSWORD') as string) ||
+  'student123';
 
 describe('researcher docs: log in as a study administrator', () => {
   it('shows the admin prompt and allows email/password login', () => {

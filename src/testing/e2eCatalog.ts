@@ -20,7 +20,7 @@ export const e2eCatalog: E2EEntry[] = [
     githubIssueNumber: 737,
     specPath: 'cypress/e2e/researchers/bugs/gh-0737-open.cy.ts',
     runScript:
-      "CYPRESS_E2E_RUN_OPEN_BUGS=true npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/bugs/gh-0737-open.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev.web.app},video=true",
+      "CYPRESS_E2E_RUN_OPEN_BUGS=true npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/bugs/gh-0737-open.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true",
     defaultStatus: 'open',
   },
   {
@@ -30,7 +30,7 @@ export const e2eCatalog: E2EEntry[] = [
     githubIssueNumber: 733,
     specPath: 'cypress/e2e/researchers/bugs/gh-0733-open.cy.ts',
     runScript:
-      "CYPRESS_E2E_RUN_OPEN_BUGS=true npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/bugs/gh-0733-open.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev.web.app},video=true",
+      "CYPRESS_E2E_RUN_OPEN_BUGS=true npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/bugs/gh-0733-open.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true",
     defaultStatus: 'open',
   },
   {
@@ -40,7 +40,7 @@ export const e2eCatalog: E2EEntry[] = [
     githubIssueNumber: 735,
     specPath: 'cypress/e2e/researchers/bugs/gh-0735-open.cy.ts',
     runScript:
-      "CYPRESS_E2E_RUN_OPEN_BUGS=true npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/bugs/gh-0735-open.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev.web.app},video=true",
+      "CYPRESS_E2E_RUN_OPEN_BUGS=true npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/bugs/gh-0735-open.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true",
     defaultStatus: 'open',
   },
   {
@@ -50,7 +50,7 @@ export const e2eCatalog: E2EEntry[] = [
     githubIssueNumber: 719,
     specPath: 'cypress/e2e/researchers/bugs/gh-0719-closed.cy.ts',
     runScript:
-      "npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/bugs/gh-0719-closed.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev.web.app},video=true",
+      "npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/bugs/gh-0719-closed.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true",
     defaultStatus: 'closed',
   },
   {
@@ -59,7 +59,7 @@ export const e2eCatalog: E2EEntry[] = [
     name: 'Add group',
     specPath: 'cypress/e2e/researchers/tasks/add-group.cy.ts',
     runScript:
-      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/add-group.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev.web.app},video=true',
+      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/add-group.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true',
     defaultStatus: 'open',
   },
   {
@@ -68,7 +68,7 @@ export const e2eCatalog: E2EEntry[] = [
     name: 'Administrator login',
     specPath: 'cypress/e2e/researchers/tasks/administrator-login.cy.ts',
     runScript:
-      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/administrator-login.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev.web.app},video=true',
+      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/administrator-login.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true',
     defaultStatus: 'open',
   },
   {
@@ -77,7 +77,7 @@ export const e2eCatalog: E2EEntry[] = [
     name: 'Assignment task conditions',
     specPath: 'cypress/e2e/researchers/tasks/assignment-task-conditions.cy.ts',
     runScript:
-      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/assignment-task-conditions.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev.web.app},video=true',
+      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/assignment-task-conditions.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true',
     defaultStatus: 'open',
   },
   {
@@ -86,7 +86,7 @@ export const e2eCatalog: E2EEntry[] = [
     name: 'Monitor completion',
     specPath: 'cypress/e2e/researchers/tasks/monitor-completion.cy.ts',
     runScript:
-      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/monitor-completion.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev.web.app},video=true',
+      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/monitor-completion.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true',
     defaultStatus: 'open',
   },
   {
@@ -95,7 +95,7 @@ export const e2eCatalog: E2EEntry[] = [
     name: 'Researcher full workflow',
     specPath: 'cypress/e2e/researchers/tasks/researcher-full-workflow.cy.ts',
     runScript:
-      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/researcher-full-workflow.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev.web.app},video=true',
+      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/researcher-full-workflow.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true',
     defaultStatus: 'open',
   },
   {
@@ -112,7 +112,7 @@ export const e2eCatalog: E2EEntry[] = [
     name: 'Researcher docs scenario (single video)',
     specPath: 'cypress/e2e/researchers/tasks/researcher-docs-scenario.cy.ts',
     runScript:
-      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/researcher-docs-scenario.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev.web.app},video=true',
+      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/researcher-docs-scenario.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true',
     defaultStatus: 'open',
   },
 ];

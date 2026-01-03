@@ -7,8 +7,14 @@ Cypress.on('uncaught:exception', (err) => {
   if (err.message.includes('Missing or insufficient permissions')) return false;
 });
 
-const email: string = (Cypress.env('E2E_TEST_EMAIL') as string) || 'student@levante.test';
-const password: string = (Cypress.env('E2E_TEST_PASSWORD') as string) || 'student123';
+const email: string =
+  (Cypress.env('E2E_AI_SITE_ADMIN_EMAIL') as string) ||
+  (Cypress.env('E2E_TEST_EMAIL') as string) ||
+  'student@levante.test';
+const password: string =
+  (Cypress.env('E2E_AI_SITE_ADMIN_PASSWORD') as string) ||
+  (Cypress.env('E2E_TEST_PASSWORD') as string) ||
+  'student123';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -113,9 +119,15 @@ describe('researcher README workflow (hosted): assignment task conditions', () =
     signIn();
 
     // Select site (required for permissions mode)
-    const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'AAA Site';
-    cy.get('[data-cy="site-select"]', { timeout: 90000 }).should('be.visible').click();
-    cy.contains('[role="option"]', new RegExp(`^${escapeRegExp(siteName)}$`), { timeout: 60000 }).click();
+    const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'ai-tests';
+    cy.get('body', { timeout: 90000 }).then(($body) => {
+      if ($body.find('[data-cy="site-select"]').length) {
+        cy.get('[data-cy="site-select"]', { timeout: 90000 }).should('be.visible').click();
+        cy.contains('[role="option"]', new RegExp(`^${escapeRegExp(siteName)}$`), { timeout: 60000 }).click();
+      } else {
+        cy.log('Site select dropdown not present, assuming site is already selected or not required.');
+      }
+    });
     assertCurrentSiteSelected();
 
     // Create a cohort (group) to assign to.
