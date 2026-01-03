@@ -15,7 +15,7 @@ fi
 
 EXPIRES="${PREVIEW_EXPIRES:-7d}"
 
-npm run build:dev
+ VITE_PREVIEW_CHANNEL="${CHANNEL}" npm run build:dev
 PROJECT_ID="${FIREBASE_PROJECT_ID:-hs-levante-admin-dev}"
 
 echo "Deploying preview channel: ${CHANNEL} (expires: ${EXPIRES})"

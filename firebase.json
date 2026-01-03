@@ -3,36 +3,35 @@
     "rules": "firebase/LEVANTE/admin/firestore.rules",
     "indexes": "firebase/LEVANTE/admin/firestore.indexes.json"
   },
-  "hosting": [
-    {
-      "public": "dist",
-      "target": "production",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "rewrites": [
-        {
-          "source": "**",
-          "destination": "/index.html",
-          "headers": [
-            {
-              "key": "Cross-Origin-Opener-Policy",
-              "value": "same-origin-allow-popups"
-            }
-          ]
-        }
-      ],
-      "headers": [
-        {
-          "source": "**",
-          "headers": [
-            {
-              "key": "Cross-Origin-Opener-Policy",
-              "value": "same-origin-allow-popups"
-            }
-          ]
-        }
-      ]
-    }
-  ],
+  "functions": {
+    "source": "functions"
+  },
+  "hosting": {
+    "public": "dist",
+    "target": "production",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "/api/**",
+        "function": "api"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cross-Origin-Opener-Policy",
+            "value": "same-origin-allow-popups"
+          }
+        ]
+      }
+    ]
+  },
   "emulators": {
     "auth": {
       "host": "127.0.0.1",

@@ -5,8 +5,7 @@
         <div class="flex flex-column gap-1">
           <div class="admin-page-header">E2E Results</div>
           <div class="text-md text-gray-500">
-            Run from the UI (local dev runner). Results are saved to
-            <code>gs://levante-performance-dev/test-results/</code>
+            Run tests from the UI (local dev runner).
           </div>
           <div v-if="runnerAvailable && runnerConfig?.targetBaseUrl" class="text-sm text-gray-600">
             Target app: <code>{{ runnerConfig.targetBaseUrl }}</code>
@@ -30,9 +29,9 @@
               <div class="flex gap-2 items-start">
                 <code class="text-xs bg-gray-50 border border-gray-200 rounded px-2 py-2 break-all flex-1">{{ selectedRow.runScript }}</code>
                 <PvButton
+                  v-tooltip.bottom="'Copy command'"
                   icon="pi pi-copy"
                   class="bg-primary text-white border-none"
-                  v-tooltip.bottom="'Copy command'"
                   @click="copyToClipboard(selectedRow.runScript)"
                 />
               </div>
@@ -46,6 +45,19 @@
               <div class="col-12 md:col-6">
                 <div class="uppercase text-xs text-gray-500">Last run</div>
                 <div class="text-gray-700">{{ formatLastRun(resultsStore.byId[selectedRow.id]?.lastRunAt) }}</div>
+              </div>
+              <div class="col-12 md:col-6">
+                <div class="uppercase text-xs text-gray-500">Run link</div>
+                <a
+                  v-if="resultsStore.byId[selectedRow.id]?.lastRunUrl"
+                  class="text-primary underline"
+                  :href="resultsStore.byId[selectedRow.id].lastRunUrl"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open workflow run
+                </a>
+                <div v-else class="text-gray-500">-</div>
               </div>
               <div class="col-12 md:col-6">
                 <div class="uppercase text-xs text-gray-500">Exit code</div>
@@ -103,13 +115,13 @@
                         icon="pi pi-play"
                         class="bg-primary text-white border-none"
                         :loading="Boolean(running[row.id])"
-                        :disabled="!runnerAvailable || Boolean(running[row.id])"
+                        :disabled="!runnerAvailable || Boolean(running[row.id]) || (runnerKind === 'remote' && !canRunNow)"
                         @click="runTest(row)"
                       />
                       <PvButton
-                        icon="pi pi-info-circle"
-                        class="bg-white text-gray-700 border border-gray-200"
                         v-tooltip.bottom="'Details'"
+                        icon="pi pi-info-circle"
+                        :class="detailsButtonClass(row.id)"
                         @click="openDetails(row)"
                       />
                     </div>
@@ -163,13 +175,13 @@
                         icon="pi pi-play"
                         class="bg-primary text-white border-none"
                         :loading="Boolean(running[row.id])"
-                        :disabled="!runnerAvailable || Boolean(running[row.id])"
+                        :disabled="!runnerAvailable || Boolean(running[row.id]) || (runnerKind === 'remote' && !canRunNow)"
                         @click="runTest(row)"
                       />
                       <PvButton
-                        icon="pi pi-info-circle"
-                        class="bg-white text-gray-700 border border-gray-200"
                         v-tooltip.bottom="'Details'"
+                        icon="pi pi-info-circle"
+                        :class="detailsButtonClass(row.id)"
                         @click="openDetails(row)"
                       />
                     </div>
@@ -199,11 +211,14 @@ import { useToast } from 'primevue/usetoast';
 import PvButton from 'primevue/button';
 import { e2eCatalog } from '@/testing/e2eCatalog';
 import { useE2EResultsStore } from '@/store/e2eResults';
+import { useAuthStore } from '@/store/auth';
 import { fetchIssue } from '@/testing/githubIssues';
 import RoarModal from '@/components/modals/RoarModal.vue';
+import { ROLES } from '@/constants/roles';
 
 const toast = useToast();
 const resultsStore = useE2EResultsStore();
+const authStore = useAuthStore();
 
 const running = ref({});
 const issueStateById = ref({});
@@ -212,8 +227,13 @@ const runnerAvailable = ref(false);
 const runnerConfig = ref(null);
 const isDetailsModalOpen = ref(false);
 const selectedRowId = ref(null);
+const runnerKind = ref('none'); // 'none' | 'local' | 'remote'
 
 const selectedRow = computed(() => rows.value.find((r) => r.id === selectedRowId.value) ?? null);
+const canRunNow = computed(() => {
+  const roles = authStore.userData?.roles?.map((r) => r.role) ?? [];
+  return roles.includes(ROLES.SUPER_ADMIN);
+});
 
 const rows = computed(() => {
   return e2eCatalog.map((entry) => {
@@ -225,6 +245,15 @@ const rows = computed(() => {
 
 const bugRows = computed(() => rows.value.filter((r) => r.category === 'bugs'));
 const taskRows = computed(() => rows.value.filter((r) => r.category === 'tasks'));
+
+function detailsButtonClass(id) {
+  const isClosed = issueStateById.value[id] === 'closed';
+  const result = resultsStore.byId[id]?.result ?? 'unknown';
+
+  if (isClosed && result === 'pass') return 'bg-green-50 text-green-800 border border-green-300';
+  if (isClosed && result === 'fail') return 'bg-red-50 text-red-800 border border-red-300';
+  return 'bg-amber-50 text-amber-900 border border-amber-300';
+}
 
 function formatLastRun(lastRunAt) {
   if (!lastRunAt) return '-';
@@ -273,6 +302,21 @@ function delay(ms) {
 }
 
 async function pollUntilFinished(runId) {
+  if (runnerKind.value === 'remote') {
+    const token = (await authStore.getIdToken().catch(() => undefined)) ?? '';
+    if (!token) throw new Error('Not authenticated');
+    const statusRes = await fetch(`/api/e2e/status?runId=${encodeURIComponent(runId)}`, {
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+    });
+    const ct = statusRes.headers.get('content-type') ?? '';
+    if (!statusRes.ok) throw new Error(`Runner status failed: HTTP ${statusRes.status}`);
+    if (!ct.includes('application/json')) throw new Error('Runner status returned non-JSON response');
+    const statusJson = await statusRes.json();
+    if (statusJson.status === 'completed') return statusJson;
+    await delay(3000);
+    return await pollUntilFinished(runId);
+  }
+
   const statusRes = await fetch(`/__e2e/status?runId=${encodeURIComponent(runId)}`);
   if (!statusRes.ok) throw new Error(`Runner status failed: HTTP ${statusRes.status}`);
   const statusJson = await statusRes.json();
@@ -287,18 +331,40 @@ async function runTest(row) {
       toast.add({
         severity: 'warn',
         summary: 'Runner not enabled',
-        detail: 'Restart dev server with: npm run dev:db:runner',
+        detail: runnerKind.value === 'remote' ? 'Remote runner not available.' : 'Restart dev server with: npm run dev:db:runner',
         life: 8000,
+      });
+      return;
+    }
+
+    if (runnerKind.value === 'remote' && !canRunNow.value) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Run disabled',
+        detail: 'Only SuperAdmins can run tests. You can still view results.',
+        life: 6000,
       });
       return;
     }
 
     running.value[row.id] = true;
 
-    const res = await fetch('/__e2e/run', {
+    const baseUrl = window.location.origin;
+    const token = (await authStore.getIdToken().catch(() => undefined)) ?? '';
+    const endpoint = runnerKind.value === 'remote' ? '/api/e2e/run' : '/__e2e/run';
+    const clientRunId = crypto.randomUUID();
+    const payload =
+      runnerKind.value === 'remote'
+        ? { specId: row.id, baseUrl, gitRef: import.meta.env.VITE_PREVIEW_CHANNEL || 'main', clientRunId }
+        : { id: row.id, command: row.runScript };
+
+    const res = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: row.id, command: row.runScript }),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(runnerKind.value === 'remote' && token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
@@ -306,17 +372,36 @@ async function runTest(row) {
       throw new Error(`Runner request failed: HTTP ${res.status} ${res.statusText} body=${text}`);
     }
 
-    const { runId } = await res.json();
-    await resultsStore.setRunResult({ id: row.id, result: 'unknown', command: row.runScript, runId });
+    const runContentType = res.headers.get('content-type') ?? '';
+    if (!runContentType.includes('application/json')) {
+      const text = await res.text().catch(() => '');
+      runnerAvailable.value = false;
+      throw new Error(`Runner is not active (expected JSON, got ${runContentType || 'unknown'}): ${text.slice(0, 120)}`);
+    }
 
-    const finished = await pollUntilFinished(runId);
-    const result = finished.exitCode === 0 ? 'pass' : 'fail';
-    await resultsStore.setRunResult({ id: row.id, result, command: row.runScript, runId });
+    const json = await res.json();
+    const runId = json?.runId ?? null;
+    const effectiveRunId = runnerKind.value === 'remote' ? json?.clientRunId ?? clientRunId : runId;
+    await resultsStore.setRunResult({
+      id: row.id,
+      result: 'unknown',
+      command: row.runScript,
+      runId: effectiveRunId ?? undefined,
+    });
+
+    const finished = await pollUntilFinished(effectiveRunId);
+    if (runnerKind.value === 'local') {
+      const result = finished.exitCode === 0 ? 'pass' : 'fail';
+      await resultsStore.setRunResult({ id: row.id, result, command: row.runScript, runId });
+    } else {
+      await refreshRemoteResults();
+    }
+
     toast.add({
-      severity: result === 'pass' ? 'success' : 'error',
-      summary: 'Run complete',
-      detail: `${row.name}: ${result.toUpperCase()}`,
-      life: 4000,
+      severity: 'success',
+      summary: runnerKind.value === 'local' ? 'Run complete' : 'Run queued',
+      detail: `${row.name}`,
+      life: 3500,
     });
   } catch (e) {
     toast.add({
@@ -344,24 +429,74 @@ function openDetails(row) {
   isDetailsModalOpen.value = true;
 }
 
+async function refreshRemoteResults() {
+  const token = (await authStore.getIdToken().catch(() => undefined)) ?? '';
+  if (!token) return;
+  const res = await fetch('/api/e2e/results', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+  });
+  const ct = res.headers.get('content-type') ?? '';
+  if (!res.ok || !ct.includes('application/json')) return;
+  const json = await res.json().catch(() => null);
+  resultsStore.mergeFromRemote(json?.byId ?? {});
+}
+
 onMounted(async () => {
-  try {
-    const ping = await fetch('/__e2e/ping');
-    runnerAvailable.value = ping.ok;
-  } catch {
-    runnerAvailable.value = false;
+  // Prefer local runner in DEV; otherwise use remote runner via /api.
+  runnerAvailable.value = false;
+  runnerKind.value = 'none';
+
+  if (import.meta.env.DEV) {
+    try {
+      const ping = await fetch('/__e2e/ping', { headers: { Accept: 'application/json' } });
+      const pingContentType = ping.headers.get('content-type') ?? '';
+      if (ping.ok && pingContentType.includes('application/json')) {
+        const pingJson = await ping.json().catch(() => null);
+        if (pingJson?.ok) {
+          runnerAvailable.value = true;
+          runnerKind.value = 'local';
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!runnerAvailable.value) {
+    try {
+      const token = (await authStore.getIdToken().catch(() => undefined)) ?? '';
+      if (!token) throw new Error('Not authenticated');
+      const ping = await fetch('/api/e2e/ping', { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } });
+      const ct = ping.headers.get('content-type') ?? '';
+      if (ping.ok && ct.includes('application/json')) {
+        const pingJson = await ping.json().catch(() => null);
+        if (pingJson?.ok) {
+          runnerAvailable.value = true;
+          runnerKind.value = 'remote';
+          runnerConfig.value = { targetBaseUrl: window.location.origin };
+        }
+      }
+    } catch {
+      // ignore
+    }
   }
 
   if (runnerAvailable.value) {
     try {
-      const cfg = await fetch('/__e2e/config');
-      if (cfg.ok) runnerConfig.value = await cfg.json();
+      if (runnerKind.value === 'local') {
+        const cfg = await fetch('/__e2e/config');
+        const cfgContentType = cfg.headers.get('content-type') ?? '';
+        if (cfg.ok && cfgContentType.includes('application/json')) runnerConfig.value = await cfg.json();
 
-      const res = await fetch('/__e2e/results?refresh=1');
-      if (res.ok) {
-        const json = await res.json();
-        const byId = json?.byId ?? {};
-        resultsStore.mergeFromRemote(byId);
+        const res = await fetch('/__e2e/results?refresh=1');
+        const resultsContentType = res.headers.get('content-type') ?? '';
+        if (res.ok && resultsContentType.includes('application/json')) {
+          const json = await res.json();
+          const byId = json?.byId ?? {};
+          resultsStore.mergeFromRemote(byId);
+        }
+      } else if (runnerKind.value === 'remote') {
+        await refreshRemoteResults();
       }
     } catch {
       // Ignore: local state still works; persistence requires gsutil/auth.

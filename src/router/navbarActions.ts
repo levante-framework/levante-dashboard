@@ -1,7 +1,7 @@
 interface NavbarAction {
   title: string;
   icon?: string; // Optional icon
-  buttonLink: { name: string; params?: Record<string, any> }; // Define buttonLink structure
+  buttonLink: { name: string; params?: Record<string, unknown> }; // Define buttonLink structure
   requiresSuperAdmin: boolean;
   requiresAdmin?: boolean; // Optional requiresAdmin
   project: 'ALL' | 'LEVANTE' | 'ROAR'; // Use literal types for project
