@@ -1,3 +1,69 @@
+/**
+ * @fileoverview Permissions: Role-Based Access Control E2E Test
+ *
+ * @description
+ * Tests the new resource-based permissions system, verifying that different roles
+ * (admin, site_admin, research_assistant, super_admin, participant) have the correct
+ * access to routes and UI elements based on their permissions.
+ *
+ * @test-id task-permissions
+ * @category tasks
+ *
+ * @setup
+ * This test automatically bootstraps the "ai-tests" site with required users when run
+ * via the local E2E runner. The bootstrap process:
+ * - Deletes and recreates the "ai-tests" site (district)
+ * - Creates users with roles: admin, site_admin, research_assistant
+ * - Sets useNewPermissions=true in userClaims for all admin users
+ * - Writes credentials to bug-tests/site.ai-tests.creds.json
+ *
+ * @required-env-vars
+ * The following environment variables are automatically injected by the local runner
+ * (from bug-tests/site.ai-tests.creds.json):
+ * - E2E_SITE_NAME=ai-tests
+ * - E2E_USE_SESSION=TRUE
+ * - E2E_FIREBASE_PROJECT_ID=hs-levante-admin-dev
+ * - E2E_AI_ADMIN_EMAIL (auto-generated)
+ * - E2E_AI_ADMIN_PASSWORD (auto-generated)
+ * - E2E_AI_SITE_ADMIN_EMAIL (auto-generated)
+ * - E2E_AI_SITE_ADMIN_PASSWORD (auto-generated)
+ * - E2E_AI_RESEARCH_ASSISTANT_EMAIL (auto-generated)
+ * - E2E_AI_RESEARCH_ASSISTANT_PASSWORD (auto-generated)
+ *
+ * Optional (for super_admin and participant tests):
+ * - E2E_AI_SUPER_ADMIN_EMAIL
+ * - E2E_AI_SUPER_ADMIN_PASSWORD
+ * - E2E_PARTICIPANT_EMAIL
+ * - E2E_PARTICIPANT_PASSWORD
+ *
+ * @test-cases
+ * 1. admin: Can CRUD assignments/users; can create cohorts; cannot create sites; blocked from super-admin routes
+ * 2. site_admin: Can CRUDE within site; can create cohorts; cannot create sites; blocked from super-admin routes
+ * 3. research_assistant: Can read groups/assignments; can create users; cannot create groups/assignments; blocked from super-admin routes
+ * 4. super_admin (optional): Can access super-admin routes; can create sites globally
+ * 5. participant (optional): Cannot access any admin routes
+ *
+ * @expected-behavior
+ * - All admin users must have useNewPermissions=true in their userClaims
+ * - Permission checks use the new PermissionService from @levante-framework/permissions-core
+ * - UI elements (buttons, routes) are gated by PermissionGuard components
+ * - Router blocks unauthorized routes by redirecting to /
+ *
+ * @related-docs
+ * - README_TESTS_PERMISSIONS.md - Full permissions system specification
+ * - https://www.notion.so/Permissions-234244e26d9b80a98181c67ea1f27e91 - Original permissions spec
+ * - src/composables/usePermissions.ts - Frontend permissions composable
+ * - src/components/PermissionGuard.vue - UI permission gating component
+ * - src/router/index.ts - Route-level permission checks
+ *
+ * @modification-notes
+ * To modify this test:
+ * 1. Update the test cases above to reflect new requirements
+ * 2. Add/remove environment variables in the @required-env-vars section
+ * 3. Update assertions in the test cases to match new UI/route expectations
+ * 4. If adding new roles, ensure they're created in scripts/e2e-init/reset-site.mjs
+ */
+
 import { selectSite, signInWithPassword } from '../_helpers';
 
 function hasCreds(email: unknown, password: unknown): boolean {
