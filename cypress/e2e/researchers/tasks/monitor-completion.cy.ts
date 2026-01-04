@@ -1,3 +1,54 @@
+/**
+ * @fileoverview Monitor Completion: Assignment Progress Tracking
+ *
+ * @description
+ * Tests the assignment completion monitoring workflow, verifying that researchers
+ * can view progress reports for assignments and see participant completion status.
+ * The test self-seeds a cohort and assignment if none exist, making it robust to
+ * empty test environments.
+ *
+ * @test-id task-monitor-completion
+ * @category tasks
+ *
+ * @setup
+ * This test self-seeds data if none exists:
+ * - Creates a cohort if none found
+ * - Creates an assignment for the cohort via upsertAdministration
+ * - Extracts administrationId, orgType, and orgId from the response
+ * - Navigates directly to the progress report page
+ * - Falls back to opening an existing assignment card if seeding fails
+ *
+ * @required-env-vars
+ * - E2E_SITE_NAME (default: ai-tests)
+ * - E2E_AI_SITE_ADMIN_EMAIL or E2E_TEST_EMAIL (required - admin or site_admin)
+ * - E2E_AI_SITE_ADMIN_PASSWORD or E2E_TEST_PASSWORD (required)
+ *
+ * @test-cases
+ * 1. Sign in and select site
+ * 2. Self-seed cohort and assignment (if needed)
+ * 3. Navigate to progress report page
+ * 4. Verify progress report page loads with data table visible
+ *
+ * @expected-behavior
+ * - Progress report page loads successfully at /administration/{id}/{orgType}/{orgId}
+ * - Page title contains "Progress Report"
+ * - Data table component ([data-cy="roar-data-table"]) is rendered
+ * - Table may be empty if no participants have completed (this is acceptable)
+ *
+ * @related-docs
+ * - src/pages/administration/ProgressReport.vue - Progress report UI
+ * - src/composables/queries/useProgressReportQuery.ts - Data fetching
+ * - README_TESTS.md - General testing documentation
+ *
+ * @modification-notes
+ * To modify this test:
+ * 1. Update cohort/assignment creation logic if seeding API changes
+ * 2. Adjust selectors if UI structure changes (e.g., [data-cy="roar-data-table"])
+ * 3. Add assertions for specific data if needed (e.g., participant counts)
+ * 4. Consider adding test cases for different org types (school, class, etc.)
+ * 5. Update extraction logic if upsertAdministration response format changes
+ */
+
 import {
   ignoreKnownHostedUncaughtExceptions,
   pickToday,

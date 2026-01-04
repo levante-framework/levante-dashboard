@@ -286,8 +286,16 @@ function e2eRunnerPlugin() {
           const runId = crypto.randomUUID();
           const startedAt = new Date().toISOString();
           const logDir = ensureLogDir();
-          const logPath = path.join(logDir, `${runId}.log`);
-          const logStream = fs.createWriteStream(logPath, { flags: 'a' });
+          const logPath = path.join(logDir, `${id}.log`);
+          // Delete any existing log for this test ID to keep only the most recent
+          if (fs.existsSync(logPath)) {
+            try {
+              fs.unlinkSync(logPath);
+            } catch {
+              // ignore deletion errors
+            }
+          }
+          const logStream = fs.createWriteStream(logPath, { flags: 'w' });
           const specBasename = parseSpecBasename(command);
 
           // For Permissions task runs, do a full ai-tests reset/bootstrap and inject the freshly-created creds.
