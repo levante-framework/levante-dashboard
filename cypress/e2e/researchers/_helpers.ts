@@ -22,6 +22,13 @@ export function signInWithPassword(params: { email: string; password: string }) 
   })();
 
   function doLogin(): void {
+    // Hosted previews can be slow to fully fire the page load event (service worker, chunk fetch, cold starts).
+    // Avoid flake by bumping the pageLoadTimeout for the login navigation if needed.
+    const currentPageLoadTimeout = Cypress.config('pageLoadTimeout');
+    if (typeof currentPageLoadTimeout === 'number' && currentPageLoadTimeout < 120_000) {
+      Cypress.config('pageLoadTimeout', 120_000);
+    }
+
     cy.intercept('POST', '**/accounts:signInWithPassword*').as('signInWithPassword');
 
     cy.visit('/signin');
@@ -42,6 +49,10 @@ export function signInWithPassword(params: { email: string; password: string }) 
           )}`,
         );
       }
+
+      const responseBody = interception.response?.body as { idToken?: unknown; localId?: unknown } | undefined;
+      if (typeof responseBody?.idToken === 'string') Cypress.env('E2E_LAST_ID_TOKEN', responseBody.idToken);
+      if (typeof responseBody?.localId === 'string') Cypress.env('E2E_LAST_UID', responseBody.localId);
     });
 
     cy.location('pathname', { timeout: 90000 }).should('not.eq', '/signin');

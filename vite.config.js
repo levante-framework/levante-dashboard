@@ -30,6 +30,37 @@ function e2eRunnerPlugin() {
     res.end(JSON.stringify(body));
   }
 
+  function shellEscape(value) {
+    // Safely wrap in single quotes for bash -lc.
+    const sq = '\'';
+    const s = String(value);
+    const escaped = s.split(sq).join(sq + '\\' + sq + sq);
+    return sq + escaped + sq;
+  }
+
+  function readAiTestsCreds() {
+    try {
+      const credsPath = path.join(process.cwd(), 'bug-tests', 'site.ai-tests.creds.json');
+      if (!fs.existsSync(credsPath)) return { ok: false, error: `Missing creds file: ${credsPath}` };
+      const raw = fs.readFileSync(credsPath, 'utf8');
+      const parsed = JSON.parse(raw);
+      return { ok: true, data: parsed };
+    } catch (e) {
+      return { ok: false, error: `Failed to read ai-tests creds: ${String(e?.message ?? e)}` };
+    }
+  }
+
+  function bootstrapAiTestsForPermissions(logStream) {
+    // Destructive reset + recreates ai-tests site and admin users. Intended for local dev only.
+    const cmd =
+      'node scripts/e2e-init/reset-site.mjs --yes --site-name ai-tests --project-id hs-levante-admin-dev --out bug-tests/site.ai-tests.json --out-creds bug-tests/site.ai-tests.creds.json';
+    const r = child.spawnSync('bash', ['-lc', cmd], { cwd: process.cwd(), env: process.env, encoding: 'utf8' });
+    if (r.stdout) logStream.write(r.stdout);
+    if (r.stderr) logStream.write(r.stderr);
+    if (r.status !== 0) return { ok: false, error: `ai-tests bootstrap failed (exit=${r.status})` };
+    return { ok: true };
+  }
+
   async function readJson(req) {
     return await new Promise((resolve, reject) => {
       let raw = '';
@@ -259,7 +290,44 @@ function e2eRunnerPlugin() {
           const logStream = fs.createWriteStream(logPath, { flags: 'a' });
           const specBasename = parseSpecBasename(command);
 
-          const proc = child.spawn('bash', ['-lc', command], {
+          // For Permissions task runs, do a full ai-tests reset/bootstrap and inject the freshly-created creds.
+          let effectiveCommand = command;
+          if (id === 'task-permissions') {
+            logStream.write('[e2e-runner] bootstrapping ai-tests for permissions...\n');
+            const boot = bootstrapAiTestsForPermissions(logStream);
+            if (!boot.ok) {
+              logStream.end();
+              return sendJson(res, 500, { error: boot.error });
+            }
+
+            const creds = readAiTestsCreds();
+            if (!creds.ok) {
+              logStream.end();
+              return sendJson(res, 500, { error: creds.error });
+            }
+
+            const users = creds.data?.users ?? {};
+            const admin = users.admin ?? {};
+            const siteAdmin = users.site_admin ?? {};
+            const ra = users.research_assistant ?? {};
+
+            // Provide credentials + site context to Cypress for this run.
+            const envPrefix = [
+              `E2E_SITE_NAME=${shellEscape('ai-tests')}`,
+              `E2E_USE_SESSION=${shellEscape('TRUE')}`,
+              `E2E_FIREBASE_PROJECT_ID=${shellEscape('hs-levante-admin-dev')}`,
+              `E2E_AI_ADMIN_EMAIL=${shellEscape(admin.email ?? '')}`,
+              `E2E_AI_ADMIN_PASSWORD=${shellEscape(admin.password ?? '')}`,
+              `E2E_AI_SITE_ADMIN_EMAIL=${shellEscape(siteAdmin.email ?? '')}`,
+              `E2E_AI_SITE_ADMIN_PASSWORD=${shellEscape(siteAdmin.password ?? '')}`,
+              `E2E_AI_RESEARCH_ASSISTANT_EMAIL=${shellEscape(ra.email ?? '')}`,
+              `E2E_AI_RESEARCH_ASSISTANT_PASSWORD=${shellEscape(ra.password ?? '')}`,
+            ].join(' ');
+
+            effectiveCommand = `${envPrefix} ${command}`;
+          }
+
+          const proc = child.spawn('bash', ['-lc', effectiveCommand], {
             cwd: process.cwd(),
             env: process.env,
             stdio: ['ignore', 'pipe', 'pipe'],
@@ -268,7 +336,7 @@ function e2eRunnerPlugin() {
           runs.set(runId, {
             runId,
             id,
-            command,
+            command: effectiveCommand,
             specBasename,
             startedAt,
             finishedAt: null,
