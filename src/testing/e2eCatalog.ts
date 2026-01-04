@@ -115,5 +115,14 @@ export const e2eCatalog: E2EEntry[] = [
       'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/researcher-docs-scenario.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true',
     defaultStatus: 'open',
   },
+  {
+    id: 'task-permissions',
+    category: 'tasks',
+    name: 'Permissions',
+    specPath: 'cypress/e2e/researchers/tasks/permissions.cy.ts',
+    runScript:
+      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/permissions.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true',
+    defaultStatus: 'open',
+  },
 ];
 
