@@ -37,8 +37,9 @@
  * - E2E_PARTICIPANT_PASSWORD
  *
  * @test-cases
- * 1. admin: Can CRUD assignments/users; can create cohorts; cannot create sites; blocked from super-admin routes
- * 2. site_admin: Can CRUDE within site; can create cohorts; cannot create sites; blocked from super-admin routes
+ * 1. admin: Can CRUD assignments; **CRU for users** (create, read, update - no delete); **RUD for groups** (can read, update, delete but cannot create Sites, Schools, Classes, or Cohorts); blocked from super-admin routes
+ *    Note: admin and site_admin are different roles - admin cannot create groups but can update/delete existing ones
+ * 2. site_admin: Can CRUDE within site; can create Schools/Classes/Cohorts (but NOT Sites - they manage one existing site); blocked from super-admin routes
  * 3. research_assistant: Can read groups/assignments; can create users; cannot create groups/assignments; blocked from super-admin routes
  * 4. super_admin (optional): Can access super-admin routes; can create sites globally
  * 5. participant (optional): Cannot access any admin routes
@@ -112,6 +113,17 @@ function waitForPermissionsToLoad() {
   cy.contains('Loading permissions...', { timeout: 120000 }).should('not.exist');
 }
 
+function waitForUserData() {
+  // Prefer network-based waiting over app introspection so this works on hosted previews too.
+  // `fetchDocById('users', uid)` uses Firestore REST GET requests.
+  return cy.wait('@fetchUserData', { timeout: 120000 }).then((interception) => {
+    const status = interception.response?.statusCode;
+    if (status && status >= 400) {
+      throw new Error(`Failed to fetch userData (HTTP ${status}) url=${interception.request.url}`);
+    }
+  });
+}
+
 function assertAllowed(path: string, readySelector: string) {
   cy.visit(path);
   cy.location('pathname', { timeout: 60000 }).should('eq', path);
@@ -124,6 +136,12 @@ function assertBlocked(path: string) {
 }
 
 describe('permissions: role-based route access', () => {
+  beforeEach(() => {
+    // App.vue loads userData via fetchDocById('users', uid) (Firestore REST GET).
+    // We use this to avoid relying on window.__LEVANTE_APP__ (which can be flaky on hosted previews).
+    cy.intercept('GET', '**/documents/users/**').as('fetchUserData');
+  });
+
   const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'ai-tests';
 
   const adminEmail = Cypress.env('E2E_AI_ADMIN_EMAIL') as string | undefined;
@@ -141,23 +159,27 @@ describe('permissions: role-based route access', () => {
   const participantEmail = Cypress.env('E2E_PARTICIPANT_EMAIL') as string | undefined;
   const participantPassword = Cypress.env('E2E_PARTICIPANT_PASSWORD') as string | undefined;
 
-  it('admin: CRUD assignments; CRUD users; can create cohorts; cannot create sites; no super-admin-only routes', () => {
+  it('admin: CRUD assignments; CRUD users; RUD for groups - cannot create but can update/delete (admin ≠ site_admin); no super-admin-only routes', () => {
     if (!hasCreds(adminEmail, adminPassword)) {
       throw new Error('Missing required creds: E2E_AI_ADMIN_EMAIL / E2E_AI_ADMIN_PASSWORD');
     }
     signInWithPassword({ email: adminEmail!, password: adminPassword! });
     selectSite(siteName);
     assertNewPermissionsEnabled();
+    waitForUserData();
 
     assertAllowed('/list-groups', '[data-testid="groups-page-title"]');
     waitForPermissionsToLoad();
-    cy.get('[data-cy="add-group-btn"]').should('be.visible').should('not.be.disabled').click();
-    cy.get('[data-testid="modalTitle"]', { timeout: 60000 }).should('contain.text', 'Add New');
-    cy.get('[data-cy="dropdown-org-type"]').should('be.visible').click();
-    cy.contains('[role="option"]', /^Cohort$/).should('exist');
-    cy.contains('[role="option"]', /^Site$/).should('not.exist');
-    cy.get('[data-cy="add-users-btn"]').should('be.visible');
-
+    
+    // admin is RUD for groups - cannot create any groups (Sites, Schools, Classes, or Cohorts)
+    // but can update/delete existing groups
+    // The "Add Group" button should be hidden for admin (gated by canCreateAnyGroupType)
+    cy.get('[data-cy="add-group-btn"]', { timeout: 10000 }).should('not.exist');
+    
+    // admin should be able to see Edit buttons (for update/delete actions)
+    // Note: Edit button visibility is not gated in the UI, backend enforces permissions
+    
+    cy.get('[data-cy="add-users-btn"]', { timeout: 120000 }).should('be.visible');
     assertAllowed('/add-users', '[data-cy="upload-add-users-csv"]');
     assertAllowed('/create-assignment', '[data-cy="input-administration-name"]');
 
@@ -165,13 +187,14 @@ describe('permissions: role-based route access', () => {
     assertBlocked('/testing-results');
   });
 
-  it('site_admin: CRUDE within site; can create cohorts; cannot access super-admin-only routes', () => {
+  it('site_admin: CRUDE within site; can create Schools/Classes/Cohorts (but NOT Sites); cannot access super-admin-only routes', () => {
     if (!hasCreds(siteAdminEmail, siteAdminPassword)) {
       throw new Error('Missing required creds: E2E_AI_SITE_ADMIN_EMAIL / E2E_AI_SITE_ADMIN_PASSWORD');
     }
     signInWithPassword({ email: siteAdminEmail!, password: siteAdminPassword! });
     selectSite(siteName);
     assertNewPermissionsEnabled();
+    waitForUserData();
 
     assertAllowed('/list-groups', '[data-testid="groups-page-title"]');
     waitForPermissionsToLoad();
@@ -191,8 +214,21 @@ describe('permissions: role-based route access', () => {
     signInWithPassword({ email: researchAssistantEmail!, password: researchAssistantPassword! });
     selectSite(siteName);
     assertNewPermissionsEnabled();
-
-    assertAllowed('/list-groups', '[data-testid="groups-page-title"]');
+    waitForUserData();
+    
+    // Navigate - router guard should allow access since userData.roles includes research_assistant
+    cy.visit('/list-groups');
+    cy.location('pathname', { timeout: 120000 }).then((pathname) => {
+      if (pathname === '/') {
+        throw new Error(
+          'Research Assistant was redirected to /. This means route access denied (roles not loaded or missing "research_assistant").',
+        );
+      } else if (pathname === '/list-groups') {
+        cy.get('[data-testid="groups-page-title"]', { timeout: 120000 }).should('be.visible');
+      } else {
+        throw new Error(`Research Assistant navigated to unexpected path: ${pathname}`);
+      }
+    });
     waitForPermissionsToLoad();
     cy.get('[data-cy="add-group-btn"]').should('not.exist');
     cy.get('[data-cy="add-users-btn"]').should('be.visible');

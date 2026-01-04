@@ -46,9 +46,15 @@
  */
 
 import 'cypress-real-events';
-import { assert } from 'chai';
 
-import { ignoreKnownHostedUncaughtExceptions, selectSite, signInWithPassword } from '../_helpers';
+import {
+  ignoreKnownHostedUncaughtExceptions,
+  selectSite,
+  signInWithPassword,
+  addAndLinkUsers,
+  typeInto,
+  pickToday,
+} from '../_helpers';
 
 const email: string =
   (Cypress.env('E2E_AI_SITE_ADMIN_EMAIL') as string) ||
@@ -60,49 +66,6 @@ const password: string =
   'student123';
 const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'ai-tests';
 
-function typeInto(selector: string, value: string, opts: Partial<Cypress.TypeOptions> = {}) {
-  cy.get(selector)
-    .should('be.visible')
-    .click()
-    .type('{selectall}{backspace}', { delay: 0 })
-    .type(value, { delay: 0, ...opts });
-}
-
-function pickToday(datePickerSelector: string) {
-  cy.get(datePickerSelector).should('be.visible').click();
-  cy.get('body').then(($body) => {
-    if ($body.find('button').filter((_, el) => el.textContent?.trim() === 'Today').length) {
-      cy.contains('button', /^Today$/).click({ force: true });
-      return;
-    }
-
-    const today = `${new Date().getDate()}`;
-    cy.get('.p-datepicker-calendar', { timeout: 60000 }).contains('span', new RegExp(`^${today}$`)).click({ force: true });
-  });
-  cy.get('body').click(0, 0);
-}
-
-function extractCreatedUsers(body: unknown) {
-  // We only need email/password to validate that createUsers returned something sane for the scenario.
-  // Shapes vary depending on callable/function envelopes.
-  const candidates: unknown[] = [];
-  const isRecord = (v: unknown): v is Record<string, unknown> => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
-  const isCreated = (v: unknown): v is { uid: string; email: string; password: string } =>
-    isRecord(v) && typeof v.uid === 'string' && typeof v.email === 'string' && typeof v.password === 'string';
-
-  if (isRecord(body)) {
-    candidates.push(body.data);
-    if (isRecord(body.data)) candidates.push(body.data.data);
-    if (isRecord(body.result)) candidates.push(body.result.data);
-  } else {
-    candidates.push(body);
-  }
-
-  for (const c of candidates) {
-    if (Array.isArray(c) && c.every(isCreated)) return c;
-  }
-  return null;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -166,32 +129,17 @@ describe('researcher docs scenario: groups → users → assignment → monitor 
     cy.get('[data-testid="modalTitle"]').should('not.exist');
     cy.contains('Cohort created successfully.', { timeout: 30000 }).should('exist');
 
-    // Docs Step 2: Add and link users (upload CSV)
-    cy.intercept('POST', '**/createUsers').as('createUsers');
-    cy.visit('/add-users');
-    cy.get('[data-cy="upload-add-users-csv"]').within(() => {
-      const csv = [
-        'id,userType,month,year,cohort,caregiverId,teacherId',
-        `${childId},child,5,2017,${cohortName},${caregiverId},${teacherId}`,
-        `${caregiverId},caregiver,5,2017,${cohortName},,`,
-        `${teacherId},teacher,5,2017,${cohortName},,`,
-      ].join('\n');
-
-      cy.get('input[type="file"]').selectFile(
-        { contents: Cypress.Buffer.from(csv), fileName: 'users.csv', mimeType: 'text/csv' },
-        { force: true },
-      );
+    // Docs Step 2: Add and link users (following documented two-step process)
+    // Step 2B: Add users to the dashboard
+    // Step 2C: Link users as needed
+    addAndLinkUsers({
+      childId,
+      caregiverId,
+      teacherId,
+      cohortName,
+      month: 5,
+      year: 2017,
     });
-    cy.contains('File Successfully Uploaded', { timeout: 60000 }).should('exist');
-    cy.get('[data-cy="button-add-users-from-file"]', { timeout: 60000 }).should('be.visible').click();
-    cy.wait('@createUsers', { timeout: 60000 }).then((interception) => {
-      const status = interception.response?.statusCode;
-      const created = extractCreatedUsers(interception.response?.body);
-      if (status && status >= 400) throw new Error(`createUsers failed: HTTP ${status}`);
-      if (!created) throw new Error('createUsers returned an unexpected body shape');
-      assert.isAtLeast(created.length, 3, 'createUsers should return at least 3 created users');
-    });
-    cy.contains('User Creation Successful', { timeout: 60000 }).should('exist');
 
     // Docs Step 3: Create assignment (assign cohort, pick a task, create)
     cy.visit('/create-assignment');
