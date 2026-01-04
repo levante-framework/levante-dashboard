@@ -4,6 +4,7 @@ import 'dotenv/config';
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -12,6 +13,7 @@ function parseArgs(argv) {
     siteName: 'ai-tests',
     projectId: undefined,
     out: 'bug-tests/site.ai-tests.json',
+    outCreds: 'bug-tests/site.ai-tests.creds.json',
     yes: false,
     force: false,
     createAdminUsers: true,
@@ -19,6 +21,8 @@ function parseArgs(argv) {
     adminPassword: process.env.E2E_AI_ADMIN_PASSWORD,
     siteAdminEmail: process.env.E2E_AI_SITE_ADMIN_EMAIL || 'ai-site-admin@levante.test',
     siteAdminPassword: process.env.E2E_AI_SITE_ADMIN_PASSWORD,
+    researchAssistantEmail: process.env.E2E_AI_RESEARCH_ASSISTANT_EMAIL || 'ai-research-assistant@levante.test',
+    researchAssistantPassword: process.env.E2E_AI_RESEARCH_ASSISTANT_PASSWORD,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -26,6 +30,7 @@ function parseArgs(argv) {
     if (a === '--site-name') args.siteName = argv[++i];
     else if (a === '--project-id') args.projectId = argv[++i];
     else if (a === '--out') args.out = argv[++i];
+    else if (a === '--out-creds') args.outCreds = argv[++i];
     else if (a === '--yes') args.yes = true;
     else if (a === '--force') args.force = true;
     else if (a === '--no-admin') args.createAdminUsers = false;
@@ -33,6 +38,8 @@ function parseArgs(argv) {
     else if (a === '--admin-password') args.adminPassword = argv[++i];
     else if (a === '--site-admin-email') args.siteAdminEmail = argv[++i];
     else if (a === '--site-admin-password') args.siteAdminPassword = argv[++i];
+    else if (a === '--research-assistant-email') args.researchAssistantEmail = argv[++i];
+    else if (a === '--research-assistant-password') args.researchAssistantPassword = argv[++i];
   }
 
   return args;
@@ -78,7 +85,7 @@ async function deleteAllForDistrict(db, districtId) {
 async function resetAdminUser({ projectId, districtId, siteName, email, password, role, force }) {
   if (!role) throw new Error('Missing role for admin user');
   if (!email) throw new Error('Missing admin email');
-  if (!password) throw new Error('Missing admin password');
+  const effectivePassword = password || `AI1-${crypto.randomBytes(24).toString('base64url')}`;
 
   // Guard: don't allow destructive admin ops on arbitrary accounts unless explicitly forced.
   const safeEmail = email.toLowerCase().includes('ai-') || email.toLowerCase().endsWith('@levante.test');
@@ -91,7 +98,7 @@ async function resetAdminUser({ projectId, districtId, siteName, email, password
   try {
     const u = await auth.getUserByEmail(email);
     existingUid = u.uid;
-  } catch (e) {
+  } catch {
     // ignore not-found
   }
 
@@ -101,7 +108,7 @@ async function resetAdminUser({ projectId, districtId, siteName, email, password
 
   const created = await auth.createUser({
     email,
-    password,
+    password: effectivePassword,
     displayName: email.split('@')[0],
     emailVerified: true,
   });
@@ -142,7 +149,7 @@ async function resetAdminUser({ projectId, districtId, siteName, email, password
   );
 
   console.log(`[e2e-init] created ${role} user (${email}) for site "${siteName}" (uid=${uid}) in ${projectId}`);
-  return { uid, email };
+  return { uid, email, password: effectivePassword };
 }
 
 async function main() {
@@ -159,7 +166,7 @@ async function main() {
 
   if (!args.force && !isDev) {
     throw new Error(
-      `Refusing to run outside DEV. Set VITE_FIREBASE_PROJECT=DEV or pass --project-id hs-levante-admin-dev. (Use --force to override)`,
+      'Refusing to run outside DEV. Set VITE_FIREBASE_PROJECT=DEV or pass --project-id hs-levante-admin-dev. (Use --force to override)',
     );
   }
 
@@ -213,8 +220,12 @@ async function main() {
     createdAt: new Date().toISOString(),
   };
 
+  let createdAdminUser = null;
+  let createdSiteAdminUser = null;
+  let createdResearchAssistantUser = null;
+
   if (args.createAdminUsers) {
-    const admin = await resetAdminUser({
+    createdAdminUser = await resetAdminUser({
       projectId,
       districtId: districtRef.id,
       siteName,
@@ -223,7 +234,7 @@ async function main() {
       role: 'admin',
       force: args.force,
     });
-    const siteAdmin = await resetAdminUser({
+    createdSiteAdminUser = await resetAdminUser({
       projectId,
       districtId: districtRef.id,
       siteName,
@@ -232,13 +243,54 @@ async function main() {
       role: 'site_admin',
       force: args.force,
     });
-    payload.aiAdmin = { uid: admin.uid, email: admin.email, role: 'admin' };
-    payload.aiSiteAdmin = { uid: siteAdmin.uid, email: siteAdmin.email, role: 'site_admin' };
+    createdResearchAssistantUser = await resetAdminUser({
+      projectId,
+      districtId: districtRef.id,
+      siteName,
+      email: args.researchAssistantEmail,
+      password: args.researchAssistantPassword,
+      role: 'research_assistant',
+      force: args.force,
+    });
+
+    payload.aiAdmin = { uid: createdAdminUser.uid, email: createdAdminUser.email, role: 'admin' };
+    payload.aiSiteAdmin = { uid: createdSiteAdminUser.uid, email: createdSiteAdminUser.email, role: 'site_admin' };
+    payload.aiResearchAssistant = {
+      uid: createdResearchAssistantUser.uid,
+      email: createdResearchAssistantUser.email,
+      role: 'research_assistant',
+    };
   }
 
   const outPath = path.resolve(process.cwd(), args.out);
   await fs.mkdir(path.dirname(outPath), { recursive: true });
   await fs.writeFile(outPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
+
+  if (args.createAdminUsers) {
+    const creds = {
+      projectId,
+      siteName,
+      districtId: districtRef.id,
+      createdAt: payload.createdAt,
+      users: {
+        // Note: passwords are written to this creds file only (gitignored).
+        admin: { email: createdAdminUser.email, password: createdAdminUser.password, role: 'admin' },
+        site_admin: { email: createdSiteAdminUser.email, password: createdSiteAdminUser.password, role: 'site_admin' },
+        research_assistant: {
+          email: createdResearchAssistantUser.email,
+          password: createdResearchAssistantUser.password,
+          role: 'research_assistant',
+        },
+      },
+      notes: {
+        useNewPermissions: true,
+      },
+    };
+    const credsPath = path.resolve(process.cwd(), args.outCreds);
+    await fs.mkdir(path.dirname(credsPath), { recursive: true });
+    await fs.writeFile(credsPath, JSON.stringify(creds, null, 2) + '\n', 'utf8');
+    console.log(`[e2e-init] wrote ${args.outCreds}`);
+  }
 
   console.log(`[e2e-init] created site "${siteName}" (districtId=${districtRef.id})`);
   console.log(`[e2e-init] wrote ${args.out}`);

@@ -171,7 +171,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/groups/ListGroups.vue'),
     meta: {
       pageTitle: 'Groups',
-      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
+      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
   {
@@ -245,7 +245,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/users/AddUsers.vue'),
     meta: {
       pageTitle: 'Add Users',
-      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
+      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
 
@@ -255,7 +255,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../pages/users/LinkUsers.vue'),
     meta: {
       pageTitle: 'Link Users',
-      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
+      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
   // {

@@ -5,7 +5,7 @@
         <div class="flex flex-column align-items-start mb-2 md:flex-row w-full justify-content-between">
           <div class="flex align-items-center gap-3 mb-4 md:mb-0">
             <div class="admin-page-header mr-4" data-testid="groups-page-title">Groups</div>
-            <PermissionGuard :requireRole="ROLES.RESEARCH_ASSISTANT">
+            <PermissionGuard resource="groups" action="create" sub-resource="cohorts">
               <PvButton
                 class="bg-primary text-white border-none p-2 ml-auto"
                 data-testid="add-group-btn"
@@ -15,12 +15,15 @@
                 >Add Group</PvButton
               >
             </PermissionGuard>
-            <PvButton
-              class="bg-primary text-white border-none p-2 ml-auto"
-              data-testid="add-users-btn"
-              @click="addUsers"
-              >Add Users</PvButton
-            >
+            <PermissionGuard resource="users" action="create">
+              <PvButton
+                class="bg-primary text-white border-none p-2 ml-auto"
+                data-testid="add-users-btn"
+                data-cy="add-users-btn"
+                @click="addUsers"
+                >Add Users</PvButton
+              >
+            </PermissionGuard>
           </div>
           <div class="flex align-items-center justify-content-end w-full md:w-auto">
             <span class="p-input-icon-left p-input-icon-right">
