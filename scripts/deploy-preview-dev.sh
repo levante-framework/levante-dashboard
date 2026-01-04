@@ -27,5 +27,35 @@ DEPLOY_JSON="$(
     --json
 )"
 
-echo "$DEPLOY_JSON" | node -e "let s=''; process.stdin.on('data', d => (s += d)); process.stdin.on('end', () => { const o = JSON.parse(s); const url = o?.result?.production?.url || o?.result?.hosting?.[0]?.url || o?.result?.hosting?.url; console.log(''); console.log('Preview URL:'); console.log(url || '(could not parse url; re-run with --json and inspect output)'); });"
+echo "$DEPLOY_JSON" | node -e "
+  import fs from 'fs';
+  import path from 'path';
+  let s = '';
+  process.stdin.on('data', (d) => (s += d));
+  process.stdin.on('end', () => {
+    const o = JSON.parse(s);
+    const url = o?.result?.production?.url || o?.result?.hosting?.[0]?.url || o?.result?.hosting?.url;
+
+    console.log('');
+    console.log('Preview URL:');
+    console.log(url || '(could not parse url; re-run with --json and inspect output)');
+
+    if (!url) return;
+
+    const resultsDir = path.join(process.cwd(), '.tmp', 'e2e-runner');
+    fs.mkdirSync(resultsDir, { recursive: true });
+    fs.writeFileSync(path.join(resultsDir, 'target-base-url.txt'), String(url));
+    fs.writeFileSync(
+      path.join(resultsDir, 'target-base-url.json'),
+      JSON.stringify(
+        { updatedAt: new Date().toISOString(), projectId: process.env.FIREBASE_PROJECT_ID || '${PROJECT_ID}', channel: '${CHANNEL}', url },
+        null,
+        2,
+      ),
+    );
+    console.log('');
+    console.log('Saved runner target URL to:');
+    console.log(path.join(resultsDir, 'target-base-url.txt'));
+  });
+"
 
