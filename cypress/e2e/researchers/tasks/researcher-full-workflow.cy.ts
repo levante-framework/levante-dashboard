@@ -1,3 +1,59 @@
+/**
+ * @fileoverview Researcher Full Workflow: Complete Setup and Participant Login
+ *
+ * @description
+ * Comprehensive end-to-end test covering the complete researcher workflow from setup
+ * through participant login. Tests: groups → users → link users → assignment → monitor
+ * completion → participant login. This is the most complete workflow test, including
+ * user linking and participant authentication verification.
+ *
+ * @test-id task-researcher-full-workflow
+ * @category tasks
+ *
+ * @setup
+ * - Test self-seeds all required data
+ * - Creates cohort, users (child/caregiver/teacher), links them, creates assignment
+ * - Uses timestamp-based naming to avoid conflicts
+ * - Validates API responses to ensure data integrity
+ *
+ * @required-env-vars
+ * - E2E_SITE_NAME (default: ai-tests)
+ * - E2E_AI_SITE_ADMIN_EMAIL or E2E_TEST_EMAIL (required)
+ * - E2E_AI_SITE_ADMIN_PASSWORD or E2E_TEST_PASSWORD (required)
+ *
+ * @test-cases
+ * 1. Sign in as administrator and select site
+ * 2. Create a Cohort group
+ * 3. Upload CSV to create users (child, caregiver, teacher)
+ * 4. Upload linking CSV to establish relationships between users
+ * 5. Create assignment with selected variant and cohort
+ * 6. Monitor completion (open progress report)
+ * 7. Sign in as participant (child) and verify participant home page
+ *
+ * @expected-behavior
+ * - All workflow steps complete successfully
+ * - Users are created with proper UIDs returned
+ * - Users are linked correctly (child → caregiver, child → teacher)
+ * - Assignment is created and appears in assignment list
+ * - Progress report loads (may be empty)
+ * - Participant can sign in and see home page (with or without assignments)
+ *
+ * @related-docs
+ * - README_TESTS.md - General testing documentation
+ * - src/pages/users/AddUsers.vue - User creation UI
+ * - src/pages/users/LinkUsers.vue - User linking UI
+ *
+ * @modification-notes
+ * To modify this test:
+ * 1. Update CSV formats if user creation/linking schemas change
+ * 2. Adjust site selection logic if permissions mode changes
+ * 3. Update participant home assertions if UI structure changes
+ * 4. Test includes validation of createUsers and linkUsers API responses
+ * 5. Uses assertCurrentSiteSelected() helper to verify site context
+ * 6. Includes best-effort progress report check (doesn't fail if assignment not ready)
+ * 7. Clears cookies/localStorage before participant login for clean session
+ */
+
 import 'cypress-real-events';
 import { assert } from 'chai';
 

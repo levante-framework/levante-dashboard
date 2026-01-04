@@ -1,3 +1,57 @@
+/**
+ * @fileoverview GH#735 [OPEN]: Progress Report Blank for Some Site Admins (403 Errors)
+ *
+ * @description
+ * Tests GitHub issue #735 - verifies that site admins can access progress reports without
+ * encountering 403 (Forbidden) errors when fetching data. This is a permissions system bug
+ * where some site admins were incorrectly denied access to progress report data.
+ *
+ * @test-id gh-0735-open
+ * @category bugs
+ * @github-issue 735
+ *
+ * @setup
+ * - Requires at least one assignment to exist
+ * - Requires a site_admin user account
+ * - Test intercepts Firestore requests to detect 403 errors
+ * - Only runs if E2E_RUN_OPEN_BUGS=true (skipped by default)
+ *
+ * @required-env-vars
+ * - E2E_SITE_NAME (default: ai-tests)
+ * - E2E_AI_SITE_ADMIN_EMAIL or E2E_TEST_EMAIL (required - site_admin account)
+ * - E2E_AI_SITE_ADMIN_PASSWORD or E2E_TEST_PASSWORD (required)
+ * - E2E_RUN_OPEN_BUGS=true (required to run this test, otherwise skipped)
+ *
+ * @test-cases
+ * 1. Set up interceptors to detect 403 errors on Firestore requests
+ * 2. Sign in as site_admin and select site
+ * 3. Navigate to home page
+ * 4. Open progress report for any assignment
+ * 5. Verify progress report page loads
+ * 6. Verify data table is visible
+ * 7. Verify no 403 errors occurred
+ *
+ * @expected-behavior
+ * - Progress report page loads successfully
+ * - Data table ([data-cy="roar-data-table"]) is visible
+ * - No 403 errors on Firestore runQuery or batchGet requests
+ * - Page title contains "Progress Report"
+ *
+ * @related-docs
+ * - https://github.com/levante-framework/levante-dashboard/issues/735 - Original issue
+ * - src/pages/administration/ProgressReport.vue - Progress report component
+ * - README_TESTS_PERMISSIONS.md - Permissions system documentation
+ *
+ * @modification-notes
+ * To modify this test:
+ * 1. Update intercept patterns if Firestore API endpoints change
+ * 2. Update selectors if progress report UI structure changes
+ * 3. Test is skipped by default (set E2E_RUN_OPEN_BUGS=true to run)
+ * 4. Uses failOn403ForProgressReportRequests() helper to detect permission errors
+ * 5. Test fails if any 403 errors are detected on progress report data fetches
+ * 6. Includes helpful error message listing all 403 URLs if test fails
+ */
+
 import { ignoreKnownHostedUncaughtExceptions, selectSite, signInWithPassword } from '../_helpers';
 
 // GH#735: For some (newly created) site admins, progress report is blank due to a 403 when fetching data.

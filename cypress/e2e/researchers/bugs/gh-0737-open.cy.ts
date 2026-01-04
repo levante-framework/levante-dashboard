@@ -1,3 +1,55 @@
+/**
+ * @fileoverview GH#737 [OPEN]: Prohibit Identical Class Names Within Site
+ *
+ * @description
+ * Tests GitHub issue #737 - verifies that the system prevents creating classes with duplicate
+ * names within the same site, even if they're in different schools. This ensures data integrity
+ * and prevents user confusion when classes have identical names.
+ *
+ * @test-id gh-0737-open
+ * @category bugs
+ * @github-issue 737
+ *
+ * @setup
+ * - Test creates two schools and attempts to create classes with the same name
+ * - Requires site selection
+ * - Only runs if E2E_RUN_OPEN_BUGS=true (skipped by default)
+ *
+ * @required-env-vars
+ * - E2E_SITE_NAME (default: ai-tests)
+ * - E2E_TEST_EMAIL (required)
+ * - E2E_TEST_PASSWORD (required)
+ * - E2E_RUN_OPEN_BUGS=true (required to run this test, otherwise skipped)
+ *
+ * @test-cases
+ * 1. Sign in and select site
+ * 2. Create School A
+ * 3. Create School B
+ * 4. Create Class with name X in School A (should succeed)
+ * 5. Attempt to create Class with name X in School B (should fail with duplicate error)
+ *
+ * @expected-behavior
+ * - First class creation succeeds
+ * - Second class creation fails with error: "Class Creation Error"
+ * - Error message: "Class with name {name} already exists" (case-insensitive)
+ * - Form submission is blocked
+ *
+ * @related-docs
+ * - https://github.com/levante-framework/levante-dashboard/issues/737 - Original issue
+ * - src/components/modals/AddGroupModal.vue - Class creation UI
+ * - src/composables/mutations/useUpsertOrgMutation.ts - Backend validation
+ *
+ * @modification-notes
+ * To modify this test:
+ * 1. Update error message text if validation messages change
+ * 2. Update selectors if modal structure changes
+ * 3. Test is skipped by default (set E2E_RUN_OPEN_BUGS=true to run)
+ * 4. Uses reloadGroupsPage() helper to ensure cached queries refresh
+ * 5. Uses waitForGroupRow() helper to wait for async table updates
+ * 6. Test validates uniqueness at site level (not school level)
+ * 7. Includes helper functions for clarity (openAddGroupModal, selectOrgType, etc.)
+ */
+
 import { ignoreKnownHostedUncaughtExceptions, selectSite, signInWithPassword, typeInto } from '../_helpers';
 
 // GH#737: Prohibit identical class names within a site (even across different schools).

@@ -1,3 +1,47 @@
+/**
+ * @fileoverview Dev Login: Basic Authentication Smoke Test
+ *
+ * @description
+ * Simple smoke test for the sign-in flow. Verifies that email/password authentication
+ * works and that users are redirected appropriately after login. Used for quick validation
+ * of authentication infrastructure.
+ *
+ * @test-id dev-login
+ * @category utility
+ *
+ * @setup
+ * - No special setup required
+ * - Uses default test credentials if env vars not set
+ *
+ * @required-env-vars
+ * - E2E_USE_ENV (optional - if false, uses hardcoded defaults)
+ * - E2E_BASE_URL (default: http://localhost:5173/signin)
+ * - E2E_TEST_EMAIL (default: student@levante.test)
+ * - E2E_TEST_PASSWORD (default: student123)
+ *
+ * @test-cases
+ * 1. Visit sign-in page
+ * 2. Enter email and password
+ * 3. Submit form
+ * 4. Verify redirect (either to nav bar or error message)
+ *
+ * @expected-behavior
+ * - Sign-in form is accessible
+ * - Form submission completes
+ * - On success: redirects away from /signin and nav bar appears
+ * - On failure: stays on /signin and shows error message
+ *
+ * @related-docs
+ * - src/pages/SignIn.vue - Sign-in page component
+ *
+ * @modification-notes
+ * To modify this test:
+ * 1. Update default credentials if test account changes
+ * 2. Update selectors if sign-in form structure changes
+ * 3. Test uses E2E_USE_ENV flag to toggle between env vars and defaults
+ * 4. Simple test - mainly for quick validation of auth flow
+ */
+
 import 'cypress-real-events';
 
 const useEnvFlag: boolean = (() => {

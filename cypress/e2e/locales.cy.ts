@@ -1,3 +1,53 @@
+/**
+ * @fileoverview Locales: Multi-Language Sign-In Page Smoke Test
+ *
+ * @description
+ * Tests that the sign-in page renders correctly across multiple locales/languages.
+ * Verifies that the UI is properly internationalized and that authentication works
+ * regardless of the selected locale. Can optionally skip login to test rendering only.
+ *
+ * @test-id locales
+ * @category utility
+ *
+ * @setup
+ * - No special setup required
+ * - Can run without backend if E2E_SKIP_LOGIN=true (tests rendering only)
+ *
+ * @required-env-vars
+ * - E2E_USE_ENV (optional - if false, uses hardcoded defaults)
+ * - E2E_BASE_URL (default: http://localhost:5173/signin)
+ * - E2E_TEST_EMAIL (default: student@levante.test)
+ * - E2E_TEST_PASSWORD (default: student123)
+ * - E2E_SKIP_LOGIN (optional - if true, only tests page rendering, no auth)
+ * - E2E_LOCALES (optional - comma-separated list, defaults to 10 locales)
+ *
+ * @test-cases
+ * Tests each locale:
+ * 1. Set locale in sessionStorage before page load
+ * 2. Visit sign-in page
+ * 3. Verify sign-in form renders (at least 2 inputs)
+ * 4. If E2E_SKIP_LOGIN=false: login and verify redirect
+ * 5. If E2E_SKIP_LOGIN=true: verify sign-in text appears
+ *
+ * @expected-behavior
+ * - Sign-in page renders correctly for all locales
+ * - Form inputs are visible
+ * - Login works (if not skipped)
+ * - Redirects away from /signin after successful login
+ *
+ * @related-docs
+ * - src/pages/SignIn.vue - Sign-in page component
+ * - src/translations/i18n.ts - Internationalization setup
+ *
+ * @modification-notes
+ * To modify this test:
+ * 1. Update defaultLocales array to add/remove locales
+ * 2. Update sessionStorage keys if locale storage mechanism changes
+ * 3. Test ignores Firebase auth network errors when E2E_SKIP_LOGIN=true
+ * 4. Uses setLocaleBeforeLoad() helper to inject locale before page load
+ * 5. Default locales: en, en-US, es, es-CO, de, fr-CA, nl, en-GH, de-CH, es-AR
+ */
+
 import 'cypress-real-events';
 
 // Ignore Firebase auth network errors when skipping login

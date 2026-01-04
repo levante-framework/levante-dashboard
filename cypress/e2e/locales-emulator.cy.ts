@@ -1,3 +1,51 @@
+/**
+ * @fileoverview Locales Emulator: Multi-Language Login Test for Emulator
+ *
+ * @description
+ * Similar to locales.cy.ts but specifically designed for emulator runs (HTTP, not HTTPS).
+ * Tests that login works correctly across multiple locales when running against the Firebase
+ * emulator. Simpler than locales.cy.ts (no skip-login option).
+ *
+ * @test-id locales-emulator
+ * @category utility
+ *
+ * @setup
+ * - Requires Firebase emulator to be running
+ * - Uses HTTP (not HTTPS) for emulator compatibility
+ *
+ * @required-env-vars
+ * - E2E_USE_ENV (optional - if false, uses hardcoded defaults)
+ * - E2E_BASE_URL (default: http://localhost:5173/signin)
+ * - E2E_TEST_EMAIL (default: student@levante.test)
+ * - E2E_TEST_PASSWORD (default: student123)
+ * - E2E_LOCALES (optional - comma-separated list, defaults to 10 locales)
+ *
+ * @test-cases
+ * Tests each locale:
+ * 1. Set locale in sessionStorage before page load
+ * 2. Visit sign-in page
+ * 3. Verify sign-in form renders (at least 2 inputs)
+ * 4. Login with credentials
+ * 5. Verify redirect away from /signin
+ *
+ * @expected-behavior
+ * - Sign-in page renders correctly for all locales
+ * - Login succeeds for all locales
+ * - Redirects away from /signin after successful login
+ *
+ * @related-docs
+ * - locales.cy.ts - Similar test with skip-login option
+ * - README_TESTS.md - General testing documentation
+ *
+ * @modification-notes
+ * To modify this test:
+ * 1. Update defaultLocales array to add/remove locales
+ * 2. Update sessionStorage keys if locale storage mechanism changes
+ * 3. Test is simpler than locales.cy.ts (no skip-login option)
+ * 4. Designed specifically for emulator runs (HTTP URLs)
+ * 5. Default locales: en, en-US, es, es-CO, de, fr-CA, nl, en-GH, de-CH, es-AR
+ */
+
 import 'cypress-real-events';
 
 // Flag to use env-overrides
