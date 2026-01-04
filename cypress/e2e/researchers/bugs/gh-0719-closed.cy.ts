@@ -1,3 +1,51 @@
+/**
+ * @fileoverview GH#719 [CLOSED]: Assignment Cards Show "See Details" When Stats Missing
+ *
+ * @description
+ * Regression test for GitHub issue #719. Verifies that assignment cards continue to display
+ * "See Details" buttons even when progress statistics documents are missing from Firestore.
+ * This ensures the UI remains functional even if stats collection is incomplete.
+ *
+ * @test-id gh-0719-closed
+ * @category bugs
+ * @github-issue 719
+ *
+ * @setup
+ * - Requires at least one assignment to exist
+ * - Test intercepts Firestore batchGet requests to simulate missing stats documents
+ * - Site selection required for permissions mode
+ *
+ * @required-env-vars
+ * - E2E_SITE_NAME (default: ai-tests)
+ * - E2E_AI_SITE_ADMIN_EMAIL or E2E_TEST_EMAIL (required)
+ * - E2E_AI_SITE_ADMIN_PASSWORD or E2E_TEST_PASSWORD (required)
+ *
+ * @test-cases
+ * 1. Intercept Firestore batchGet to return missing documents for all /stats/ requests
+ * 2. Sign in and select site
+ * 3. Navigate to home page
+ * 4. Verify assignment cards render
+ * 5. Verify "See Details" buttons are visible despite missing stats
+ *
+ * @expected-behavior
+ * - Assignment cards render successfully even when stats docs are missing
+ * - "See Details" buttons ([data-cy="button-progress"]) are visible
+ * - No errors prevent card rendering
+ * - UI remains functional for navigation to progress reports
+ *
+ * @related-docs
+ * - https://github.com/levante-framework/levante-dashboard/issues/719 - Original issue
+ * - src/pages/HomeAdministrator.vue - Assignment cards component
+ *
+ * @modification-notes
+ * To modify this test:
+ * 1. Update intercept pattern if Firestore API structure changes
+ * 2. Update selectors if assignment card structure changes
+ * 3. Test was updated to handle site selection gracefully (checks if dropdown exists)
+ * 4. Uses ensureSiteSelected() helper to handle permissions mode
+ * 5. Test simulates missing stats by intercepting batchGet and returning { missing: { name } }
+ */
+
 import 'cypress-real-events';
 import { assert } from 'chai';
 

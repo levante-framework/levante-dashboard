@@ -1,3 +1,50 @@
+/**
+ * @fileoverview Researcher Docs Scenario: Complete Workflow E2E
+ *
+ * @description
+ * Tests the complete researcher workflow as documented in the researcher documentation website.
+ * This is a comprehensive end-to-end test that covers: creating groups → adding users → creating
+ * assignments → monitoring completion. Designed to produce a single video artifact for documentation.
+ *
+ * @test-id task-researcher-docs-scenario
+ * @category tasks
+ *
+ * @setup
+ * - Test self-seeds all required data (cohort, users, assignment)
+ * - Uses timestamp-based naming to avoid conflicts
+ * - Creates child, caregiver, and teacher users with proper linking
+ *
+ * @required-env-vars
+ * - E2E_SITE_NAME (default: ai-tests)
+ * - E2E_AI_SITE_ADMIN_EMAIL or E2E_TEST_EMAIL (required)
+ * - E2E_AI_SITE_ADMIN_PASSWORD or E2E_TEST_PASSWORD (required)
+ *
+ * @test-cases
+ * 1. Sign in as administrator (via "Are you an Admin?" prompt)
+ * 2. Create a new Cohort group
+ * 3. Upload CSV to add users (child, caregiver, teacher) with linking relationships
+ * 4. Create an assignment for the cohort with a selected variant
+ * 5. Navigate to progress report (monitor completion)
+ *
+ * @expected-behavior
+ * - All workflow steps complete successfully
+ * - Users are created and linked correctly
+ * - Assignment is created and processing message appears
+ * - Progress report page loads (may be empty if no completions yet)
+ *
+ * @related-docs
+ * - https://researcher.levante-network.org/dashboard - Researcher documentation website
+ * - README_TESTS.md - General testing documentation
+ *
+ * @modification-notes
+ * To modify this test:
+ * 1. Update CSV format if user creation schema changes
+ * 2. Adjust variant selection logic if UI changes
+ * 3. Update progress report navigation if route structure changes
+ * 4. Test includes fallback logic for assignment card appearance (async processing)
+ * 5. Uses intercepts to validate API responses (createUsers, upsertAdministration)
+ */
+
 import 'cypress-real-events';
 import { assert } from 'chai';
 

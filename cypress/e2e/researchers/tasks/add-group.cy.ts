@@ -1,3 +1,48 @@
+/**
+ * @fileoverview Add Group: Create Cohort Workflow
+ *
+ * @description
+ * Tests the basic workflow of creating a new Cohort group via the Add Group modal.
+ * Verifies that the modal opens, org type can be selected, and the cohort is created successfully.
+ *
+ * @test-id task-add-group
+ * @category tasks
+ *
+ * @setup
+ * - Requires a site to be selected (test uses ai-tests by default)
+ * - User must have permissions to create cohorts
+ *
+ * @required-env-vars
+ * - E2E_SITE_NAME (default: ai-tests)
+ * - E2E_AI_SITE_ADMIN_EMAIL or E2E_TEST_EMAIL (required)
+ * - E2E_AI_SITE_ADMIN_PASSWORD or E2E_TEST_PASSWORD (required)
+ *
+ * @test-cases
+ * 1. Sign in and select site
+ * 2. Navigate to /list-groups
+ * 3. Click "Add Group" button
+ * 4. Select "Cohort" from org type dropdown
+ * 5. Enter cohort name
+ * 6. Submit and verify success toast appears
+ *
+ * @expected-behavior
+ * - Modal opens with "Add New" title
+ * - Cohort option is available in org type dropdown
+ * - Success toast: "Cohort created successfully."
+ * - Modal closes after successful creation
+ *
+ * @related-docs
+ * - src/components/modals/AddGroupModal.vue - Add Group modal component
+ * - src/pages/groups/ListGroups.vue - Groups listing page
+ *
+ * @modification-notes
+ * To modify this test:
+ * 1. Update selectors if modal structure changes ([data-testid="modalTitle"], [data-cy="dropdown-org-type"])
+ * 2. Change org type if testing different group types (School, Class, Site)
+ * 3. Update success message assertion if toast text changes
+ * 4. Test was updated to use shared helpers (selectSite, signInWithPassword) for consistency
+ */
+
 import 'cypress-real-events';
 
 import { selectSite, signInWithPassword } from '../_helpers';

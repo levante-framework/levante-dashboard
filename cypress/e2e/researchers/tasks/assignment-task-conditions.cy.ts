@@ -1,3 +1,54 @@
+/**
+ * @fileoverview Assignment Task Conditions: Age-Based Condition Configuration
+ *
+ * @description
+ * Tests the assignment task conditions feature, specifically verifying that age-based
+ * conditions can be configured for tasks and are correctly included in the assignment
+ * creation payload. Validates both UI interaction and API payload structure.
+ *
+ * @test-id task-assignment-task-conditions
+ * @category tasks
+ *
+ * @setup
+ * - Test self-seeds a cohort if needed
+ * - Requires a site to be selected
+ * - Needs at least one variant available for selection
+ *
+ * @required-env-vars
+ * - E2E_SITE_NAME (default: ai-tests)
+ * - E2E_AI_SITE_ADMIN_EMAIL or E2E_TEST_EMAIL (required)
+ * - E2E_AI_SITE_ADMIN_PASSWORD or E2E_TEST_PASSWORD (required)
+ *
+ * @test-cases
+ * 1. Sign in and select site
+ * 2. Create a cohort (if needed)
+ * 3. Create assignment and select cohort
+ * 4. Select a variant
+ * 5. Edit variant conditions: add "Age >= 5" assigned condition
+ * 6. Verify condition appears in UI
+ * 7. Submit assignment and verify condition is included in upsertAdministration payload
+ *
+ * @expected-behavior
+ * - Condition editor dialog opens and closes correctly
+ * - Age condition can be configured (field: Age, operator: Greater Than or Equal, value: 5)
+ * - Condition is displayed in the variant card after saving
+ * - upsertAdministration request includes condition in assessments[].conditions.assigned.conditions[]
+ * - Condition format: { field: 'age', op: 'GREATER_THAN_OR_EQUAL', value: 5 }
+ *
+ * @related-docs
+ * - src/pages/CreateAssignment.vue - Assignment creation UI
+ * - src/components/VariantCard.vue - Variant selection and condition editing
+ *
+ * @modification-notes
+ * To modify this test:
+ * 1. Update condition field/operator/value if schema changes
+ * 2. Update selectors if condition editor UI changes (PrimeVue Select overlays)
+ * 3. Update payload validation if upsertAdministration structure changes
+ * 4. Test handles PrimeVue Select overlays that render outside dialog (appended to body)
+ * 5. Uses intercept to validate API payload structure
+ * 6. Includes validation error checking for common blocking messages
+ */
+
 import 'cypress-real-events';
 import { assert } from 'chai';
 
