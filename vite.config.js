@@ -85,6 +85,27 @@ function e2eRunnerPlugin() {
     return dir;
   }
 
+  function readTargetBaseUrl() {
+    // Priority:
+    // 1) explicit env E2E_APP_URL
+    // 2) last deployed preview URL persisted by scripts/deploy-preview-dev.sh
+    // 3) fallback default
+    const fromEnv = process.env.E2E_APP_URL;
+    if (fromEnv && String(fromEnv).trim()) return String(fromEnv).trim();
+
+    try {
+      const p = path.join(process.cwd(), '.tmp', 'e2e-runner', 'target-base-url.txt');
+      if (fs.existsSync(p)) {
+        const s = fs.readFileSync(p, 'utf8').trim();
+        if (s) return s;
+      }
+    } catch {
+      // ignore
+    }
+
+    return DEFAULT_E2E_APP_URL;
+  }
+
   function parseSpecBasename(command) {
     try {
       const m = String(command || '').match(/--spec\s+([^\s]+)/);
@@ -249,7 +270,7 @@ function e2eRunnerPlugin() {
       server.middlewares.use('/__e2e/config', async (req, res, next) => {
         if (req.method !== 'GET') return next();
         return sendJson(res, 200, {
-          targetBaseUrl: process.env.E2E_APP_URL ?? DEFAULT_E2E_APP_URL,
+          targetBaseUrl: readTargetBaseUrl(),
           bucket: BUCKET_NAME,
           objectPath: OBJECT_PATH,
           hasGsutil: gsutilExists(),
@@ -299,7 +320,9 @@ function e2eRunnerPlugin() {
           const specBasename = parseSpecBasename(command);
 
           // For Permissions task runs, do a full ai-tests reset/bootstrap and inject the freshly-created creds.
-          let effectiveCommand = command;
+          const targetBaseUrl = readTargetBaseUrl();
+          // Always inject E2E_APP_URL so catalog commands never fall back to stale hosted defaults.
+          let effectiveCommand = `E2E_APP_URL=${shellEscape(targetBaseUrl)} ${command}`;
           if (id === 'task-permissions') {
             logStream.write('[e2e-runner] bootstrapping ai-tests for permissions...\n');
             const boot = bootstrapAiTestsForPermissions(logStream);
@@ -321,6 +344,7 @@ function e2eRunnerPlugin() {
 
             // Provide credentials + site context to Cypress for this run.
             const envPrefix = [
+              `E2E_APP_URL=${shellEscape(targetBaseUrl)}`,
               `E2E_SITE_NAME=${shellEscape('ai-tests')}`,
               `E2E_USE_SESSION=${shellEscape('TRUE')}`,
               `E2E_FIREBASE_PROJECT_ID=${shellEscape('hs-levante-admin-dev')}`,
