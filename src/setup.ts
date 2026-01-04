@@ -53,5 +53,8 @@ export const createAppInstance = (): VueApp<Element> => {
  */
 export const mountApp = (): void => {
   const app = createAppInstance();
-  app.mount('#app');
+  const mounted = app.mount('#app');
+  if ((window as any).Cypress) {
+    (window as any).__LEVANTE_APP__ = mounted;
+  }
 };
