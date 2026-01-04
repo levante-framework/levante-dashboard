@@ -5,16 +5,15 @@
         <div class="flex flex-column align-items-start mb-2 md:flex-row w-full justify-content-between">
           <div class="flex align-items-center gap-3 mb-4 md:mb-0">
             <div class="admin-page-header mr-4" data-testid="groups-page-title">Groups</div>
-            <PermissionGuard resource="groups" action="create" sub-resource="cohorts">
-              <PvButton
-                class="bg-primary text-white border-none p-2 ml-auto"
-                data-testid="add-group-btn"
-                data-cy="add-group-btn"
-                :disabled="isAddGroupDisabled"
-                @click="isAddGroupModalVisible = true"
-                >Add Group</PvButton
-              >
-            </PermissionGuard>
+            <PvButton
+              v-if="canCreateAnyGroupType"
+              class="bg-primary text-white border-none p-2 ml-auto"
+              data-testid="add-group-btn"
+              data-cy="add-group-btn"
+              :disabled="isAddGroupDisabled"
+              @click="isAddGroupModalVisible = true"
+              >Add Group</PvButton
+            >
             <PermissionGuard resource="users" action="create">
               <PvButton
                 class="bg-primary text-white border-none p-2 ml-auto"
@@ -236,6 +235,10 @@ import { ROLES } from '@/constants/roles';
 import { normalizeToLowercase } from '@/helpers';
 import _useDistrictsQuery from '@/composables/queries/_useDistrictsQuery';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
+import { usePermissions } from '@/composables/usePermissions';
+import { PERMISSION_ACTIONS } from '@/constants/roles';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 
 const router = useRouter();
 const initialized = ref(false);
@@ -277,10 +280,23 @@ const addUsers = () => {
 const authStore = useAuthStore();
 const { currentSite, roarfirekit, shouldUsePermissions, userClaims } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
+const { can, canGlobal } = usePermissions();
 
 const isAddGroupDisabled = computed(() => {
   if (!shouldUsePermissions.value) return false;
   return !currentSite.value || currentSite.value === 'any';
+});
+
+// Check if user can create any group type (schools, classes, or cohorts)
+// Note: Sites can only be created by super_admin, not site_admin
+const canCreateAnyGroupType = computed(() => {
+  if (!shouldUsePermissions.value) return true;
+  
+  return (
+    can(FIRESTORE_COLLECTIONS.GROUPS, PERMISSION_ACTIONS.CREATE, FIRESTORE_COLLECTIONS.SCHOOLS) ||
+    can(FIRESTORE_COLLECTIONS.GROUPS, PERMISSION_ACTIONS.CREATE, FIRESTORE_COLLECTIONS.CLASSES) ||
+    can(FIRESTORE_COLLECTIONS.GROUPS, PERMISSION_ACTIONS.CREATE, 'cohorts')
+  );
 });
 
 

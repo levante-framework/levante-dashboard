@@ -1,6 +1,16 @@
 // composables/usePermissions.ts
-import { ref, computed, onMounted, readonly } from 'vue';
-import { CacheService, PermissionDocument, PermissionService, type Resource, type Action, type Role, type UserRole as CoreUserRole, GroupSubResource, AdminSubResource } from '@levante-framework/permissions-core';
+import { ref, computed, readonly, watch } from 'vue';
+import {
+  CacheService,
+  PermissionDocument,
+  PermissionService,
+  type Resource,
+  type Action,
+  type Role,
+  type UserRole as CoreUserRole,
+  GroupSubResource,
+  AdminSubResource,
+} from '@levante-framework/permissions-core';
 import { useAuthStore } from '@/store/auth';
 import { getAxiosInstance, getBaseDocumentPath, convertValues } from '@/helpers/query/utils';
 import _mapValues from 'lodash/mapValues';
@@ -23,6 +33,8 @@ export const usePermissions = () => {
   // console.log('firebaseUser: ', firebaseUser.adminFirebaseUser);
 
   const permissionsLoaded = ref(false);
+  const isLoadingPermissions = ref(false);
+  let inFlightLoad: Promise<void> | null = null;
   const user = computed(() => {
     if (!isAuthenticated() || !firebaseUser.value?.adminFirebaseUser) return null;
 
@@ -52,10 +64,10 @@ export const usePermissions = () => {
     // });
 
     const rawData = response.data;
-    
+
     // Convert Firestore field values to JavaScript values
     const convertedData = _mapValues(rawData.fields, (value) => convertValues(value));
-    
+
 
     const {success, errors } = permissionService.loadPermissions(convertedData as PermissionDocument);
 
@@ -65,12 +77,43 @@ export const usePermissions = () => {
     permissionsLoaded.value = true;
   };
 
-  // Load permissions when component mounts and user is authenticated
-  onMounted(() => {
-    if (shouldUsePermissions.value && isAuthenticated()) {
-      loadPermissions();
-    }
-  });
+  const ensurePermissionsLoaded = async () => {
+    if (permissionsLoaded.value) return;
+    if (isLoadingPermissions.value) return inFlightLoad ?? undefined;
+
+    isLoadingPermissions.value = true;
+    inFlightLoad = (async () => {
+      try {
+        await loadPermissions();
+      } finally {
+        isLoadingPermissions.value = false;
+        inFlightLoad = null;
+      }
+    })();
+
+    return inFlightLoad;
+  };
+
+  // Load permissions whenever permissions mode becomes enabled after login.
+  // Previously this only ran onMounted, which is flaky because shouldUsePermissions is set after userClaims load.
+  watch(
+    [
+      () => shouldUsePermissions.value,
+      () => isAuthenticated(),
+      () => firebaseUser.value?.adminFirebaseUser?.uid,
+    ],
+    async ([usePerms, authed, uid]) => {
+      if (!usePerms || !authed || !uid) {
+        permissionsLoaded.value = false;
+        isLoadingPermissions.value = false;
+        inFlightLoad = null;
+        return;
+      }
+
+      await ensurePermissionsLoaded();
+    },
+    { immediate: true },
+  );
 
   const can = (resource: Resource, action: Action, subResource?: GroupSubResource | AdminSubResource): boolean => {
     if (!shouldUsePermissions.value || !permissionsLoaded.value || !user.value || !currentSite.value) return false;

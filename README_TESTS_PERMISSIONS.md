@@ -11,9 +11,11 @@ Source spec: `https://www.notion.so/Permissions-234244e26d9b80a98181c67ea1f27e91
 
 ### Roles (spec)
 
-- **super_admin**: internal dev access to everything
-- **site_admin**: full control over their site’s resources
-- **admin**: subset of actions within their site
+**Important**: `admin` and `site_admin` are **different roles** with different permission levels.
+
+- **super_admin**: internal dev access to everything (can create Sites globally)
+- **site_admin**: full control over their site's resources (can create Schools, Classes, Cohorts within their site, but **cannot create Sites** - they manage one existing site)
+- **admin**: subset of actions within their site (**RUD for groups** - can read, update, delete groups but cannot create Sites, Schools, Classes, or Cohorts)
 - **research_assistant**: read access with ability to create users
 - **participant**: no access to admin side of dashboard
 
@@ -41,9 +43,16 @@ Source spec: `https://www.notion.so/Permissions-234244e26d9b80a98181c67ea1f27e91
 
 ### Action matrix (spec summary)
 
-- **Groups**: super_admin/site_admin CRUDE; admin CRUD; research_assistant R; participant -
+**Note**: `admin` and `site_admin` are different roles with different permissions.
+
+- **Groups**: 
+  - super_admin: CRUDE (can create Sites globally, and Schools/Classes/Cohorts within any site)
+  - site_admin: CRUDE for Schools/Classes/Cohorts within their site, but **cannot create Sites** (they manage one existing site)
+  - admin: **RUD (read, update, delete)** - cannot create any groups (Sites, Schools, Classes, or Cohorts), but can update/delete existing groups
+  - research_assistant: R (read-only)
+  - participant: - (no access)
 - **Assignments**: super_admin/site_admin CRUDE; admin CRUD; research_assistant R; participant -
-- **Users**: super_admin/site_admin CRUDE; admin CRUD; research_assistant CR; participant -
+- **Users**: super_admin/site_admin CRUDE; admin **CRU (create, read, update - no delete)**; research_assistant CR; participant -
 - **Admins**: super_admin/site_admin CRUDE; admin R; research_assistant R; participant -
 - **Tasks**: super_admin/site_admin CRUDE; admin exclude-only for tasks management; research_assistant R; participant -
 

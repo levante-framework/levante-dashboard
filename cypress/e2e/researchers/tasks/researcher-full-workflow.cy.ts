@@ -57,6 +57,12 @@
 import 'cypress-real-events';
 import { assert } from 'chai';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+import { addAndLinkUsers, typeInto, pickToday } from '../_helpers';
+
 // The hosted dev environment occasionally throws a Firestore permissions error from background listeners.
 // This is not relevant to validating the researcher workflow steps below.
 Cypress.on('uncaught:exception', (err) => {
@@ -72,44 +78,7 @@ const password: string =
   (Cypress.env('E2E_TEST_PASSWORD') as string) ||
   'student123';
 
-interface CreatedUser {
-  uid: string;
-  email: string;
-  password: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function isCreatedUser(value: unknown): value is CreatedUser {
-  if (!isRecord(value)) return false;
-  return typeof value.uid === 'string' && typeof value.email === 'string' && typeof value.password === 'string';
-}
-
-function extractCreatedUsersFromCreateUsersResponse(body: unknown): CreatedUser[] | null {
-  const candidates: unknown[] = [];
-
-  // Common shapes we've seen:
-  // - { data: { data: CreatedUser[] } }
-  // - { data: CreatedUser[] }
-  // - { result: { data: CreatedUser[] } } (callable response envelope)
-  // - CreatedUser[]
-  if (isRecord(body)) {
-    candidates.push(body.data);
-    if (isRecord(body.data)) candidates.push(body.data.data);
-    if (isRecord(body.result)) candidates.push(body.result.data);
-  } else {
-    candidates.push(body);
-  }
-
-  for (const candidate of candidates) {
-    if (!Array.isArray(candidate)) continue;
-    if (candidate.every(isCreatedUser)) return candidate as CreatedUser[];
-  }
-
-  return null;
-}
+// CreatedUser interface is now imported from _helpers
 
 function escapeRegExp(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -137,13 +106,7 @@ function assertCurrentSiteSelected() {
   });
 }
 
-function typeInto(selector: string, value: string, opts: Partial<Cypress.TypeOptions> = {}) {
-  cy.get(selector)
-    .should('be.visible')
-    .click()
-    .type('{selectall}{backspace}', { delay: 0 })
-    .type(value, { delay: 0, ...opts });
-}
+// typeInto is now imported from _helpers
 
 function signIn() {
   // Firebase Auth (password) goes through Google Identity Toolkit.
@@ -187,19 +150,7 @@ function signIn() {
   cy.get('#site-header', { timeout: 90000 }).should('be.visible');
 }
 
-function pickToday(datePickerSelector: string) {
-  cy.get(datePickerSelector).should('be.visible').click();
-  cy.get('body').then(($body) => {
-    if ($body.find('button').filter((_, el) => el.textContent?.trim() === 'Today').length) {
-      cy.contains('button', /^Today$/).click({ force: true });
-      return;
-    }
-
-    const today = `${new Date().getDate()}`;
-    cy.get('.p-datepicker-calendar', { timeout: 60000 }).contains('span', new RegExp(`^${today}$`)).click({ force: true });
-  });
-  cy.get('body').click(0, 0);
-}
+// pickToday is now imported from _helpers
 
 describe('researcher README workflow (hosted): groups → users → link → assignment', () => {
   it('can set up, populate, and create an assignment for a site', () => {
@@ -257,91 +208,20 @@ describe('researcher README workflow (hosted): groups → users → link → ass
     cy.contains('Success', { timeout: 30000 }).should('exist');
     cy.contains('Cohort created successfully.', { timeout: 30000 }).should('exist');
 
-    // 2) Add Users: upload CSV and create users
-    cy.intercept('POST', '**/createUsers').as('createUsers');
-
-    cy.visit('/add-users');
+    // 2) Add and Link Users: following documented two-step process
+    // Step 2B: Add users to the dashboard
+    // Step 2C: Link users as needed
     assertCurrentSiteSelected();
-    cy.get('[data-cy="upload-add-users-csv"]').within(() => {
-      const csv = [
-        'id,userType,month,year,cohort,caregiverId,teacherId',
-        `${childId},child,5,2017,${cohortName},${caregiverId},${teacherId}`,
-        `${caregiverId},caregiver,5,2017,${cohortName},,`,
-        `${teacherId},teacher,5,2017,${cohortName},,`,
-      ].join('\n');
-
-      cy.get('input[type="file"]').selectFile(
-        { contents: Cypress.Buffer.from(csv), fileName: 'users.csv', mimeType: 'text/csv' },
-        { force: true },
-      );
-    });
-
-    // Wait for the CSV to be parsed and accepted (button is only rendered after isFileUploaded=true).
-    cy.contains('File Successfully Uploaded', { timeout: 60000 }).should('exist');
-    cy.get('[data-cy="button-add-users-from-file"]', { timeout: 60000 }).should('be.visible').click();
-    cy.wait('@createUsers', { timeout: 60000 }).then((interception) => {
-      const status = interception.response?.statusCode;
-      const body = interception.response?.body;
-      const requestBody = interception.request?.body;
-      const created = extractCreatedUsersFromCreateUsersResponse(body);
-
-      if (!created) {
-        throw new Error(
-          `createUsers returned unexpected body (status=${status}). request=${JSON.stringify(
-            requestBody,
-          )} body=${JSON.stringify(body)}`,
-        );
-      }
-
-      assert.isAtLeast(created.length, 3, 'createUsers should return at least 3 created users');
-      cy.wrap(created, { log: false }).as('createdUsers');
-      cy.wrap({ email: created[0]?.email, password: created[0]?.password }, { log: false }).as('childLogin');
-    });
-    cy.contains('User Creation Successful', { timeout: 60000 }).should('exist');
-
-    // 2) Link Users: build a linking CSV with returned UIDs and upload it
-    cy.intercept('POST', '**/linkUsers').as('linkUsers');
-
-    cy.get('@createdUsers').then((createdUsers) => {
-      const created = createdUsers as unknown as CreatedUser[];
-      assert.isAtLeast(created.length, 3, 'createUsers should return at least 3 created users');
-      assert.isString(created[0]?.uid, 'child uid');
-      assert.isString(created[1]?.uid, 'caregiver uid');
-      assert.isString(created[2]?.uid, 'teacher uid');
-
-      const rows = [
-        { id: childId, userType: 'child', uid: created?.[0]?.uid, caregiverId, teacherId },
-        { id: caregiverId, userType: 'caregiver', uid: created?.[1]?.uid, caregiverId: '', teacherId: '' },
-        { id: teacherId, userType: 'teacher', uid: created?.[2]?.uid, caregiverId: '', teacherId: '' },
-      ];
-
-      rows.forEach((r) => assert.isString(r.uid, `uid for ${r.id}`));
-
-      const linkCsv = [
-        'id,userType,uid,caregiverId,teacherId',
-        `${rows[0]!.id},${rows[0]!.userType},${rows[0]!.uid},${rows[0]!.caregiverId},${rows[0]!.teacherId}`,
-        `${rows[1]!.id},${rows[1]!.userType},${rows[1]!.uid},,`,
-        `${rows[2]!.id},${rows[2]!.userType},${rows[2]!.uid},,`,
-      ].join('\n');
-
-      cy.visit('/link-users');
-      cy.get('[data-cy="upload-link-users-csv"]').within(() => {
-        cy.get('input[type="file"]').selectFile(
-          { contents: Cypress.Buffer.from(linkCsv), fileName: 'link-users.csv', mimeType: 'text/csv' },
-          { force: true },
-        );
-      });
-
-      cy.get('[data-cy="button-start-linking-users"]').should('be.visible').click();
-      cy.wait('@linkUsers', { timeout: 60000 }).then((interception) => {
-        const status = interception.response?.statusCode;
-        const body = interception.response?.body;
-        if (status && status >= 400) {
-          throw new Error(`linkUsers failed: HTTP ${status} body=${JSON.stringify(body)}`);
-        }
-        const maybeError = isRecord(body) ? body.error : undefined;
-        if (maybeError) throw new Error(`linkUsers failed: body.error=${JSON.stringify(maybeError)}`);
-      });
+    addAndLinkUsers({
+      childId,
+      caregiverId,
+      teacherId,
+      cohortName,
+      month: 5,
+      year: 2017,
+    }).then((result) => {
+      cy.wrap(result.createdUsers, { log: false }).as('createdUsers');
+      cy.wrap(result.childLogin, { log: false }).as('childLogin');
     });
 
     // 3) Create Assignments: select cohort, pick tasks, submit
