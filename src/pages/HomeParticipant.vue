@@ -1,11 +1,11 @@
 <template>
-  <div data-testid="home-participant">
+  <div>
     <div v-if="!initialized || isLoading || isFetching">
       <LevanteSpinner fullscreen />
     </div>
 
     <div v-else-if="!hasAssignments">
-      <div class="col-full text-center py-8" data-testid="home-participant-no-assignments">
+      <div class="col-full text-center py-8">
         <h1>{{ $t('homeParticipant.noAssignments') }}</h1>
         <p class="text-center">
           {{ $t('homeParticipant.contactAdministrator') }}
@@ -20,7 +20,7 @@
     </div>
 
     <div v-else>
-      <div class="assignment" data-testid="home-participant-has-assignments">
+      <div class="assignment">
         <div class="assignment__header">
           <PvTag
             :value="t(`participantSidebar.status${capitalize(getAssignmentStatus(selectedAssignment))}`)"
@@ -74,6 +74,7 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
   <ConsentModal
     v-if="showConsent"
@@ -104,6 +105,7 @@ import useDistrictsQuery from '@/composables/queries/useDistrictsQuery';
 import ConsentModal from '@/components/ConsentModal.vue';
 import GameTabs from '@/components/GameTabs.vue';
 import ParticipantSidebar from '@/components/ParticipantSidebar.vue';
+import SideBar from '@/components/SideBar.vue';
 import { useI18n } from 'vue-i18n';
 import axios from 'axios';
 import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
