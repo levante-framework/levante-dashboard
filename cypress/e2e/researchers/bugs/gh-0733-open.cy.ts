@@ -16,8 +16,8 @@
  * - Only runs if E2E_RUN_OPEN_BUGS=true (skipped by default)
  *
  * @required-env-vars
- * - E2E_TEST_EMAIL (required - SuperAdmin account)
- * - E2E_TEST_PASSWORD (required)
+ * - E2E_AI_SUPER_ADMIN_EMAIL (required - SuperAdmin account)
+ * - E2E_AI_SUPER_ADMIN_PASSWORD (required)
  * - E2E_RUN_OPEN_BUGS=true (required to run this test, otherwise skipped)
  *
  * @test-cases
@@ -50,8 +50,10 @@
 
 import { ignoreKnownHostedUncaughtExceptions, signInWithPassword, typeInto } from '../_helpers';
 
-const email: string = (Cypress.env('E2E_TEST_EMAIL') as string) || 'student@levante.test';
-const password: string = (Cypress.env('E2E_TEST_PASSWORD') as string) || 'student123';
+const email: string | undefined =
+  (Cypress.env('E2E_AI_SUPER_ADMIN_EMAIL') as string | undefined) || (Cypress.env('E2E_TEST_EMAIL') as string | undefined);
+const password: string | undefined =
+  (Cypress.env('E2E_AI_SUPER_ADMIN_PASSWORD') as string | undefined) || (Cypress.env('E2E_TEST_PASSWORD') as string | undefined);
 
 function openAddGroupModal() {
   cy.get('[data-testid="add-group-btn"]', { timeout: 60000 }).should('be.visible').click();
@@ -68,6 +70,13 @@ describe('GH#733 [OPEN] PERMISSIONS SuperAdmins cannot create sites', () => {
 
   testRunner('allows SuperAdmin to create a Site when no site is selected', () => {
     ignoreKnownHostedUncaughtExceptions();
+
+    if (!email || !password) {
+      throw new Error(
+        'Missing SuperAdmin credentials for GH#733 test. Set E2E_AI_SUPER_ADMIN_EMAIL and E2E_AI_SUPER_ADMIN_PASSWORD (preferred), ' +
+          'or E2E_TEST_EMAIL and E2E_TEST_PASSWORD, in your local .env.',
+      );
+    }
 
     const nonce = Date.now();
     const siteName = `e2e-site-${nonce}`;
