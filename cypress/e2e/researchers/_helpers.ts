@@ -181,3 +181,155 @@ function escapeRegExp(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+export interface CreatedUser {
+  uid: string;
+  email: string;
+  password: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isCreatedUser(value: unknown): value is CreatedUser {
+  if (!isRecord(value)) return false;
+  return typeof value.uid === 'string' && typeof value.email === 'string' && typeof value.password === 'string';
+}
+
+function extractCreatedUsersFromResponse(body: unknown): CreatedUser[] | null {
+  const candidates: unknown[] = [];
+
+  // Common shapes we've seen:
+  // - { data: { data: CreatedUser[] } }
+  // - { data: CreatedUser[] }
+  // - { result: { data: CreatedUser[] } } (callable response envelope)
+  // - CreatedUser[]
+  if (isRecord(body)) {
+    candidates.push(body.data);
+    if (isRecord(body.data)) candidates.push(body.data.data);
+    if (isRecord(body.result)) candidates.push(body.result.data);
+  } else {
+    candidates.push(body);
+  }
+
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate)) continue;
+    if (candidate.every(isCreatedUser)) return candidate as CreatedUser[];
+  }
+
+  return null;
+}
+
+export interface AddAndLinkUsersParams {
+  childId: string;
+  caregiverId: string;
+  teacherId: string;
+  cohortName: string;
+  month?: number;
+  year?: number;
+}
+
+export interface AddAndLinkUsersResult {
+  createdUsers: CreatedUser[];
+  childLogin: { email: string; password: string };
+}
+
+/**
+ * Adds and links users following the documented two-step process:
+ * Step 2B: Add users to the dashboard (upload CSV, get UIDs back)
+ * Step 2C: Link users as needed (upload linking CSV with UIDs)
+ *
+ * This matches the workflow described in the researcher documentation:
+ * https://researcher.levante-network.org/dashboard/add-users
+ *
+ * @param params - User identifiers and cohort information
+ * @returns Created users and child login credentials
+ */
+export function addAndLinkUsers(params: AddAndLinkUsersParams): Cypress.Chainable<AddAndLinkUsersResult> {
+  const { childId, caregiverId, teacherId, cohortName, month = 5, year = 2017 } = params;
+
+  // Step 2B: Add users to the dashboard
+  cy.intercept('POST', '**/createUsers').as('createUsers');
+
+  cy.visit('/add-users');
+  cy.get('[data-cy="upload-add-users-csv"]').within(() => {
+    // Note: caregiverId and teacherId are included in the CSV but will be empty strings
+    // The actual linking happens in Step 2C after we get UIDs back
+    const csv = [
+      'id,userType,month,year,cohort,caregiverId,teacherId',
+      `${childId},child,${month},${year},${cohortName},,`,
+      `${caregiverId},caregiver,${month},${year},${cohortName},,`,
+      `${teacherId},teacher,${month},${year},${cohortName},,`,
+    ].join('\n');
+
+    cy.get('input[type="file"]').selectFile(
+      { contents: Cypress.Buffer.from(csv), fileName: 'users.csv', mimeType: 'text/csv' },
+      { force: true },
+    );
+  });
+
+  cy.contains('File Successfully Uploaded', { timeout: 60000 }).should('exist');
+  cy.get('[data-cy="button-add-users-from-file"]', { timeout: 60000 }).should('be.visible').click();
+  
+  return cy.wait('@createUsers', { timeout: 60000 }).then((interception) => {
+    const status = interception.response?.statusCode;
+    const body = interception.response?.body;
+    const requestBody = interception.request?.body;
+    const created = extractCreatedUsersFromResponse(body);
+
+    if (!created) {
+      throw new Error(
+        `createUsers returned unexpected body (status=${status}). request=${JSON.stringify(
+          requestBody,
+        )} body=${JSON.stringify(body)}`,
+      );
+    }
+
+    assert.isAtLeast(created.length, 3, 'createUsers should return at least 3 created users');
+    assert.isString(created[0]?.uid, 'child uid');
+    assert.isString(created[1]?.uid, 'caregiver uid');
+    assert.isString(created[2]?.uid, 'teacher uid');
+
+    cy.contains('User Creation Successful', { timeout: 60000 }).should('exist');
+
+    // Step 2C: Link users as needed
+    cy.intercept('POST', '**/linkUsers').as('linkUsers');
+
+    const rows = [
+      { id: childId, userType: 'child', uid: created[0]!.uid, caregiverId, teacherId },
+      { id: caregiverId, userType: 'caregiver', uid: created[1]!.uid, caregiverId: '', teacherId: '' },
+      { id: teacherId, userType: 'teacher', uid: created[2]!.uid, caregiverId: '', teacherId: '' },
+    ];
+
+    const linkCsv = [
+      'id,userType,uid,caregiverId,teacherId',
+      `${rows[0]!.id},${rows[0]!.userType},${rows[0]!.uid},${rows[0]!.caregiverId},${rows[0]!.teacherId}`,
+      `${rows[1]!.id},${rows[1]!.userType},${rows[1]!.uid},,`,
+      `${rows[2]!.id},${rows[2]!.userType},${rows[2]!.uid},,`,
+    ].join('\n');
+
+    cy.visit('/link-users');
+    cy.get('[data-cy="upload-link-users-csv"]').within(() => {
+      cy.get('input[type="file"]').selectFile(
+        { contents: Cypress.Buffer.from(linkCsv), fileName: 'link-users.csv', mimeType: 'text/csv' },
+        { force: true },
+      );
+    });
+
+    cy.get('[data-cy="button-start-linking-users"]').should('be.visible').click();
+    cy.wait('@linkUsers', { timeout: 60000 }).then((linkInterception) => {
+      const linkStatus = linkInterception.response?.statusCode;
+      const linkBody = linkInterception.response?.body;
+      if (linkStatus && linkStatus >= 400) {
+        throw new Error(`linkUsers failed: HTTP ${linkStatus} body=${JSON.stringify(linkBody)}`);
+      }
+      const maybeError = isRecord(linkBody) ? linkBody.error : undefined;
+      if (maybeError) throw new Error(`linkUsers failed: body.error=${JSON.stringify(maybeError)}`);
+    });
+
+    return {
+      createdUsers: created,
+      childLogin: { email: created[0]!.email, password: created[0]!.password },
+    };
+  });
+}
