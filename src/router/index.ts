@@ -170,7 +170,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/manage-administrators',
     name: 'ManageAdministrators',
-    component: () => import('@/pages/ManageAdministrators.vue'),
+    component: () => import('@/pages/CreateAdministrator.vue'),
     meta: {
       pageTitle: 'Manage Administrators',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
@@ -327,7 +327,6 @@ const router = createRouter({
 router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
   const authStore = useAuthStore();
   const { shouldUsePermissions, userData } = storeToRefs(authStore);
-  const { isAuthenticated } = authStore;
   const allowedUnauthenticatedRoutes = ['AuthEmailLink', 'AuthEmailSent', 'Debug', 'Maintenance', 'SignIn'];
   const inMaintenanceMode = false;
   const toName = typeof to.name === 'string' ? to.name : '';
@@ -343,7 +342,11 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   }
 
   // Check if user is signed in. If not, go to signin
-  if (!to.path.includes('__/auth/handler') && !isAuthenticated() && !allowedUnauthenticatedRoutes.includes(toName)) {
+  if (
+    !to.path.includes('__/auth/handler') &&
+    !authStore.isAuthenticated() &&
+    !allowedUnauthenticatedRoutes.includes(toName)
+  ) {
     return next({ name: 'SignIn' });
   }
 
