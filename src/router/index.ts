@@ -170,7 +170,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/manage-administrators',
     name: 'ManageAdministrators',
-    component: () => import('@/pages/ManageAdministrators.vue'),
+    component: () => import('@/pages/CreateAdministrator.vue'),
     meta: {
       pageTitle: 'Manage Administrators',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
@@ -327,11 +327,11 @@ const router = createRouter({
 router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
   const authStore = useAuthStore();
   const { shouldUsePermissions, userData } = storeToRefs(authStore);
-  const { isAuthenticated } = authStore;
   const allowedUnauthenticatedRoutes = ['AuthEmailLink', 'AuthEmailSent', 'Debug', 'Maintenance', 'SignIn'];
   const inMaintenanceMode = false;
+  const toName = typeof to.name === 'string' ? to.name : '';
 
-  if (NAVBAR_BLACKLIST.includes(to.name)) {
+  if (typeof to.name === 'string' && (NAVBAR_BLACKLIST as readonly string[]).includes(to.name)) {
     authStore.setShowSideBar(false);
   }
 
@@ -345,7 +345,7 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   if (
     !to.path.includes('__/auth/handler') &&
     !authStore.isAuthenticated() &&
-    !allowedUnauthenticatedRoutes.includes(to.name)
+    !allowedUnauthenticatedRoutes.includes(toName)
   ) {
     return next({ name: 'SignIn' });
   }
@@ -353,7 +353,7 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   // @TODO
   // If we're gonna keep this solution,
   // we need to think about setting up a max num of tries and an error handler.
-  if (!authStore.userData && !allowedUnauthenticatedRoutes.includes(to.name)) {
+  if (!authStore.userData && !allowedUnauthenticatedRoutes.includes(toName)) {
     await new Promise<void>((resolve) => {
       const checkUserData = () => {
         if (userData.value) return resolve();
