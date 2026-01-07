@@ -87,7 +87,7 @@ if [ "$VIDEO" = "true" ] || [ "$VIDEO" = "TRUE" ]; then
 fi
 
 echo "Running Cypress spec(s): ${SPEC_PATH}"
-./node_modules/.bin/cypress run --browser "$BROWSER" --e2e --spec "$SPEC_PATH" --config "baseUrl=http://localhost:${PORT},video=${VIDEO}"
+./node_modules/.bin/cypress run --browser "$BROWSER" --e2e --spec "$SPEC_PATH" --config "baseUrl=http://localhost:${PORT},video=${VIDEO},trashAssetsBeforeRuns=false"
 code=$?
 
 if [ "$code" -ne 0 ]; then
