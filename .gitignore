@@ -55,6 +55,8 @@ testsprite_tests/tmp/raw_report.md
 .env.sentry-build-plugin
 
 cypress/screenshots
+cypress/videos
+cypress/downloads
 
 # Intl Hash
 .cache

@@ -71,6 +71,21 @@ if [ "${1:-}" = "--spec" ] && [ -n "${2:-}" ]; then
 fi
 BROWSER="${E2E_BROWSER:-chrome}"
 
+# Ensure we only keep a single video for single-spec runs (avoid Cypress "(1)", "(2)" duplicates).
+# When Cypress sees an existing video with the same base name, it creates a numbered variant.
+if [ "$VIDEO" = "true" ] || [ "$VIDEO" = "TRUE" ]; then
+  VIDEOS_DIR="/home/david/levante/levante-dashboard/cypress/videos"
+  if [ -f "$SPEC_PATH" ]; then
+    spec_base="$(basename "$SPEC_PATH")"
+    rm -f \
+      "${VIDEOS_DIR}/${spec_base}.mp4" \
+      "${VIDEOS_DIR}/${spec_base}"\ \(*\).mp4 \
+      "${VIDEOS_DIR}/${spec_base}-compressed.mp4" \
+      "${VIDEOS_DIR}/${spec_base}-compressed"\ \(*\).mp4 \
+      2>/dev/null || true
+  fi
+fi
+
 echo "Running Cypress spec(s): ${SPEC_PATH}"
 ./node_modules/.bin/cypress run --browser "$BROWSER" --e2e --spec "$SPEC_PATH" --config "baseUrl=http://localhost:${PORT},video=${VIDEO}"
 code=$?
