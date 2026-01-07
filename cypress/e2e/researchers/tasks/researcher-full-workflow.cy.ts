@@ -162,6 +162,16 @@ describe('researcher README workflow (hosted): groups → users → link → ass
     const caregiverId = `e2e_caregiver_${runId}`;
     const teacherId = `e2e_teacher_${runId}`;
 
+    const screenshotSlug = (input: string) =>
+      input
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80);
+
+    const takeStepScreenshot = (step: string) => cy.screenshot(`researcher-full-workflow-${runId}-${screenshotSlug(step)}`);
+
     cy.visit('/signin');
     signIn();
 
@@ -176,6 +186,7 @@ describe('researcher README workflow (hosted): groups → users → link → ass
       }
     });
     assertCurrentSiteSelected();
+    takeStepScreenshot('signed-in-and-site-selected');
 
     // 1) Add Groups: create a Cohort
     cy.visit('/list-groups');
@@ -207,11 +218,13 @@ describe('researcher README workflow (hosted): groups → users → link → ass
     cy.get('[data-testid="modalTitle"]').should('not.exist');
     cy.contains('Success', { timeout: 30000 }).should('exist');
     cy.contains('Cohort created successfully.', { timeout: 30000 }).should('exist');
+    takeStepScreenshot('cohort-created');
 
     // 2) Add and Link Users: following documented two-step process
     // Step 2B: Add users to the dashboard
     // Step 2C: Link users as needed
     assertCurrentSiteSelected();
+    takeStepScreenshot('before-add-and-link-users');
     addAndLinkUsers({
       childId,
       caregiverId,
@@ -222,6 +235,7 @@ describe('researcher README workflow (hosted): groups → users → link → ass
     }).then((result) => {
       cy.wrap(result.createdUsers, { log: false }).as('createdUsers');
       cy.wrap(result.childLogin, { log: false }).as('childLogin');
+      takeStepScreenshot('users-created-and-linked');
     });
 
     // 3) Create Assignments: select cohort, pick tasks, submit
@@ -240,6 +254,7 @@ describe('researcher README workflow (hosted): groups → users → link → ass
     cy.get('[data-cy="panel-droppable-zone"]', { timeout: 120000 }).contains('Variant name:').should('exist');
 
     cy.get('input[id="No"]').should('exist').check({ force: true });
+    takeStepScreenshot('assignment-form-filled');
 
     cy.intercept('POST', /upsertAdministration/i).as('upsertAdministration');
     cy.get('[data-cy="button-create-administration"]').should('be.visible').should('not.be.disabled').click();
@@ -268,10 +283,12 @@ describe('researcher README workflow (hosted): groups → users → link → ass
     });
     cy.contains('Your new assignment is being processed', { timeout: 60000 }).should('exist');
     cy.location('pathname', { timeout: 60000 }).should('eq', '/');
+    takeStepScreenshot('assignment-created-processing');
 
     // 4) Monitor completion (best-effort): the assignment may take time to appear, so don't fail the E2E run here.
     cy.visit('/');
     cy.get('[data-cy="search-input"]', { timeout: 60000 }).should('be.visible').type(`${assignmentName}{enter}`);
+    takeStepScreenshot('after-search-assignment');
     cy.get('body', { timeout: 120000 }).then(($body) => {
       const titles = $body
         .find('[data-cy="h2-card-admin-title"]')
@@ -289,6 +306,7 @@ describe('researcher README workflow (hosted): groups → users → link → ass
         });
 
       cy.get('[data-cy="roar-data-table"]', { timeout: 60000 }).should('exist');
+      takeStepScreenshot('progress-report-opened');
     });
 
     // 5) Participant login (smoke): ensure the child can sign in and reach participant home
@@ -303,6 +321,7 @@ describe('researcher README workflow (hosted): groups → users → link → ass
       cy.clearCookies();
       cy.clearLocalStorage();
       cy.visit('/signin');
+      takeStepScreenshot('participant-signin-page');
       cy.get('[data-cy="input-username-email"]').should('be.visible');
       typeInto('[data-cy="input-username-email"]', childEmail);
       typeInto('[data-cy="input-password"]', childPassword, { log: false });
@@ -314,6 +333,7 @@ describe('researcher README workflow (hosted): groups → users → link → ass
         cy.get('[data-testid="home-participant-no-assignments"], [data-testid="home-participant-has-assignments"]', {
           timeout: 180000,
         }).should('exist');
+        takeStepScreenshot('participant-home');
       });
     });
   });
