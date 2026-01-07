@@ -1,0 +1,5 @@
+The actual product-code bug #671 fix lives in these two files:
+src/pages/ProgressReport.vue: changed the Survey column to use Levante surveyResponses-derived progress (Started/Completed) instead of relying on startedOn/completedOn (which surveys don’t reliably write).
+src/helpers/query/assignments.js: fixed the survey progress computation so it correctly interprets surveyResponses (prefers isEntireSurveyCompleted when present; handles “general complete + no specific surveys” correctly).
+The other “functional” product change we made was supporting reliability / permission behavior, not the core #671 logic:
+src/App.vue: prevents the app from getting stuck on the global spinner if userClaims/userData fetch fails (permission/404/etc). This was important for stable participant flows in E2E, and matches the “permission errors” theme from the thread, but it’s not the core survey-progress calculation itself.
