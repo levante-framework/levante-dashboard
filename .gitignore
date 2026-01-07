@@ -46,6 +46,8 @@ coverage
 .env.sentry-build-plugin
 
 cypress/screenshots
+cypress/videos
+cypress/downloads
 
 # Intl Hash
 .cache
