@@ -250,13 +250,14 @@ const parseCreateOrgData = (data: CreateOrgType) => {
   let formatted;
   let parsed;
 
-  const { districtId, name, normalizedName, parentOrgId, schoolId, tags, type, createdBy } = data;
+  const { districtId, name, normalizedName, parentOrgId, schoolId, tags, type, createdBy, siteId } = data;
   const commonFields = {
     name,
     normalizedName,
     tags,
     type,
     createdBy,
+    siteId,
   };
 
   switch (type) {
@@ -379,10 +380,10 @@ const submit = async () => {
   let parsedData: unknown;
 
   try {
-    parsedData = parseCreateOrgData(data);
-    parsedData = { ...(parsedData as CreateOrgType), siteId: authStore.currentSite };
+    parsedData = parseCreateOrgData({ ...(data as CreateOrgType), siteId: authStore.currentSite! });
   } catch (error) {
     isSubmitBtnDisabled.value = false;
+
     return toast.add({
       severity: 'error',
       summary: 'Validation Error',
