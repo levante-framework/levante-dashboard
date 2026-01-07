@@ -270,54 +270,60 @@ export function addAndLinkUsers(params: AddAndLinkUsersParams): Cypress.Chainabl
 
   cy.contains('File Successfully Uploaded', { timeout: 60000 }).should('exist');
   cy.get('[data-cy="button-add-users-from-file"]', { timeout: 60000 }).should('be.visible').click();
-  
-  return cy.wait('@createUsers', { timeout: 60000 }).then((interception) => {
-    const status = interception.response?.statusCode;
-    const body = interception.response?.body;
-    const requestBody = interception.request?.body;
-    const created = extractCreatedUsersFromResponse(body);
 
-    if (!created) {
-      throw new Error(
-        `createUsers returned unexpected body (status=${status}). request=${JSON.stringify(
-          requestBody,
-        )} body=${JSON.stringify(body)}`,
-      );
-    }
+  // Keep this fully Cypress-chained. We store intermediate data in closure variables and only "yield" a value at the end.
+  let createdUsers: CreatedUser[] | null = null;
 
-    assert.isAtLeast(created.length, 3, 'createUsers should return at least 3 created users');
-    assert.isString(created[0]?.uid, 'child uid');
-    assert.isString(created[1]?.uid, 'caregiver uid');
-    assert.isString(created[2]?.uid, 'teacher uid');
+  return cy
+    .wait('@createUsers', { timeout: 60000 })
+    .then((interception) => {
+      const status = interception.response?.statusCode;
+      const body = interception.response?.body;
+      const requestBody = interception.request?.body;
+      const created = extractCreatedUsersFromResponse(body);
 
-    cy.contains('User Creation Successful', { timeout: 60000 }).should('exist');
+      if (!created) {
+        throw new Error(
+          `createUsers returned unexpected body (status=${status}). request=${JSON.stringify(
+            requestBody,
+          )} body=${JSON.stringify(body)}`,
+        );
+      }
 
-    // Step 2C: Link users as needed
-    cy.intercept('POST', '**/linkUsers').as('linkUsers');
+      assert.isAtLeast(created.length, 3, 'createUsers should return at least 3 created users');
+      assert.isString(created[0]?.uid, 'child uid');
+      assert.isString(created[1]?.uid, 'caregiver uid');
+      assert.isString(created[2]?.uid, 'teacher uid');
 
-    const rows = [
-      { id: childId, userType: 'child', uid: created[0]!.uid, caregiverId, teacherId },
-      { id: caregiverId, userType: 'caregiver', uid: created[1]!.uid, caregiverId: '', teacherId: '' },
-      { id: teacherId, userType: 'teacher', uid: created[2]!.uid, caregiverId: '', teacherId: '' },
-    ];
+      createdUsers = created;
+    })
+    .then(() => {
+      if (!createdUsers) throw new Error('createUsers did not return created users');
 
-    const linkCsv = [
-      'id,userType,uid,caregiverId,teacherId',
-      `${rows[0]!.id},${rows[0]!.userType},${rows[0]!.uid},${rows[0]!.caregiverId},${rows[0]!.teacherId}`,
-      `${rows[1]!.id},${rows[1]!.userType},${rows[1]!.uid},,`,
-      `${rows[2]!.id},${rows[2]!.userType},${rows[2]!.uid},,`,
-    ].join('\n');
+      cy.contains('User Creation Successful', { timeout: 60000 }).should('exist');
 
-    cy.visit('/link-users');
-    cy.get('[data-cy="upload-link-users-csv"]').within(() => {
-      cy.get('input[type="file"]').selectFile(
-        { contents: Cypress.Buffer.from(linkCsv), fileName: 'link-users.csv', mimeType: 'text/csv' },
-        { force: true },
-      );
-    });
+      // Step 2C: Link users as needed
+      cy.intercept('POST', '**/linkUsers').as('linkUsers');
 
-    cy.get('[data-cy="button-start-linking-users"]').should('be.visible').click();
-    cy.wait('@linkUsers', { timeout: 60000 }).then((linkInterception) => {
+      const linkCsv = [
+        'id,userType,uid,caregiverId,teacherId',
+        `${childId},child,${createdUsers[0]!.uid},${caregiverId},${teacherId}`,
+        `${caregiverId},caregiver,${createdUsers[1]!.uid},,`,
+        `${teacherId},teacher,${createdUsers[2]!.uid},,`,
+      ].join('\n');
+
+      cy.visit('/link-users');
+      cy.get('[data-cy="upload-link-users-csv"]').within(() => {
+        cy.get('input[type="file"]').selectFile(
+          { contents: Cypress.Buffer.from(linkCsv), fileName: 'link-users.csv', mimeType: 'text/csv' },
+          { force: true },
+        );
+      });
+
+      cy.get('[data-cy="button-start-linking-users"]').should('be.visible').click();
+      return cy.wait('@linkUsers', { timeout: 60000 });
+    })
+    .then((linkInterception) => {
       const linkStatus = linkInterception.response?.statusCode;
       const linkBody = linkInterception.response?.body;
       if (linkStatus && linkStatus >= 400) {
@@ -325,11 +331,15 @@ export function addAndLinkUsers(params: AddAndLinkUsersParams): Cypress.Chainabl
       }
       const maybeError = isRecord(linkBody) ? linkBody.error : undefined;
       if (maybeError) throw new Error(`linkUsers failed: body.error=${JSON.stringify(maybeError)}`);
+    })
+    .then(() => {
+      if (!createdUsers) throw new Error('createUsers did not return created users');
+      return cy.wrap(
+        {
+          createdUsers,
+          childLogin: { email: createdUsers[0]!.email, password: createdUsers[0]!.password },
+        },
+        { log: false },
+      );
     });
-
-    return {
-      createdUsers: created,
-      childLogin: { email: created[0]!.email, password: created[0]!.password },
-    };
-  });
 }

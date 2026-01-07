@@ -56,6 +56,8 @@ testsprite_tests/tmp/code_summary.json
 .env.sentry-build-plugin
 
 cypress/screenshots
+cypress/videos
+cypress/downloads
 
 # Intl Hash
 .cache

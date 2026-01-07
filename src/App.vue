@@ -80,27 +80,39 @@ const pageTitle = computed(() => {
 const loadSessionTimeoutHandler = computed(() => isAuthStoreReady.value && authStore.isAuthenticated());
 
 onBeforeMount(async () => {
-  await authStore.initFirekit();
+  try {
+    await authStore.initFirekit();
 
-  await authStore.initStateFromRedirect().then(async () => {
-    // @TODO: Refactor this callback as we should ideally use the useUserClaimsQuery and useUserDataQuery composables.
-    // @NOTE: Whilst the rest of the application relies on the user's ROAR UID, this callback requires the user's ID
-    // in order for SSO to work and cannot currently be changed without significant refactoring.
-    if (authStore.getUserId()) {
-      const userClaims = await fetchDocById('userClaims', authStore.getUserId());
-      authStore.setUserClaims(userClaims);
+    await authStore.initStateFromRedirect();
 
-      const showSideBar = !userClaims?.claims?.super_admin && !userClaims?.claims?.admin;
-      authStore.setShowSideBar(showSideBar);
+    // @TODO: Refactor this bootstrap as we should ideally use the useUserClaimsQuery and useUserDataQuery composables.
+    // IMPORTANT: Never block app render on these fetches; participants may not have permission to read all docs.
+    const userId = authStore.getUserId();
+    if (userId) {
+      try {
+        const userClaims = await fetchDocById('userClaims', userId);
+        authStore.setUserClaims(userClaims);
+
+        const showSideBar = !userClaims?.claims?.super_admin && !userClaims?.claims?.admin;
+        authStore.setShowSideBar(showSideBar);
+      } catch (error) {
+        console.error('App bootstrap: failed to fetch userClaims:', error);
+      }
     }
 
-    if (authStore.getUserId()) {
-      const userData = await fetchDocById('users', authStore.getUserId());
-      authStore.setUserData(userData);
+    if (userId) {
+      try {
+        const userData = await fetchDocById('users', userId);
+        authStore.setUserData(userData);
+      } catch (error) {
+        console.error('App bootstrap: failed to fetch userData:', error);
+      }
     }
-  });
-
-  isAuthStoreReady.value = true;
+  } catch (error) {
+    console.error('App bootstrap: failed to initialize auth/firekit:', error);
+  } finally {
+    isAuthStoreReady.value = true;
+  }
 });
 
 onMounted(() => {

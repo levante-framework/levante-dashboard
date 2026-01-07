@@ -70,7 +70,6 @@
           </PvTabPanels>
         </PvTabs>
       </PvPanel>
-    </div>
     <div v-if="!forParentOrg" class="col-12 md:col-4">
       <PvPanel class="h-full">
         <template #header>
@@ -100,12 +99,15 @@
 </template>
 
 <script setup lang="ts">
+import _useDistrictsQuery from '@/composables/queries/_useDistrictsQuery';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
 import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
 import { convertToGroupName } from '@/helpers';
 import { orderByDefault } from '@/helpers/query/utils';
 import { useAuthStore } from '@/store/auth';
 import _capitalize from 'lodash/capitalize';
+import _get from 'lodash/get';
+import _head from 'lodash/head';
 import { storeToRefs } from 'pinia';
 import PvChip from 'primevue/chip';
 import PvFloatLabel from 'primevue/floatlabel';
@@ -139,6 +141,7 @@ interface OrgCollection {
 
 interface Props {
   orgs?: Partial<OrgCollection>;
+  forParentOrg?: boolean;
 }
 
 interface Emits {
@@ -146,13 +149,20 @@ interface Emits {
 }
 
 const authStore = useAuthStore();
-const { currentSite } = storeToRefs(authStore);
+const { currentSite, shouldUsePermissions, userClaims } = storeToRefs(authStore);
+const { isUserSuperAdmin } = authStore;
 
 const emit = defineEmits<Emits>();
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  orgs: undefined,
+  forParentOrg: false,
+});
 
-const activeHeader = ref('districts');
+const claimsLoaded = computed(() => !!userClaims.value?.claims);
+
+const activeIndex = ref(0);
 const orderBy = ref(orderByDefault);
+const selectedDistrict = ref<string | undefined>(undefined);
 const selectedSchool = ref<string | undefined>(undefined);
 const selectedOrgs = reactive<OrgCollection>({
   districts: [],
@@ -162,22 +172,57 @@ const selectedOrgs = reactive<OrgCollection>({
   families: [],
 });
 
-const orgHeaders = computed(() => [
-  { value: 'districts', label: 'Sites' },
-  { value: 'schools', label: 'Schools' },
-  { value: 'classes', label: 'Classes' },
-  { value: 'groups', label: 'Cohorts' },
-]);
+const orgHeaders = computed(() => {
+  return {
+    districts: { header: 'Sites', id: 'districts' },
+    schools: { header: 'Schools', id: 'schools' },
+    classes: { header: 'Classes', id: 'classes' },
+    groups: { header: 'Cohorts', id: 'groups' },
+  };
+});
 
-const { data: orgsData, isLoading: isLoadingOrgsData } = useOrgsTableQuery(
-  activeHeader,
-  currentSite,
-  selectedSchool,
-  orderBy,
-  false, // includeCreators = false for GroupPicker
-);
+const activeOrgType = computed({
+  get() {
+    return Object.keys(orgHeaders.value)[activeIndex.value];
+  },
+  set(value) {
+    const keys = Object.keys(orgHeaders.value);
+    activeIndex.value = keys.indexOf(value);
+  },
+});
 
-const { isLoading: isLoadingSchoolsData, data: schoolsData } = _useSchoolsQuery(currentSite);
+const activeOrgTypeValue = activeOrgType;
+
+const selectedSite = computed(() => (shouldUsePermissions.value ? currentSite.value : selectedDistrict.value));
+
+const { data: districtsData, isLoading: isLoadingDistricts } = _useDistrictsQuery({
+  enabled: !shouldUsePermissions.value,
+});
+
+watch(districtsData, (newDistrictsData) => {
+  if (newDistrictsData && !isUserSuperAdmin()) {
+    selectedDistrict.value = _get(_head(newDistrictsData), 'id');
+  }
+});
+
+const { data: schoolsData, isLoading: isLoadingSchools } = _useSchoolsQuery(selectedSite);
+
+watch(schoolsData, (newSchoolsData) => {
+  if (newSchoolsData && !isUserSuperAdmin()) {
+    selectedSchool.value = _get(_head(newSchoolsData), 'id');
+  }
+});
+
+const districtOptions = districtsData;
+const allSchools = schoolsData;
+
+const {
+  data: orgData,
+  isLoading: isLoadingOrgData,
+  isFetching: isFetchingOrgData,
+} = useOrgsTableQuery(activeOrgType, selectedSite, selectedSchool, orderBy, {
+  enabled: claimsLoaded,
+});
 
 const removeSelectedOrg = (orgHeader: string, selectedOrg: OrgItem) => {
   const rawSelectedOrgs = toRaw(selectedOrgs);
@@ -188,6 +233,8 @@ const removeSelectedOrg = (orgHeader: string, selectedOrg: OrgItem) => {
     selectedOrgs[orgHeader] = [];
   }
 };
+
+const remove = (org: OrgItem, orgKey: string) => removeSelectedOrg(orgKey, org);
 
 const syncSelectedOrgsWithOrgData = (orgType: string, options: OrgItem[] | undefined) => {
   if (!options || options.length === 0) return;
@@ -202,7 +249,7 @@ const syncSelectedOrgsWithOrgData = (orgType: string, options: OrgItem[] | undef
 };
 
 watch(
-  () => [orgsData.value, activeHeader.value] as const,
+  () => [orgData.value, activeOrgType.value] as const,
   ([options, orgType]) => {
     syncSelectedOrgsWithOrgData(orgType, options);
   },
@@ -216,8 +263,8 @@ watch(
       if (newOrgs.schools) selectedOrgs.schools = [...(newOrgs.schools ?? [])];
       if (newOrgs.classes) selectedOrgs.classes = [...(newOrgs.classes ?? [])];
       if (newOrgs.groups) selectedOrgs.groups = [...(newOrgs.groups ?? [])];
-      if (activeHeader.value && orgsData.value) {
-        syncSelectedOrgsWithOrgData(activeHeader.value, orgsData.value);
+      if (activeOrgType.value && orgData.value) {
+        syncSelectedOrgsWithOrgData(activeOrgType.value, orgData.value);
       }
     }
   },
@@ -227,6 +274,14 @@ watch(
 watch(selectedOrgs, (newSelectedOrgs) => {
   emit('selection', newSelectedOrgs || selectedOrgs);
 });
+
+const isLoadingOrgDataCombined = computed(() => Boolean(isLoadingOrgData.value || isFetchingOrgData.value));
+
+// Template expects these names
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const isLoadingDistrictsCombined = isLoadingDistricts;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const isLoadingSchoolsCombined = isLoadingSchools;
 </script>
 
 <style lang="scss">

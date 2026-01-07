@@ -958,16 +958,25 @@ export const assignmentPageFetcher = async (
         if (surveyResponse) {
           // Check completion based on user type
           if (user.data.userType === 'student') {
-            progress = surveyResponse.general?.isComplete ? 'completed' : 'started';
+            // A surveyResponse doc existing implies the participant has at least started.
+            // Treat completion as either the explicit general completion or the overall survey completion flag.
+            progress =
+              surveyResponse.isEntireSurveyCompleted === true || surveyResponse.general?.isComplete === true
+                ? 'completed'
+                : 'started';
           } else if (['parent', 'teacher'].includes(user.data.userType)) {
             // For parent/teacher, check both general and specific parts
-            const generalComplete = surveyResponse.general?.isComplete || false;
-            const specificItems = surveyResponse?.specific || [];
+            const generalComplete = surveyResponse.general?.isComplete === true;
+            const specificItems = Array.isArray(surveyResponse?.specific) ? surveyResponse.specific : [];
 
-            if (specificItems.length > 0) {
-              const allSpecificComplete = specificItems.every((item) => item.isComplete === true);
-              // Both general and all specific items must be complete
-              progress = generalComplete && allSpecificComplete ? 'completed' : 'started';
+            const allSpecificComplete = specificItems.length > 0 && specificItems.every((item) => item.isComplete === true);
+
+            // Prefer the explicit overall-completion flag (set by the survey submit flow).
+            if (surveyResponse.isEntireSurveyCompleted === true) {
+              progress = 'completed';
+            } else if (generalComplete && (specificItems.length === 0 || allSpecificComplete)) {
+              // If there are no specific surveys (no children/classes), general completion implies full completion.
+              progress = 'completed';
             } else {
               progress = 'started';
             }
