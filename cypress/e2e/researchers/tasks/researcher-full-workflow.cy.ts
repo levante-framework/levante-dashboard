@@ -61,7 +61,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-import { addAndLinkUsers, typeInto, pickToday } from '../_helpers';
+import { addAndLinkUsers, typeInto, pickToday, selectSite } from '../_helpers';
 
 // The hosted dev environment occasionally throws a Firestore permissions error from background listeners.
 // This is not relevant to validating the researcher workflow steps below.
@@ -79,10 +79,6 @@ const password: string =
   'student123';
 
 // CreatedUser interface is now imported from _helpers
-
-function escapeRegExp(input: string): string {
-  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 function assertCurrentSiteSelected() {
   cy.window().then((win) => {
@@ -175,17 +171,9 @@ describe('researcher README workflow (hosted): groups → users → link → ass
     cy.visit('/signin');
     signIn();
 
-    // Select site (required for permissions mode)
+    // Select site (required for permissions mode). `selectSite()` polls until currentSite is set (not "any").
     const siteName: string = (Cypress.env('E2E_SITE_NAME') as string) || 'ai-tests';
-    cy.get('body', { timeout: 90000 }).then(($body) => {
-      if ($body.find('[data-cy="site-select"]').length) {
-        cy.get('[data-cy="site-select"]', { timeout: 90000 }).should('be.visible').click();
-        cy.contains('[role="option"]', new RegExp(`^${escapeRegExp(siteName)}$`), { timeout: 60000 }).click();
-      } else {
-        cy.log('Site select dropdown not present, assuming site is already selected or not required.');
-      }
-    });
-    assertCurrentSiteSelected();
+    selectSite(siteName);
     takeStepScreenshot('signed-in-and-site-selected');
 
     // 1) Add Groups: create a Cohort
