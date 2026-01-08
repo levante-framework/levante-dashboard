@@ -979,8 +979,7 @@ export const assignmentPageFetcher = async (
           assignment,
           user: user.data,
           roarUid: user.name.split('/users/')[1],
-          ...(
-            includeSurveyResponses && {
+          ...(includeSurveyResponses && {
             survey: {
               progress,
               ...surveyResponse,
@@ -1075,7 +1074,13 @@ export const getUserAssignments = async (roarUid) => {
 };
 
 // TODO: Rename this function to be more descriptive.
-export const assignmentFetchAll = async (adminId, orgType, orgId, includeScores = false, includeSurveyResponses = false) => {
+export const assignmentFetchAll = async (
+  adminId,
+  orgType,
+  orgId,
+  includeScores = false,
+  includeSurveyResponses = false,
+) => {
   return await assignmentPageFetcher(
     adminId,
     orgType,
@@ -1089,16 +1094,16 @@ export const assignmentFetchAll = async (adminId, orgType, orgId, includeScores 
   );
 };
 
-export const fetchAssignmentsByNameAndDistricts = async (name, normalizedName, districts, adminId) => {
+export const fetchAssignmentsByNameAndDistricts = async (name, normalizedName, districtIds, adminId) => {
   const axiosInstance = getAxiosInstance();
 
-  const queries = districts.map(async (district) => {
+  const queries = districtIds.map(async (districtId) => {
     const filters = [
       {
         fieldFilter: {
           field: { fieldPath: 'districts' },
           op: 'ARRAY_CONTAINS',
-          value: { stringValue: district.id },
+          value: { stringValue: districtId },
         },
       },
       {
