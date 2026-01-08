@@ -3,30 +3,34 @@ import fs from 'node:fs';
 import path from 'node:path';
 import dotenv from 'dotenv';
 
+function loadEnvFromDotenvFile(projectRoot: string): Record<string, string> {
+  const envPath = path.join(projectRoot, '.env');
+  if (!fs.existsSync(envPath)) return {};
+
+  const parsed = dotenv.parse(fs.readFileSync(envPath, 'utf8'));
+
+  // Support CYPRESS_* variants by mapping to the non-prefixed key when present.
+  const fromFile: Record<string, string> = { ...parsed };
+  for (const [k, v] of Object.entries(parsed)) {
+    if (k.startsWith('CYPRESS_')) {
+      const unprefixed = k.replace(/^CYPRESS_/, '');
+      if (!(unprefixed in fromFile)) fromFile[unprefixed] = v;
+    }
+  }
+
+  return fromFile;
+}
+
+const envFromFile = loadEnvFromDotenvFile(process.cwd());
+
 export default defineConfig({
   e2e: {
     setupNodeEvents(on, config) {
-      // Load local repo `.env` for E2E credentials/config. This is intentionally file-based so
-      // local runs don't depend on the caller's shell environment.
-      const envPath = path.join(config.projectRoot, '.env');
-      if (fs.existsSync(envPath)) {
-        const parsed = dotenv.parse(fs.readFileSync(envPath, 'utf8'));
-
-        // Merge `.env` values into Cypress env, without overriding explicit CLI config/env.
-        // Also support CYPRESS_* variants by mapping to the non-prefixed key when present.
-        const fromFile: Record<string, string> = { ...parsed };
-        for (const [k, v] of Object.entries(parsed)) {
-          if (k.startsWith('CYPRESS_')) {
-            const unprefixed = k.replace(/^CYPRESS_/, '');
-            if (!(unprefixed in fromFile)) fromFile[unprefixed] = v;
-          }
-        }
-
-        config.env = {
-          ...fromFile,
-          ...config.env,
-        };
-      }
+      // Merge `.env` values into Cypress env, without overriding explicit CLI config/env.
+      config.env = {
+        ...envFromFile,
+        ...config.env,
+      };
 
       // Provide a default base URL for the locales specs; researcher specs typically use baseUrl from runner script.
       if (!config.env.E2E_BASE_URL) config.env.E2E_BASE_URL = 'http://localhost:5173/signin';
@@ -35,6 +39,6 @@ export default defineConfig({
     },
     supportFile: false,
     excludeSpecPattern: ['**/locales*.cy.ts'],
-    env: {},
+    env: envFromFile,
   },
 });
