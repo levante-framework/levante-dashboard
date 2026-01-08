@@ -33,23 +33,45 @@ function startTask(tasksRemaining: number) {
     });
 }
 
+function parseDotenv(contents: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const rawLine of contents.split('\n')) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const idx = line.indexOf('=');
+    if (idx <= 0) continue;
+    const key = line.slice(0, idx).trim();
+    let value = line.slice(idx + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    out[key] = value;
+  }
+  return out;
+}
+
+function getDotenvCreds(): Cypress.Chainable<{ email: string; password: string }> {
+  return cy.readFile('.env', { log: false }).then((contents) => {
+    const env = parseDotenv(String(contents));
+    const email = env.E2E_TEST_EMAIL || env.CYPRESS_E2E_TEST_EMAIL;
+    const password = env.E2E_TEST_PASSWORD || env.CYPRESS_E2E_TEST_PASSWORD;
+    if (typeof email !== 'string' || !email) throw new Error('Missing E2E_TEST_EMAIL in .env');
+    if (typeof password !== 'string' || !password) throw new Error('Missing E2E_TEST_PASSWORD in .env');
+    return { email, password };
+  });
+}
+
 describe('test core tasks from dashboard', () => {
   it('logs in to the dashboard and begins each task', () => {
     // Prefer `.env` / Cypress env values; fall back to historical defaults for local dev.
     const baseUrl = Cypress.config('baseUrl') || 'http://localhost:5173';
     const dashboardUrl = `${baseUrl}/signin`;
 
-    const envUsername = Cypress.env('E2E_TEST_EMAIL') as unknown;
-    const envPassword = Cypress.env('E2E_TEST_PASSWORD') as unknown;
-    const hasEnvCreds =
-      typeof envUsername === 'string' && envUsername.length > 0 && typeof envPassword === 'string' && envPassword.length > 0;
-
-    const username = hasEnvCreds ? envUsername : 'student@levante.test';
-    const password = hasEnvCreds ? envPassword : 'student123';
-
     // Use shared sign-in helper for robustness + fail-fast on auth errors.
     cy.visit(dashboardUrl);
-    signInWithPassword({ email: username, password });
+    getDotenvCreds().then(({ email, password }) => {
+      signInWithPassword({ email, password });
+    });
 
     // ensure we navigated away from /signin (fail fast if login didn't work)
     cy.location('pathname', { timeout: 30000 }).should((p) => expect(p).to.not.match(/\/signin$/));
