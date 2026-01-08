@@ -1094,72 +1094,69 @@ export const assignmentFetchAll = async (
   );
 };
 
-export const fetchAssignmentsByNameAndDistricts = async (name, normalizedName, districtIds, adminId) => {
+export const fetchAssignmentsByNameAndSite = async (name, normalizedName, siteId, adminId) => {
   const axiosInstance = getAxiosInstance();
 
-  const queries = districtIds.map(async (districtId) => {
-    const filters = [
-      {
-        fieldFilter: {
-          field: { fieldPath: 'districts' },
-          op: 'ARRAY_CONTAINS',
-          value: { stringValue: districtId },
-        },
+  const filters = [
+    {
+      fieldFilter: {
+        field: { fieldPath: 'siteId' },
+        op: 'EQUAL',
+        value: { stringValue: siteId },
       },
-      {
-        compositeFilter: {
-          op: 'OR',
-          filters: [
-            {
-              fieldFilter: {
-                field: { fieldPath: 'name' },
-                op: 'EQUAL',
-                value: { stringValue: name },
-              },
+    },
+    {
+      compositeFilter: {
+        op: 'OR',
+        filters: [
+          {
+            fieldFilter: {
+              field: { fieldPath: 'name' },
+              op: 'EQUAL',
+              value: { stringValue: name },
             },
-            {
-              fieldFilter: {
-                field: { fieldPath: 'normalizedName' },
-                op: 'EQUAL',
-                value: { stringValue: normalizedName },
-              },
-            },
-          ],
-        },
-      },
-    ];
-
-    if (adminId) {
-      filters.push({
-        fieldFilter: {
-          field: { fieldPath: '__name__' },
-          op: 'NOT_EQUAL',
-          value: { referenceValue: `${getBaseDocumentPath()}/${FIRESTORE_COLLECTIONS.ADMINISTRATIONS}/${adminId}` },
-        },
-      });
-    }
-
-    const requestBody = {
-      structuredQuery: {
-        from: [{ collectionId: FIRESTORE_COLLECTIONS.ADMINISTRATIONS }],
-        where: {
-          compositeFilter: {
-            op: 'AND',
-            filters,
           },
+          {
+            fieldFilter: {
+              field: { fieldPath: 'normalizedName' },
+              op: 'EQUAL',
+              value: { stringValue: normalizedName },
+            },
+          },
+        ],
+      },
+    },
+  ];
+
+  if (adminId) {
+    filters.push({
+      fieldFilter: {
+        field: { fieldPath: '__name__' },
+        op: 'NOT_EQUAL',
+        value: {
+          referenceValue: `${getBaseDocumentPath()}/${FIRESTORE_COLLECTIONS.ADMINISTRATIONS}/${adminId}`,
         },
       },
-    };
+    });
+  }
 
-    try {
-      const response = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
-      return mapFields(response.data);
-    } catch (error) {
-      console.error('Error fetching assignment by name: ', error);
-      return null;
-    }
-  });
+  const requestBody = {
+    structuredQuery: {
+      from: [{ collectionId: FIRESTORE_COLLECTIONS.ADMINISTRATIONS }],
+      where: {
+        compositeFilter: {
+          op: 'AND',
+          filters,
+        },
+      },
+    },
+  };
 
-  const results = await Promise.all(queries);
-  return Array.isArray(results) ? results.flat() : null;
+  try {
+    const response = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
+    return mapFields(response.data);
+  } catch (error) {
+    console.error('Error fetching assignment by name: ', error);
+    return null;
+  }
 };
