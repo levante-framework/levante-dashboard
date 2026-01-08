@@ -17,10 +17,10 @@ function normalizeUrl(url: string): string {
   }
 }
 
-// Force use of known working credentials for now
-const dashboardUrl: string = 'http://localhost:5173/signin';
-const username: string = 'quqa2y1jss@levante.com';
-const password: string = 'xbqamkqc7z';
+// Prefer `.env` / Cypress env values; fall back to historical defaults for local dev.
+const dashboardUrl: string = `${Cypress.config('baseUrl') || 'http://localhost:5173'}/signin`;
+const username: string = (Cypress.env('E2E_TEST_EMAIL') as string) || 'quqa2y1jss@levante.com';
+const password: string = (Cypress.env('E2E_TEST_PASSWORD') as string) || 'xbqamkqc7z';
 
 // starts each task and checks that it has loaded (the 'OK' button is present)
 function startTask(tasksRemaining: number) {
@@ -28,7 +28,7 @@ function startTask(tasksRemaining: number) {
     .children()
     .then((taskTabs) => {
       // start task
-      cy.wrap(taskTabs.eq(tasksRemaining)).click();
+      cy.wrap(taskTabs.eq(tasksRemaining)).scrollIntoView().click({ force: true });
       cy.scrollTo('bottomLeft', { ensureScrollable: false });
       cy.get('[data-pc-name=tabpanel][data-p-active=true]').children().contains('Click to start').click();
 
