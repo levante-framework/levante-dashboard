@@ -1,21 +1,5 @@
 import 'cypress-real-events';
-
-// Flag: when true, read URL and credentials from Cypress env; otherwise use defaults
-const useEnvFlag: boolean = (() => {
-  const v = Cypress.env('E2E_USE_ENV');
-  return v === true || v === 'TRUE' || v === 'true' || v === 1 || v === '1';
-})();
-
-const defaultUrl = 'https://localhost:5173/signin';
-
-function normalizeUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    return u.toString();
-  } catch {
-    return 'https://localhost:5173/signin';
-  }
-}
+import { signInWithPassword } from './researchers/_helpers';
 
 // Prefer `.env` / Cypress env values; fall back to historical defaults for local dev.
 const dashboardUrl: string = `${Cypress.config('baseUrl') || 'http://localhost:5173'}/signin`;
@@ -61,24 +45,10 @@ function startTask(tasksRemaining: number) {
 
 describe('test core tasks from dashboard', () => {
   it('logs in to the dashboard and begins each task', () => {
+    // Use shared sign-in helper for robustness + fail-fast on auth errors.
+    Cypress.config('baseUrl', Cypress.config('baseUrl') || 'http://localhost:5173');
     cy.visit(dashboardUrl);
-
-    // input username
-    cy.get('input')
-      .should('have.length', 2)
-      .then((inputs) => {
-        cy.wrap(inputs[0]).clear().type(username);
-      });
-
-    // input password
-    cy.get('input')
-      .should('have.length', 2)
-      .then((inputs) => {
-        cy.wrap(inputs[1]).clear().type(password);
-      });
-
-    // click go button
-    cy.get('button').filter('[data-pc-name=button]').click();
+    signInWithPassword({ email: username, password });
 
     // ensure we navigated away from /signin (fail fast if login didn't work)
     cy.location('pathname', { timeout: 30000 }).should((p) => expect(p).to.not.match(/\/signin$/));
