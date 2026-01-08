@@ -1,16 +1,6 @@
 import 'cypress-real-events';
 import { signInWithPassword } from './researchers/_helpers';
 
-// Prefer `.env` / Cypress env values; fall back to historical defaults for local dev.
-const dashboardUrl: string = `${Cypress.config('baseUrl') || 'http://localhost:5173'}/signin`;
-
-const envUsername = Cypress.env('E2E_TEST_EMAIL') as unknown;
-const envPassword = Cypress.env('E2E_TEST_PASSWORD') as unknown;
-const hasEnvCreds = typeof envUsername === 'string' && envUsername.length > 0 && typeof envPassword === 'string' && envPassword.length > 0;
-
-const username: string = hasEnvCreds ? envUsername : 'quqa2y1jss@levante.com';
-const password: string = hasEnvCreds ? envPassword : 'xbqamkqc7z';
-
 // starts each task and checks that it has loaded (the 'OK' button is present)
 function startTask(tasksRemaining: number) {
   cy.get('[data-pc-section=tablist]', { timeout: 30000 })
@@ -45,8 +35,19 @@ function startTask(tasksRemaining: number) {
 
 describe('test core tasks from dashboard', () => {
   it('logs in to the dashboard and begins each task', () => {
+    // Prefer `.env` / Cypress env values; fall back to historical defaults for local dev.
+    const baseUrl = Cypress.config('baseUrl') || 'http://localhost:5173';
+    const dashboardUrl = `${baseUrl}/signin`;
+
+    const envUsername = Cypress.env('E2E_TEST_EMAIL') as unknown;
+    const envPassword = Cypress.env('E2E_TEST_PASSWORD') as unknown;
+    const hasEnvCreds =
+      typeof envUsername === 'string' && envUsername.length > 0 && typeof envPassword === 'string' && envPassword.length > 0;
+
+    const username = hasEnvCreds ? envUsername : 'student@levante.test';
+    const password = hasEnvCreds ? envPassword : 'student123';
+
     // Use shared sign-in helper for robustness + fail-fast on auth errors.
-    Cypress.config('baseUrl', Cypress.config('baseUrl') || 'http://localhost:5173');
     cy.visit(dashboardUrl);
     signInWithPassword({ email: username, password });
 
