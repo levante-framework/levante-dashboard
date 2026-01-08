@@ -126,6 +126,8 @@ import { formatDateWithLocale } from '@/helpers';
 import PvTag from 'primevue/tag';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { capitalize } from 'lodash';
+import 'survey-core/survey.i18n';
+
 
 const showConsent = ref(false);
 const consentVersion = ref('');
