@@ -19,8 +19,13 @@ function normalizeUrl(url: string): string {
 
 // Prefer `.env` / Cypress env values; fall back to historical defaults for local dev.
 const dashboardUrl: string = `${Cypress.config('baseUrl') || 'http://localhost:5173'}/signin`;
-const username: string = (Cypress.env('E2E_TEST_EMAIL') as string) || 'quqa2y1jss@levante.com';
-const password: string = (Cypress.env('E2E_TEST_PASSWORD') as string) || 'xbqamkqc7z';
+
+const envUsername = Cypress.env('E2E_TEST_EMAIL') as unknown;
+const envPassword = Cypress.env('E2E_TEST_PASSWORD') as unknown;
+const hasEnvCreds = typeof envUsername === 'string' && envUsername.length > 0 && typeof envPassword === 'string' && envPassword.length > 0;
+
+const username: string = hasEnvCreds ? envUsername : 'quqa2y1jss@levante.com';
+const password: string = hasEnvCreds ? envPassword : 'xbqamkqc7z';
 
 // starts each task and checks that it has loaded (the 'OK' button is present)
 function startTask(tasksRemaining: number) {
