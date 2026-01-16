@@ -255,9 +255,6 @@ export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABAS
         const rRole = r?.role;
         if (!rSiteId || !rRole) return false;
 
-        // Global super admins should show up under any selected site.
-        if (rSiteId === 'any' && rRole === ROLES.SUPER_ADMIN) return true;
-
         // Site-scoped roles: show admins assigned to the selected site regardless of siteName shape.
         return rSiteId === selectedSiteId && allowedSiteRoles.has(rRole);
       });
