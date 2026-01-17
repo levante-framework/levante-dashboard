@@ -53,7 +53,8 @@ const pages: Array<{ path: string; h1: RegExp }> = [
   { path: '/dashboard/create-a-group', h1: /^1\. Add groups$/ },
   { path: '/dashboard/add-users', h1: /^2\. Add and link users$/ },
   { path: '/dashboard/create-an-assignment', h1: /^3\. Create assignments$/ },
-  { path: '/dashboard/administrator-log-in', h1: /^Log in as a study administrator$/ },
+  // Heading changed on the docs site; accept either to keep the smoke test stable across updates.
+  { path: '/dashboard/administrator-log-in', h1: /^(Log in as a study administrator|Researcher accounts and login)$/ },
   { path: '/dashboard/monitor-completion', h1: /^Monitor completion$/ },
   { path: '/dashboard/participant-user-log-in', h1: /^Use the dashboard as a child, caregiver, or teacher$/ },
 ];
