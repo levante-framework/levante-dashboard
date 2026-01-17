@@ -105,15 +105,7 @@ describe('researcher docs scenario: groups → users → assignment → monitor 
     const teacherId = `e2e_teacher_${runId}`;
 
     // Docs: “Log in as a study administrator”
-    cy.visit('/signin');
-    cy.contains('Are you an Admin?', { timeout: 60000 })
-      .should('be.visible')
-      .parent()
-      .within(() => {
-        cy.contains('here').click();
-      });
-    cy.contains('button', /Continue with Google/i, { timeout: 60000 }).should('be.visible');
-
+    // The exact prompt copy on /signin can vary; rely on the stable password login helper instead.
     signInWithPassword({ email, password });
     selectSite(siteName);
 
@@ -125,9 +117,19 @@ describe('researcher docs scenario: groups → users → assignment → monitor 
     cy.get('[data-cy="dropdown-org-type"]').click();
     cy.contains('[role="option"]', /^Cohort$/).click();
     typeInto('[data-cy="input-org-name"]', cohortName);
+    cy.get('[data-cy="dropdown-org-type"]', { timeout: 60000 }).find('.p-select-label').should('contain.text', 'Cohort');
+    cy.get('[data-cy="input-org-name"]').should('have.value', cohortName);
     cy.get('[data-testid="submitBtn"]').should('not.be.disabled').click();
-    cy.get('[data-testid="modalTitle"]').should('not.exist');
-    cy.contains('Cohort created successfully.', { timeout: 30000 }).should('exist');
+    cy.get('.p-toast-message', { timeout: 60000 })
+      .should('be.visible')
+      .invoke('text')
+      .then((t) => t.replace(/\s+/g, ' ').trim())
+      .then((toastText) => {
+        if (!toastText.includes('Success')) throw new Error(`Expected success toast. Got: ${toastText}`);
+        if (!/created successfully\.$/i.test(toastText))
+          throw new Error(`Expected "... created successfully." toast. Got: ${toastText}`);
+      });
+    cy.get('[data-testid="modalTitle"]', { timeout: 60000 }).should('not.exist');
 
     // Docs Step 2: Add and link users (following documented two-step process)
     // Step 2B: Add users to the dashboard

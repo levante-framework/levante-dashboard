@@ -54,7 +54,7 @@ export const createAppInstance = (): VueApp<Element> => {
 export const mountApp = (): void => {
   const app = createAppInstance();
   const mounted = app.mount('#app');
-  if ((window as any).Cypress) {
-    (window as any).__LEVANTE_APP__ = mounted;
-  }
+  const win = window as Window & { Cypress?: unknown; __LEVANTE_APP__?: unknown };
+  if (win.Cypress || import.meta.env.MODE === 'development') win.__LEVANTE_APP__ = mounted;
+  (win as Window & { __VITE_BASE_URL__?: string }).__VITE_BASE_URL__ = import.meta.env.BASE_URL;
 };

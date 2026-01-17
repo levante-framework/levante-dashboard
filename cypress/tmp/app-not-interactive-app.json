@@ -1,0 +1,10 @@
+{
+  "location": {
+    "href": "http://localhost:5173/signin",
+    "pathname": "/signin"
+  },
+  "viteBaseUrl": "/",
+  "hasApp": true,
+  "routerPath": "/",
+  "routerName": null
+}

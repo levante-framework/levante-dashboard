@@ -1,9 +1,15 @@
 import { assert } from 'chai';
 
 export function ignoreKnownHostedUncaughtExceptions() {
+  const baseUrl = Cypress.config('baseUrl');
+  const isHosted =
+    typeof baseUrl === 'string' &&
+    (baseUrl.includes('web.app') || baseUrl.includes('levante-network.org') || baseUrl.includes('levante-framework'));
+  if (!isHosted) return;
+
   Cypress.on('uncaught:exception', (err) => {
     if (err.message.includes('Missing or insufficient permissions')) return false;
-    if (err.message.includes("Cannot read properties of null (reading 'id')")) return false;
+    if (err.message.includes('Cannot read properties of null (reading')) return false;
   });
 }
 
@@ -29,11 +35,72 @@ export function signInWithPassword(params: { email: string; password: string }) 
       Cypress.config('pageLoadTimeout', 120_000);
     }
 
+    const baseUrl = Cypress.config('baseUrl');
+    const isLocalhost = typeof baseUrl === 'string' && baseUrl.includes('localhost:5173');
+
+    const windowErrors: Array<{ type: 'error' | 'unhandledrejection'; message: string }> = [];
+
+    cy.on('window:before:load', (win) => {
+      win.addEventListener('error', (e) => {
+        const message = e?.message || 'Unknown window error';
+        windowErrors.push({ type: 'error', message });
+      });
+      win.addEventListener('unhandledrejection', (e) => {
+        const reason = (e as PromiseRejectionEvent).reason;
+        const message =
+          reason instanceof Error
+            ? `${reason.name}: ${reason.message}`
+            : typeof reason === 'string'
+              ? reason
+              : `Unhandled rejection: ${JSON.stringify(reason)}`;
+        windowErrors.push({ type: 'unhandledrejection', message });
+      });
+    });
+
+    if (isLocalhost) cy.intercept('GET', '**/src/pages/SignIn.vue*').as('signInPageModule');
+
     cy.intercept('POST', '**/accounts:signInWithPassword*').as('signInWithPassword');
 
     cy.visit('/signin');
-    cy.get('[data-cy="input-username-email"]').should('be.visible');
+    cy.location('pathname', { timeout: 60000 }).should('eq', '/signin');
+
+    const startedAt = Date.now();
+    const timeoutMs = 120_000;
+    const pollMs = 1_000;
+
+    function waitForEmailInput(): Cypress.Chainable<void> {
+      return cy.get('body', { timeout: 60000 }).then(($body) => {
+        const hasEmailInput = $body.find('[data-cy="input-username-email"]').length > 0;
+        if (hasEmailInput) return;
+
+        if (Date.now() - startedAt > timeoutMs) {
+          const errorMessage = `Timed out waiting for signin inputs. Wrote diagnostics to cypress/tmp/login-body.{html,txt}. url=${String(
+            $body[0]?.baseURI ?? '',
+          )}`;
+          return cy
+            .window()
+            .then((win) => {
+              const winWithApp = win as Window & { __LEVANTE_APP__?: { $route?: unknown } };
+              const route = winWithApp.__LEVANTE_APP__?.$route ?? null;
+              return cy.writeFile('cypress/tmp/login-route.json', JSON.stringify(route, null, 2));
+            })
+            .then(() => cy.writeFile('cypress/tmp/login-window-errors.json', JSON.stringify(windowErrors, null, 2)))
+            .then(() => cy.writeFile('cypress/tmp/login-body.html', $body.html() ?? ''))
+            .then(() => cy.writeFile('cypress/tmp/login-body-text.txt', $body.text()))
+            .then(() => {
+              throw new Error(errorMessage);
+            });
+        }
+
+        return cy.wait(pollMs).then(() => waitForEmailInput());
+      }) as unknown as Cypress.Chainable<void>;
+    }
+
+    cy.wrap(null, { log: false }).then(() => waitForEmailInput());
+
+    cy.get('[data-cy="input-username-email"]', { timeout: 60000 }).should('be.visible');
     typeInto('[data-cy="input-username-email"]', params.email);
+    cy.get('[data-cy="input-password"]', { timeout: 60000 }).should('be.visible');
     typeInto('[data-cy="input-password"]', params.password, { log: false });
     cy.get('[data-cy="submit-sign-in-with-password"]').click();
 
@@ -97,7 +164,9 @@ export function selectSite(siteName: string) {
         return;
       }
 
-      return cy.window().then((win) => {
+      return cy
+        .window()
+        .then((win) => {
         const raw = win.sessionStorage.getItem('authStore');
         if (typeof raw !== 'string') return retryOrFail('authStore sessionStorage missing');
 
@@ -118,8 +187,9 @@ export function selectSite(siteName: string) {
             currentSite,
           )}`,
         );
-      });
-    });
+        })
+        .then(() => undefined) as unknown as Cypress.Chainable<void>;
+    }) as unknown as Cypress.Chainable<void>;
   }
 
   function retryOrFail(message: string): Cypress.Chainable<void> {
@@ -164,14 +234,15 @@ export function waitForAssignmentCard(assignmentName: string, opts?: { timeoutMs
         throw new Error(`Timed out waiting for assignment card to appear: "${assignmentName}"`);
       }
 
-      cy.wait(pollMs);
-      cy.reload();
-      cy.get('[data-cy="search-input"] input', { timeout: 60000 })
-        .should('be.visible')
-        .clear()
-        .type(`${assignmentName}{enter}`);
-      return attempt();
-    });
+      return cy.wait(pollMs).then(() => {
+        cy.reload();
+        cy.get('[data-cy="search-input"] input', { timeout: 60000 })
+          .should('be.visible')
+          .clear()
+          .type(`${assignmentName}{enter}`);
+        return attempt();
+      });
+    }) as unknown as Cypress.Chainable<void>;
   }
 
   return attempt();

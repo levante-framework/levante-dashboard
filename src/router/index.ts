@@ -328,8 +328,10 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   const authStore = useAuthStore();
   const { shouldUsePermissions, userData } = storeToRefs(authStore);
   const allowedUnauthenticatedRoutes = ['AuthEmailLink', 'AuthEmailSent', 'Debug', 'Maintenance', 'SignIn'];
+  const allowedUnauthenticatedPaths = ['/signin', '/auth-email-link', '/auth-email-sent', '/debug', '/maintenance', '/enable-cookies'];
   const inMaintenanceMode = false;
   const toName = typeof to.name === 'string' ? to.name : '';
+  const isAllowedUnauthenticated = allowedUnauthenticatedRoutes.includes(toName) || allowedUnauthenticatedPaths.includes(to.path);
 
   if (toName && (NAVBAR_BLACKLIST as readonly string[]).includes(toName)) {
     authStore.setShowSideBar(false);
@@ -345,15 +347,18 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   if (
     !to.path.includes('__/auth/handler') &&
     !authStore.isAuthenticated() &&
-    !allowedUnauthenticatedRoutes.includes(toName)
+    !isAllowedUnauthenticated
   ) {
     return next({ name: 'SignIn' });
   }
 
+  // If the user is not authenticated, we should not block routing on userData hydration.
+  if (!authStore.isAuthenticated()) return next();
+
   // @TODO
   // If we're gonna keep this solution,
   // we need to think about setting up a max num of tries and an error handler.
-  if (!userData.value && !allowedUnauthenticatedRoutes.includes(toName)) {
+  if (!userData.value && !isAllowedUnauthenticated) {
     await new Promise<void>((resolve) => {
       const checkUserData = () => {
         if (userData.value) return resolve();

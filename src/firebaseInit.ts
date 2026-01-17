@@ -21,8 +21,18 @@ const emulatorConfig = (() => {
 const roarConfig = levanteFirebaseConfig;
 
 export async function initNewFirekit(): Promise<RoarFirekit> {
+  const debugToken = import.meta.env.VITE_APPCHECK_DEBUG_TOKEN as string | undefined;
+  const siteKey = import.meta.env.VITE_APPCHECK_SITE_KEY as string | undefined;
+  const isCypress = typeof window !== 'undefined' && Boolean((window as Window & { Cypress?: unknown }).Cypress);
+
+  const roarConfigWithAppCheck = {
+    ...roarConfig,
+    ...(siteKey ? { siteKey } : {}),
+    ...(debugToken ? { debugToken } : {}),
+  };
+
   const firekit = new RoarFirekit({
-    roarConfig,
+    roarConfig: roarConfigWithAppCheck,
     emulatorConfig,
     authPersistence: 'session',
     markRawConfig: {
@@ -34,8 +44,8 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
 
     // The site key is used for app check token verification
     // The debug token is used to bypass app check for local development
-    siteKey: roarConfig?.siteKey,
-    debugToken: emulatorConfig ? 'test-debug-token' : roarConfig?.debugToken,
+    siteKey: siteKey,
+    debugToken: emulatorConfig || isCypress ? 'test-debug-token' : debugToken,
   });
   return await firekit.init();
 }
