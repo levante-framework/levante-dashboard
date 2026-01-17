@@ -56,7 +56,7 @@ describe('useDistrictsListQuery', () => {
     });
 
     expect(VueQuery.useQuery).toHaveBeenCalledWith({
-      queryKey: ['districts-list'],
+      queryKey: ['districts-list', 'super', null],
       queryFn: expect.any(Function),
       enabled: expect.any(Object),
     });
@@ -84,7 +84,7 @@ describe('useDistrictsListQuery', () => {
     });
 
     expect(VueQuery.useQuery).toHaveBeenCalledWith({
-      queryKey: ['districts-list'],
+      queryKey: ['districts-list', 'super', null],
       queryFn: expect.any(Function),
       enabled: expect.any(Object),
     });

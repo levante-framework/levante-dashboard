@@ -54,13 +54,16 @@ import {
   addAndLinkUsers,
   typeInto,
   pickToday,
+  waitForAuthClaimsLoaded,
 } from '../_helpers';
 
 const email: string =
+  (Cypress.env('E2E_AI_SUPER_ADMIN_EMAIL') as string) ||
   (Cypress.env('E2E_AI_SITE_ADMIN_EMAIL') as string) ||
   (Cypress.env('E2E_TEST_EMAIL') as string) ||
   'student@levante.test';
 const password: string =
+  (Cypress.env('E2E_AI_SUPER_ADMIN_PASSWORD') as string) ||
   (Cypress.env('E2E_AI_SITE_ADMIN_PASSWORD') as string) ||
   (Cypress.env('E2E_TEST_PASSWORD') as string) ||
   'student123';
@@ -92,6 +95,73 @@ function extractAdministrationIdFromUpsertResponse(body: unknown): string | null
   return null;
 }
 
+function waitForSiteToBeSelected(): void {
+  const timeoutMs = 90_000;
+  const pollMs = 500;
+  const startedAt = Date.now();
+
+  function readPiniaAuthStore(win: Window): { currentSiteName: unknown; currentSite: unknown } {
+    const w = win as Window & { __LEVANTE_APP__?: unknown };
+    const app = w.__LEVANTE_APP__ as any;
+    const piniaState = app?.$pinia?.state?.value?.authStore ?? null;
+    return {
+      currentSite: piniaState?.currentSite,
+      currentSiteName: piniaState?.currentSiteName,
+    };
+  }
+
+  function attempt(): Cypress.Chainable<void> {
+    return cy.window({ timeout: 60000 }).then((win) => {
+      const raw = win.sessionStorage.getItem('authStore');
+      if (typeof raw === 'string') {
+        try {
+          // Note: persisted authStore does not necessarily include currentSiteName, so we only gate on currentSite.
+          const parsed = JSON.parse(raw) as { currentSite?: unknown };
+          const currentSite = parsed?.currentSite;
+          if (typeof currentSite === 'string' && currentSite && currentSite !== 'any') return;
+        } catch {
+          // ignore + retry
+        }
+      }
+
+      if (Date.now() - startedAt > timeoutMs) {
+        return cy
+          .writeFile('cypress/tmp/authStore.sessionStorage.txt', String(raw ?? ''))
+          .then(() => {
+            throw new Error(
+              'Timed out waiting for a specific site to be selected (expected authStore.currentSite != "any"). See cypress/tmp/authStore.sessionStorage.txt',
+            );
+          });
+      }
+
+      return cy.wait(pollMs).then(() => attempt());
+    });
+  }
+
+  attempt();
+}
+
+function writeSelectedSiteDiagnostics(): void {
+  cy.window({ timeout: 60000 }).then((win) => {
+    const w = win as Window & { __LEVANTE_APP__?: unknown };
+    const app = w.__LEVANTE_APP__ as any;
+    const piniaAuth = app?.$pinia?.state?.value?.authStore ?? null;
+
+    const snapshot = {
+      location: { href: win.location.href, pathname: win.location.pathname },
+      sessionAuthStore: win.sessionStorage.getItem('authStore'),
+      pinia: {
+        currentSite: piniaAuth?.currentSite ?? null,
+        currentSiteName: piniaAuth?.currentSiteName ?? null,
+        shouldUsePermissions: piniaAuth?.shouldUsePermissions ?? null,
+        userClaims: piniaAuth?.userClaims ?? null,
+        userData: piniaAuth?.userData ?? null,
+      },
+    };
+    cy.writeFile('cypress/tmp/site-selection.json', JSON.stringify(snapshot, null, 2));
+  });
+}
+
 describe('researcher docs scenario: groups → users → assignment → monitor completion', () => {
   it('executes the documented workflow end-to-end (single video)', () => {
     ignoreKnownHostedUncaughtExceptions();
@@ -108,6 +178,9 @@ describe('researcher docs scenario: groups → users → assignment → monitor 
     // The exact prompt copy on /signin can vary; rely on the stable password login helper instead.
     signInWithPassword({ email, password });
     selectSite(siteName);
+    waitForSiteToBeSelected();
+    waitForAuthClaimsLoaded();
+    writeSelectedSiteDiagnostics();
 
     // Docs Step 1: Add groups (create cohort)
     cy.visit('/list-groups');
@@ -117,6 +190,36 @@ describe('researcher docs scenario: groups → users → assignment → monitor 
     cy.get('[data-cy="dropdown-org-type"]').click();
     cy.contains('[role="option"]', /^Cohort$/).click();
     typeInto('[data-cy="input-org-name"]', cohortName);
+    // Some deployments require explicitly selecting the Site inside the modal (even if the navbar site is set),
+    // especially right after a site is created and lists/derived state may lag.
+    cy.get('body', { log: false }).then(($body) => {
+      if (!$body.find('[data-cy="dropdown-parent-district"]').length) return;
+
+      cy.get('[data-cy="dropdown-parent-district"]', { timeout: 60000 }).should('be.visible').click();
+      cy.get('[role="listbox"] [role="option"]', { timeout: 60000 }).then(($options) => {
+        const labels = $options
+          .toArray()
+          .map((el) => (el.textContent ?? '').replace(/\s+/g, ' ').trim())
+          .filter(Boolean);
+
+        const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/[-_]/g, '');
+        const target = normalize(siteName);
+        const idx = labels.findIndex((l) => normalize(l) === target || normalize(l).includes(target));
+
+        cy.writeFile('cypress/tmp/parent-district-options.json', JSON.stringify({ siteName, labels, idx }, null, 2));
+
+        const noOptions =
+          labels.length === 1 && typeof labels[0] === 'string' && labels[0].toLowerCase().includes('no available options');
+        if (noOptions) {
+          throw new Error(
+            'Modal Site dropdown has no available options. This typically means the test account cannot list sites in this deployment.',
+          );
+        }
+
+        const chosenIndex = idx >= 0 ? idx : 0;
+        cy.wrap($options.eq(chosenIndex)).click();
+      });
+    });
     cy.get('[data-cy="dropdown-org-type"]', { timeout: 60000 }).find('.p-select-label').should('contain.text', 'Cohort');
     cy.get('[data-cy="input-org-name"]').should('have.value', cohortName);
     cy.get('[data-testid="submitBtn"]').should('not.be.disabled').click();
@@ -125,9 +228,30 @@ describe('researcher docs scenario: groups → users → assignment → monitor 
       .invoke('text')
       .then((t) => t.replace(/\s+/g, ' ').trim())
       .then((toastText) => {
+        if (toastText.includes('Validation Error') && toastText.includes('Please check the form for errors')) {
+          return cy
+            .get('body', { log: false })
+            .then(($body) => {
+              return cy
+                .writeFile('cypress/tmp/add-group-validation-body.html', $body.html() ?? '')
+                .then(() => cy.writeFile('cypress/tmp/add-group-validation-body-text.txt', $body.text()));
+            })
+            .then(() => {
+              return cy.get('.p-error:visible', { log: false }).then(($errs) => {
+                const errors = $errs
+                  .toArray()
+                  .map((el) => el.textContent?.trim() ?? '')
+                  .filter(Boolean);
+                return cy.writeFile('cypress/tmp/add-group-validation-errors.json', JSON.stringify(errors, null, 2));
+              });
+            })
+            .then(() => {
+              throw new Error(`Add Group validation failed. Toast: ${toastText} (see cypress/tmp/add-group-validation-*)`);
+            });
+        }
+
         if (!toastText.includes('Success')) throw new Error(`Expected success toast. Got: ${toastText}`);
-        if (!/created successfully\.$/i.test(toastText))
-          throw new Error(`Expected "... created successfully." toast. Got: ${toastText}`);
+        if (!/created successfully\.$/i.test(toastText)) throw new Error(`Expected "... created successfully." toast. Got: ${toastText}`);
       });
     cy.get('[data-testid="modalTitle"]', { timeout: 60000 }).should('not.exist');
 

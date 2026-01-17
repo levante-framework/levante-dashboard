@@ -21,6 +21,11 @@ function loadDotenv() {
     loadedFrom,
     hasE2eEmail: Boolean(process.env.E2E_TEST_EMAIL || process.env.DEV_LOGIN),
     hasE2ePassword: Boolean(process.env.E2E_TEST_PASSWORD || process.env.DEV_PASSWORD),
+    hasAiSiteAdminEmail: Boolean(process.env.E2E_AI_SITE_ADMIN_EMAIL),
+    hasAiSiteAdminPassword: Boolean(process.env.E2E_AI_SITE_ADMIN_PASSWORD),
+    hasAiSuperAdminEmail: Boolean(process.env.E2E_AI_SUPER_ADMIN_EMAIL),
+    hasAiSuperAdminPassword: Boolean(process.env.E2E_AI_SUPER_ADMIN_PASSWORD),
+    hasSiteId: Boolean(process.env.E2E_SITE_ID),
   };
 }
 
@@ -57,7 +62,11 @@ export default defineConfig({
       console.log(
         `[cypress] env loaded from: ${dotenvStatus.loadedFrom.length ? dotenvStatus.loadedFrom.join(', ') : '(none)'} | hasE2E_TEST_EMAIL=${
           dotenvStatus.hasE2eEmail
-        } hasE2E_TEST_PASSWORD=${dotenvStatus.hasE2ePassword}`,
+        } hasE2E_TEST_PASSWORD=${dotenvStatus.hasE2ePassword} hasE2E_AI_SITE_ADMIN_EMAIL=${
+          dotenvStatus.hasAiSiteAdminEmail
+        } hasE2E_AI_SITE_ADMIN_PASSWORD=${dotenvStatus.hasAiSiteAdminPassword} hasE2E_AI_SUPER_ADMIN_EMAIL=${
+          dotenvStatus.hasAiSuperAdminEmail
+        } hasE2E_AI_SUPER_ADMIN_PASSWORD=${dotenvStatus.hasAiSuperAdminPassword} hasE2E_SITE_ID=${dotenvStatus.hasSiteId}`,
       );
       return config;
     },

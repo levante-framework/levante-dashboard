@@ -64,6 +64,17 @@ export function signInWithPassword(params: { email: string; password: string }) 
     cy.visit('/signin');
     cy.location('pathname', { timeout: 60000 }).should('eq', '/signin');
 
+    // Wait for app to finish initializing (if it's still initializing)
+    cy.get('body', { timeout: 60000 }).then(($body) => {
+      if ($body.find('[data-testid="app-initializing"]').length > 0) {
+        cy.get('[data-testid="app-initializing"]', { timeout: 120000 }).should('not.exist');
+      }
+    });
+
+    // Wait for router-view to render content (not just empty comments)
+    // The SignIn page should have a signin-container or the email input
+    cy.get('#signin-container, [data-cy="input-username-email"]', { timeout: 120000 }).should('exist');
+
     const startedAt = Date.now();
     const timeoutMs = 120_000;
     const pollMs = 1_000;
@@ -156,12 +167,59 @@ export function selectSite(siteName: string) {
   const pollMs = 1_000;
   const startedAt = Date.now();
 
+  function forceCurrentSiteNameIfMissing(selectedSiteName: string): Cypress.Chainable<void> {
+    // Hosted previews can lag on loading the districts list (or a site was just created), so the dropdown can
+    // successfully set `currentSite` (id) while `currentSiteName` stays null. Some flows (e.g. Add Cohort)
+    // rely on both values, so we force `currentSiteName` to the label we just selected when it's missing.
+    const started = Date.now();
+
+    function attempt(): Cypress.Chainable<void> {
+      return cy.window().then((win) => {
+        const w = win as Window & {
+          __LEVANTE_APP__?: { $pinia?: { _s?: Map<string, unknown>; state?: { value?: { authStore?: unknown } } } };
+        };
+
+        const pinia = w.__LEVANTE_APP__?.$pinia;
+        const authStore = pinia?._s?.get('authStore') as
+          | {
+              currentSite?: unknown;
+              currentSiteName?: unknown;
+              setCurrentSite?: (id: string | null, name: string | null) => void;
+            }
+          | undefined;
+
+        const authState = pinia?.state?.value?.authStore as
+          | { currentSite?: unknown; currentSiteName?: unknown }
+          | undefined;
+
+        const currentSite = authStore?.currentSite ?? authState?.currentSite;
+        const currentSiteName = authStore?.currentSiteName ?? authState?.currentSiteName;
+
+        if (typeof currentSite === 'string' && currentSite && currentSite !== 'any') {
+          if (currentSiteName == null || currentSiteName === '') {
+            if (authStore?.setCurrentSite) {
+              authStore.setCurrentSite(currentSite, selectedSiteName);
+            } else if (authState && typeof authState === 'object') {
+              (authState as { currentSiteName?: unknown }).currentSiteName = selectedSiteName;
+            }
+          }
+          return;
+        }
+
+        if (Date.now() - started > 10_000) return;
+        return cy.wait(200, { log: false }).then(() => attempt());
+      }) as unknown as Cypress.Chainable<void>;
+    }
+
+    return attempt();
+  }
+
   function attempt(): Cypress.Chainable<void> {
     return cy.get('body', { timeout: 60000 }).then(($body) => {
       if ($body.find('[data-cy="site-select"]').length) {
         cy.get('[data-cy="site-select"]', { timeout: 60000 }).should('be.visible').click();
         cy.contains('[role="option"]', new RegExp(`^${escapeRegExp(siteName)}$`), { timeout: 60000 }).click();
-        return;
+        return forceCurrentSiteNameIfMissing(siteName);
       }
 
       return cy
@@ -199,6 +257,42 @@ export function selectSite(siteName: string) {
   }
 
   attempt();
+}
+
+export function waitForAuthClaimsLoaded(): Cypress.Chainable<void> {
+  const timeoutMs = 120_000;
+  const pollMs = 500;
+  const startedAt = Date.now();
+
+  function attempt(): Cypress.Chainable<void> {
+    return (cy.window({ log: false }).then((win) => {
+      const w = win as Window & { __LEVANTE_APP__?: { $pinia?: { state?: { value?: { authStore?: unknown } } } } };
+      const authState = w.__LEVANTE_APP__?.$pinia?.state?.value?.authStore as
+        | { userClaims?: unknown; userData?: unknown }
+        | undefined;
+
+      const userClaims = authState?.userClaims as { claims?: unknown } | undefined;
+      const claims = userClaims?.claims;
+      const claimsLoaded = Boolean(
+        claims && typeof claims === 'object' && !Array.isArray(claims) && Object.keys(claims).length > 0,
+      );
+      const userDataLoaded = Boolean(authState?.userData);
+
+      if (claimsLoaded && userDataLoaded) return;
+
+      if (Date.now() - startedAt > timeoutMs) {
+        cy.writeFile(
+          'cypress/tmp/auth-claims-not-loaded.json',
+          JSON.stringify({ claimsLoaded, userDataLoaded, userClaims: userClaims ?? null }, null, 2),
+        );
+        throw new Error('Timed out waiting for authStore userClaims/userData to load (see cypress/tmp/auth-claims-not-loaded.json)');
+      }
+
+      return cy.wait(pollMs, { log: false }).then(() => attempt());
+    }) as unknown) as Cypress.Chainable<void>;
+  }
+
+  return attempt();
 }
 
 export function pickToday(datePickerSelector: string) {

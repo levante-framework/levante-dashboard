@@ -21,6 +21,7 @@ const useDistrictsListQuery = (queryOptions?: UseQueryOptions): UseQueryReturnTy
 
   // Get admin's administation orgs.
   const administrationOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
+  const isSuperAdmin = computed(() => isUserSuperAdmin());
 
   // Ensure all necessary data is loaded before enabling the query.
   const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
@@ -28,8 +29,10 @@ const useDistrictsListQuery = (queryOptions?: UseQueryOptions): UseQueryReturnTy
   const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
 
   return useQuery({
-    queryKey: [DISTRICTS_LIST_QUERY_KEY],
-    queryFn: () => orgFetcher(FIRESTORE_COLLECTIONS.DISTRICTS, undefined, ref(isUserSuperAdmin()), administrationOrgs),
+    // Include role + scope in the query key so if userData arrives after mount (common in Cypress),
+    // we refetch instead of caching an empty districts list.
+    queryKey: [DISTRICTS_LIST_QUERY_KEY, isSuperAdmin.value ? 'super' : 'scoped', administrationOrgs.value ?? null],
+    queryFn: () => orgFetcher(FIRESTORE_COLLECTIONS.DISTRICTS, undefined, isSuperAdmin, administrationOrgs),
     enabled: isQueryEnabled,
     ...options,
   });
