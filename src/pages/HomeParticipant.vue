@@ -23,55 +23,55 @@
 
       <div v-else>
         <div class="assignment" data-testid="home-participant-has-assignments">
-        <div class="assignment__header">
-          <PvTag
-            :value="t(`participantSidebar.status${capitalize(getAssignmentStatus(selectedAssignment))}`)"
-            class="text-xs uppercase"
-            :class="`assignment__status --${getAssignmentStatus(selectedAssignment)}`"
-          />
+          <div class="assignment__header">
+            <PvTag
+              :value="t(`participantSidebar.status${capitalize(getAssignmentStatus(selectedAssignment))}`)"
+              class="text-xs uppercase"
+              :class="`assignment__status --${getAssignmentStatus(selectedAssignment)}`"
+            />
 
+            <h2 class="assignment__name">
+              {{ selectedAssignment?.publicName || selectedAssignment?.name }}
+            </h2>
 
-          <h2 class="assignment__name">
-            {{ selectedAssignment?.publicName || selectedAssignment?.name }}
-          </h2>
-
-          <div v-if="selectedAssignment?.dateOpened && selectedAssignment?.dateClosed" class="assignment__dates">
-            <div class="assignment__date">
-              <i class="pi pi-calendar"></i>
-              <small
-                ><span class="font-bold">{{ assignmentStartDateLabel }}</span>
-                {{ formattedStartDate }}</small
-              >
-            </div>
-            <div class="assignment__date">
-              <i class="pi pi-calendar"></i>
-              <small
-                ><span class="font-bold">{{ assignmentEndDateLabel }}</span>
-                {{ formattedEndDate }}</small
-              >
+            <div v-if="selectedAssignment?.dateOpened && selectedAssignment?.dateClosed" class="assignment__dates">
+              <div class="assignment__date">
+                <i class="pi pi-calendar"></i>
+                <small
+                  ><span class="font-bold">{{ assignmentStartDateLabel }}</span>
+                  {{ formattedStartDate }}</small
+                >
+              </div>
+              <div class="assignment__date">
+                <i class="pi pi-calendar"></i>
+                <small
+                  ><span class="font-bold">{{ assignmentEndDateLabel }}</span>
+                  {{ formattedEndDate }}</small
+                >
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="assignment__main">
-          <ParticipantSidebar :total-games="totalGames" :completed-games="completeGames" />
+          <div class="assignment__main">
+            <ParticipantSidebar :total-games="totalGames" :completed-games="completeGames" />
 
-          <div class="tabs-container">
-            <Transition name="fade" mode="out-in">
-              <!-- TODO: Pass in data conditionally to one instance of GameTabs. -->
-              <GameTabs
-                v-if="showOptionalAssessments && userData"
-                :games="optionalAssessments"
-                :sequential="isSequential"
-                :user-data="userData"
-              />
-              <GameTabs
-                v-else-if="requiredAssessments && userData"
-                :games="requiredAssessments"
-                :sequential="isSequential"
-                :user-data="userData"
-              />
-            </Transition>
+            <div class="tabs-container">
+              <Transition name="fade" mode="out-in">
+                <!-- TODO: Pass in data conditionally to one instance of GameTabs. -->
+                <GameTabs
+                  v-if="showOptionalAssessments && userData"
+                  :games="optionalAssessments"
+                  :sequential="isSequential"
+                  :user-data="userData"
+                />
+                <GameTabs
+                  v-else-if="requiredAssessments && userData"
+                  :games="requiredAssessments"
+                  :sequential="isSequential"
+                  :user-data="userData"
+                />
+              </Transition>
+            </div>
           </div>
         </div>
       </div>

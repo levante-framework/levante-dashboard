@@ -165,13 +165,22 @@ export const fetchDocById = async (
   const queryParams = (select ?? []).map((field) => `mask.fieldPaths=${field}`);
   const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
 
-  const { data } = await axiosInstance.get(getBaseDocumentPath() + docPath + queryString);
+  try {
+    const { data } = await axiosInstance.get(getBaseDocumentPath() + docPath + queryString);
 
-  return {
-    id: docIdValue,
-    collectionValue,
-    ..._mapValues(data.fields, (value) => convertValues(value)),
-  };
+    return {
+      id: docIdValue,
+      collectionValue,
+      ..._mapValues(data.fields, (value) => convertValues(value)),
+    };
+  } catch (error) {
+    if (error?.response?.status === 404) {
+      return {};
+    }
+
+    console.error('fetchDocById: Error fetching document:', error);
+    throw error;
+  }
 };
 
 /**

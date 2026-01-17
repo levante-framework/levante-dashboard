@@ -803,7 +803,6 @@ async function submitUsers() {
         return processedUser;
       });
 
-      const res = await createUsers({users: processedUsers, siteId: currentSite.value});
       const res = await createUsers({ users: processedUsers, siteId: currentSite.value });
       logger.capture('Admin: Add Users', { processedUsers });
       const currentRegisteredUsers = res.data.data;
