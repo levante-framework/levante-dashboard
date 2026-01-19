@@ -116,6 +116,15 @@ export const e2eCatalog: E2EEntry[] = [
     defaultStatus: 'open',
   },
   {
+    id: 'task-researcher-docs-flow',
+    category: 'tasks',
+    name: 'Researcher docs flow (robust)',
+    specPath: 'cypress/e2e/researchers/tasks/researcher-docs-flow.cy.ts',
+    runScript:
+      'npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/researcher-docs-flow.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true',
+    defaultStatus: 'open',
+  },
+  {
     id: 'task-permissions',
     category: 'tasks',
     name: 'Permissions',

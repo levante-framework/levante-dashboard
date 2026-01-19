@@ -65,12 +65,46 @@ function typeInto(selector: string, value: string, opts: Partial<Cypress.TypeOpt
     .type(value, { delay: 0, ...opts });
 }
 
+function waitForGroupsPageReady() {
+  const startedAt = Date.now();
+  const timeoutMs = 90_000;
+  const pollMs = 1_000;
+
+  function attempt(): Cypress.Chainable<void> {
+    return cy.get('body', { timeout: 60000 }).then(($body) => {
+      if ($body.find('[data-testid="groups-page-ready"]').length > 0) return;
+
+      if (Date.now() - startedAt > timeoutMs) {
+        return cy
+          .window()
+          .then((win) => {
+            const w = win as Window & { __LEVANTE_APP__?: { $pinia?: { state?: { value?: { authStore?: unknown } } } } };
+            const authState = w.__LEVANTE_APP__?.$pinia?.state?.value?.authStore ?? null;
+            const route = w.__LEVANTE_APP__?.$route ?? null;
+            return cy
+              .writeFile('cypress/tmp/add-group-auth-store.json', JSON.stringify(authState, null, 2))
+              .then(() => cy.writeFile('cypress/tmp/add-group-route.json', JSON.stringify(route, null, 2)));
+          })
+          .then(() => cy.writeFile('cypress/tmp/add-group-body.html', $body.html() ?? ''))
+          .then(() => cy.writeFile('cypress/tmp/add-group-body-text.txt', $body.text()))
+          .then(() => {
+            throw new Error('Timed out waiting for groups page readiness.');
+          });
+      }
+
+      return cy.wait(pollMs).then(() => attempt());
+    }) as unknown as Cypress.Chainable<void>;
+  }
+
+  return attempt();
+}
+
 describe('researcher workflow: add groups', () => {
   it('can create a new Cohort group (requires selecting Site dropdown first)', () => {
     signInWithPassword({ email, password });
     selectSite(siteName);
     cy.visit('/list-groups');
-    cy.get('[data-testid="groups-page-ready"]', { timeout: 60000 }).should('exist');
+    waitForGroupsPageReady();
 
     cy.get('[data-testid="add-group-btn"]').should('be.visible').should('not.be.disabled').click();
     cy.get('[data-testid="modalTitle"]').should('contain.text', 'Add New');
@@ -82,14 +116,23 @@ describe('researcher workflow: add groups', () => {
     cy.contains('[role="option"]', /^Cohort$/).click();
 
     typeInto('[data-cy="input-org-name"]', groupName);
+    cy.intercept('POST', '**/upsertOrg*').as('upsertOrg');
     cy.get('[data-testid="submitBtn"]').should('not.be.disabled').click();
-
-    // Modal should close
-    cy.get('[data-testid="modalTitle"]').should('not.exist');
+    cy.wait('@upsertOrg', { timeout: 60000 }).then((interception) => {
+      const status = interception.response?.statusCode;
+      if (status && status >= 400) {
+        cy.writeFile(
+          'cypress/tmp/add-group-upsert-error.json',
+          JSON.stringify({ status, body: interception.response?.body ?? null }, null, 2),
+        );
+        throw new Error(`upsertOrg failed with status ${status}`);
+      }
+    });
 
     // Verify success via toast (avoid relying on realtime table refresh)
-    cy.contains('Success', { timeout: 30000 }).should('exist');
-    cy.contains('Cohort created successfully.', { timeout: 30000 }).should('exist');
+    cy.contains('Success', { timeout: 60000 }).should('exist');
+    cy.contains('Cohort created successfully.', { timeout: 60000 }).should('exist');
+    cy.get('[data-testid="modalTitle"]').should('not.exist');
   });
 });
 

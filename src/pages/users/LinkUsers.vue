@@ -333,7 +333,6 @@ const submitUsers = async () => {
       if (idField) normalizedUser.id = user[idField];
       if (userTypeField) {
         const userTypeValue = user[userTypeField];
-        // Change 'caregiver' to 'parent' before sending to backend
         normalizedUser.userType = userTypeValue.toLowerCase() === 'caregiver' ? 'parent' : userTypeValue;
       }
       if (uidField) normalizedUser.uid = user[uidField];
@@ -358,7 +357,10 @@ const submitUsers = async () => {
       return normalizedUser;
     });
 
-    await authStore.roarfirekit.linkUsers({users: normalizedUsers, siteId: authStore.currentSite});
+    await authStore.linkUsersWithSite(
+      { users: normalizedUsers, siteId: authStore.currentSite },
+      { siteId: authStore.currentSite, districtId: authStore.currentSite },
+    );
     isFileUploaded.value = false;
 
     toast.add({

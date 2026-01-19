@@ -30,12 +30,13 @@
           </div>
         </div>
       </div>
-      <PvTabs v-if="claimsLoaded" v-model:value="activeOrgType" lazy class="mb-7">
-        <PvTabList>
-          <PvTab v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">{{ orgType.header }}</PvTab>
-        </PvTabList>
-        <PvTabPanels>
-          <PvTabPanel v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">
+      <div v-if="claimsLoaded" data-testid="groups-page-ready">
+        <PvTabs v-model:value="activeOrgType" lazy class="mb-7">
+          <PvTabList>
+            <PvTab v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">{{ orgType.header }}</PvTab>
+          </PvTabList>
+          <PvTabPanels>
+            <PvTabPanel v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">
             <div class="grid column-gap-3 mt-2">
               <div
                 v-if="!shouldUsePermissions && orgType.id !== 'districts'"
@@ -86,9 +87,10 @@
               @edit-button="onEditButtonClick($event)"
               @assignments-button="onAssignmentsButtonClick($event)"
             />
-          </PvTabPanel>
-        </PvTabPanels>
-      </PvTabs>
+            </PvTabPanel>
+          </PvTabPanels>
+        </PvTabs>
+      </div>
     </section>
     <section class="flex mt-8 justify-content-end">
       <PvDialog

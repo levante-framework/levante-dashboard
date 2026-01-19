@@ -333,10 +333,6 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   const toName = typeof to.name === 'string' ? to.name : '';
   const isAllowedUnauthenticated = allowedUnauthenticatedRoutes.includes(toName) || allowedUnauthenticatedPaths.includes(to.path);
 
-  if (toName && (NAVBAR_BLACKLIST as readonly string[]).includes(toName)) {
-    authStore.setShowSideBar(false);
-  }
-
   if (inMaintenanceMode && toName !== 'Maintenance') {
     return next({ name: 'Maintenance' });
   } else if (!inMaintenanceMode && toName === 'Maintenance') {

@@ -140,7 +140,7 @@ import { storeToRefs } from 'pinia';
 
 const authStore = useAuthStore();
 const { currentSite, currentSiteName, shouldUsePermissions } = storeToRefs(authStore);
-const { createUsers } = authStore;
+const { createUsersWithSite } = authStore;
 const toast = useToast();
 
 const isAllSitesSelected = computed(() => shouldUsePermissions.value && currentSite.value === 'any');
@@ -782,7 +782,7 @@ async function submitUsers() {
 
         // Ensure required backend fields exist to avoid undefined access.
         if (!processedUser.orgIds) {
-          processedUser.orgIds = { districts: [], schools: [], classes: [], groups: [], families: [] };
+          processedUser.orgIds = { districts: [], sites: [], schools: [], classes: [], groups: [], families: [] };
         } else if (!processedUser.orgIds.families) {
           processedUser.orgIds.families = [];
         }
@@ -796,6 +796,7 @@ async function submitUsers() {
 
         // Some backend paths assume these are arrays.
         processedUser.orgIds.districts ??= [];
+        processedUser.orgIds.sites ??= processedUser.orgIds.districts ?? [];
         processedUser.orgIds.schools ??= [];
         processedUser.orgIds.classes ??= [];
         processedUser.orgIds.groups ??= [];
@@ -803,7 +804,10 @@ async function submitUsers() {
         return processedUser;
       });
 
-      const res = await createUsers({ users: processedUsers, siteId: currentSite.value });
+      const res = await createUsersWithSite(
+        { users: processedUsers, siteId: currentSite.value },
+        { siteId: currentSite.value, districtId: currentSite.value },
+      );
       logger.capture('Admin: Add Users', { processedUsers });
       const currentRegisteredUsers = res.data.data;
 
@@ -822,6 +826,24 @@ async function submitUsers() {
       });
 
       registeredUsers.value.push(...currentRegisteredUsers);
+
+      if (authStore.roarfirekit?.updateUserData) {
+        await Promise.all(
+          currentRegisteredUsers.map((registeredUser, index) => {
+            const sourceUser = processedUsers[index];
+            if (!sourceUser?.orgIds) return Promise.resolve();
+            return authStore.roarfirekit.updateUserData(registeredUser.uid, {
+              orgIds: sourceUser.orgIds,
+              districtId: sourceUser.districtId,
+              siteId: sourceUser.siteId,
+              roles: ['participant'],
+              rolesSet: ['participant'],
+              siteRoles: { [sourceUser.siteId]: ['participant'] },
+              siteNames: { [sourceUser.siteId]: authStore.currentSiteName ?? '' },
+            });
+          }),
+        );
+      }
 
       toast.add({
         severity: 'success',

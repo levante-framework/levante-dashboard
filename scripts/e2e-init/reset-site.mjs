@@ -77,6 +77,8 @@ async function deleteAllForDistrict(db, districtId) {
   // Finally delete the district itself.
   writer.delete(db.collection('districts').doc(districtId));
   deleteCount += 1;
+  writer.delete(db.collection('sites').doc(districtId));
+  deleteCount += 1;
 
   await writer.close();
   return deleteCount;
@@ -116,6 +118,10 @@ async function resetAdminUser({ projectId, districtId, siteName, email, password
   const db = getFirestore();
   const uid = created.uid;
 
+  const roles = [role];
+  const siteRoles = { [districtId]: roles };
+  const siteNames = { [districtId]: siteName };
+
   await db.collection('users').doc(uid).set(
     {
       email,
@@ -129,7 +135,14 @@ async function resetAdminUser({ projectId, districtId, siteName, email, password
     { merge: true },
   );
 
-  const orgs = { districts: [districtId], schools: [], classes: [], groups: [], families: [] };
+  const orgs = {
+    districts: [districtId],
+    sites: [districtId],
+    schools: [],
+    classes: [],
+    groups: [],
+    families: [],
+  };
   await db.collection('userClaims').doc(uid).set(
     {
       claims: {
@@ -140,6 +153,10 @@ async function resetAdminUser({ projectId, districtId, siteName, email, password
         adminUid: uid,
         adminOrgs: orgs,
         minimalAdminOrgs: orgs,
+        roles,
+        rolesSet: roles,
+        siteRoles,
+        siteNames,
       },
       testData: true,
       lastUpdated: Date.now(),
@@ -147,6 +164,20 @@ async function resetAdminUser({ projectId, districtId, siteName, email, password
     },
     { merge: true },
   );
+
+  await auth.setCustomUserClaims(uid, {
+    super_admin: false,
+    admin: true,
+    useNewPermissions: true,
+    roarUid: uid,
+    adminUid: uid,
+    adminOrgs: orgs,
+    minimalAdminOrgs: orgs,
+    roles,
+    rolesSet: roles,
+    siteRoles,
+    siteNames,
+  });
 
   console.log(`[e2e-init] created ${role} user (${email}) for site "${siteName}" (uid=${uid}) in ${projectId}`);
   return { uid, email, password: effectivePassword };
@@ -211,6 +242,24 @@ async function main() {
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
+  await db.collection('sites').doc(districtRef.id).set(
+    {
+      name: siteName,
+      normalizedName,
+      tags: [],
+      schools: [],
+      classes: [],
+      archivedSchools: [],
+      archivedClasses: [],
+      subGroups: [],
+      type: 'sites',
+      active: true,
+      createdBy: 'e2e-init',
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
 
   const payload = {
     projectId,

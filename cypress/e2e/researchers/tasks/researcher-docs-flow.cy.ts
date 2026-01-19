@@ -130,10 +130,14 @@ describe('researcher docs flow (robust): groups → users → assignment → pro
     pickToday('[data-cy="input-start-date"]');
     pickToday('[data-cy="input-end-date"]');
 
-    cy.contains('Cohorts').click();
-    cy.get('[data-cy="group-picker-listbox"]').should('be.visible');
-    cy.contains('[role="option"]', cohortName).click();
-    cy.contains('Selected Groups').closest('.p-panel').contains(cohortName).should('exist');
+    cy.contains('[role="tab"]', /^Cohorts$/).click({ force: true });
+    cy.get('[data-cy="group-picker-listbox"]')
+      .filter(':visible')
+      .first()
+      .within(() => {
+        cy.contains('[role="option"]', cohortName).click();
+      });
+    cy.get('.selected-groups-scroll-panel', { timeout: 10000 }).contains(cohortName).should('exist');
 
     cy.get('[data-cy="input-variant-name"]', { timeout: 120000 }).should('be.visible');
     cy.get('[data-cy="selected-variant"]', { timeout: 120000 }).should('exist').first().click();

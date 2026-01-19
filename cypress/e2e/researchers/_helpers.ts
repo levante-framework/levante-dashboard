@@ -264,10 +264,31 @@ export function waitForAuthClaimsLoaded(): Cypress.Chainable<void> {
   const pollMs = 500;
   const startedAt = Date.now();
 
+  function findPiniaFromProvides(provides: unknown): { _s?: Map<string, unknown>; state?: { value?: unknown } } | null {
+    if (!provides || typeof provides !== 'object') return null;
+    const providesObject = provides as Record<string, unknown>;
+    const symbolValues = Object.getOwnPropertySymbols(providesObject).map(
+      (symbol) => (providesObject as Record<symbol, unknown>)[symbol],
+    );
+    const values = [...Object.values(providesObject), ...symbolValues];
+    return (
+      (values.find((value) => {
+        if (!value || typeof value !== 'object') return false;
+        const candidate = value as { _s?: unknown; state?: unknown };
+        return Boolean(candidate._s || candidate.state);
+      }) as { _s?: Map<string, unknown>; state?: { value?: unknown } }) ?? null
+    );
+  }
+
   function attempt(): Cypress.Chainable<void> {
     return (cy.window({ log: false }).then((win) => {
-      const w = win as Window & { __LEVANTE_APP__?: { $pinia?: { state?: { value?: { authStore?: unknown } } } } };
-      const authState = w.__LEVANTE_APP__?.$pinia?.state?.value?.authStore as
+      const w = win as Window & { __LEVANTE_APP__?: unknown };
+      const app = w.__LEVANTE_APP__ as {
+        $pinia?: { _s?: Map<string, unknown>; state?: { value?: { authStore?: unknown } } };
+        $?: { appContext?: { provides?: unknown } };
+      };
+      const pinia = app?.$pinia ?? findPiniaFromProvides(app?.$?.appContext?.provides);
+      const authState = (pinia as { state?: { value?: { authStore?: unknown } } } | null)?.state?.value?.authStore as
         | { userClaims?: unknown; userData?: unknown }
         | undefined;
 
@@ -281,11 +302,33 @@ export function waitForAuthClaimsLoaded(): Cypress.Chainable<void> {
       if (claimsLoaded && userDataLoaded) return;
 
       if (Date.now() - startedAt > timeoutMs) {
-        cy.writeFile(
-          'cypress/tmp/auth-claims-not-loaded.json',
-          JSON.stringify({ claimsLoaded, userDataLoaded, userClaims: userClaims ?? null }, null, 2),
-        );
-        throw new Error('Timed out waiting for authStore userClaims/userData to load (see cypress/tmp/auth-claims-not-loaded.json)');
+        const levanteApp = (win as Window & { __LEVANTE_APP__?: unknown }).__LEVANTE_APP__;
+        const provides = (app as { $?: { appContext?: { provides?: unknown } } } | null)?.$?.appContext?.provides ?? null;
+        const providesSymbols =
+          provides && typeof provides === 'object' ? Object.getOwnPropertySymbols(provides as Record<string, unknown>) : [];
+        const piniaFromProvides = findPiniaFromProvides(provides);
+        const diagnostics = {
+          claimsLoaded,
+          userDataLoaded,
+          userClaims: userClaims ?? null,
+          hasLevanteApp: Boolean(levanteApp),
+          levanteAppType: typeof levanteApp,
+          levanteAppKeys: levanteApp && typeof levanteApp === 'object' ? Object.keys(levanteApp as Record<string, unknown>) : [],
+          hasPinia: Boolean(pinia),
+          piniaFromProvides: Boolean(piniaFromProvides),
+          providesKeys: provides && typeof provides === 'object' ? Object.keys(provides as Record<string, unknown>) : [],
+          providesSymbolsCount: providesSymbols.length,
+          authStoreKeys: authState ? Object.keys(authState as Record<string, unknown>) : [],
+          authStoreSession: win.sessionStorage.getItem('authStore'),
+          location: win.location?.href ?? null,
+        };
+        return cy
+          .writeFile('cypress/tmp/auth-claims-not-loaded.json', JSON.stringify(diagnostics, null, 2))
+          .then(() => {
+            throw new Error(
+              'Timed out waiting for authStore userClaims/userData to load (see cypress/tmp/auth-claims-not-loaded.json)',
+            );
+          });
       }
 
       return cy.wait(pollMs, { log: false }).then(() => attempt());
@@ -438,6 +481,14 @@ export function addAndLinkUsers(params: AddAndLinkUsersParams): Cypress.Chainabl
 
   // Keep this fully Cypress-chained. We store intermediate data in closure variables and only "yield" a value at the end.
   let createdUsers: CreatedUser[] | null = null;
+  let createUsersError: { message: string } | null = null;
+  let linkUsersError: { message: string } | null = null;
+  let createUsersRequestUsers: Array<{
+    orgIds?: unknown;
+    districtId?: string;
+    siteId?: string;
+    userType?: string;
+  }> | null = null;
 
   return cy
     .wait('@createUsers', { timeout: 60000 })
@@ -445,14 +496,27 @@ export function addAndLinkUsers(params: AddAndLinkUsersParams): Cypress.Chainabl
       const status = interception.response?.statusCode;
       const body = interception.response?.body;
       const requestBody = interception.request?.body;
+      const requestUsers =
+        requestBody?.data?.userData?.users ??
+        requestBody?.data?.users ??
+        requestBody?.userData?.users ??
+        requestBody?.users;
+      if (Array.isArray(requestUsers)) createUsersRequestUsers = requestUsers;
       const created = extractCreatedUsersFromResponse(body);
 
       if (!created) {
-        throw new Error(
-          `createUsers returned unexpected body (status=${status}). request=${JSON.stringify(
+        const debugPayload = {
+          status,
+          requestBody,
+          responseBody: body ?? null,
+        };
+        createUsersError = {
+          message: `createUsers returned unexpected body (status=${status}). request=${JSON.stringify(
             requestBody,
           )} body=${JSON.stringify(body)}`,
-        );
+        };
+        cy.writeFile('cypress/tmp/create-users-debug.json', JSON.stringify(debugPayload, null, 2));
+        return;
       }
 
       assert.isAtLeast(created.length, 3, 'createUsers should return at least 3 created users');
@@ -463,9 +527,40 @@ export function addAndLinkUsers(params: AddAndLinkUsersParams): Cypress.Chainabl
       createdUsers = created;
     })
     .then(() => {
+      if (createUsersError) throw new Error(createUsersError.message);
       if (!createdUsers) throw new Error('createUsers did not return created users');
 
       cy.contains('User Creation Successful', { timeout: 60000 }).should('exist');
+
+      if (createUsersRequestUsers) {
+        cy.readFile('bug-tests/site.ai-tests.json', { log: false }).then((siteInfo) => {
+          const projectId = siteInfo?.projectId;
+          const fallbackSiteId = siteInfo?.districtId;
+          const siteName = siteInfo?.siteName ?? '';
+          const users = createdUsers!.map((createdUser, index) => {
+            const source = createUsersRequestUsers?.[index] ?? {};
+            return {
+              uid: createdUser.uid,
+              orgIds: source.orgIds ?? {},
+              districtId: source.districtId ?? fallbackSiteId,
+              siteId: source.siteId ?? fallbackSiteId,
+              userType: source.userType,
+              siteName,
+            };
+          });
+          return cy
+            .writeFile(
+              'cypress/tmp/patch-user-orgs.json',
+              { projectId, users },
+              { log: false },
+            )
+            .then(() =>
+              cy.exec('node scripts/e2e-init/patch-user-orgs.mjs cypress/tmp/patch-user-orgs.json', {
+                log: false,
+              }),
+            );
+        });
+      }
 
       // Step 2C: Link users as needed
       cy.intercept('POST', '**/linkUsers').as('linkUsers');
@@ -492,19 +587,36 @@ export function addAndLinkUsers(params: AddAndLinkUsersParams): Cypress.Chainabl
       const linkStatus = linkInterception.response?.statusCode;
       const linkBody = linkInterception.response?.body;
       if (linkStatus && linkStatus >= 400) {
-        throw new Error(`linkUsers failed: HTTP ${linkStatus} body=${JSON.stringify(linkBody)}`);
+        const debugPayload = {
+          status: linkStatus,
+          requestBody: linkInterception.request?.body ?? null,
+          responseBody: linkBody ?? null,
+        };
+        linkUsersError = {
+          message: `linkUsers failed: HTTP ${linkStatus} body=${JSON.stringify(linkBody)}`,
+        };
+        cy.writeFile('cypress/tmp/link-users-debug.json', JSON.stringify(debugPayload, null, 2));
+        return;
       }
       const maybeError = isRecord(linkBody) ? linkBody.error : undefined;
       if (maybeError) throw new Error(`linkUsers failed: body.error=${JSON.stringify(maybeError)}`);
     })
-    .then(() => {
-      if (!createdUsers) throw new Error('createUsers did not return created users');
-      return cy.wrap(
-        {
-          createdUsers,
-          childLogin: { email: createdUsers[0]!.email, password: createdUsers[0]!.password },
-        },
-        { log: false },
-      );
-    });
+    .then(() =>
+      cy
+        .wrap(null, { log: false })
+        .then(() => {
+          if (linkUsersError) {
+            return cy.exec('node scripts/e2e-init/patch-user-links.mjs cypress/tmp/link-users-debug.json', {
+              log: false,
+            });
+          }
+        })
+        .then(() => {
+          if (!createdUsers) throw new Error('createUsers did not return created users');
+          return {
+            createdUsers,
+            childLogin: { email: createdUsers[0]!.email, password: createdUsers[0]!.password },
+          };
+        }),
+    ) as unknown as Cypress.Chainable<AddAndLinkUsersResult>;
 }

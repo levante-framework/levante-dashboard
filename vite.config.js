@@ -282,14 +282,21 @@ function e2eRunnerPlugin() {
         const url = new URL(req.url ?? '', 'http://localhost');
         const refresh = url.searchParams.get('refresh') === '1';
         if (refresh) {
+          // First try to download from bucket (for remote persistence)
           const dl = downloadFromBucket();
           if (dl.ok) {
             cachedResults = dl.data;
             saveLocalResults(cachedResults);
             return sendJson(res, 200, { source: 'bucket', ...cachedResults });
           }
+          // If bucket download fails, reload from local file (ensures we have latest local results)
+          const local = loadLocalResults();
+          cachedResults = local;
           return sendJson(res, 200, { source: 'local', ...cachedResults, meta: { ...(cachedResults.meta ?? {}), lastDownloadError: dl.error } });
         }
+        // Always load fresh from file to ensure we have latest results
+        const local = loadLocalResults();
+        cachedResults = local;
         return sendJson(res, 200, { source: 'local', ...cachedResults });
       });
 

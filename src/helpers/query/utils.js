@@ -90,15 +90,13 @@ export const getAxiosInstance = (db = FIRESTORE_DATABASES.ADMIN, unauthenticated
   const axiosOptions = _get(roarfirekit.value.restConfig, db) ?? {};
   axiosOptions.baseURL = FIRESTORE_BASE_URL;
 
-  // // Add appCheckToken to the headers if it exists in the firekit config
-  // const appCheckToken = roarfirekit.value[db]?.appCheckToken;
-  //
-  // if (appCheckToken) {
-  //   axiosOptions.headers = {
-  //     ...axiosOptions.headers,
-  //     'X-Firebase-AppCheck': appCheckToken,
-  //   };
-  // }
+  const appCheckToken = roarfirekit.value[db]?.appCheckToken;
+  if (appCheckToken) {
+    axiosOptions.headers = {
+      ...axiosOptions.headers,
+      'X-Firebase-AppCheck': appCheckToken,
+    };
+  }
 
   if (unauthenticated) {
     delete axiosOptions.headers;

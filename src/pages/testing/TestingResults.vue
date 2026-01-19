@@ -3,7 +3,16 @@
     <section class="main-body">
       <div class="flex flex-column gap-6">
         <div class="flex flex-column gap-1">
-          <div class="admin-page-header">E2E Results</div>
+          <div class="flex items-center justify-content-between">
+            <div class="admin-page-header">E2E Results</div>
+            <PvButton
+              icon="pi pi-refresh"
+              label="Refresh"
+              class="!bg-gray-600 hover:!bg-gray-700 !text-white !border-none"
+              :loading="isRefreshing"
+              @click="refreshResults"
+            />
+          </div>
           <div class="text-md text-gray-500">
             Run tests from the UI (local dev runner).
           </div>
@@ -235,7 +244,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import PvButton from 'primevue/button';
 import { e2eCatalog } from '@/testing/e2eCatalog';
@@ -257,6 +266,7 @@ const runnerConfig = ref(null);
 const isDetailsModalOpen = ref(false);
 const selectedRowId = ref(null);
 const runnerKind = ref('none'); // 'none' | 'local' | 'remote'
+const isRefreshing = ref(false);
 
 const selectedRow = computed(() => rows.value.find((r) => r.id === selectedRowId.value) ?? null);
 const canRunNow = computed(() => {
@@ -427,8 +437,20 @@ async function runTest(row) {
 
     const finished = await pollUntilFinished(effectiveRunId);
     if (runnerKind.value === 'local') {
-      const result = finished.exitCode === 0 ? 'pass' : 'fail';
-      await resultsStore.setRunResult({ id: row.id, result, command: row.runScript, runId });
+      // Refresh results from local file to get complete data (log tail, video path, etc.)
+      try {
+        const res = await fetch('/__e2e/results?refresh=1');
+        const resultsContentType = res.headers.get('content-type') ?? '';
+        if (res.ok && resultsContentType.includes('application/json')) {
+          const json = await res.json();
+          const byId = json?.byId ?? {};
+          resultsStore.mergeFromRemote(byId);
+        }
+      } catch {
+        // Fallback: update store with basic result if refresh fails
+        const result = finished.exitCode === 0 ? 'pass' : 'fail';
+        await resultsStore.setRunResult({ id: row.id, result, command: row.runScript, runId });
+      }
     } else {
       await refreshRemoteResults();
     }
@@ -479,6 +501,29 @@ async function refreshRemoteResults() {
   if (!res.ok || !ct.includes('application/json')) return;
   const json = await res.json().catch(() => null);
   resultsStore.mergeFromRemote(json?.byId ?? {});
+}
+
+async function refreshResults() {
+  isRefreshing.value = true;
+  try {
+    if (runnerKind.value === 'local') {
+      const res = await fetch('/__e2e/results?refresh=1');
+      const resultsContentType = res.headers.get('content-type') ?? '';
+      if (res.ok && resultsContentType.includes('application/json')) {
+        const json = await res.json();
+        const byId = json?.byId ?? {};
+        resultsStore.mergeFromRemote(byId);
+        toast.add({ severity: 'success', summary: 'Refreshed', detail: 'Results updated.', life: 2000 });
+      }
+    } else if (runnerKind.value === 'remote') {
+      await refreshRemoteResults();
+      toast.add({ severity: 'success', summary: 'Refreshed', detail: 'Results updated.', life: 2000 });
+    }
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Refresh failed', detail: e?.message ?? 'Unknown error', life: 3000 });
+  } finally {
+    isRefreshing.value = false;
+  }
 }
 
 onMounted(async () => {
@@ -559,6 +604,19 @@ onMounted(async () => {
       }
     }),
   );
+
+  // Refresh results when page becomes visible (e.g., user switches back to tab)
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible' && runnerAvailable.value) {
+      refreshResults();
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  // Cleanup on unmount
+  onUnmounted(() => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  });
 });
 </script>
 

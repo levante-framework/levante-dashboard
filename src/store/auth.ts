@@ -252,9 +252,13 @@ export const useAuthStore = defineStore(
       return roarfirekit.value?.createUsers(userData as any);
     }
 
+    async function linkUsers(userData: unknown): Promise<unknown> {
+      return roarfirekit.value?.linkUsers(userData as any);
+    }
+
     async function createUsersWithSite(
       userData: unknown,
-      opts: { siteId?: string; districtId?: string },
+      opts: { siteId?: string; districtId?: string; includeArrays?: boolean },
     ): Promise<unknown> {
       if (!isFirekitInit()) throw new Error('Firekit not initialized');
       if (!opts.siteId && !opts.districtId) return await createUsers(userData);
@@ -263,14 +267,68 @@ export const useAuthStore = defineStore(
       if (!functions) return await createUsers(userData);
 
       const cloudCreateUsers = httpsCallable(functions, 'createUsers');
-      return await cloudCreateUsers({
-        userData,
-        // Some deployments expect plural ids (arrays) and will `.map()` them.
-        siteIds: opts.siteId ? [opts.siteId] : [],
-        districtIds: opts.districtId ? [opts.districtId] : [],
-        // Keep singulars too for backwards compatibility.
+      const includeArrays = opts.includeArrays !== false;
+      const siteIds = opts.siteId ? [opts.siteId] : [];
+      const districtIds = opts.districtId ? [opts.districtId] : [];
+      const userDataWithIds =
+        includeArrays && typeof userData === 'object' && userData !== null
+          ? { ...userData, siteIds, districtIds }
+          : userData;
+      const userDataWithNested =
+        includeArrays && typeof userDataWithIds === 'object' && userDataWithIds !== null
+          ? { ...userDataWithIds, userData: userDataWithIds }
+          : userDataWithIds;
+      const topLevelUsers =
+        userDataWithIds && typeof userDataWithIds === 'object' && 'users' in userDataWithIds
+          ? (userDataWithIds as { users?: unknown }).users
+          : undefined;
+      const payload = {
+        userData: userDataWithNested,
+        ...(includeArrays ? { siteIds, districtIds } : {}),
+        ...(topLevelUsers ? { users: topLevelUsers } : {}),
         siteId: opts.siteId,
         districtId: opts.districtId,
+      };
+      return await cloudCreateUsers({
+        ...payload,
+      });
+    }
+
+    async function linkUsersWithSite(
+      userData: unknown,
+      opts: { siteId?: string; districtId?: string; includeArrays?: boolean },
+    ): Promise<unknown> {
+      if (!isFirekitInit()) throw new Error('Firekit not initialized');
+      if (!opts.siteId && !opts.districtId) return await linkUsers(userData);
+
+      const functions = (roarfirekit.value as any)?.admin?.functions;
+      if (!functions) return await linkUsers(userData);
+
+      const cloudLinkUsers = httpsCallable(functions, 'linkUsers');
+      const includeArrays = opts.includeArrays !== false;
+      const siteIds = opts.siteId ? [opts.siteId] : [];
+      const districtIds = opts.districtId ? [opts.districtId] : [];
+      const userDataWithIds =
+        includeArrays && typeof userData === 'object' && userData !== null
+          ? { ...userData, siteIds, districtIds }
+          : userData;
+      const userDataWithNested =
+        includeArrays && typeof userDataWithIds === 'object' && userDataWithIds !== null
+          ? { ...userDataWithIds, userData: userDataWithIds }
+          : userDataWithIds;
+      const topLevelUsers =
+        userDataWithIds && typeof userDataWithIds === 'object' && 'users' in userDataWithIds
+          ? (userDataWithIds as { users?: unknown }).users
+          : undefined;
+      const payload = {
+        userData: userDataWithNested,
+        ...(includeArrays ? { siteIds, districtIds } : {}),
+        ...(topLevelUsers ? { users: topLevelUsers } : {}),
+        siteId: opts.siteId,
+        districtId: opts.districtId,
+      };
+      return await cloudLinkUsers({
+        ...payload,
       });
     }
 
@@ -344,6 +402,8 @@ export const useAuthStore = defineStore(
       completeAssessment,
       createUsers,
       createUsersWithSite,
+      linkUsers,
+      linkUsersWithSite,
       forceIdTokenRefresh,
       getLegalDoc,
       initFirekit,
