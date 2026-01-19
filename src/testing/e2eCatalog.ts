@@ -44,6 +44,16 @@ export const e2eCatalog: E2EEntry[] = [
     defaultStatus: 'open',
   },
   {
+    id: 'gh-0766-open',
+    category: 'bugs',
+    name: 'GH#766 Add users fails with class + school combinations',
+    githubIssueNumber: 766,
+    specPath: 'cypress/e2e/researchers/bugs/gh-0766-open.cy.ts',
+    runScript:
+      "CYPRESS_E2E_RUN_OPEN_BUGS=true npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/bugs/gh-0766-open.cy.ts --config baseUrl=${E2E_APP_URL:-https://hs-levante-admin-dev--ai-tests-dctel36u.web.app},video=true",
+    defaultStatus: 'open',
+  },
+  {
     id: 'gh-0719-closed',
     category: 'bugs',
     name: 'GH#719 (closed)',

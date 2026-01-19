@@ -1,11 +1,11 @@
 {
   "projectId": "hs-levante-admin-dev",
-  "districtId": "nEibEfDOLueICfpRhgUY",
+  "districtId": "EKGMiab2oq8QYMsJe0Rx",
   "siteName": "ai-tests",
   "normalizedName": "ai-tests",
-  "createdAt": "2026-01-19T17:15:36.976Z",
+  "createdAt": "2026-01-19T17:35:35.829Z",
   "aiAdmin": {
-    "uid": "MQqO9RisPwh6VbIxBUC84iDidrB2",
+    "uid": "eTSZ7Oz4vLS7gU66D9JAXsBNwSX2",
     "email": "ai-admin@levante.test",
     "role": "admin"
   },
@@ -15,7 +15,7 @@
     "role": "site_admin"
   },
   "aiResearchAssistant": {
-    "uid": "zEkgO0AR8NNNhHFdlNiwX751YQw2",
+    "uid": "wRnDzyS96ia7XV5KUmuG3Lc9hqa2",
     "email": "ai-research-assistant@levante.test",
     "role": "research_assistant"
   }

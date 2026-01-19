@@ -45,6 +45,7 @@ jobs:
             gh-0737-open) SPEC="cypress/e2e/researchers/bugs/gh-0737-open.cy.ts" ;;
             gh-0733-open) SPEC="cypress/e2e/researchers/bugs/gh-0733-open.cy.ts" ;;
             gh-0735-open) SPEC="cypress/e2e/researchers/bugs/gh-0735-open.cy.ts" ;;
+            gh-0766-open) SPEC="cypress/e2e/researchers/bugs/gh-0766-open.cy.ts" ;;
             gh-0719-closed) SPEC="cypress/e2e/researchers/bugs/gh-0719-closed.cy.ts" ;;
             task-add-group) SPEC="cypress/e2e/researchers/tasks/add-group.cy.ts" ;;
             task-administrator-login) SPEC="cypress/e2e/researchers/tasks/administrator-login.cy.ts" ;;
