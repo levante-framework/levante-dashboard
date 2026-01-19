@@ -471,6 +471,9 @@ xdg-open coverage/index.html  # Linux
 - **Element Not Found**: Check for dynamic content loading and use proper waits
 - **Authentication**: Ensure test credentials are valid
 - **Network Issues**: Check for proper mocking or test environment setup
+- **Remote runner allowlist**: `.github/workflows/e2e-remote-runner.yml` maps `specId` → spec path; keep it aligned with `cypress/e2e/researchers/**`
+- **Permissions users**: use `scripts/e2e-init/create-permissions-users.mjs` to provision admin/site_admin/research_assistant accounts for `task-permissions`
+- **Temp artifacts**: `cypress/tmp` contains debug output and is ignored; don’t commit it
 
 #### Translation Tests
 
@@ -515,6 +518,10 @@ npx firebase emulators:start --only auth,firestore
 # Run emulator-specific tests
 npm run e2e:locales:emulator
 ```
+
+### CI Notes
+
+- `useDistrictsListQuery.test.ts` depends on a mocked `userClaims` ref; missing refs in tests can break CI even when app code is fine.
 
 ## Integration with CI/CD
 
