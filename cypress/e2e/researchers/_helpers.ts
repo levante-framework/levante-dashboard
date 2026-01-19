@@ -256,7 +256,7 @@ export function selectSite(siteName: string) {
     return attempt();
   }
 
-  attempt();
+  return attempt();
 }
 
 export function waitForAuthClaimsLoaded(): Cypress.Chainable<void> {
