@@ -141,9 +141,13 @@ describe('researcher docs: monitor completion', () => {
       pickToday('[data-cy="input-start-date"]');
       pickToday('[data-cy="input-end-date"]');
 
-      cy.contains('Cohorts').click();
-      cy.get('[data-cy="group-picker-listbox"]', { timeout: 120000 }).should('be.visible');
-      cy.contains('[role="option"]', cohortName, { timeout: 120000 }).click();
+      cy.contains('[role="tab"]', /^Cohorts$/).click({ force: true });
+      cy.get('[data-cy="group-picker-listbox"]', { timeout: 120000 })
+        .filter(':visible')
+        .first()
+        .within(() => {
+          cy.contains('[role="option"]', cohortName, { timeout: 120000 }).click();
+        });
 
       cy.get('[data-cy="input-variant-name"]', { timeout: 120000 }).should('be.visible');
       cy.get('[data-cy="selected-variant"]', { timeout: 120000 }).should('exist').first().click();
