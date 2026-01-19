@@ -1,24 +1,32 @@
-import { ref } from 'vue';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as VueQuery from '@tanstack/vue-query';
 import { type QueryClient } from '@tanstack/vue-query';
 import { withSetup } from '@/test-support/withSetup.js';
 import { orgFetcher } from '@/helpers/query/orgs';
 import useDistrictsListQuery from './useDistrictsListQuery';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { createPinia, setActivePinia } from 'pinia';
+
+const mockStore = vi.hoisted(() => ({
+  isUserSuperAdmin: vi.fn(() => true),
+}));
+
+const userClaimsRef = vi.hoisted(() => ({ value: { claims: {} } }));
 
 vi.mock('@/helpers/query/orgs', () => ({
   orgFetcher: vi.fn().mockImplementation(() => []),
 }));
 
-vi.mock('@/composables/queries/useUserClaimsQuery');
-
 vi.mock('@/store/auth', () => ({
-  useAuthStore: vi.fn(() => ({
-    isUserSuperAdmin: vi.fn(() => true),
-  })),
+  useAuthStore: vi.fn(() => mockStore),
 }));
+
+vi.mock('pinia', async (importOriginal) => {
+  const original = await importOriginal();
+  return {
+    ...original,
+    storeToRefs: () => ({ userClaims: userClaimsRef }),
+  };
+});
 
 vi.mock('@tanstack/vue-query', async (getModule) => {
   const original = await getModule();
@@ -34,6 +42,7 @@ describe('useDistrictsListQuery', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     queryClient = new VueQuery.QueryClient();
+    userClaimsRef.value = { claims: {} };
   });
 
   afterEach(() => {
@@ -42,13 +51,11 @@ describe('useDistrictsListQuery', () => {
   });
 
   it('should call query with correct parameters', () => {
-    vi.mocked(useUserClaimsQuery).mockReturnValue({
-      data: ref({
-        claims: {
-          adminOrgs: ['mock-org-id-1', 'mock-org-id-2'],
-        },
-      }),
-    });
+    userClaimsRef.value = {
+      claims: {
+        adminOrgs: ['mock-org-id-1', 'mock-org-id-2'],
+      },
+    };
     vi.spyOn(VueQuery, 'useQuery');
 
     const [result] = withSetup(() => useDistrictsListQuery(), {
@@ -56,7 +63,7 @@ describe('useDistrictsListQuery', () => {
     });
 
     expect(VueQuery.useQuery).toHaveBeenCalledWith({
-      queryKey: ['districts-list', 'super', null],
+      queryKey: ['districts-list', 'super', ['mock-org-id-1', 'mock-org-id-2']],
       queryFn: expect.any(Function),
       enabled: expect.any(Object),
     });
@@ -76,6 +83,11 @@ describe('useDistrictsListQuery', () => {
 
   it('should allow the query to be disabled via the passed query options', () => {
     const queryOptions = { enabled: false };
+    userClaimsRef.value = {
+      claims: {
+        adminOrgs: ['mock-org-id-1'],
+      },
+    };
 
     vi.spyOn(VueQuery, 'useQuery');
 
@@ -84,7 +96,7 @@ describe('useDistrictsListQuery', () => {
     });
 
     expect(VueQuery.useQuery).toHaveBeenCalledWith({
-      queryKey: ['districts-list', 'super', null],
+      queryKey: ['districts-list', 'super', ['mock-org-id-1']],
       queryFn: expect.any(Function),
       enabled: expect.any(Object),
     });
