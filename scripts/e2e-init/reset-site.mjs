@@ -91,21 +91,26 @@ async function resetAdminUser({ projectId, districtId, siteName, email, password
 
   // Guard: don't allow destructive admin ops on arbitrary accounts unless explicitly forced.
   const safeEmail = email.toLowerCase().includes('ai-') || email.toLowerCase().endsWith('@levante.test');
-  if (!safeEmail && !force) {
-    throw new Error(`Refusing to delete/recreate non-e2e admin user "${email}". Use --force to override.`);
-  }
-
   const auth = getAuth();
-  let existingUid = null;
+  let existingUser = null;
   try {
-    const u = await auth.getUserByEmail(email);
-    existingUid = u.uid;
+    existingUser = await auth.getUserByEmail(email);
   } catch {
     // ignore not-found
   }
 
-  if (existingUid) {
-    await auth.deleteUser(existingUid);
+  if (!safeEmail && !force) {
+    if (!existingUser) {
+      throw new Error(`Refusing to create non-e2e admin user "${email}". Use --force to override.`);
+    }
+    console.log(
+      `[e2e-init] preserving existing non-e2e admin user "${email}" (uid=${existingUser.uid}); skipping reset`,
+    );
+    return { uid: existingUser.uid, email, password: password || '', role };
+  }
+
+  if (existingUser?.uid) {
+    await auth.deleteUser(existingUser.uid);
   }
 
   const created = await auth.createUser({
