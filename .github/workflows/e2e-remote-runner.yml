@@ -54,6 +54,7 @@ jobs:
             task-researcher-full-workflow) SPEC="cypress/e2e/researchers/tasks/researcher-full-workflow.cy.ts" ;;
             task-researcher-docs-website) SPEC="cypress/e2e/researchers/tasks/researcher-docs-website.cy.ts" ;;
             task-researcher-docs-scenario) SPEC="cypress/e2e/researchers/tasks/researcher-docs-scenario.cy.ts" ;;
+            task-researcher-docs-site-admin-school-class-add-users) SPEC="cypress/e2e/researchers/tasks/researcher-docs-site-admin-school-class-add-users.cy.ts" ;;
             *)
               echo "Unknown/blocked specId: $SPEC_ID"
               exit 2

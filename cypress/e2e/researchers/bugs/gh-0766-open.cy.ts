@@ -80,9 +80,30 @@ describe('GH#766 [OPEN] Add users fails for class + school combinations', () => 
     cy.contains('File Successfully Uploaded', { timeout: 60000 }).should('exist');
     cy.get('[data-cy="button-add-users-from-file"]', { timeout: 60000 }).should('be.visible').click();
 
-    cy.contains(
-      `Invalid Class: Class '${className}' not found in any of the specified site/school combinations`,
-      { timeout: 60000 },
-    ).should('exist');
+    const expectedError = `Invalid Class: Class '${className}' not found in any of the specified site/school combinations`;
+    const startedAt = Date.now();
+    const timeoutMs = 90_000;
+
+    function waitForOutcome(): Cypress.Chainable<void> {
+      return cy.get('body', { timeout: 60000 }).then(($body) => {
+        const bodyText = $body.text() || '';
+
+        if (bodyText.includes(expectedError)) return;
+
+        if (bodyText.includes('User Creation Successful') || $body.find('[data-cy="button-download-users"]').length) {
+          throw new Error(
+            `Bug not reproduced: Add Users succeeded for school+class. Expected error "${expectedError}".`,
+          );
+        }
+
+        if (Date.now() - startedAt > timeoutMs) {
+          throw new Error(`Timed out waiting for either "${expectedError}" or a success indicator.`);
+        }
+
+        return cy.wait(1000).then(() => waitForOutcome());
+      }) as unknown as Cypress.Chainable<void>;
+    }
+
+    waitForOutcome();
   });
 });
