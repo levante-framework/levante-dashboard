@@ -57,6 +57,7 @@ testsprite_tests/tmp/raw_report.md
 cypress/screenshots
 cypress/videos
 cypress/downloads
+cypress/tmp
 
 # Intl Hash
 .cache
