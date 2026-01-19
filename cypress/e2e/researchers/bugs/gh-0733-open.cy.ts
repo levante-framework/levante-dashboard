@@ -65,6 +65,41 @@ function selectOrgType(label: 'Site' | 'School' | 'Class' | 'Cohort') {
   cy.contains('[role="option"]', new RegExp(`^${label}$`), { timeout: 60000 }).click();
 }
 
+function clearCurrentSiteSelection() {
+  cy.window().then((win) => {
+    const w = win as Window & {
+      __LEVANTE_APP__?: {
+        $pinia?: { _s?: Map<string, unknown>; state?: { value?: { authStore?: unknown } } };
+      };
+    };
+    const pinia = w.__LEVANTE_APP__?.$pinia;
+    const authStore = pinia?._s?.get('authStore') as
+      | {
+          setCurrentSite?: (id: string | null, name: string | null) => void;
+        }
+      | undefined;
+    const authState = pinia?.state?.value?.authStore as
+      | { currentSite?: unknown; currentSiteName?: unknown }
+      | undefined;
+
+    if (authStore?.setCurrentSite) authStore.setCurrentSite('any', 'any');
+    if (authState && typeof authState === 'object') {
+      authState.currentSite = 'any';
+      authState.currentSiteName = 'any';
+    }
+
+    const raw = win.sessionStorage.getItem('authStore');
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw) as { currentSite?: unknown; currentSiteName?: unknown };
+        parsed.currentSite = 'any';
+        parsed.currentSiteName = 'any';
+        win.sessionStorage.setItem('authStore', JSON.stringify(parsed));
+      } catch {}
+    }
+  });
+}
+
 describe('GH#733 [OPEN] PERMISSIONS SuperAdmins cannot create sites', () => {
   const testRunner = Cypress.env('E2E_RUN_OPEN_BUGS') ? it : it.skip;
 
@@ -83,6 +118,7 @@ describe('GH#733 [OPEN] PERMISSIONS SuperAdmins cannot create sites', () => {
 
     cy.visit('/signin');
     signInWithPassword({ email, password });
+    clearCurrentSiteSelection();
 
     cy.visit('/list-groups');
     cy.get('[data-testid="groups-page-ready"]', { timeout: 60000 }).should('exist');

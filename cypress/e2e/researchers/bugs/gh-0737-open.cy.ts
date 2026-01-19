@@ -91,32 +91,6 @@ function goToGroupsTab(label: 'Sites' | 'Schools' | 'Classes' | 'Cohorts') {
   cy.contains('[role="tab"]', new RegExp(`^${label}$`), { timeout: 60000 }).click();
 }
 
-function waitForGroupRow(name: string) {
-  const startedAt = Date.now();
-  const timeoutMs = 2 * 60_000;
-
-  function attempt(): Cypress.Chainable<void> {
-    cy.get('[data-cy="search-groups-input"]', { timeout: 60000 })
-      .should('be.visible')
-      .clear()
-      .type(name);
-
-    return cy.get('body', { timeout: 60000 }).then(($body) => {
-      if ($body.text().includes(name)) return;
-
-      if (Date.now() - startedAt > timeoutMs) {
-        throw new Error(`Timed out waiting for group to appear in table: ${name}`);
-      }
-
-      cy.wait(2000);
-      reloadGroupsPage();
-      return attempt();
-    });
-  }
-
-  return attempt();
-}
-
 function submitAndExpectDuplicateError(label: string, name: string) {
   // Ensure we don't accidentally match a prior toast from a previous submission.
   cy.contains(`${label} Creation Error`, { timeout: 60000 }).should('not.exist');
@@ -160,9 +134,6 @@ describe('GH#737 [OPEN] PERMISSIONS Prohibit identical class names within site',
 
     // The school dropdown is fed by a cached query; a reload helps ensure newly created schools appear as options.
     reloadGroupsPage();
-    goToGroupsTab('Schools');
-    waitForGroupRow(schoolA);
-    waitForGroupRow(schoolB);
 
     openAddGroupModal();
     selectOrgType('Class');

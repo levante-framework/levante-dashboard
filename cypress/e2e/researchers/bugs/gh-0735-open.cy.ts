@@ -52,7 +52,7 @@
  * 6. Includes helpful error message listing all 403 URLs if test fails
  */
 
-import { ignoreKnownHostedUncaughtExceptions, selectSite, signInWithPassword } from '../_helpers';
+import { ignoreKnownHostedUncaughtExceptions, pickToday, selectSite, signInWithPassword, typeInto } from '../_helpers';
 
 // GH#735: For some (newly created) site admins, progress report is blank due to a 403 when fetching data.
 // https://github.com/levante-framework/levante-dashboard/issues/735
@@ -67,16 +67,18 @@ function failOn403ForProgressReportRequests() {
   const forbiddenRequests: Array<{ url: string; status: number }> = [];
 
   // Firestore REST endpoints used by ProgressReport.vue queries.
-  cy.intercept('POST', '**:runQuery', (req) => {
-    req.continue((res) => {
+  cy.intercept({ method: 'POST', url: '**:runQuery', middleware: true }, (req) => {
+    req.on('response', (res) => {
       if (res.statusCode === 403) forbiddenRequests.push({ url: req.url, status: res.statusCode });
     });
+    req.continue();
   }).as('fsRunQuery');
 
-  cy.intercept('POST', '**:batchGet', (req) => {
-    req.continue((res) => {
+  cy.intercept({ method: 'POST', url: '**:batchGet', middleware: true }, (req) => {
+    req.on('response', (res) => {
       if (res.statusCode === 403) forbiddenRequests.push({ url: req.url, status: res.statusCode });
     });
+    req.continue();
   }).as('fsBatchGet');
 
   // Surface a single helpful failure at the end of the test.
@@ -101,11 +103,67 @@ describe('GH#735 [OPEN] PERMISSIONS Progress report is blank for some users', ()
 
     // Navigate to any assignment and open Progress Report.
     cy.visit('/');
-    cy.get('[data-cy="h2-card-admin-title"]', { timeout: 120000 })
-      .should('exist')
-      .then(($titles) => {
-        if ($titles.length < 1) throw new Error('No assignments found to open Progress Report. Seed ai-tests first.');
+    cy.contains('All Assignments', { timeout: 120000 }).should('be.visible');
+    cy.get('body', { timeout: 120000 }).then(($body) => {
+      if ($body.find('[data-cy="h2-card-admin-title"]').length) return;
+
+      const runId = `${Date.now()}`;
+      const cohortName = `e2e-cohort-735-${runId}`;
+      const assignmentName = `e2e-assignment-735-${runId}`;
+
+      cy.visit('/list-groups');
+      cy.get('[data-testid="groups-page-ready"]', { timeout: 90000 }).should('exist');
+      cy.get('body').then(($groupBody) => {
+        if ($groupBody.find('[data-testid="add-group-btn"]').length) {
+          cy.get('[data-testid="add-group-btn"]').should('be.visible').should('not.be.disabled').click();
+          return;
+        }
+        cy.contains('button', /^Add Group$/, { timeout: 60000 }).should('be.visible').click();
       });
+
+      cy.get('[data-testid="modalTitle"]').should('contain.text', 'Add New');
+      cy.get('[data-cy="dropdown-org-type"]').click();
+      cy.contains('[role="option"]', /^Cohort$/).click();
+      typeInto('[data-cy="input-org-name"]', cohortName);
+      cy.intercept('POST', /upsertOrg/i).as('upsertOrg');
+      cy.get('[data-testid="submitBtn"]').should('not.be.disabled').click();
+      cy.wait('@upsertOrg', { timeout: 120000 }).then((interception) => {
+        const status = interception.response?.statusCode;
+        if (status && status >= 400) throw new Error(`upsertOrg failed: HTTP ${status}`);
+      });
+      cy.contains('Cohort created successfully.', { timeout: 60000 }).should('exist');
+
+      cy.visit('/create-assignment');
+      typeInto('[data-cy="input-administration-name"]', assignmentName);
+      pickToday('[data-cy="input-start-date"]');
+      pickToday('[data-cy="input-end-date"]');
+
+      cy.contains('[role="tab"]', /^Cohorts$/).click({ force: true });
+      cy.get('[data-cy="group-picker-listbox"]', { timeout: 120000 })
+        .filter(':visible')
+        .first()
+        .within(() => {
+          cy.contains('[role="option"]', cohortName, { timeout: 120000 }).click();
+        });
+
+      cy.get('[data-cy="input-variant-name"]', { timeout: 120000 }).should('be.visible');
+      cy.get('[data-cy="selected-variant"]', { timeout: 120000 }).should('exist').first().click();
+      cy.get('[data-cy="panel-droppable-zone"]', { timeout: 120000 }).contains('Variant name:').should('exist');
+
+      cy.get('input[id="No"]').should('exist').check({ force: true });
+
+      cy.intercept('POST', /upsertAdministration/i).as('upsertAdministration');
+      cy.get('[data-cy="button-create-administration"]').should('be.visible').should('not.be.disabled').click();
+      cy.wait('@upsertAdministration', { timeout: 120000 }).then((interception) => {
+        const status = interception.response?.statusCode;
+        if (status && status >= 400) throw new Error(`upsertAdministration failed: HTTP ${status}`);
+      });
+      cy.contains('Your new assignment is being processed', { timeout: 60000 }).should('exist');
+
+      cy.visit('/');
+      cy.contains('All Assignments', { timeout: 120000 }).should('be.visible');
+      cy.get('[data-cy="h2-card-admin-title"]', { timeout: 120000 }).should('exist');
+    });
 
     cy.get('.card-administration', { timeout: 120000 })
       .first()

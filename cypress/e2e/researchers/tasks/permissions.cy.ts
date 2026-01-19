@@ -168,7 +168,7 @@ describe('permissions: role-based route access', () => {
     assertNewPermissionsEnabled();
     waitForUserData();
 
-    assertAllowed('/list-groups', '[data-testid="groups-page-title"]');
+    assertAllowed('/list-groups', '[data-testid="groups-page-ready"]');
     waitForPermissionsToLoad();
     
     // admin is RUD for groups - cannot create any groups (Sites, Schools, Classes, or Cohorts)
@@ -196,7 +196,7 @@ describe('permissions: role-based route access', () => {
     assertNewPermissionsEnabled();
     waitForUserData();
 
-    assertAllowed('/list-groups', '[data-testid="groups-page-title"]');
+    assertAllowed('/list-groups', '[data-testid="groups-page-ready"]');
     waitForPermissionsToLoad();
     cy.get('[data-cy="add-group-btn"]').should('be.visible').click();
     cy.get('[data-testid="modalTitle"]', { timeout: 60000 }).should('contain.text', 'Add New');
@@ -224,7 +224,7 @@ describe('permissions: role-based route access', () => {
           'Research Assistant was redirected to /. This means route access denied (roles not loaded or missing "research_assistant").',
         );
       } else if (pathname === '/list-groups') {
-        cy.get('[data-testid="groups-page-title"]', { timeout: 120000 }).should('be.visible');
+        cy.get('[data-testid="groups-page-ready"]', { timeout: 120000 }).should('be.visible');
       } else {
         throw new Error(`Research Assistant navigated to unexpected path: ${pathname}`);
       }
@@ -248,7 +248,7 @@ describe('permissions: role-based route access', () => {
     cy.location('pathname', { timeout: 60000 }).should('eq', '/testing-results');
     cy.contains('E2E Results', { timeout: 60000 }).should('exist');
 
-    assertAllowed('/list-groups', '[data-testid="groups-page-title"]');
+    assertAllowed('/list-groups', '[data-testid="groups-page-ready"]');
     waitForPermissionsToLoad();
     cy.get('[data-cy="add-group-btn"]').should('be.visible').click();
     cy.get('[data-cy="dropdown-org-type"]').should('be.visible').click();
