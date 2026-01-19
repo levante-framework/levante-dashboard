@@ -1,9 +1,0 @@
-{
-  "when": "2026-01-03T22:51:28.351Z",
-  "seededAdministrationId": "dq3x4RF9MwR4dM8Ek0oE",
-  "seededOrgType": "group",
-  "seededOrgId": "0tS6m7wwACAhDoy0TScq",
-  "responseStatus": 200,
-  "responseBodyPreview": "{\"result\":{\"status\":\"ok\",\"administrationId\":\"dq3x4RF9MwR4dM8Ek0oE\"}}",
-  "requestDataPreview": "{\"name\":\"e2e-assignment-monitor-1767480658388\",\"publicName\":\"e2e-assignment-monitor-1767480658388\",\"normalizedName\":\"e2e-assignment-monitor-1767480658388\",\"assessments\":[{\"variantId\":\"YXXjBbBuaacSaEV4NGiW\",\"variantName\":\"en\",\"taskId\":\"intro\",\"params\":{\"storeItemId\":false,\"maxTime\":100,\"sequentialStimulus\":true,\"numberOfTrials\":300,\"keyHelpers\":false,\"stimulusBlocks\":3,\"corpus\":null,\"numOfPracticeTrials\":2,\"maxIncorrect\":3,\"language\":\"en\",\"sequentialPractice\":true,\"skipInstructions\":true,\"taskName\":\"intro\",\"buttonLayout\":\"default\",\"age\":null},\"conditions\":{\"assigned\":{\"op\":\"AND\",\"conditions\":[{\"field\":\"userType\",\"op\":\"EQUAL\",\"value\":\"student\"}]}}}],\"dateOpen\":\"2026-01-03T22:51:25.675Z\",\"dateClose\":\"2026-01-04T07:59:59.999Z\",\"sequential\":false,\"orgs\":{\"districts\":[],\"schools\":[],\"classes\":[],\"groups\":[\"0tS6m7wwACAhDoy0TScq\"]},\"isTestData\":false,\"legal\":{\"consent\":null,\"assent\":null,\"amount\":\"\",\"expectedTime\":\"\"},\"creatorName\":\"David Cardinal\"}"
-}

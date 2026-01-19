@@ -1,0 +1,10 @@
+# Big, non-essential stuff
+node_modules/
+dist/
+.build/
+logs/
+**/*.log
+**/*.csv
+**/*.parquet
+**/*.mp4
+**/*.zip
