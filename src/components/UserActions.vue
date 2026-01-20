@@ -148,7 +148,6 @@ const handleSiteChange = (e: DropdownChangeEvent): void => {
 const helpOptions: DropdownOption[] = [
   { label: 'Researcher Documentation', value: 'researcherDocumentation' },
   { label: 'Report an Issue', value: 'reportAnIssue' },
-  { label: 'E2E Testing Results', value: 'e2eTestingResults' },
 ];
 
 const profileOptions: DropdownOption[] = [
@@ -161,8 +160,6 @@ const handleHelpChange = (e: DropdownChangeEvent): void => {
     window.open('https://researcher.levante-network.org/', '_blank');
   } else if (e.value === 'reportAnIssue') {
     window.open('https://levante-support.freshdesk.com', '_blank');
-  } else if (e.value === 'e2eTestingResults') {
-    window.open('/testing-results', '_blank');
   }
 };
 

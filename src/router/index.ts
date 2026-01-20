@@ -114,7 +114,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/auth-email-link',
     name: 'AuthEmailLink',
-    beforeEnter: [removeQueryParams, removeHash],
+    beforeRouteLeave: [removeQueryParams, removeHash],
     component: () => import('../components/auth/AuthEmailLink.vue'),
     meta: {
       pageTitle: 'Email Link Authentication',
@@ -170,7 +170,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/manage-administrators',
     name: 'ManageAdministrators',
-    component: () => import('@/pages/CreateAdministrator.vue'),
+    component: () => import('@/pages/ManageAdministrators.vue'),
     meta: {
       pageTitle: 'Manage Administrators',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
@@ -294,15 +294,6 @@ const routes: Array<RouteRecordRaw> = [
       allowedRoles: [],
     },
   },
-  {
-    path: '/testing-results',
-    name: 'TestingResults',
-    component: () => import('../pages/testing/TestingResults.vue'),
-    meta: {
-      pageTitle: 'E2E Results',
-      allowedRoles: [ROLES.SUPER_ADMIN],
-    },
-  },
 ];
 
 const scrollBehavior: RouterScrollBehavior = (to, from, savedPosition) => {
@@ -327,34 +318,25 @@ const router = createRouter({
 router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
   const authStore = useAuthStore();
   const { shouldUsePermissions, userData } = storeToRefs(authStore);
+  const { isAuthenticated } = authStore;
   const allowedUnauthenticatedRoutes = ['AuthEmailLink', 'AuthEmailSent', 'Debug', 'Maintenance', 'SignIn'];
-  const allowedUnauthenticatedPaths = ['/signin', '/auth-email-link', '/auth-email-sent', '/debug', '/maintenance', '/enable-cookies'];
   const inMaintenanceMode = false;
-  const toName = typeof to.name === 'string' ? to.name : '';
-  const isAllowedUnauthenticated = allowedUnauthenticatedRoutes.includes(toName) || allowedUnauthenticatedPaths.includes(to.path);
 
-  if (inMaintenanceMode && toName !== 'Maintenance') {
+  if (inMaintenanceMode && to.name !== 'Maintenance') {
     return next({ name: 'Maintenance' });
-  } else if (!inMaintenanceMode && toName === 'Maintenance') {
+  } else if (!inMaintenanceMode && to.name === 'Maintenance') {
     return next({ name: 'Home' });
   }
 
   // Check if user is signed in. If not, go to signin
-  if (
-    !to.path.includes('__/auth/handler') &&
-    !authStore.isAuthenticated() &&
-    !isAllowedUnauthenticated
-  ) {
+  if (!to.path.includes('__/auth/handler') && !isAuthenticated() && !allowedUnauthenticatedRoutes.includes(to.name)) {
     return next({ name: 'SignIn' });
   }
-
-  // If the user is not authenticated, we should not block routing on userData hydration.
-  if (!authStore.isAuthenticated()) return next();
 
   // @TODO
   // If we're gonna keep this solution,
   // we need to think about setting up a max num of tries and an error handler.
-  if (!userData.value && !isAllowedUnauthenticated) {
+  if (!userData.value && !allowedUnauthenticatedRoutes.includes(to.name)) {
     await new Promise<void>((resolve) => {
       const checkUserData = () => {
         if (userData.value) return resolve();
@@ -386,4 +368,3 @@ router.afterEach((to, from) => {
 });
 
 export default router;
-

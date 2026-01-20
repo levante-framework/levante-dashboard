@@ -128,13 +128,3 @@ npx cypress run --browser chrome --e2e --spec cypress/e2e/researchers/tasks/perm
   --config baseUrl=${E2E_APP_URL},video=true
 ```
 
-## Running from the E2E Results page
-
-Start the local runner, then open `http://localhost:5173/testing-results`:
-
-```bash
-VITE_E2E_RUNNER=TRUE npm run dev:db:runner
-```
-
-Then click **Run** for the “Permissions” task.
-

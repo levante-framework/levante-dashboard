@@ -183,8 +183,6 @@ describe('permissions: role-based route access', () => {
     assertAllowed('/add-users', '[data-cy="upload-add-users-csv"]');
     assertAllowed('/create-assignment', '[data-cy="input-administration-name"]');
 
-    // Current router config: /testing-results is SUPER_ADMIN only.
-    assertBlocked('/testing-results');
   });
 
   it('site_admin: CRUDE within site; can create Schools/Classes/Cohorts (but NOT Sites); cannot access super-admin-only routes', () => {
@@ -206,7 +204,6 @@ describe('permissions: role-based route access', () => {
 
     assertAllowed('/add-users', '[data-cy="upload-add-users-csv"]');
     assertAllowed('/create-assignment', '[data-cy="input-administration-name"]');
-    assertBlocked('/testing-results');
   });
 
   it('research_assistant: read groups/assignments; create users; no create groups/assignments; no super-admin routes', function () {
@@ -235,7 +232,6 @@ describe('permissions: role-based route access', () => {
 
     assertAllowed('/add-users', '[data-cy="upload-add-users-csv"]');
     assertBlocked('/create-assignment');
-    assertBlocked('/testing-results');
   });
 
   it('super_admin (optional): can access super-admin-only routes and global site creation', function () {
@@ -243,10 +239,6 @@ describe('permissions: role-based route access', () => {
     signInWithPassword({ email: superAdminEmail!, password: superAdminPassword! });
     selectSite(siteName);
     assertNewPermissionsEnabled();
-
-    cy.visit('/testing-results');
-    cy.location('pathname', { timeout: 60000 }).should('eq', '/testing-results');
-    cy.contains('E2E Results', { timeout: 60000 }).should('exist');
 
     assertAllowed('/list-groups', '[data-testid="groups-page-ready"]');
     waitForPermissionsToLoad();
@@ -262,7 +254,6 @@ describe('permissions: role-based route access', () => {
     assertBlocked('/list-groups');
     assertBlocked('/add-users');
     assertBlocked('/create-assignment');
-    assertBlocked('/testing-results');
   });
 });
 

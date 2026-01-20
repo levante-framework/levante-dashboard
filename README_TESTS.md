@@ -89,27 +89,6 @@ E2E tests simulate real user interactions and test complete workflows.
 **Location**: [`cypress/e2e/`](cypress/e2e/)
 **Config**: [`cypress.config.ts`](cypress.config.ts)
 
-#### E2E Results page (Run Test buttons)
-
-There is a dashboard page at `/testing-results` that lists E2E **Bugs** + **Tasks** and lets SuperAdmins click **Run Test**.
-
-- **Local runner (DEV)**: run the Vite dev server with the runner enabled, then open `http://localhost:5173/testing-results`
-
-```bash
-VITE_E2E_RUNNER=TRUE npm run dev:db:runner
-```
-
-- **Remote runner (deployed previews)**: the hosted preview uses Firebase Functions (`/api/e2e/*`) to trigger the GitHub Actions workflow `.github/workflows/e2e-remote-runner.yml` and persist results for everyone.
-
-Setup requirements:
-
-- Set Firebase Functions secret **`GITHUB_E2E_TOKEN`** (GitHub token that can dispatch workflows + read runs).
-- Configure GitHub Actions secrets for Cypress login:
-  - `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`
-  - `E2E_AI_ADMIN_EMAIL`, `E2E_AI_ADMIN_PASSWORD`
-  - `E2E_AI_SITE_ADMIN_EMAIL`, `E2E_AI_SITE_ADMIN_PASSWORD`
-- Deploy Functions: `npm run deploy:functions:dev`
-
 #### Recent E2E updates (Jan 2026)
 
 - Added E2E specs for Add Users school + class validation:
