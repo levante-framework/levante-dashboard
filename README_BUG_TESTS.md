@@ -65,3 +65,8 @@ To run the fetcher you must pass the project identifier (already wired into the 
 - `--project-org <orgLogin>`
 - `--project-number <number>`
 
+## Recent bug coverage updates (Jan 2026)
+
+- Added `cypress/e2e/researchers/bugs/gh-0766-open.cy.ts` to validate Add Users with school + class selections.
+- The spec now asserts success (no row-level validation errors) to confirm the fix. If you need to reproduce the original failure, use a pre-fix revision or adjust the spec.
+- The spec is allowlisted for the remote runner in `.github/workflows/e2e-remote-runner.yml` and appears in the Testing Results page catalog.

@@ -71,6 +71,15 @@ The Cypress spec `cypress/e2e/researchers/tasks/permissions.cy.ts` validates:
   - Example: **Create Cohort** (“Add Group”) is gated by `groups:create:cohorts`
   - Example: **Add Users** is gated by `users:create`
 
+## Selector contract (Jan 2026)
+
+The permissions spec relies on stable selectors in `src/pages/groups/ListGroups.vue`:
+
+- `data-cy="add-group-btn"`
+- `data-cy="add-users-btn"`
+
+If these selectors are removed or renamed, the permissions spec will fail.
+
 ## Roles under test (E2E)
 
 Required:

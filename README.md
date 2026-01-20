@@ -6,6 +6,13 @@ This project is a fork of ROAR, with additional support for the Levante environm
 
 ## NPM Scripts for LEVANTE are listed in [package.json](./package.json)
 
+## Testing and E2E context
+
+- Testing guide: [`README_TESTS.md`](./README_TESTS.md)
+- Bug-focused Cypress specs: [`README_BUG_TESTS.md`](./README_BUG_TESTS.md)
+- Permissions E2E spec: [`README_TESTS_PERMISSIONS.md`](./README_TESTS_PERMISSIONS.md)
+- Context history (recent investigations and fixes): [`README_CONTEXT_HISTORY.md`](./README_CONTEXT_HISTORY.md)
+
 ## Legacy Data Flow Diagram from ROAR
 
 See the legacy [ROAR/ROAD Data Flow Diagram here](https://miro.com/app/board/uXjVNY-_qDA=/?share_link_id=967374624080).

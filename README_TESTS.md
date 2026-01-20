@@ -110,6 +110,18 @@ Setup requirements:
   - `E2E_AI_SITE_ADMIN_EMAIL`, `E2E_AI_SITE_ADMIN_PASSWORD`
 - Deploy Functions: `npm run deploy:functions:dev`
 
+#### Recent E2E updates (Jan 2026)
+
+- Added E2E specs for Add Users school + class validation:
+  - `cypress/e2e/researchers/bugs/gh-0766-open.cy.ts`
+  - `cypress/e2e/researchers/tasks/researcher-docs-site-admin-school-class-add-users.cy.ts`
+- Added spec entries to the Testing Results catalog (`src/testing/e2eCatalog.ts`) and allowlisted new specs in `.github/workflows/e2e-remote-runner.yml`.
+- Fixed class lookup validation by including `parentSchool` in `fetchOrgByName` for `classes` queries (`src/helpers/query/orgs.js`).
+- Added stable E2E selectors (`data-cy`/`data-testid`) for permissions and add-users flows.
+- Updated `scripts/e2e-init/reset-site.mjs` to preserve existing non-e2e admin users instead of failing.
+- Added debugging scripts for org combos and user claims in `scripts/e2e-init/`.
+- Ignored Cypress artifacts and generated bug-test data in `.gitignore`.
+
 #### Test Files
 
 ##### [`testTasks.cy.ts`](cypress/e2e/testTasks.cy.ts)
