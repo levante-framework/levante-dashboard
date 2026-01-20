@@ -89,6 +89,39 @@ E2E tests simulate real user interactions and test complete workflows.
 **Location**: [`cypress/e2e/`](cypress/e2e/)
 **Config**: [`cypress.config.ts`](cypress.config.ts)
 
+#### E2E Results page (Run Test buttons)
+
+There is a dashboard page at `/testing-results` that lists E2E **Bugs** + **Tasks** and lets SuperAdmins click **Run Test**.
+
+- **Local runner (DEV)**: run the Vite dev server with the runner enabled, then open `http://localhost:5173/testing-results`
+
+```bash
+VITE_E2E_RUNNER=TRUE npm run dev:db:runner
+```
+
+- **Remote runner (deployed previews)**: the hosted preview uses Firebase Functions (`/api/e2e/*`) to trigger the GitHub Actions workflow `.github/workflows/e2e-remote-runner.yml` and persist results for everyone.
+
+Setup requirements:
+
+- Set Firebase Functions secret **`GITHUB_E2E_TOKEN`** (GitHub token that can dispatch workflows + read runs).
+- Configure GitHub Actions secrets for Cypress login:
+  - `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`
+  - `E2E_AI_ADMIN_EMAIL`, `E2E_AI_ADMIN_PASSWORD`
+  - `E2E_AI_SITE_ADMIN_EMAIL`, `E2E_AI_SITE_ADMIN_PASSWORD`
+- Deploy Functions: `npm run deploy:functions:dev`
+
+#### Recent E2E updates (Jan 2026)
+
+- Added E2E specs for Add Users school + class validation:
+  - `cypress/e2e/researchers/bugs/gh-0766-open.cy.ts`
+  - `cypress/e2e/researchers/tasks/researcher-docs-site-admin-school-class-add-users.cy.ts`
+- Added spec entries to the Testing Results catalog (`src/testing/e2eCatalog.ts`) and allowlisted new specs in `.github/workflows/e2e-remote-runner.yml`.
+- Fixed class lookup validation by including `parentSchool` in `fetchOrgByName` for `classes` queries (`src/helpers/query/orgs.js`).
+- Added stable E2E selectors (`data-cy`/`data-testid`) for permissions and add-users flows.
+- Updated `scripts/e2e-init/reset-site.mjs` to preserve existing non-e2e admin users instead of failing.
+- Added debugging scripts for org combos and user claims in `scripts/e2e-init/`.
+- Ignored Cypress artifacts and generated bug-test data in `.gitignore`.
+
 #### Test Files
 
 ##### [`testTasks.cy.ts`](cypress/e2e/testTasks.cy.ts)
@@ -105,6 +138,31 @@ E2E tests simulate real user interactions and test complete workflows.
   - `E2E_TEST_EMAIL`: Test user email
   - `E2E_TEST_PASSWORD`: Test user password
 
+##### [`researcher-full-workflow.cy.ts`](cypress/e2e/researchers/tasks/researcher-full-workflow.cy.ts)
+
+- **Purpose**: Exercises the researcher setup workflow described in `README_RESEARCHERS.md`: create a cohort, upload users CSV, link users, create an assignment.
+- **Runs against**: Hosted or local (hosted recommended for CI-like stability).
+- **Prereqs**:
+  - A site option exists in the Site dropdown named **"AAA Site"** (or update the spec to match your site name).
+  - The admin/researcher login you provide has permissions for that site.
+- **Environment Variables**:
+  - `E2E_USE_ENV`: `TRUE`
+  - `E2E_APP_URL`: Hosted app origin, e.g. `https://hs-levante-admin-dev.web.app` (preferred)
+  - `E2E_BASE_URL`: Optional; if set to a full sign-in URL, Cypress will derive the origin (e.g. `https://.../signin`)
+  - `E2E_TEST_EMAIL`: Researcher/admin email
+  - `E2E_TEST_PASSWORD`: Researcher/admin password
+- **Run**:
+
+```bash
+E2E_USE_ENV=TRUE \
+E2E_APP_URL='https://hs-levante-admin-dev.web.app' \
+E2E_TEST_EMAIL='...' \
+E2E_TEST_PASSWORD='...' \
+npx cypress run --e2e --spec cypress/e2e/researchers/tasks/researcher-full-workflow.cy.ts
+```
+
+   - For add-group test, set       E2E_APP_URL='https://hs-levante-admin-dev.web.app'
+   `
 ##### [`locales.cy.ts`](cypress/e2e/locales.cy.ts)
 
 - **Purpose**: Tests localization functionality
@@ -222,6 +280,62 @@ npx cypress run
 # Run specific test file
 npx cypress run --spec "cypress/e2e/testTasks.cy.ts"
 ```
+
+### Researcher E2E: clean `ai-tests` site (DEV)
+
+We use a dedicated Site named **`ai-tests`** for repeatable researcher/admin E2E runs.
+
+#### Prereqs (one-time)
+
+- **Cypress login creds**: set `E2E_TEST_EMAIL` and `E2E_TEST_PASSWORD` in `.env` (DEV user).
+- **AI admin creds (optional)**:
+  - `E2E_AI_ADMIN_EMAIL` / `E2E_AI_ADMIN_PASSWORD` (role: `admin`)
+  - `E2E_AI_SITE_ADMIN_EMAIL` / `E2E_AI_SITE_ADMIN_PASSWORD` (role: `site_admin`)
+- **Firestore admin auth** (for the reset script): `scripts/e2e-init/reset-site.mjs` uses `firebase-admin` and requires
+  Application Default Credentials. Examples:
+
+```bash
+# Option A: gcloud (preferred if you have it)
+gcloud auth application-default login
+
+# Option B: service account json
+export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json
+```
+
+#### Bootstrap (reset + seed)
+
+```bash
+npm run e2e:bootstrap:ai-tests
+```
+
+This does:
+- **Reset**: deletes any existing `ai-tests` Site (and dependent `schools/classes/cohorts`), then recreates it.
+- **Admin users**: creates two admin accounts for the site (if enabled):
+  - **`ai-admin`** (role: `admin`) via `E2E_AI_ADMIN_EMAIL` / `E2E_AI_ADMIN_PASSWORD`
+  - **`ai-site-admin`** (role: `site_admin`) via `E2E_AI_SITE_ADMIN_EMAIL` / `E2E_AI_SITE_ADMIN_PASSWORD`
+- **Seed**: runs the existing researcher workflow spec against `ai-tests` to create a cohort + users + assignment.
+
+Notes:
+- If you run bootstrap with admin creation enabled, you must provide **both passwords** (or the reset step will fail).
+- If you only want to reset the site without creating admin users, run:
+
+```bash
+node scripts/e2e-init/reset-site.mjs --yes --site-name ai-tests --project-id hs-levante-admin-dev --no-admin
+```
+
+#### Run researcher tests against `ai-tests`
+
+All researcher specs can be pointed at a site via `E2E_SITE_NAME`:
+
+```bash
+CYPRESS_E2E_SITE_NAME=ai-tests npm run bugtests:run:open:local
+```
+
+#### Artifacts (videos/screenshots)
+
+Artifacts are kept between runs (we do **not** trash assets before runs):
+- `cypress/videos/`
+- `cypress/screenshots/`
 
 ### Environment-Specific Test Commands
 
@@ -369,6 +483,9 @@ xdg-open coverage/index.html  # Linux
 - **Element Not Found**: Check for dynamic content loading and use proper waits
 - **Authentication**: Ensure test credentials are valid
 - **Network Issues**: Check for proper mocking or test environment setup
+- **Remote runner allowlist**: `.github/workflows/e2e-remote-runner.yml` maps `specId` → spec path; keep it aligned with `cypress/e2e/researchers/**`
+- **Permissions users**: use `scripts/e2e-init/create-permissions-users.mjs` to provision admin/site_admin/research_assistant accounts for `task-permissions`
+- **Temp artifacts**: `cypress/tmp` contains debug output and is ignored; don’t commit it
 
 #### Translation Tests
 
@@ -413,6 +530,10 @@ npx firebase emulators:start --only auth,firestore
 # Run emulator-specific tests
 npm run e2e:locales:emulator
 ```
+
+### CI Notes
+
+- `useDistrictsListQuery.test.ts` depends on a mocked `userClaims` ref; missing refs in tests can break CI even when app code is fine.
 
 ## Integration with CI/CD
 
