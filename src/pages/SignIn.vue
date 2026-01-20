@@ -227,15 +227,10 @@ const authWithEmail = async (state) => {
       })
       .catch((e) => {
         incorrect.value = true;
-        if (
-          ['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-login-credentials', 'auth/invalid-credential'].includes(
-            e.code,
-          )
-        ) {
+        if (['auth/user-not-found', 'auth/wrong-password'].includes(e.code)) {
           return;
         } else {
-          console.error('Sign-in error:', e);
-          return;
+          throw e;
         }
       })
       .finally(() => {

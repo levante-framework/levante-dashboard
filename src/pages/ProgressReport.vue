@@ -389,7 +389,7 @@ const computedProgressData = computed(() => {
   // assignmentTableData is an array of objects, each representing a row in the table
   const assignmentTableDataAcc = [];
 
-  for (const { assignment, user, survey } of assignmentData.value) {
+  for (const { assignment, user } of assignmentData.value) {
     const currRow = {
       user: {
         username: user?.username || assignment?.userData?.username || '',
@@ -415,31 +415,6 @@ const computedProgressData = computed(() => {
           severity: 'info',
         };
         progressFilterTags += ' Optional ';
-      } else if (taskId === 'survey' && survey?.progress) {
-        // Levante survey progress is tracked in the user's surveyResponses subcollection,
-        // not via startedOn/completedOn on the assessment.
-        if (survey.progress === 'completed') {
-          currRowProgress[taskId] = {
-            value: 'Completed',
-            icon: 'pi pi-check-circle',
-            severity: 'success',
-          };
-          progressFilterTags += ' Completed ';
-        } else if (survey.progress === 'started') {
-          currRowProgress[taskId] = {
-            value: 'Started',
-            icon: 'pi pi-clock',
-            severity: 'warn',
-          };
-          progressFilterTags += ' Started ';
-        } else {
-          currRowProgress[taskId] = {
-            value: 'Not Started',
-            icon: 'pi pi-minus-circle',
-            severity: 'warning',
-          };
-          progressFilterTags += ' Not Started ';
-        }
       } else if (assessment?.completedOn !== undefined) {
         currRowProgress[taskId] = {
           value: 'Completed',

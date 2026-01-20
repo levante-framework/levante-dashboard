@@ -140,7 +140,7 @@ import { storeToRefs } from 'pinia';
 
 const authStore = useAuthStore();
 const { currentSite, currentSiteName, shouldUsePermissions } = storeToRefs(authStore);
-const { createUsersWithSite } = authStore;
+const { createUsers } = authStore;
 const toast = useToast();
 
 const isAllSitesSelected = computed(() => shouldUsePermissions.value && currentSite.value === 'any');
@@ -494,39 +494,17 @@ async function submitUsers() {
     return;
   }
 
-  if (shouldUsePermissions.value && currentSite.value === 'any') {
-    activeSubmit.value = false;
-
-    return toast.add({
-      severity: 'warn',
-      summary: 'Warning',
-      detail: 'Please select a site before adding users',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  }
-
   // Check orgs exist
-  // In permissions mode, we use currentSite.value directly (district/site id).
 
   for (const { user, index } of usersToBeRegistered) {
     try {
       // Find fields case-insensitively
-      const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
       const schoolField = Object.keys(user).find((key) => key.toLowerCase() === 'school');
       const classField = Object.keys(user).find((key) => key.toLowerCase() === 'class');
       const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
 
       // Get values using the actual field names and parse as comma-separated arrays
-      const sites = (
-        siteField
-          ? user[siteField]
-              .split(',')
-              .map((s) => s.trim())
-              .filter((s) => s)
-          : shouldUsePermissions.value
-            ? [currentSite.value]
-            : [currentSiteName.value]
-      ).filter((s) => Boolean(s));
+      const sites = [currentSiteName.value];
 
       const schools = schoolField
         ? user[schoolField]
@@ -607,10 +585,7 @@ async function submitUsers() {
                 let schoolFound = false;
                 for (const siteName of sites) {
                   try {
-                    const siteId =
-                      shouldUsePermissions.value && siteName === currentSite.value
-                        ? currentSite.value
-                        : await getOrgId('districts', siteName);
+                    const siteId = await getOrgId('districts', siteName);
                     const schoolId = await getOrgId(
                       pluralizeFirestoreCollection(orgType),
                       schoolName,
@@ -620,7 +595,8 @@ async function submitUsers() {
                     orgInfo.schools.push(schoolId);
                     schoolFound = true;
                     break; // Found valid parent, move to next school
-                  } catch {
+                  } catch (error) {
+                    console.error('Error getting school ID: ', error);
                     // Try next site
                     continue;
                   }
@@ -639,10 +615,7 @@ async function submitUsers() {
                 for (const siteName of sites) {
                   for (const schoolName of schools) {
                     try {
-                      const siteId =
-                        shouldUsePermissions.value && siteName === currentSite.value
-                          ? currentSite.value
-                          : await getOrgId('districts', siteName);
+                      const siteId = await getOrgId('districts', siteName);
                       const schoolId = await getOrgId('schools', schoolName, ref({ id: siteId }), ref(undefined));
                       const classId = await getOrgId(
                         pluralizeFirestoreCollection(orgType),
@@ -653,7 +626,7 @@ async function submitUsers() {
                       orgInfo.classes.push(classId);
                       classFound = true;
                       break; // Found valid parent, move to next class
-                    } catch {
+                    } catch (error) {
                       // Try next site/school combination
                       continue;
                     }
@@ -676,17 +649,13 @@ async function submitUsers() {
               }
             } else if (orgType === 'site') {
               for (const siteName of orgNames) {
-                if (shouldUsePermissions.value && siteName === currentSite.value) {
-                  orgInfo.sites.push(currentSite.value);
-                } else {
-                  const siteId = await getOrgId(
-                    pluralizeFirestoreCollection('districts'),
-                    siteName,
-                    ref(undefined),
-                    ref(undefined),
-                  );
-                  orgInfo.sites.push(siteId);
-                }
+                const siteId = await getOrgId(
+                  pluralizeFirestoreCollection('districts'),
+                  siteName,
+                  ref(undefined),
+                  ref(undefined),
+                );
+                orgInfo.sites.push(siteId);
               }
             }
           } catch (error) {
@@ -752,6 +721,7 @@ async function submitUsers() {
 
   // Begin submit process
   // Org must be created before users can be created
+  let processedUserCount = 0;
   for (const users of chunkedUsersToBeRegistered) {
     try {
       // Ensure each user has the proper userType field name for the backend
@@ -771,43 +741,16 @@ async function submitUsers() {
             delete processedUser[userTypeField];
           }
 
-          // Keep userType values as-is (e.g. "caregiver") to match backend expectations.
+          // *** Add check to convert 'caregiver' value to 'parent' ***
+          if (typeof userTypeValue === 'string' && userTypeValue.toLowerCase() === 'caregiver') {
+            processedUser.userType = 'parent';
+          }
         }
-
-        // Backend expects parentId, not caregiverId.
-        if (processedUser.caregiverId && !processedUser.parentId) {
-          processedUser.parentId = processedUser.caregiverId;
-          delete processedUser.caregiverId;
-        }
-
-        // Ensure required backend fields exist to avoid undefined access.
-        if (!processedUser.orgIds) {
-          processedUser.orgIds = { districts: [], sites: [], schools: [], classes: [], groups: [], families: [] };
-        } else if (!processedUser.orgIds.families) {
-          processedUser.orgIds.families = [];
-        }
-        if (processedUser.isTestData === undefined) processedUser.isTestData = true;
-
-        // In permissions mode, the backend callable may require a top-level siteId/districtId.
-        if (shouldUsePermissions.value && currentSite.value && currentSite.value !== 'any') {
-          processedUser.districtId = currentSite.value;
-          processedUser.siteId = currentSite.value;
-        }
-
-        // Some backend paths assume these are arrays.
-        processedUser.orgIds.districts ??= [];
-        processedUser.orgIds.sites ??= processedUser.orgIds.districts ?? [];
-        processedUser.orgIds.schools ??= [];
-        processedUser.orgIds.classes ??= [];
-        processedUser.orgIds.groups ??= [];
 
         return processedUser;
       });
 
-      const res = await createUsersWithSite(
-        { users: processedUsers, siteId: currentSite.value },
-        { siteId: currentSite.value, districtId: currentSite.value },
-      );
+      const res = await createUsers({users: processedUsers, siteId: currentSite.value});
       logger.capture('Admin: Add Users', { processedUsers });
       const currentRegisteredUsers = res.data.data;
 
@@ -827,24 +770,8 @@ async function submitUsers() {
 
       registeredUsers.value.push(...currentRegisteredUsers);
 
-      if (authStore.roarfirekit?.updateUserData) {
-        await Promise.all(
-          currentRegisteredUsers.map((registeredUser, index) => {
-            const sourceUser = processedUsers[index];
-            if (!sourceUser?.orgIds) return Promise.resolve();
-            return authStore.roarfirekit.updateUserData(registeredUser.uid, {
-              orgIds: sourceUser.orgIds,
-              districtId: sourceUser.districtId,
-              siteId: sourceUser.siteId,
-              roles: ['participant'],
-              rolesSet: ['participant'],
-              siteRoles: { [sourceUser.siteId]: ['participant'] },
-              siteNames: { [sourceUser.siteId]: authStore.currentSiteName ?? '' },
-            });
-          }),
-        );
-      }
-
+      // Update the count of processed users
+      processedUserCount += currentRegisteredUsers.length;
       toast.add({
         severity: 'success',
         summary: 'User Creation Successful',
