@@ -7,14 +7,13 @@
 
   <div v-else-if="authStore.shouldUsePermissions" data-testid="home-selector-ready">
     <HomeAdministrator v-if="hasRole(ROLES.RESEARCH_ASSISTANT)" />
-    <HomeParticipant v-else/>
+    <HomeParticipant v-else />
   </div>
 
   <div v-else data-testid="home-selector-ready">
     <HomeParticipant v-if="isParticipant" />
     <HomeAdministrator v-else-if="isAdminUser" />
   </div>
-
 
   <ConsentModal
     v-if="!isLoading && showConsent && isAdminUser"
