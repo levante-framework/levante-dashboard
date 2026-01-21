@@ -58,5 +58,8 @@ cypress/tmp
 bug-tests/issues.*.json
 bug-tests/*.txt
 
+# Local production site exports
+tmp-prod-sites*.json
+
 # Intl Hash
 .cache
