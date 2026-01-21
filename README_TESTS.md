@@ -312,7 +312,7 @@ CYPRESS_E2E_SITE_NAME=ai-tests npm run bugtests:run:open:local
 
 #### Artifacts (videos/screenshots)
 
-Artifacts are kept between runs (we do **not** trash assets before runs):
+Artifacts are overwritten between runs (we **do** trash assets before runs):
 - `cypress/videos/`
 - `cypress/screenshots/`
 

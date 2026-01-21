@@ -173,7 +173,7 @@ export const fetchDocById = async (
     };
   } catch (error) {
     if (error?.response?.status === 404) {
-      return {};
+      return null;
     }
 
     console.error('fetchDocById: Error fetching document:', error);

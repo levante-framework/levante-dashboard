@@ -185,8 +185,8 @@ export const orgFetcher = async (orgType, selectedDistrict, isSuperAdmin, adminO
         return fetchDocById('classes', classId, ['districtId']);
       });
 
-      const schools = await Promise.all(schoolPromises);
-      const classes = await Promise.all(classPromises);
+      const schools = (await Promise.all(schoolPromises)).filter(Boolean);
+      const classes = (await Promise.all(classPromises)).filter(Boolean);
       const districtIds = schools.map((school) => school.districtId);
       districtIds.push(...classes.map((class_) => class_.districtId));
 
@@ -194,16 +194,18 @@ export const orgFetcher = async (orgType, selectedDistrict, isSuperAdmin, adminO
         promises.push(fetchDocById(orgType, districtId, select));
       }
 
-      return Promise.all(promises);
+      return Promise.all(promises).then((results) => results.filter(Boolean));
     } else if (orgType === 'schools') {
       const districtDoc = await fetchDocById('districts', districtId, ['schools']);
+      if (!districtDoc) return Promise.resolve([]);
+      const districtSchools = districtDoc.schools ?? [];
       if ((adminOrgs.value['districts'] ?? []).includes(districtId)) {
-        const promises = (districtDoc.schools ?? []).map((schoolId) => {
+        const promises = districtSchools.map((schoolId) => {
           return fetchDocById('schools', schoolId, select);
         });
         return Promise.all(promises);
       } else if ((adminOrgs.value['schools'] ?? []).length > 0) {
-        const schoolIds = _intersection(adminOrgs.value['schools'], districtDoc.schools);
+        const schoolIds = _intersection(adminOrgs.value['schools'], districtSchools);
         const promises = (schoolIds ?? []).map((schoolId) => {
           return fetchDocById('schools', schoolId, select);
         });
@@ -212,9 +214,9 @@ export const orgFetcher = async (orgType, selectedDistrict, isSuperAdmin, adminO
         const classPromises = (adminOrgs.value['classes'] ?? []).map((classId) => {
           return fetchDocById('classes', classId, ['schoolId']);
         });
-        const classes = await Promise.all(classPromises);
+        const classes = (await Promise.all(classPromises)).filter(Boolean);
         const schoolIds = _intersection(
-          districtDoc.schools,
+          districtSchools,
           classes.map((class_) => class_.schoolId),
         );
         const promises = (schoolIds ?? []).map((schoolId) => {

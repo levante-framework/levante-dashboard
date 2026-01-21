@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
@@ -21,12 +21,22 @@ const useDistrictsListQuery = (queryOptions?: UseQueryOptions): UseQueryReturnTy
 
   // Get admin's administation orgs.
   const administrationOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
-  const isSuperAdmin = computed(() => isUserSuperAdmin());
+  const isSuperAdmin = ref(false);
+
+  const updateIsSuperAdmin = () => {
+    isSuperAdmin.value = isUserSuperAdmin();
+  };
+
+  updateIsSuperAdmin();
 
   // Ensure all necessary data is loaded before enabling the query.
   const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
   const queryConditions = [() => claimsLoaded.value];
   const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
+
+  watch(claimsLoaded, (isLoaded) => {
+    if (isLoaded) updateIsSuperAdmin();
+  });
 
   return useQuery({
     // Include role + scope in the query key so if userData arrives after mount (common in Cypress),
