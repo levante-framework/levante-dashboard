@@ -1,6 +1,5 @@
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { onAuthStateChanged, User, Unsubscribe } from 'firebase/auth';
-import { httpsCallable } from 'firebase/functions';
 import { useRouter } from 'vue-router';
 import { initNewFirekit } from '../firebaseInit';
 import { AUTH_SSO_PROVIDERS } from '../constants/auth';
@@ -252,86 +251,6 @@ export const useAuthStore = defineStore(
       return roarfirekit.value?.createUsers(userData as any);
     }
 
-    async function linkUsers(userData: unknown): Promise<unknown> {
-      return roarfirekit.value?.linkUsers(userData as any);
-    }
-
-    async function createUsersWithSite(
-      userData: unknown,
-      opts: { siteId?: string; districtId?: string; includeArrays?: boolean },
-    ): Promise<unknown> {
-      if (!isFirekitInit()) throw new Error('Firekit not initialized');
-      if (!opts.siteId && !opts.districtId) return await createUsers(userData);
-
-      const functions = (roarfirekit.value as any)?.admin?.functions;
-      if (!functions) return await createUsers(userData);
-
-      const cloudCreateUsers = httpsCallable(functions, 'createUsers');
-      const includeArrays = opts.includeArrays !== false;
-      const siteIds = opts.siteId ? [opts.siteId] : [];
-      const districtIds = opts.districtId ? [opts.districtId] : [];
-      const userDataWithIds =
-        includeArrays && typeof userData === 'object' && userData !== null
-          ? { ...userData, siteIds, districtIds }
-          : userData;
-      const userDataWithNested =
-        includeArrays && typeof userDataWithIds === 'object' && userDataWithIds !== null
-          ? { ...userDataWithIds, userData: userDataWithIds }
-          : userDataWithIds;
-      const topLevelUsers =
-        userDataWithIds && typeof userDataWithIds === 'object' && 'users' in userDataWithIds
-          ? (userDataWithIds as { users?: unknown }).users
-          : undefined;
-      const payload = {
-        userData: userDataWithNested,
-        ...(includeArrays ? { siteIds, districtIds } : {}),
-        ...(topLevelUsers ? { users: topLevelUsers } : {}),
-        siteId: opts.siteId,
-        districtId: opts.districtId,
-      };
-      return await cloudCreateUsers({
-        ...payload,
-      });
-    }
-
-    async function linkUsersWithSite(
-      userData: unknown,
-      opts: { siteId?: string; districtId?: string; includeArrays?: boolean },
-    ): Promise<unknown> {
-      if (!isFirekitInit()) throw new Error('Firekit not initialized');
-      if (!opts.siteId && !opts.districtId) return await linkUsers(userData);
-
-      const functions = (roarfirekit.value as any)?.admin?.functions;
-      if (!functions) return await linkUsers(userData);
-
-      const cloudLinkUsers = httpsCallable(functions, 'linkUsers');
-      const includeArrays = opts.includeArrays !== false;
-      const siteIds = opts.siteId ? [opts.siteId] : [];
-      const districtIds = opts.districtId ? [opts.districtId] : [];
-      const userDataWithIds =
-        includeArrays && typeof userData === 'object' && userData !== null
-          ? { ...userData, siteIds, districtIds }
-          : userData;
-      const userDataWithNested =
-        includeArrays && typeof userDataWithIds === 'object' && userDataWithIds !== null
-          ? { ...userDataWithIds, userData: userDataWithIds }
-          : userDataWithIds;
-      const topLevelUsers =
-        userDataWithIds && typeof userDataWithIds === 'object' && 'users' in userDataWithIds
-          ? (userDataWithIds as { users?: unknown }).users
-          : undefined;
-      const payload = {
-        userData: userDataWithNested,
-        ...(includeArrays ? { siteIds, districtIds } : {}),
-        ...(topLevelUsers ? { users: topLevelUsers } : {}),
-        siteId: opts.siteId,
-        districtId: opts.districtId,
-      };
-      return await cloudLinkUsers({
-        ...payload,
-      });
-    }
-
     async function signOut(): Promise<void> {
       console.log('PostHog Reset (explicit signOut)');
       posthogInstance.reset();
@@ -401,9 +320,7 @@ export const useAuthStore = defineStore(
       $reset,
       completeAssessment,
       createUsers,
-      createUsersWithSite,
       linkUsers,
-      linkUsersWithSite,
       forceIdTokenRefresh,
       getLegalDoc,
       initFirekit,
