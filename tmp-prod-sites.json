@@ -1,0 +1,276 @@
+{
+  "projectId": "hs-levante-admin-prod",
+  "count": 54,
+  "sites": [
+    {
+      "id": "2VdDfBMMxJbCeMQ5CwHn",
+      "name": "ai-tests",
+      "normalizedName": "ai-tests"
+    },
+    {
+      "id": "UOwl8wZLOr5eqs18Hq7v",
+      "name": "Amy's Test Site",
+      "normalizedName": "amy's test site"
+    },
+    {
+      "id": "76KRWvgwJcjIA0hQpAoF",
+      "name": "Annie Test Site",
+      "normalizedName": "annie test site"
+    },
+    {
+      "id": "jT9MpvNkPvlpYJWxFmGt",
+      "name": "another site test",
+      "normalizedName": "another site test"
+    },
+    {
+      "id": "XV11ZzmKSz65QkJIEtCC",
+      "name": "Aupdate",
+      "normalizedName": "aupdate"
+    },
+    {
+      "id": "WrWpCTFX0v4r1gyjxvTL",
+      "name": "C-Cuskley-Test",
+      "normalizedName": "c-cuskley-test"
+    },
+    {
+      "id": "T4e5m4X3McNmBeEMN6ET",
+      "name": "CA-western-pilot",
+      "normalizedName": "ca-western-pilot"
+    },
+    {
+      "id": "DkhKRjp0hMLVvIRyYumF",
+      "name": "CA-western-pilot-test",
+      "normalizedName": "ca-western-pilot-test"
+    },
+    {
+      "id": "HbKnUO4DP6uznBQAlJ6N",
+      "name": "CO-archived-sites",
+      "normalizedName": "co-archived-sites"
+    },
+    {
+      "id": "kdCe535D1FGOtYp8YmYy",
+      "name": "CO-bogota-pilot",
+      "normalizedName": "co-bogota-pilot"
+    },
+    {
+      "id": "4QwrjWqSdf9FUTah03h8",
+      "name": "CO-bogota-pilot-test",
+      "normalizedName": "co-bogota-pilot-test"
+    },
+    {
+      "id": "mnmxUgnG1JGYmCRFY7sM",
+      "name": "CO-rural-pilot",
+      "normalizedName": "co-rural-pilot"
+    },
+    {
+      "id": "NcO1GZNsYeLEKdwZLqju",
+      "name": "CO-rural-pilot-test",
+      "normalizedName": "co-rural-pilot-test"
+    },
+    {
+      "id": "L8fubpQS5T45dWLGhXp8",
+      "name": "creatOrg",
+      "normalizedName": "creatorg"
+    },
+    {
+      "id": "KgA7f81OPaCrZQhyQf5F",
+      "name": "Cuskley-Test",
+      "normalizedName": "cuskley-test"
+    },
+    {
+      "id": "x5gHQylxzyACFHohApYY",
+      "name": "DE-mpieva-pilot",
+      "normalizedName": "de-mpieva-pilot"
+    },
+    {
+      "id": "KNnBHtGG111rAz8jDKQm",
+      "name": " DE-mpieva-pilot-test",
+      "normalizedName": "de-mpieva-pilot-test"
+    },
+    {
+      "id": "E0RpKRlWYUWUoOJS9x9o",
+      "name": "Firebase manual modifications",
+      "normalizedName": "firebase manual modifications"
+    },
+    {
+      "id": "ZXCCvlI0krdUMZSNgDrj",
+      "name": "Ghana",
+      "normalizedName": "ghana"
+    },
+    {
+      "id": "6ONOPpLSNeCxsrRUnF0C",
+      "name": "New site",
+      "normalizedName": "new site"
+    },
+    {
+      "id": "PFQiRnTyS0vh3D0iC6fI",
+      "name": "New testing group",
+      "normalizedName": "new testing group"
+    },
+    {
+      "id": "I48cQtHq4YQsACAAJYaN",
+      "name": "partner-childexplore-intl",
+      "normalizedName": "partner-childexplore-intl"
+    },
+    {
+      "id": "TbyA1NTvwHUmezi1fezs",
+      "name": "partner-mpib-de",
+      "normalizedName": "partner-mpib-de"
+    },
+    {
+      "id": "CuvHWF0sVNTgjzbyzPzw",
+      "name": "partner-mpib-de-test",
+      "normalizedName": "partner-mpib-de-test"
+    },
+    {
+      "id": "NgpKBsJTPGlrvdtejP1V",
+      "name": "partner-sparklab-us",
+      "normalizedName": "partner-sparklab-us"
+    },
+    {
+      "id": "gFUfSywX8AUP8Yt2TSmn",
+      "name": "partner-sparklab-us-test",
+      "normalizedName": "partner-sparklab-us-test"
+    },
+    {
+      "id": "08CxBtfwVrqP7yrAPvmJ",
+      "name": "rfp1-calgary-ca-sandbox",
+      "normalizedName": "rfp1-calgary-ca-sandbox"
+    },
+    {
+      "id": "FpEHSAQV4c77NOHSxN4v",
+      "name": "rfp1-donders-nl-sandbox",
+      "normalizedName": "rfp1-donders-nl-sandbox"
+    },
+    {
+      "id": "slMpQDffkSA3NqVuLEv1",
+      "name": "rfp1-mpbi-de-sandbox",
+      "normalizedName": "rfp1-mpbi-de-sandbox"
+    },
+    {
+      "id": "Gww3E3KGIxhEc3L8rI4z",
+      "name": "rfp1-sheffield-gb-sandbox",
+      "normalizedName": "rfp1-sheffield-gb-sandbox"
+    },
+    {
+      "id": "fV9yv1A6zCxA7CGVbFHH",
+      "name": "rfp1-utdt-ar-sandbox",
+      "normalizedName": "rfp1-utdt-ar-sandbox"
+    },
+    {
+      "id": "MypmfUeKa2UEKhKszirt",
+      "name": "rfp1-uzh-ch-sandbox",
+      "normalizedName": "rfp1-uzh-ch-sandbox"
+    },
+    {
+      "id": "2eyxjwJxJjEt649QFms9",
+      "name": "RUMC",
+      "normalizedName": "rumc"
+    },
+    {
+      "id": "cMdgvBZDqLQrpBspb0AB",
+      "name": "RUMC/Donders Levante",
+      "normalizedName": "rumc/donders levante"
+    },
+    {
+      "id": "xNfrqXRJmaCk002EGerw",
+      "name": "S&S Site",
+      "normalizedName": "s&s site"
+    },
+    {
+      "id": "9vpP5cKqKy6PtlQSMsc5",
+      "name": "S&S Test 9.9.25 ",
+      "normalizedName": "s&s test 9.9.25"
+    },
+    {
+      "id": "XbW36BrA6d3a0H27Z7g6",
+      "name": "Second Foundation",
+      "normalizedName": "second foundation"
+    },
+    {
+      "id": "nuTjyAhOe3MO49jN4dbW",
+      "name": "Shyne Test Site",
+      "normalizedName": "shyne test site"
+    },
+    {
+      "id": "4528vX346GDvtzN5D0K6",
+      "name": "Site Gama",
+      "normalizedName": "site gama"
+    },
+    {
+      "id": "y5PMj12XWd6xlCw4WiKR",
+      "name": "SnS Test Site",
+      "normalizedName": "sns test site"
+    },
+    {
+      "id": "aGEZ0rnHMbpCqJypNO8U",
+      "name": "Starlink Site",
+      "normalizedName": "starlink site"
+    },
+    {
+      "id": "ppZFWVihrWHynekfk1HK",
+      "name": "T Site",
+      "normalizedName": "t site"
+    },
+    {
+      "id": "3FAblumSkZcJGZ4DAYck",
+      "name": "Test CO Site",
+      "normalizedName": "test co site"
+    },
+    {
+      "id": "QtFdKTYBWo9aPj2278Jn",
+      "name": "test site",
+      "normalizedName": "test site"
+    },
+    {
+      "id": "00ht6sXWtc0cRvQ7jRca",
+      "name": "test-site",
+      "normalizedName": "test-site"
+    },
+    {
+      "id": "KZoSezjAj8fNZ3lPL7S7",
+      "name": "testrict",
+      "normalizedName": "testrict"
+    },
+    {
+      "id": "e4coAPefEEdAWvv6zEv0",
+      "name": "testrict 1",
+      "normalizedName": "testrict 1"
+    },
+    {
+      "id": "wCCOBb20n17x0BDcKiEE",
+      "name": "Theresa's Test Site",
+      "normalizedName": "theresa's test site"
+    },
+    {
+      "id": "qNO94XjXvVgkXcAFfN46",
+      "name": "US-downward_extension-pilot",
+      "normalizedName": "us-downward_extension-pilot"
+    },
+    {
+      "id": "koNeBjSvJspnBB51Pg8A",
+      "name": "US-downward_extension-pilot-test",
+      "normalizedName": "us-downward_extension-pilot-test"
+    },
+    {
+      "id": "kKH2iypQtwSgLlnp8VDr",
+      "name": "us-stanford-school-pilot",
+      "normalizedName": "us-stanford-school-pilot"
+    },
+    {
+      "id": "1N6JR1XYYIuo1L30ZN7r",
+      "name": "Western_CA",
+      "normalizedName": "western_ca"
+    },
+    {
+      "id": "1mKpEnr2rqCCO69AEOvO",
+      "name": "yea",
+      "normalizedName": "yea"
+    },
+    {
+      "id": "yLcGLFWg1tmRG6bYNfvm",
+      "name": "Zach test site",
+      "normalizedName": "zach test site"
+    }
+  ]
+}

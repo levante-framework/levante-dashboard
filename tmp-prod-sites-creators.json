@@ -1,0 +1,236 @@
+{
+  "projectId": "hs-levante-admin-prod",
+  "count": 46,
+  "rows": [
+    {
+      "siteName": " DE-mpieva-pilot-test",
+      "creatorName": "Ethan Zhang",
+      "creatorEmail": "ezhang61@stanford.edu"
+    },
+    {
+      "siteName": "ai-tests",
+      "creatorName": "--",
+      "creatorEmail": "--"
+    },
+    {
+      "siteName": "Amy's Test Site",
+      "creatorName": "Amy Lightbody",
+      "creatorEmail": "aal@stanford.edu"
+    },
+    {
+      "siteName": "Annie Test Site",
+      "creatorName": "Annie Cardinal",
+      "creatorEmail": "anniec42@stanford.edu"
+    },
+    {
+      "siteName": "another site test",
+      "creatorName": "--",
+      "creatorEmail": "philipz4848+test31@gmail.com"
+    },
+    {
+      "siteName": "Aupdate",
+      "creatorName": "Flávio Conte",
+      "creatorEmail": "flavio.conte@tarmac.io"
+    },
+    {
+      "siteName": "C-Cuskley-Test",
+      "creatorName": "Christine Cuskley",
+      "creatorEmail": "cuskley@stanford.edu"
+    },
+    {
+      "siteName": "CA-western-pilot-test",
+      "creatorName": "Ethan Zhang",
+      "creatorEmail": "ezhang61@stanford.edu"
+    },
+    {
+      "siteName": "CO-archived-sites",
+      "creatorName": "Ethan Zhang",
+      "creatorEmail": "ezhang61@stanford.edu"
+    },
+    {
+      "siteName": "CO-bogota-pilot-test",
+      "creatorName": "Ethan Zhang",
+      "creatorEmail": "ezhang61@stanford.edu"
+    },
+    {
+      "siteName": "CO-rural-pilot-test",
+      "creatorName": "Ethan Zhang",
+      "creatorEmail": "ezhang61@stanford.edu"
+    },
+    {
+      "siteName": "Cuskley-Test",
+      "creatorName": "Christine Cuskley",
+      "creatorEmail": "cuskley@stanford.edu"
+    },
+    {
+      "siteName": "Firebase manual modifications",
+      "creatorName": "Ethan Zhang",
+      "creatorEmail": "ezhang61@stanford.edu"
+    },
+    {
+      "siteName": "Ghana",
+      "creatorName": "Pedro Espinosa",
+      "creatorEmail": "pedro.espinosa@maxplanckschools.de"
+    },
+    {
+      "siteName": "New site",
+      "creatorName": "--",
+      "creatorEmail": "philipz4848+test31@gmail.com"
+    },
+    {
+      "siteName": "New testing group",
+      "creatorName": "Flávio Conte",
+      "creatorEmail": "flavio.conte@tarmac.io"
+    },
+    {
+      "siteName": "partner-childexplore-intl",
+      "creatorName": "Amy Lightbody",
+      "creatorEmail": "aal@stanford.edu"
+    },
+    {
+      "siteName": "partner-mpib-de",
+      "creatorName": "Amy Lightbody",
+      "creatorEmail": "aal@stanford.edu"
+    },
+    {
+      "siteName": "partner-mpib-de-test",
+      "creatorName": "Ethan Zhang",
+      "creatorEmail": "ezhang61@stanford.edu"
+    },
+    {
+      "siteName": "partner-sparklab-us",
+      "creatorName": "Tiffany Yang",
+      "creatorEmail": "iwakhlu@stanford.edu"
+    },
+    {
+      "siteName": "partner-sparklab-us-test",
+      "creatorName": "Ethan Zhang",
+      "creatorEmail": "ezhang61@stanford.edu"
+    },
+    {
+      "siteName": "rfp1-calgary-ca-sandbox",
+      "creatorName": "Amy Lightbody",
+      "creatorEmail": "aal@stanford.edu"
+    },
+    {
+      "siteName": "rfp1-donders-nl-sandbox",
+      "creatorName": "Amy Lightbody",
+      "creatorEmail": "aal@stanford.edu"
+    },
+    {
+      "siteName": "rfp1-mpbi-de-sandbox",
+      "creatorName": "Amy Lightbody",
+      "creatorEmail": "aal@stanford.edu"
+    },
+    {
+      "siteName": "rfp1-sheffield-gb-sandbox",
+      "creatorName": "Amy Lightbody",
+      "creatorEmail": "aal@stanford.edu"
+    },
+    {
+      "siteName": "rfp1-utdt-ar-sandbox",
+      "creatorName": "Amy Lightbody",
+      "creatorEmail": "aal@stanford.edu"
+    },
+    {
+      "siteName": "rfp1-uzh-ch-sandbox",
+      "creatorName": "Amy Lightbody",
+      "creatorEmail": "aal@stanford.edu"
+    },
+    {
+      "siteName": "RUMC",
+      "creatorName": "Rogier Kievit",
+      "creatorEmail": "Rogier.Kievit@radboudumc.nl"
+    },
+    {
+      "siteName": "RUMC/Donders Levante",
+      "creatorName": "Rogier Kievit",
+      "creatorEmail": "Rogier.Kievit@radboudumc.nl"
+    },
+    {
+      "siteName": "S&S Site",
+      "creatorName": "Serena Lee",
+      "creatorEmail": "serlee@stanford.edu"
+    },
+    {
+      "siteName": "S&S Test 9.9.25 ",
+      "creatorName": "Serena Lee",
+      "creatorEmail": "serlee@stanford.edu"
+    },
+    {
+      "siteName": "Shyne Test Site",
+      "creatorName": "Serena Lee",
+      "creatorEmail": "serlee@stanford.edu"
+    },
+    {
+      "siteName": "Site Gama",
+      "creatorName": "Flávio Conte",
+      "creatorEmail": "flavio.conte@tarmac.io"
+    },
+    {
+      "siteName": "SnS Test Site",
+      "creatorName": "Sachin Allums",
+      "creatorEmail": "sachino@stanford.edu"
+    },
+    {
+      "siteName": "Starlink Site",
+      "creatorName": "Serena Lee",
+      "creatorEmail": "serlee@stanford.edu"
+    },
+    {
+      "siteName": "T Site",
+      "creatorName": "--",
+      "creatorEmail": "philipz4848+test31@gmail.com"
+    },
+    {
+      "siteName": "Test CO Site",
+      "creatorName": "Serena Lee",
+      "creatorEmail": "serlee@stanford.edu"
+    },
+    {
+      "siteName": "test site",
+      "creatorName": "Annie Cardinal",
+      "creatorEmail": "anniec42@stanford.edu"
+    },
+    {
+      "siteName": "test-site",
+      "creatorName": "Philip Ziolkowski",
+      "creatorEmail": "zio4@stanford.edu"
+    },
+    {
+      "siteName": "testrict 1",
+      "creatorName": "--",
+      "creatorEmail": "philipz4848+test31@gmail.com"
+    },
+    {
+      "siteName": "Theresa's Test Site",
+      "creatorName": "Theresa Cheng",
+      "creatorEmail": "twcheng@stanford.edu"
+    },
+    {
+      "siteName": "US-downward_extension-pilot-test",
+      "creatorName": "Ethan Zhang",
+      "creatorEmail": "ezhang61@stanford.edu"
+    },
+    {
+      "siteName": "us-stanford-school-pilot",
+      "creatorName": "Theresa Cheng",
+      "creatorEmail": "twcheng@stanford.edu"
+    },
+    {
+      "siteName": "Western_CA",
+      "creatorName": "Nichola Jenkins",
+      "creatorEmail": "jenknich@gmail.com"
+    },
+    {
+      "siteName": "yea",
+      "creatorName": "Philip Ziolkowski",
+      "creatorEmail": "zio4@stanford.edu"
+    },
+    {
+      "siteName": "Zach test site",
+      "creatorName": "Zach Watson",
+      "creatorEmail": "zdwatson2001@gmail.com"
+    }
+  ]
+}

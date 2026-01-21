@@ -72,7 +72,7 @@ export default defineConfig({
     },
     baseUrl: getBaseUrl(),
     supportFile: false,
-    trashAssetsBeforeRuns: false,
+    trashAssetsBeforeRuns: true,
     excludeSpecPattern: ['**/locales*.cy.ts'],
     env: {
       E2E_USE_SESSION: process.env.E2E_USE_SESSION || process.env.CYPRESS_E2E_USE_SESSION,
