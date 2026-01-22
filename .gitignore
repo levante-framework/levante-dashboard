@@ -57,6 +57,7 @@ cypress/tmp
 # Bug test artifacts (generated locally)
 bug-tests/issues.*.json
 bug-tests/*.txt
+bug-tests/site.ai-tests.json
 
 # Local production site exports
 tmp-prod-sites*.json
