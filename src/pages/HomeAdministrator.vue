@@ -322,7 +322,11 @@ const sortOptions = ref([
     ],
   },
 ]);
-const sortKey = ref(sortOptions.value[0]);
+
+// Select default (newest first) by label
+const defaultLabel = 'Start date (descending)';
+const sortKey = ref(sortOptions.value.find(option => option.label === defaultLabel));
+
 const sortOrder = ref();
 const sortField = ref();
 const dataViewKey = ref(0);
