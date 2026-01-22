@@ -333,7 +333,7 @@ const sortOptionStorageKey = 'sortOption';
 const getInitialSortOption = () => {
 
   const defaultLabel = 'Start date (descending)';
-  const defaultOption = sortOptions.value.find(o => o.label === defaultLabel);
+  const defaultOption = sortOptions.value.find(o => o.label === defaultLabel) || sortOptions.value[0];
   const sortOptionFromStorage = sessionStorage.getItem(sortOptionStorageKey);
 
   if (sortOptionFromStorage) {
