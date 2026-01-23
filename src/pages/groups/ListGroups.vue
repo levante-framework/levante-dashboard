@@ -10,6 +10,7 @@
                 v-tooltip.bottom="currentSite === 'any' && 'Please select a specific site to add a group'"
                 class="bg-primary text-white border-none p-2 ml-auto"
                 data-testid="add-group-btn"
+                data-cy="add-group-btn"
                 @click="isAddGroupModalVisible = true"
                 >Add Group</PvButton
               >
@@ -17,6 +18,7 @@
             <PvButton
               class="bg-primary text-white border-none p-2 ml-auto"
               data-testid="add-users-btn"
+              data-cy="add-users-btn"
               @click="addUsers"
               >Add Users</PvButton
             >
