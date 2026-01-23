@@ -18,7 +18,7 @@ export function typeInto(selector: string, value: string, opts: Partial<Cypress.
     .should('be.visible')
     .click()
     .type('{selectall}{backspace}', { delay: 0 })
-    .type(value, { delay: 0, ...opts });
+    .type(value, { delay: 0, parseSpecialCharSequences: false, ...opts });
 }
 
 export function signInWithPassword(params: { email: string; password: string }) {
@@ -460,7 +460,7 @@ export function addAndLinkUsers(params: AddAndLinkUsersParams): Cypress.Chainabl
   cy.intercept('POST', '**/createUsers').as('createUsers');
 
   cy.visit('/add-users');
-  cy.get('[data-cy="upload-add-users-csv"]').within(() => {
+  cy.get('body', { timeout: 60000 }).then(($body) => {
     // Note: caregiverId and teacherId are included in the CSV but will be empty strings
     // The actual linking happens in Step 2C after we get UIDs back
     const csv = [
@@ -470,14 +470,58 @@ export function addAndLinkUsers(params: AddAndLinkUsersParams): Cypress.Chainabl
       `${teacherId},teacher,${month},${year},${cohortName},,`,
     ].join('\n');
 
-    cy.get('input[type="file"]').selectFile(
-      { contents: Cypress.Buffer.from(csv), fileName: 'users.csv', mimeType: 'text/csv' },
-      { force: true },
-    );
+    if ($body.find('[data-cy="upload-add-users-csv"]').length) {
+      cy.get('[data-cy="upload-add-users-csv"]').within(() => {
+        cy.get('input[type="file"]').selectFile(
+          { contents: Cypress.Buffer.from(csv), fileName: 'users.csv', mimeType: 'text/csv' },
+          { force: true },
+        );
+      });
+      return;
+    }
+
+    cy.get('input[type="file"]', { timeout: 60000 })
+      .first()
+      .selectFile({ contents: Cypress.Buffer.from(csv), fileName: 'users.csv', mimeType: 'text/csv' }, { force: true });
   });
 
   cy.contains('File Successfully Uploaded', { timeout: 60000 }).should('exist');
-  cy.get('[data-cy="button-add-users-from-file"]', { timeout: 60000 }).should('be.visible').click();
+
+  const startedAt = Date.now();
+  const timeoutMs = 120000;
+  const pollMs = 1000;
+
+  function waitForAddUsersButton(): Cypress.Chainable<void> {
+    return cy.get('body', { timeout: 60000 }).then(($body) => {
+      if ($body.find('[data-cy="button-add-users-from-file"]').length) {
+        cy.get('[data-cy="button-add-users-from-file"]').should('be.visible').click();
+        return;
+      }
+
+      if ($body.find('button').filter((_, el) => (el.textContent ?? '').includes('Add Users from Uploaded File')).length) {
+        cy.contains('button', 'Add Users from Uploaded File', { timeout: 60000 }).click();
+        return;
+      }
+
+      if ($body.find('.error-container').length || $body.text().includes('No Groups found')) {
+        const errorText = $body.find('.error-container').text() || $body.text();
+        throw new Error(`Add Users validation failed: ${errorText}`);
+      }
+
+      if (Date.now() - startedAt > timeoutMs) {
+        return cy
+          .writeFile('cypress/tmp/add-users-body.html', $body.html() ?? '', { log: false })
+          .then(() => cy.writeFile('cypress/tmp/add-users-body.txt', $body.text(), { log: false }))
+          .then(() => {
+            throw new Error('Timed out waiting for Add Users button to appear.');
+          });
+      }
+
+      return cy.wait(pollMs).then(() => waitForAddUsersButton());
+    }) as unknown as Cypress.Chainable<void>;
+  }
+
+  cy.wrap(null, { log: false }).then(() => waitForAddUsersButton());
 
   // Keep this fully Cypress-chained. We store intermediate data in closure variables and only "yield" a value at the end.
   let createdUsers: CreatedUser[] | null = null;
@@ -573,14 +617,29 @@ export function addAndLinkUsers(params: AddAndLinkUsersParams): Cypress.Chainabl
       ].join('\n');
 
       cy.visit('/link-users');
-      cy.get('[data-cy="upload-link-users-csv"]').within(() => {
-        cy.get('input[type="file"]').selectFile(
-          { contents: Cypress.Buffer.from(linkCsv), fileName: 'link-users.csv', mimeType: 'text/csv' },
-          { force: true },
-        );
+      cy.get('body', { timeout: 60000 }).then(($body) => {
+        if ($body.find('[data-cy="upload-link-users-csv"]').length) {
+          cy.get('[data-cy="upload-link-users-csv"]').within(() => {
+            cy.get('input[type="file"]').selectFile(
+              { contents: Cypress.Buffer.from(linkCsv), fileName: 'link-users.csv', mimeType: 'text/csv' },
+              { force: true },
+            );
+          });
+          return;
+        }
+
+        cy.get('input[type="file"]', { timeout: 60000 })
+          .first()
+          .selectFile({ contents: Cypress.Buffer.from(linkCsv), fileName: 'link-users.csv', mimeType: 'text/csv' }, { force: true });
       });
 
-      cy.get('[data-cy="button-start-linking-users"]').should('be.visible').click();
+      cy.get('body', { timeout: 60000 }).then(($body) => {
+        if ($body.find('[data-cy="button-start-linking-users"]').length) {
+          cy.get('[data-cy="button-start-linking-users"]').should('be.visible').click();
+          return;
+        }
+        cy.contains('button', 'Start Linking', { timeout: 60000 }).should('be.visible').click();
+      });
       return cy.wait('@linkUsers', { timeout: 60000 });
     })
     .then((linkInterception) => {
