@@ -1,5 +1,8 @@
 import fs from 'node:fs';
 
+const allowlistPath = new URL('./spec-allowlist.json', import.meta.url);
+const allowlist = JSON.parse(fs.readFileSync(allowlistPath, 'utf8'));
+
 const specId = process.env.SPEC_ID || '';
 const specPathInput = process.env.SPEC_PATH || '';
 
@@ -11,13 +14,20 @@ function isAllowedSpecPath(input) {
   return /^cypress\/e2e\/researchers\/[A-Za-z0-9_.\/-]+\.cy\.ts$/.test(input);
 }
 
-if (!specPathInput) {
-  throw new Error(`Missing specPath (specId="${specId}")`);
+let specPath = '';
+
+if (specPathInput) {
+  const normalized = normalizeSpecPath(specPathInput);
+  if (!isAllowedSpecPath(normalized)) {
+    throw new Error(`Invalid specPath: ${specPathInput}`);
+  }
+  specPath = normalized;
+} else {
+  specPath = allowlist[specId] || '';
 }
 
-const specPath = normalizeSpecPath(specPathInput);
-if (!isAllowedSpecPath(specPath)) {
-  throw new Error(`Invalid specPath: ${specPathInput}`);
+if (!specPath) {
+  throw new Error(`Unknown/blocked specId: ${specId}`);
 }
 
 if (!fs.existsSync(specPath)) {
