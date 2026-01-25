@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       specId:
-        description: Catalog spec id (allowlisted)
-        required: true
+        description: Optional catalog spec id (for labeling)
+        required: false
         type: string
       specPath:
-        description: Optional spec path override (must be within cypress/e2e/researchers)
-        required: false
+        description: Spec path (must be within cypress/e2e/researchers)
+        required: true
         type: string
       baseUrl:
         description: Target baseUrl to run against
@@ -20,7 +20,7 @@ on:
         required: true
         type: string
 
-run-name: e2e ${{ inputs.clientRunId }} ${{ inputs.specId }}
+run-name: e2e ${{ inputs.clientRunId }} ${{ inputs.specId || inputs.specPath }}
 
 jobs:
   run:
