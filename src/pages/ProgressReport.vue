@@ -131,6 +131,7 @@
               :allow-export="true"
               :lazy-pre-sorting="orderBy"
               :show-options-control="true"
+              :show-options="true"
               @export-selected="exportSelected"
               @export-all="exportAll"
             >
