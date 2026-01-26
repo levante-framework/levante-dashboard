@@ -480,7 +480,7 @@ Array of objects consisting of a field and header at minimum.
 */
 const shouldRenderToolbar = computed(() => props.allowFiltering || props.allowColumnSelection || props.allowExport);
 
-const showControls = ref(!props.showOptionsControl && shouldRenderToolbar.value);
+const showControls = ref(props.showOptionsControl && shouldRenderToolbar.value);
 const toggleControls = () => {
   if (!props.showOptionsControl || !shouldRenderToolbar.value) return;
   showControls.value = !showControls.value;

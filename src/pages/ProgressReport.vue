@@ -130,6 +130,7 @@
               :reset-filters="resetFilters"
               :allow-export="true"
               :lazy-pre-sorting="orderBy"
+              :show-options-control="true"
               @export-selected="exportSelected"
               @export-all="exportAll"
             >
