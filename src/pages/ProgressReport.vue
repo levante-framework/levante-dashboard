@@ -56,11 +56,16 @@
             </div>
           </div>
 
-          <div v-if="assignmentData?.length">
-            <div
-              v-if="!isEmpty(adminStats)"
-              class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card"
-            >
+          <div v-if="!assignmentData?.length || !adminStats?.length" class="empty-user-list">
+            <div class="text-lg font-semibold text-gray-700">Could not find users for {{ orgData?.name }}.</div>
+            <div class="mt-2 text-sm text-gray-500">
+              <a href="/add-users">Add users</a> to <span class="font-bold">{{ orgData?.name }}</span> to see the
+              progress report.
+            </div>
+          </div>
+
+          <div v-else>
+            <div class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card">
               <div class="flex flex-column gap-1 mx-5 mb-5">
                 <div class="text-sm uppercase text-gray-500">Progress by Task</div>
                 <div
@@ -84,7 +89,7 @@
                 <div class="flex justify-content-between align-items-center">
                   <div class="text-xl font-bold text-gray-600 w-full">
                     Total
-                    <span class="font-light text-sm"> (Assigned to {{ adminStats.assignment.assigned }} users) </span>
+                    <span class="font-light text-sm"> (Assigned to {{ adminStats?.assignment?.assigned }} users) </span>
                   </div>
                   <PvChart
                     type="bar"
@@ -118,6 +123,7 @@
                 <div v-if="!isLevante" class="font-light uppercase text-xs text-gray-500 my-1">Legend</div>
               </div>
             </div>
+
             <RoarDataTable
               v-if="progressReportColumns?.length ?? 0 > 0"
               :data="filteredTableData"
@@ -180,7 +186,7 @@ import PvMultiSelect from 'primevue/multiselect';
 import PvSelectButton from 'primevue/selectbutton';
 import { useAuthStore } from '@/store/auth';
 import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
-import useAdministrationsStatsQuery from '@/composables/queries/useAdministrationsStatsQuery';
+import useAdministrationsStatsQuery from '@/firestore/queries/administrations/useAdministrationsStatsQuery';
 import useOrgQuery from '@/composables/queries/useOrgQuery';
 import useAdministrationAssignmentsQuery from '@/composables/queries/useAdministrationAssignmentsQuery';
 import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
@@ -191,10 +197,10 @@ import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
 import { isLevante, getTooltip, normalizeToLowercase } from '@/helpers';
 import { APP_ROUTES } from '@/constants/routes';
 import RoarDataTable from '@/components/RoarDataTable.vue';
-import { isEmpty } from 'lodash';
 import PvFloatLabel from 'primevue/floatlabel';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import PvInputText from 'primevue/inputtext';
+import _capitalize from 'lodash/capitalize';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -233,9 +239,9 @@ const { data: administrationData, isLoading: isLoadingAdministration } = useAdmi
   },
 );
 
-const { data: adminStats, isLoading: isLoadingAdminStats } = useAdministrationsStatsQuery([props.administrationId], {
-  enabled: initialized,
-  select: (data) => data[0],
+const { data: adminStats, isLoading: isLoadingAdministrationsStats } = useAdministrationsStatsQuery({
+  administrationIds: [props.administrationId],
+  queryOptions: { select: (data) => data[0] },
 });
 
 const { data: orgData, isLoading: isLoadingOrg } = useOrgQuery(props.orgType, [props.orgId], {
@@ -262,12 +268,14 @@ const creatorName = computed(() => {
 });
 
 const displayOrgType = computed(() => {
-  if (props.orgType === 'district') {
-    return 'Site';
-  } else if (props.orgType === 'group') {
-    return 'Cohort';
+  switch (props.orgType) {
+    case 'district':
+      return 'Site';
+    case 'group':
+      return 'Cohort';
+    default:
+      return _capitalize(props.orgType);
   }
-  return props.orgType;
 });
 
 const isLoading = computed(
@@ -276,7 +284,7 @@ const isLoading = computed(
     isLoadingAssignments.value ||
     isLoadingTasksDictionary.value ||
     isLoadingAdministration.value ||
-    isLoadingAdminStats.value ||
+    isLoadingAdministrationsStats.value ||
     isLoadingOrg.value,
 );
 
@@ -635,5 +643,16 @@ onMounted(async () => {
 }
 .details-card {
   max-width: 100%;
+}
+
+.empty-user-list {
+  display: flex-column;
+  align-items: center;
+  width: 100%;
+  height: auto;
+  margin: 2rem 0 0;
+  padding: 1.5rem 0 0;
+  border-top: 1px solid var(--gray-100);
+  text-align: center;
 }
 </style>
