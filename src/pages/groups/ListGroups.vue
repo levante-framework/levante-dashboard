@@ -32,7 +32,7 @@
           </div>
         </div>
       </div>
-      <PvTabs v-if="claimsLoaded" v-model:value="activeOrgType" lazy class="mb-7" data-testid="groups-page-ready">
+      <PvTabs v-if="claimsLoaded" v-model:value="activeOrgType" lazy class="mb-7" data-cy="groups-page-ready">
         <PvTabList>
           <PvTab v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">{{ orgType.header }}</PvTab>
         </PvTabList>

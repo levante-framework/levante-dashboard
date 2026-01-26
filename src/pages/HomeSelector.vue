@@ -1,9 +1,9 @@
 <template>
-  <LevanteSpinner v-if="isLoading" fullscreen data-testid="home-selector-loading" />
+  <LevanteSpinner v-if="isLoading" fullscreen data-cy="home-selector-loading" />
 
-  <HomeAdministrator v-else-if="shouldRenderAdminPage" data-testid="home-selector-admin" />
+  <HomeAdministrator v-else-if="shouldRenderAdminPage" data-cy="home-selector-admin" />
 
-  <HomeParticipant v-else data-testid="home-selector-participant" />
+  <HomeParticipant v-else data-cy="home-selector-participant" />
 
   <ConsentModal
     v-if="!isLoading && showConsent && isAdminUser"
