@@ -322,7 +322,27 @@ const sortOptions = ref([
     ],
   },
 ]);
-const sortKey = ref(sortOptions.value[0]);
+
+const sortOptionStorageKey = 'sortOption';
+
+/**
+ * Get the default sort option based on user's session.
+ * @returns {Object} - The sort option from available sort options
+ */
+const getInitialSortOption = () => {
+  const defaultLabel = 'Start date (descending)';
+  const defaultOption = sortOptions.value.find((o) => o.label === defaultLabel) || sortOptions.value[0];
+  const sortOptionFromStorage = sessionStorage.getItem(sortOptionStorageKey);
+
+  if (sortOptionFromStorage) {
+    return JSON.parse(sortOptionFromStorage);
+  } else {
+    sessionStorage.setItem(sortOptionStorageKey, JSON.stringify(defaultOption));
+    return defaultOption;
+  }
+};
+
+const sortKey = ref(getInitialSortOption());
 const sortOrder = ref();
 const sortField = ref();
 const dataViewKey = ref(0);
@@ -375,6 +395,8 @@ const onSortChange = (event) => {
   sortField.value = value[0].field?.fieldPath;
   sortOrder.value = value[0].direction === 'DESCENDING' ? -1 : 1;
   sortKey.value = sortValue;
+
+  sessionStorage.setItem(sortOptionStorageKey, JSON.stringify(sortValue));
 };
 </script>
 
