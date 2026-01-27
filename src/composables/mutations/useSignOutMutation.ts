@@ -37,6 +37,7 @@ const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown>
       surveyStore.reset();
       sessionStorage.removeItem('authStore');
       sessionStorage.removeItem('assignmentsStore');
+      sessionStorage.removeItem('sortOption');
 
       // Clear the query client to remove all cached data.
       queryClient.clear();
