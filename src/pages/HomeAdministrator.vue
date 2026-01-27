@@ -334,7 +334,7 @@ const dataViewKey = ref(0);
 const clearSearch = () => {
   search.value = '';
   searchInput.value = '';
-  filteredAdministrations.value = administrations.value;
+  filteredAdministrations.value = administrations.value ?? [];
 };
 
 /**
@@ -343,11 +343,10 @@ const clearSearch = () => {
  */
 const onSearch = () => {
   search.value = searchInput.value;
-  if (!search.value) filteredAdministrations.value = administrations.value;
+  if (!search.value) filteredAdministrations.value = administrations.value ?? [];
   else {
-    filteredAdministrations.value = administrations.value.filter((item) =>
-      item.name.toLowerCase().includes(search.value.toLowerCase()),
-    );
+    filteredAdministrations.value =
+      administrations.value?.filter((item) => item.name.toLowerCase().includes(search.value.toLowerCase())) ?? [];
   }
 };
 
@@ -356,9 +355,12 @@ const onSearch = () => {
  * @returns {void}
  */
 const autocomplete = () => {
-  searchSuggestions.value = searchTokens.value.filter((item) => {
-    return item.toLowerCase().includes(searchInput.value.toLowerCase());
-  });
+  const query = (searchInput.value ?? '').toLowerCase();
+  if (!query) {
+    searchSuggestions.value = [];
+    return;
+  }
+  searchSuggestions.value = searchTokens.value.filter((item) => item.toLowerCase().includes(query));
 };
 
 /**
