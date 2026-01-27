@@ -33,7 +33,6 @@ const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown>
       // remove it manually from sessionStorage to prevent any issues.
       assignmentsStore.$reset();
       authStore.$reset();
-      assignmentsStore.$reset();
       surveyStore.reset();
       sessionStorage.removeItem('authStore');
       sessionStorage.removeItem('assignmentsStore');
