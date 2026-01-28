@@ -1,74 +1,68 @@
-import { computed, ref } from 'vue';
+import { computed, Ref, ComputedRef } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import _isEmpty from 'lodash/isEmpty';
-import useUserType from '@/composables/useUserType';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
-import { orgPageFetcher } from '@/helpers/query/orgs';
+import { orgFetchAll } from '@/helpers/query/orgs';
 import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
-import { useAuthStore } from '@/store/auth';
+import { ORG_TYPES } from '@/constants/orgTypes';
+
+export interface OrgItem {
+  id: string;
+  name: string;
+  tags?: string[];
+  parentOrgId?: string;
+  createdBy?: string;
+  creatorName?: string;
+  districtId?: string;
+  schoolId?: string;
+  schools?: string[];
+  classes?: string[];
+}
+
 /**
  * Orgs Table query.
  *
- * Fetches all orgs assigned to the current user account. This query is intended to be used by the List Orgs page that
- * contains a tabbed data table with orgs (districts, schools, etc.) assigned to the user.
+ * Fetches all orgs assigned to the current user account. This query is used by the List Orgs page and GroupPicker
+ * component. Both share the same cached data.
  *
- * @TODO: Explore the possibility of removing this query in favour of more granular queries for each org type.
+ * Firestore rules handle permission filtering, so no client-side filtering is needed.
  *
  * @param {String} activeOrgType – The active org type (district, school, etc.).
  * @param {String} selectedDistrict – The selected district ID.
  * @param {String} selectedSchool – The selected school ID.
  * @param {String} orderBy – The order by field.
- * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
+ * @param {Boolean} includeCreators – Whether to fetch and include creator names (default: true).
+ * @param {Object} queryOptions – Optional TanStack query options.
  * @returns {UseQueryResult} The TanStack query result.
  */
 const useOrgsTableQuery = (
-  activeOrgType,
-  selectedDistrict,
-  selectedSchool,
-  orderBy,
-  queryOptions?: UseQueryOptions,
-): UseQueryReturnType => {
-  const { data: userClaims } = useUserClaimsQuery({
-    enabled: queryOptions?.enabled ?? true,
-  });
-
-  const authStore = useAuthStore();
-  const { isUserSuperAdmin } = authStore;
-
-  // Get admin's administation orgs.
-  const adminOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
-
-  // Ensure all necessary data is loaded before enabling the query.
-  const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
-  const queryConditions = [() => claimsLoaded.value];
-  const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
-
-  // Determine select fields based on org type
-  const selectFields = computed(() => {
-    const orgType = typeof activeOrgType === 'function' ? activeOrgType() : activeOrgType.value || activeOrgType;
-    if (orgType === 'groups') {
-      return ['id', 'name', 'tags', 'parentOrgId'];
+  activeOrgType: Ref<string> | ComputedRef<string>,
+  selectedDistrict: Ref<string | null | undefined> | ComputedRef<string | null | undefined>,
+  selectedSchool: Ref<string | undefined> | ComputedRef<string | undefined>,
+  orderBy: Ref<unknown>,
+  includeCreators = true,
+  queryOptions?: { enabled?: boolean | Ref<boolean> | ComputedRef<boolean> },
+) => {
+  const selectFields = computed<string[]>(() => {
+    const orgType = activeOrgType.value;
+    if (orgType === ORG_TYPES.GROUPS) {
+      return ['id', 'name', 'tags', 'parentOrgId', 'createdBy'];
     }
-    return ['id', 'name', 'tags'];
+    return ['id', 'name', 'tags', 'createdBy', 'districtId', 'schoolId', 'schools', 'classes'];
   });
 
   return useQuery({
     queryKey: [ORGS_TABLE_QUERY_KEY, activeOrgType, selectedDistrict, selectedSchool, orderBy],
-    queryFn: () =>
-      orgPageFetcher(
+    queryFn: async (): Promise<OrgItem[]> => {
+      const result = await orgFetchAll(
         activeOrgType,
         selectedDistrict,
         selectedSchool,
         orderBy,
-        ref(100000),
-        ref(0),
-        isUserSuperAdmin(),
-        adminOrgs,
         selectFields.value,
-      ),
-    enabled: isQueryEnabled,
-    ...options,
+        includeCreators,
+      );
+      return result as OrgItem[];
+    },
+    ...queryOptions,
   });
 };
 

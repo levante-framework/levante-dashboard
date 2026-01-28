@@ -1,5 +1,5 @@
 <template>
-  <header id="site-header" class="navbar-container">
+  <header id="site-header" class="navbar-container" data-cy="nav-bar">
     <nav class="flex flex-row align-items-center justify-content-between w-full">
       <div id="navBarRightEnd" class="flex flex-row align-items-center justify-content-start w-full gap-1">
         <div class="flex align-items-center justify-content-center w-full">
@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
@@ -53,13 +53,14 @@ import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { APP_ROUTES } from '@/constants/routes';
 import Badge from 'primevue/badge';
 import UserActions from './UserActions.vue';
-import useUserType from '@/composables/useUserType';
+import { ROLES } from '@/constants/roles';
+import { usePermissions } from '@/composables/usePermissions';
 
 interface NavbarAction {
   category: string;
   title: string;
   icon: string;
-  buttonLink: string;
+  buttonLink: { name: string; params?: Record<string, any> };
 }
 
 interface MenuItem {
@@ -73,7 +74,8 @@ interface MenuItem {
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { roarfirekit } = storeToRefs(authStore);
+const { roarfirekit, userData, currentSite } = storeToRefs(authStore);
+const { userRole } = usePermissions();
 
 const initialized = ref<boolean>(false);
 const menu = ref();
@@ -100,11 +102,6 @@ onMounted((): void => {
 
 onUnmounted((): void => {
   window.removeEventListener('resize', handleResize);
-});
-
-const { data: userClaims } = useUserClaimsQuery({
-  queryKey: ['userClaims'],
-  enabled: initialized,
 });
 
 const computedItems = computed((): MenuItem[] => {
@@ -147,25 +144,20 @@ const computedItems = computed((): MenuItem[] => {
   return items;
 });
 
-const { isAdmin, isSuperAdmin } = useUserType(userClaims);
-
 const computedIsBasicView = computed((): boolean => {
-  if (!userClaims.value) {
-    return false;
+  if (userRole.value === ROLES.PARTICIPANT) {
+    return true;
   }
-  return !isSuperAdmin.value && !isAdmin.value;
-});
-
-const isAtHome = computed((): boolean => {
-  return router.currentRoute.value.fullPath === '/';
+  return false;
 });
 
 const rawActions = computed((): NavbarAction[] => {
+  const userRoles = userData.value?.roles || [];
+  const currentRoleObj = userRoles.find((r: { siteId: string; role: string }) => (r.siteId === currentSite.value) || r.role === ROLES.SUPER_ADMIN);
+
   return getNavbarActions({
-    isSuperAdmin: isSuperAdmin.value,
-    isAdmin: isAdmin.value,
-    includeHomeLink: !isAtHome.value,
-  });
+    userRole: currentRoleObj?.role,
+  }) as unknown as NavbarAction[];
 });
 
 const toggleMenu = (event: Event): void => {

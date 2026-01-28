@@ -30,32 +30,15 @@
         <small v-if="v$.orgType.$error" class="p-error">Please select a type.</small>
       </div>
 
-      <div v-if="parentOrgRequired" class="">
+      <div v-if="parentOrgRequired && orgType?.singular === SINGULAR_ORG_TYPES.CLASSES" class="">
         <div class="flex w-full gap-3">
-          <div class="flex flex-column gap-1 w-full">
-            <PvFloatLabel class="w-full">
-              <PvSelect
-                v-model="parentDistrict"
-                :loading="isLoadingDistricts"
-                :options="districts"
-                class="w-full"
-                data-cy="dropdown-parent-district"
-                input-id="parentDistrict"
-                option-label="name"
-                show-clear
-              />
-              <label for="parentDistrict">Site<span class="required-asterisk">*</span></label>
-            </PvFloatLabel>
-            <small v-if="v$.parentDistrict.$error" class="p-error">Please select a site.</small>
-          </div>
-
-          <div v-if="orgType?.singular === SINGULAR_ORG_TYPES.CLASSES" class="w-full">
+          <div class="w-full">
             <div class="flex flex-column gap-1 w-full">
               <PvFloatLabel class="w-full">
                 <PvSelect
                   v-model="parentSchool"
-                  :loading="!schoolDropdownEnabled"
-                  :options="schools"
+                  :loading="isFetchingSchools"
+                  :options="(schools as SelectedOrg[]) ?? []"
                   class="w-full"
                   data-cy="dropdown-parent-school"
                   input-id="parentSchool"
@@ -77,23 +60,6 @@
         </PvFloatLabel>
         <small v-if="v$.orgName.$error" class="p-error">Please supply a name.</small>
       </div>
-
-      <p class="m-0">Optional fields:</p>
-
-      <PvFloatLabel>
-        <PvAutoComplete
-          v-model="tags"
-          class="w-full"
-          data-cy="input-autocomplete"
-          dropdown
-          multiple
-          name="tags"
-          :options="allTags"
-          :suggestions="tagSuggestions"
-          @complete="searchTags"
-        />
-        <label for="tags">Tags</label>
-      </PvFloatLabel>
     </div>
 
     <template #footer>
@@ -118,8 +84,6 @@
 
 <script setup lang="ts">
 import _capitalize from 'lodash/capitalize';
-import _union from 'lodash/union';
-import _without from 'lodash/without';
 import { computed, ref, toRaw, watch } from 'vue';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { normalizeToLowercase } from '@/helpers';
@@ -134,22 +98,20 @@ import {
   CreateOrgType,
   CreateSchoolSchema,
 } from '@levante-framework/levante-zod';
-import PvAutoComplete from 'primevue/autocomplete';
 import PvButton from 'primevue/button';
 import PvDialog from 'primevue/dialog';
 import PvFloatLabel from 'primevue/floatlabel';
 import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
-import useDistrictSchoolsQuery from '@/composables/queries/useDistrictSchoolsQuery';
-import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
-import useGroupsListQuery from '@/composables/queries/useGroupsListQuery';
+import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
 import useOrgNameExistsQuery from '@/composables/queries/useOrgNameExistsQuery';
-import useSchoolClassesQuery from '@/composables/queries/useSchoolClassesQuery';
 import useUpsertOrgMutation from '@/composables/mutations/useUpsertOrgMutation';
 import useVuelidate from '@vuelidate/core';
 import { usePermissions } from '@/composables/usePermissions';
 import { useAuthStore } from '@/store/auth';
-import { PERMISSION_ACTIONS } from '@/constants/roles';
+import { ROLES } from '@/constants/roles';
+import { useQueryClient } from '@tanstack/vue-query';
+import { DISTRICTS_QUERY_KEY, ORGS_TABLE_QUERY_KEY, SCHOOLS_QUERY_KEY } from '@/constants/queryKeys';
 
 interface OrgType {
   firestoreCollection: string;
@@ -177,7 +139,8 @@ const emit = defineEmits<Emits>();
 
 const toast = useToast();
 const authStore = useAuthStore();
-const { can, canGlobal } = usePermissions();
+const { hasMinimumRole, userRole } = usePermissions();
+const queryClient = useQueryClient();
 
 const isSubmitBtnDisabled = ref(false);
 const orgName = ref('');
@@ -195,26 +158,32 @@ const orgTypes = computed(() => {
     return allOrgTypes;
   }
 
-  return allOrgTypes.filter((orgType) => {
-    if (orgType.singular === SINGULAR_ORG_TYPES.DISTRICTS) {
-      return canGlobal(FIRESTORE_COLLECTIONS.GROUPS, PERMISSION_ACTIONS.CREATE, 'sites');
-    } else if (orgType.singular === SINGULAR_ORG_TYPES.SCHOOLS) {
-      return can(FIRESTORE_COLLECTIONS.GROUPS, PERMISSION_ACTIONS.CREATE, FIRESTORE_COLLECTIONS.SCHOOLS);
-    } else if (orgType.singular === SINGULAR_ORG_TYPES.CLASSES) {
-      return can(FIRESTORE_COLLECTIONS.GROUPS, PERMISSION_ACTIONS.CREATE, FIRESTORE_COLLECTIONS.CLASSES);
-    } else if (orgType.singular === SINGULAR_ORG_TYPES.GROUPS) {
-      return can(FIRESTORE_COLLECTIONS.GROUPS, PERMISSION_ACTIONS.CREATE, 'cohorts');
-    }
-    return false;
-  });
+  if (!userRole.value) {
+    return [];
+  }
+
+  return allOrgTypes.filter((orgType) =>
+    orgType.singular === SINGULAR_ORG_TYPES.DISTRICTS
+      ? hasMinimumRole(ROLES.SUPER_ADMIN)
+      : hasMinimumRole(ROLES.SITE_ADMIN),
+  );
 });
 
+const isAllSitesSelected = computed(() => authStore.currentSite === 'any');
 
+const parentDistrict = computed<SelectedOrg | undefined>(() => {
+  if (!authStore.currentSite || !authStore.currentSiteName || isAllSitesSelected.value) {
+    return undefined;
+  }
+  return {
+    id: authStore.currentSite,
+    name: authStore.currentSiteName,
+    tags: [],
+  };
+});
 
-const parentDistrict = ref<SelectedOrg | undefined>(undefined);
 const parentSchool = ref<SelectedOrg | undefined>(undefined);
 const tags = ref<string[]>([]);
-const tagSuggestions = ref<string[]>([]);
 
 const orgTypesRequiringParent: string[] = [
   SINGULAR_ORG_TYPES.SCHOOLS,
@@ -230,9 +199,6 @@ const v$ = useVuelidate(
     orgName: {
       required,
     },
-    parentDistrict: {
-      required: requiredIf(() => orgTypesRequiringParent.includes(orgType?.value?.singular || '')),
-    },
     parentSchool: {
       required: requiredIf(() => orgType?.value?.singular === SINGULAR_ORG_TYPES.CLASSES),
     },
@@ -240,41 +206,17 @@ const v$ = useVuelidate(
   {
     orgType,
     orgName,
-    parentDistrict,
     parentSchool,
   },
 );
 
-const allTags = computed<string[]>(() => {
-  const districtTags = (districts.value ?? []).map((org: CreateOrgType) => org.tags);
-  const schoolTags = (districts.value ?? []).map((org: CreateOrgType) => org.tags);
-  const classTags = (classes.value ?? []).map((org: CreateOrgType) => org.tags);
-  const groupTags = (groups.value ?? []).map((org: CreateOrgType) => org.tags);
-  return (_without(_union(...districtTags, ...schoolTags, ...classTags, ...groupTags), undefined) || []) as string[];
-});
-const classQueryEnabled = computed(() => parentSchool?.value !== undefined);
 const orgTypeLabel = computed(() => (orgType.value ? _capitalize(orgType.value.label) : 'Group'));
 const parentOrgRequired = computed(() => orgTypesRequiringParent.includes(orgType.value?.singular || ''));
-const selectedDistrict = computed(() => parentDistrict?.value?.id);
-const selectedSchool = computed(() => parentSchool?.value?.id);
-const schoolQueryEnabled = computed(() => parentDistrict?.value !== undefined);
-const schoolDropdownEnabled = computed(() => {
-  return parentDistrict.value && !isFetchingSchools.value;
-});
+const selectedSite = computed(() => authStore.currentSite ?? '');
 
 const { mutate: upsertOrg, isPending: isSubmittingOrg } = useUpsertOrgMutation();
 
-const { data: classes } = useSchoolClassesQuery(selectedSchool, {
-  enabled: classQueryEnabled,
-});
-
-const { data: districts, loading: isLoadingDistricts } = useDistrictsListQuery();
-
-const { data: groups } = useGroupsListQuery();
-
-const { isFetching: isFetchingSchools, data: schools } = useDistrictSchoolsQuery(selectedDistrict, {
-  enabled: schoolQueryEnabled,
-});
+const { isFetching: isFetchingSchools, data: schools } = _useSchoolsQuery(selectedSite);
 
 const { isRefetching: isCheckingOrgName, refetch: doesOrgNameExist } = useOrgNameExistsQuery(
   orgName,
@@ -300,34 +242,22 @@ const resetForm = () => {
   orgName.value = '';
   orgType.value = undefined;
   tags.value = [];
-  parentDistrict.value = undefined;
   parentSchool.value = undefined;
   v$.value.$reset();
-};
-
-const searchTags = (e: { query: string }) => {
-  const query = e.query.toLowerCase();
-  let filteredOptions = allTags.value.filter((opt: string) => opt.toLowerCase().includes(query));
-
-  if (filteredOptions.length === 0 && query) {
-    filteredOptions.push(query);
-  } else {
-    filteredOptions = filteredOptions.map((opt: string) => opt);
-  }
-
-  tagSuggestions.value = filteredOptions;
 };
 
 const parseCreateOrgData = (data: CreateOrgType) => {
   let formatted;
   let parsed;
 
-  const { districtId, name, normalizedName, parentOrgId, schoolId, tags, type } = data;
+  const { districtId, name, normalizedName, parentOrgId, schoolId, tags, type, createdBy, siteId } = data;
   const commonFields = {
     name,
     normalizedName,
     tags,
     type,
+    createdBy,
+    siteId,
   };
 
   switch (type) {
@@ -422,18 +352,30 @@ const submit = async () => {
     schoolId: toRaw(parentSchool.value)?.id,
     districtId: toRaw(parentDistrict.value)?.id,
     parentOrgId: toRaw(parentDistrict.value)?.id,
+    createdBy: authStore.getUserId(),
   } as CreateOrgType;
+
+  if (orgType.value?.singular !== SINGULAR_ORG_TYPES.DISTRICTS && authStore.currentSite === 'any') {
+    handleOnClose();
+    isSubmitBtnDisabled.value = false;
+    return toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Please select a specific site to add a group',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+  }
 
   const { data: orgNameExists } = await doesOrgNameExist();
 
   if (orgNameExists) {
     const errorTitle = `${orgTypeLabel.value} Creation Error`;
-    let errorMessage: string;
+    let errorMessage = `${orgTypeLabel.value} with name ${orgName.value} already exists.`;
 
     if (orgType.value?.singular === SINGULAR_ORG_TYPES.DISTRICTS) {
-      errorMessage = `${orgTypeLabel.value} with name ${orgName.value} already exists. ${orgTypeLabel.value} names must be unique.`;
+      errorMessage += ` ${orgTypeLabel.value} names must be unique.`;
     } else {
-      errorMessage = `${orgTypeLabel.value} with name ${orgName.value} already exists. ${orgTypeLabel.value} names must be unique within a site.`;
+      errorMessage += ` ${orgTypeLabel.value} names must be unique within a site.`;
     }
 
     isSubmitBtnDisabled.value = false;
@@ -449,9 +391,10 @@ const submit = async () => {
   let parsedData: unknown;
 
   try {
-    parsedData = parseCreateOrgData(data);
+    parsedData = parseCreateOrgData({ ...(data as CreateOrgType), siteId: authStore.currentSite! });
   } catch (error) {
     isSubmitBtnDisabled.value = false;
+
     return toast.add({
       severity: 'error',
       summary: 'Validation Error',
@@ -468,6 +411,10 @@ const submit = async () => {
         detail: `${orgTypeLabel.value} created successfully.`,
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
+
+      queryClient.invalidateQueries({ queryKey: [ORGS_TABLE_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [DISTRICTS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [SCHOOLS_QUERY_KEY] });
 
       handleOnClose();
     },

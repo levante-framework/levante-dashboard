@@ -163,16 +163,15 @@ const authWithGoogle = () => {
       .then(async () => {
         if (authStore.getUserId()) {
           const userClaims = await fetchDocById('userClaims', authStore.getUserId());
-          authStore.userClaims = userClaims;
+          authStore.setUserClaims(userClaims);
 
           const userData = await fetchDocById('users', authStore.getUserId());
-          authStore.userData = userData;
+          authStore.setUserData(userData);
 
           if (!authStore.isUserAdmin() && !authStore.isUserSuperAdmin()) {
             const userAssignments = await getUserAssignments(authStore.getUserId());
             const sortedAssignments = sortAssignmentsByDateOpened(userAssignments);
             assignmentsStore.setUserAssignments(sortedAssignments);
-            authStore.setShowSideBar(true);
           }
         }
       })
@@ -214,16 +213,15 @@ const authWithEmail = async (state) => {
       .then(async () => {
         if (authStore.getUserId()) {
           const userClaims = await fetchDocById('userClaims', authStore.getUserId());
-          authStore.userClaims = userClaims;
+          authStore.setUserClaims(userClaims);
 
           const userData = await fetchDocById('users', authStore.getUserId());
-          authStore.userData = userData;
+          authStore.setUserData(userData);
 
           if (!authStore.isUserAdmin() && !authStore.isUserSuperAdmin()) {
             const userAssignments = await getUserAssignments(authStore.getUserId());
             const sortedAssignments = sortAssignmentsByDateOpened(userAssignments);
             assignmentsStore.setUserAssignments(sortedAssignments);
-            authStore.setShowSideBar(true);
           }
         }
       })

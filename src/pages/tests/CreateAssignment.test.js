@@ -8,6 +8,13 @@ import CreateAssignment from '../CreateAssignment.vue';
 
 const mockUpsertAdministration = vi.fn();
 const mockDoesAssignmentExist = vi.fn().mockResolvedValue({ data: false });
+const mockRouterPush = vi.fn();
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: mockRouterPush,
+  }),
+}));
 
 vi.mock('@/composables/mutations/useUpsertAdministrationMutation', () => {
   return {
@@ -27,7 +34,7 @@ vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
   })),
 }));
 
-vi.mock('@/composables/queries/useAssignmentByNameQuery', () => ({
+vi.mock('@/composables/queries/useAssignmentExistsQuery', () => ({
   default: vi.fn(() => ({
     refetch: mockDoesAssignmentExist,
   })),
@@ -45,6 +52,14 @@ vi.mock('@/store/auth', () => ({
     roarfirekit: ref({
       restConfig: true,
     }),
+    userData: ref({
+      name: {
+        first: 'Test First',
+        middle: 'Test Middle',
+        last: 'Test Last',
+      },
+      displayName: 'Test Display Name',
+    }),
   })),
 }));
 
@@ -53,6 +68,7 @@ beforeEach(() => {
   mockUpsertAdministration.mockClear();
   mockDoesAssignmentExist.mockClear();
   mockDoesAssignmentExist.mockResolvedValue({ data: false });
+  mockRouterPush.mockClear();
 });
 
 describe('Create Assignment Page', () => {

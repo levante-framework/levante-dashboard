@@ -10,7 +10,45 @@ import PvFloatLabel from 'primevue/floatlabel';
 import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { nextTick } from 'vue';
+import { nextTick, ref } from 'vue';
+
+// Mock useAuthStore
+const mockFirebaseUser = ref({
+  adminFirebaseUser: {
+    uid: 'test-user-id',
+    email: 'test@example.com',
+  },
+});
+
+vi.mock('@/store/auth', () => ({
+  useAuthStore: vi.fn(() => ({
+    getUserId: vi.fn(() => 'test-user-id'),
+    $subscribe: vi.fn(),
+    roarfirekit: ref({
+      restConfig: true,
+    }),
+    isAuthenticated: () => true,
+    isUserSuperAdmin: vi.fn(() => true),
+    firebaseUser: mockFirebaseUser,
+    userData: ref({
+      roles: [],
+    }),
+    shouldUsePermissions: ref(false),
+    currentSite: 'any',
+    userClaims: ref({
+      claims: {
+        adminOrgs: {
+          districts: [],
+          schools: [],
+          classes: [],
+          groups: [],
+          families: [],
+        },
+      },
+    }),
+    sites: [],
+  })),
+}));
 
 const mockUseUpsertOrgMutation = vi.fn();
 let mockOrgNameExists = false;
@@ -28,6 +66,20 @@ vi.mock('@/composables/queries/useOrgNameExistsQuery', () => ({
     refetch: vi.fn().mockResolvedValue({
       data: mockOrgNameExists,
     }),
+  })),
+}));
+
+vi.mock('@/composables/queries/useDistrictsListQuery', () => ({
+  default: vi.fn(() => ({
+    data: ref([]),
+    isLoading: ref(false),
+  })),
+}));
+
+vi.mock('@/composables/queries/useDistrictSchoolsQuery', () => ({
+  default: vi.fn(() => ({
+    data: ref([]),
+    isFetching: ref(false),
   })),
 }));
 

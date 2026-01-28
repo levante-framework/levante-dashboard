@@ -6,8 +6,8 @@
           <h2 data-cy="h2-card-admin-title" class="sm:text-lg lg:text-lx m-0 h2-card-admin-title">
             {{ title }}
           </h2>
-          <small v-if="Object.keys(props.creator).length" class="m-0 ml-1">
-            — Created by <span class="font-bold">{{ props.creator?.displayName }}</span></small
+          <small class="m-0 ml-1">
+            — Created by <span class="font-bold">{{ props.creatorName }}</span></small
           >
         </div>
         <div v-if="speedDialItems.length > 0" class="flex justify-content-end w-3">
@@ -161,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watchEffect } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
@@ -191,6 +191,8 @@ import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toast
 import { isLevante, getTooltip } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
 import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
+import { usePermissions } from '@/composables/usePermissions';
+import { ROLES } from '@/constants/roles';
 
 interface Assessment {
   taskId: string;
@@ -228,7 +230,7 @@ interface Props {
   assessments: Assessment[];
   showParams: boolean;
   isSuperAdmin: boolean;
-  creator?: any;
+  creatorName: string;
   onDeleteAdministration?: (administrationId: string) => void;
 }
 
@@ -277,9 +279,12 @@ const router = useRouter();
 const queryClient = useQueryClient();
 
 const props = withDefaults(defineProps<Props>(), {
-  creator: {},
+  creatorName: '--',
+  onDeleteAdministration: () => {},
   stats: () => ({}),
 });
+
+const { hasRole } = usePermissions();
 
 const confirm = useConfirm();
 const toast = useToast();
@@ -307,7 +312,8 @@ const administrationStatusBadge = computed((): string => administrationStatus.va
 const speedDialItems = computed((): SpeedDialItem[] => {
   const items: SpeedDialItem[] = [];
 
-  if (props.isSuperAdmin && isUpcoming.value) {
+  // TODO: Change this to admin when edit assignment refactor is complete
+  if (isUpcoming.value && hasRole(ROLES.SUPER_ADMIN)) {
     items.push({
       label: 'Delete',
       icon: 'pi pi-trash',
@@ -342,18 +348,18 @@ const speedDialItems = computed((): SpeedDialItem[] => {
       },
     });
   }
-
-  // items.push({
-  //   label: 'Edit',
-  //   icon: 'pi pi-pencil',
-  //   command: () => {
-  //     router.push({
-  //       name: 'EditAssignment',
-  //       params: { adminId: props.id },
-  //     });
-  //   },
-  // });
-
+  if (hasRole(ROLES.ADMIN)) {
+    items.push({
+      label: 'Edit',
+      icon: 'pi pi-pencil',
+      command: () => {
+        router.push({
+          name: 'EditAssignment',
+          params: { adminId: props.id },
+        });
+      },
+    });
+  }
   return items;
 });
 
@@ -389,12 +395,10 @@ function getAssessment(assessmentId: string): Assessment | undefined {
   return props.assessments.find((assessment) => assessment.taskId.toLowerCase() === assessmentId);
 }
 
-const showTable = ref<boolean>(false);
 const enableQueries = ref<boolean>(false);
 
 onMounted((): void => {
   enableQueries.value = true;
-  showTable.value = !showTable.value;
 });
 
 const isWideScreen = computed((): boolean => {
@@ -405,6 +409,8 @@ const { data: tasksDictionary, isLoading: isLoadingTasksDictionary } = useTasksD
 
 const { data: orgs, isLoading: isLoadingDsgfOrgs } = useDsgfOrgQuery(props.id, props.assignees, {
   enabled: enableQueries,
+  staleTime: 0,
+  gcTime: 0,
 });
 
 const loadingTreeTable = computed((): boolean => {
@@ -412,12 +418,18 @@ const loadingTreeTable = computed((): boolean => {
 });
 
 const treeTableOrgs = ref<TreeNode[]>([]);
-watch(orgs, (newValue) => {
-  treeTableOrgs.value = newValue || [];
-});
 
-watch(showTable, (newValue) => {
-  if (newValue) treeTableOrgs.value = orgs.value || [];
+const cloneTreeNodes = (nodes: TreeNode[] = []): TreeNode[] =>
+  // Clone each node so we never mutate the TanStack Query cache when
+  // expanding nodes or adding stats locally.
+  nodes.map((node) => ({
+    ...node,
+    data: { ...node.data },
+    ...(node.children ? { children: cloneTreeNodes(node.children) } : {}),
+  }));
+
+watchEffect(() => {
+  treeTableOrgs.value = cloneTreeNodes(orgs.value ?? []);
 });
 
 const expanding = ref<boolean>(false);

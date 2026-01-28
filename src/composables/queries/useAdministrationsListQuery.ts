@@ -1,33 +1,29 @@
-import { computed, toValue } from 'vue';
+import { computed, Ref, toValue } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { administrationPageFetcher } from '@/helpers/query/administrations';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import useUserType from '@/composables/useUserType';
 import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
+import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
 
 /**
  * Administrations list query.
  *
+ * @param {ref<String>} selectedDistrictId – A Vue ref containing the selected district ID.
  * @param {ref<String>} orderBy – A Vue ref containing the field to order the query by.
  * @param {ref<Boolean>} [testAdministrationsOnly=false] – A Vue ref containing whether to fetch only test data.
  * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
  * @returns {UseQueryResult} The TanStack query result.
  */
 const useAdministrationsListQuery = (
-  orderBy,
+  selectedDistrictId: Ref<string>,
+  orderBy: Ref<any>,
   testAdministrationsOnly = false,
   queryOptions?: UseQueryOptions,
 ): UseQueryReturnType => {
-  // Fetch the user claims.
-  const { data: userClaims } = useUserClaimsQuery({
-    enabled: queryOptions?.enabled ?? true,
-  });
-
-  // Get admin status and administation orgs.
-  const { isSuperAdmin } = useUserType(userClaims);
-  const exhaustiveAdministrationOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
+  const authStore = useAuthStore();
+  const { userClaims } = storeToRefs(authStore);
 
   // Ensure all necessary data is loaded before enabling the query.
   const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
@@ -37,19 +33,14 @@ const useAdministrationsListQuery = (
   // Build query key, based on whether or not we only fetch test administrations.
   const queryKey = computed(() =>
     toValue(testAdministrationsOnly)
-      ? [ADMINISTRATIONS_LIST_QUERY_KEY, 'test-data', orderBy]
-      : [ADMINISTRATIONS_LIST_QUERY_KEY, orderBy],
+      ? [ADMINISTRATIONS_LIST_QUERY_KEY, selectedDistrictId, 'test-data', orderBy]
+      : [ADMINISTRATIONS_LIST_QUERY_KEY, selectedDistrictId, orderBy],
   );
 
   return useQuery({
     queryKey,
     queryFn: async () => {
-      const result = await administrationPageFetcher(
-        isSuperAdmin,
-        exhaustiveAdministrationOrgs,
-        testAdministrationsOnly,
-        orderBy,
-      );
+      const result = await administrationPageFetcher(selectedDistrictId, testAdministrationsOnly, orderBy);
       return result.sortedAdministrations;
     },
     enabled: isQueryEnabled,
@@ -60,24 +51,20 @@ const useAdministrationsListQuery = (
 /**
  * Full administrations list query that returns both sorted and full administrations.
  *
+ * @param {ref<String>} selectedDistrictId – A Vue ref containing the selected district ID.
  * @param {ref<String>} orderBy – A Vue ref containing the field to order the query by.
  * @param {ref<Boolean>} [testAdministrationsOnly=false] – A Vue ref containing whether to fetch only test data.
  * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
  * @returns {UseQueryResult} The TanStack query result with both sortedAdministrations and administrations.
  */
 const useFullAdministrationsListQuery = (
-  orderBy,
+  selectedDistrictId: Ref<string>,
+  orderBy: Ref<any>,
   testAdministrationsOnly = false,
   queryOptions?: UseQueryOptions,
 ): UseQueryReturnType => {
-  // Fetch the user claims.
-  const { data: userClaims } = useUserClaimsQuery({
-    enabled: queryOptions?.enabled ?? true,
-  });
-
-  // Get admin status and administation orgs.
-  const { isSuperAdmin } = useUserType(userClaims);
-  const exhaustiveAdministrationOrgs = computed(() => userClaims.value?.claims?.adminOrgs);
+  const authStore = useAuthStore();
+  const { userClaims } = storeToRefs(authStore);
 
   // Ensure all necessary data is loaded before enabling the query.
   const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
@@ -87,14 +74,13 @@ const useFullAdministrationsListQuery = (
   // Build query key, based on whether or not we only fetch test administrations.
   const queryKey = computed(() =>
     toValue(testAdministrationsOnly)
-      ? [ADMINISTRATIONS_LIST_QUERY_KEY, 'full', 'test-data', orderBy]
-      : [ADMINISTRATIONS_LIST_QUERY_KEY, 'full', orderBy],
+      ? [ADMINISTRATIONS_LIST_QUERY_KEY, selectedDistrictId, 'full', 'test-data', orderBy]
+      : [ADMINISTRATIONS_LIST_QUERY_KEY, selectedDistrictId, 'full', orderBy],
   );
 
   return useQuery({
     queryKey,
-    queryFn: () =>
-      administrationPageFetcher(isSuperAdmin, exhaustiveAdministrationOrgs, testAdministrationsOnly, orderBy),
+    queryFn: () => administrationPageFetcher(selectedDistrictId, testAdministrationsOnly, orderBy),
     enabled: isQueryEnabled,
     ...options,
   });

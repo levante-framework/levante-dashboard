@@ -4,70 +4,77 @@
       <!--Upload file section-->
       <AddUsersInfo />
 
-      <PvDivider />
+      <PvDivider class="my-5" />
 
-      <div class="text-gray-500 mb-2 surface-100 border-round p-2">
-        <PvFileUpload
-          name="massUploader[]"
-          custom-upload
-          accept=".csv"
-          class="bg-primary mb-2 p-3 w-2 text-white border-none border-round h-3rem m-0 hover:bg-red-900"
-          auto
-          :show-upload-button="false"
-          :show-cancel-button="false"
-          @uploader="onFileUpload($event)"
-        >
-          <template #empty>
-            <div class="flex justify-center items-center text-gray-500">
-              <p>Click choose or drag your CSV file here to upload.</p>
-            </div>
-          </template>
-        </PvFileUpload>
-      </div>
-
-      <div v-if="isFileUploaded && !errorMissingColumns && !errorUsers.length">
-        <PvDataTable
-          ref="dataTable"
-          :value="rawUserFile"
-          show-gridlines
-          :row-hover="true"
-          :resizable-columns="true"
-          paginator
-          :always-show-paginator="false"
-          :rows="10"
-          class="datatable"
-        >
-          <PvColumn v-for="col of allFields" :key="col.field" :field="col.field">
-            <template #header>
-              <div class="col-header">
-                <b>{{ col.header }}</b>
-              </div>
-            </template>
-            <template #body="{ data, field }">
-              <span>{{ data[field] }}</span>
-            </template>
-          </PvColumn>
-        </PvDataTable>
-
-        <div class="submit-container">
-          <div v-if="registeredUsers.length" class="button-group">
-            <PvButton
-              label="Continue to Link Users"
-              class="continue-button"
-              icon="pi pi-link"
-              @click="router.push({ name: 'Link Users' })"
-            />
-            <PvButton label="Download Users" class="download-button" icon="pi pi-download" @click="downloadCSV" />
-          </div>
-          <PvButton
-            v-else
-            :label="activeSubmit ? 'Adding Users' : 'Start Adding Users'"
-            :icon="activeSubmit ? 'pi pi-spin pi-spinner' : ''"
-            :disabled="activeSubmit"
-            class="bg-primary mb-2 p-3 w-2 text-white border-none border-round h-3rem m-0 hover:bg-red-900"
-            data-testid="start-adding-button"
-            @click="submitUsers"
+      <div class="m-0 mb-5 p-3 bg-gray-100 border-1 border-gray-200 border-round">
+        <div class="flex align-items-center gap-3">
+          <PvFileUpload
+            :choose-label="
+              isFileUploaded && !errorMissingColumns && !errorUsers.length
+                ? 'Choose Another CSV File'
+                : 'Choose CSV File'
+            "
+            :show-cancel-button="false"
+            :show-upload-button="false"
+            auto
+            accept=".csv"
+            custom-upload
+            mode="basic"
+            name="addUsersFile[]"
+            data-cy="upload-add-users-csv"
+            @uploader="onFileUpload($event)"
           />
+          <span v-if="isFileUploaded" class="text-gray-500">File: {{ uploadedFile?.name }}</span>
+          <span v-else class="text-gray-500">No file chosen</span>
+        </div>
+
+        <div v-if="isFileUploaded && !errorMissingColumns && !errorUsers.length">
+          <PvDataTable
+            ref="dataTable"
+            :value="rawUserFile"
+            show-gridlines
+            :row-hover="true"
+            :resizable-columns="true"
+            paginator
+            :always-show-paginator="false"
+            :rows="10"
+            class="datatable"
+          >
+            <PvColumn v-for="col of allFields" :key="col.field" :field="col.field">
+              <template #header>
+                <div class="col-header">
+                  <b>{{ col.header }}</b>
+                </div>
+              </template>
+              <template #body="{ data, field }">
+                <span>{{ data[field] }}</span>
+              </template>
+            </PvColumn>
+          </PvDataTable>
+
+          <div class="submit-container">
+            <div v-if="registeredUsers.length" class="button-group">
+              <PvButton label="Continue to Link Users" icon="pi pi-link" @click="router.push({ name: 'Link Users' })" />
+              <PvButton
+                label="Download Users"
+                icon="pi pi-download"
+                variant="outlined"
+                class="download-button"
+                data-cy="button-download-users"
+                @click="downloadCSV"
+              />
+            </div>
+            <PvButton
+              v-else
+              v-tooltip.bottom="isAllSitesSelected ? 'Please select a specific site to add users' : ''"
+              :label="activeSubmit ? 'Adding Users' : 'Add Users from Uploaded File'"
+              :icon="activeSubmit ? 'pi pi-spin pi-spinner' : ''"
+              :disabled="activeSubmit || isAllSitesSelected"
+              data-testid="start-adding-button"
+              data-cy="button-add-users-from-file"
+              @click="submitUsers"
+            />
+          </div>
         </div>
       </div>
 
@@ -103,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, toRaw, watch, nextTick } from 'vue';
+import { ref, toRaw, watch, nextTick, computed } from 'vue';
 import { csvFileToJson, normalizeToLowercase } from '@/helpers';
 import _cloneDeep from 'lodash/cloneDeep';
 import _forEach from 'lodash/forEach';
@@ -124,9 +131,17 @@ import PvFileUpload from 'primevue/fileupload';
 import { useRouter } from 'vue-router';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { logger } from '@/logger';
+import { storeToRefs } from 'pinia';
+
 const authStore = useAuthStore();
+const { currentSite, currentSiteName, shouldUsePermissions } = storeToRefs(authStore);
+const { createUsers } = authStore;
 const toast = useToast();
+
+const isAllSitesSelected = computed(() => shouldUsePermissions.value && currentSite.value === 'any');
+
 const isFileUploaded = ref(false);
+const uploadedFile = ref(null);
 const rawUserFile = ref({});
 const registeredUsers = ref([]);
 
@@ -159,11 +174,6 @@ const allFields = [
     dataType: 'string',
   },
   {
-    field: 'site',
-    header: 'Site',
-    dataType: 'string',
-  },
-  {
     field: 'school',
     header: 'School',
     dataType: 'string',
@@ -174,6 +184,7 @@ const allFields = [
     dataType: 'string',
   },
 ];
+
 
 // Error Users Table refs
 const errorTable = ref();
@@ -203,7 +214,7 @@ watch(
 // Functions supporting the uploader
 const onFileUpload = async (event) => {
   // Reset all error states and data
-  rawUserFile.value = {};
+  uploadedFile.value = null;
   errorUsers.value = [];
   errorUserColumns.value = [];
   showErrorTable.value = false;
@@ -214,8 +225,9 @@ const onFileUpload = async (event) => {
   registeredUsers.value = []; // Clear any previously registered users
   activeSubmit.value = false; // Reset the submit flag
 
-  // Read the file
-  const file = event.files[0];
+  // Read the file. In case of multiple files, use the last one.
+  const file = event.files[event.files.length - 1];
+  uploadedFile.value = file;
 
   // Parse the file directly with csvFileToJson
   const parsedData = await csvFileToJson(file);
@@ -269,6 +281,7 @@ const onFileUpload = async (event) => {
     return userTypeValue && user[userTypeValue].toLowerCase() === 'child';
   });
 
+  // If we have child users, they MUST have month and year
   if (hasChild) {
     const hasMonth = allColumns.includes('month');
     const hasYear = allColumns.includes('year');
@@ -286,13 +299,12 @@ const onFileUpload = async (event) => {
 
   // Conditional (Either): Cohort OR Site + School
   const hasCohort = allColumns.includes('cohort');
-  const hasSite = allColumns.includes('site');
   const hasSchool = allColumns.includes('school');
-  if (!hasCohort && (!hasSite || !hasSchool)) {
+  if (!hasCohort && !hasSchool) {
     toast.add({
       severity: 'error',
       summary: 'Error: Missing Column',
-      detail: 'Missing required column(s): Cohort OR Site and School',
+      detail: 'Missing required column(s): Cohort OR School',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     return;
@@ -359,7 +371,6 @@ const onFileUpload = async (event) => {
 
     // --- Org Presence Checks (Cohort OR Site+School) ---
     const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
-    const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
     const schoolField = Object.keys(user).find((key) => key.toLowerCase() === 'school');
 
     // Parse and check if arrays are non-empty after splitting and trimming
@@ -370,13 +381,7 @@ const onFileUpload = async (event) => {
         .split(',')
         .map((s) => s.trim())
         .filter((s) => s).length > 0;
-    const hasSite =
-      siteField &&
-      user[siteField] &&
-      user[siteField]
-        .split(',')
-        .map((s) => s.trim())
-        .filter((s) => s).length > 0;
+
     const hasSchool =
       schoolField &&
       user[schoolField] &&
@@ -384,10 +389,6 @@ const onFileUpload = async (event) => {
         .split(',')
         .map((s) => s.trim())
         .filter((s) => s).length > 0;
-
-    if (!hasSite) {
-      missingFields.push('Site');
-    }
 
     if (!hasCohort && !hasSchool) {
       missingFields.push('Cohort OR School');
@@ -488,34 +489,30 @@ async function submitUsers() {
     return;
   }
 
-  // Check orgs exist
   for (const { user, index } of usersToBeRegistered) {
     try {
       // Find fields case-insensitively
-      const siteField = Object.keys(user).find((key) => key.toLowerCase() === 'site');
       const schoolField = Object.keys(user).find((key) => key.toLowerCase() === 'school');
       const classField = Object.keys(user).find((key) => key.toLowerCase() === 'class');
       const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
 
       // Get values using the actual field names and parse as comma-separated arrays
-      const sites = siteField
-        ? user[siteField]
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => s)
-        : [];
+      const sites = [currentSiteName.value];
+
       const schools = schoolField
         ? user[schoolField]
             .split(',')
             .map((s) => s.trim())
             .filter((s) => s)
         : [];
+
       const classes = classField
         ? user[classField]
             .split(',')
             .map((s) => s.trim())
             .filter((s) => s)
         : [];
+
       const cohorts = cohortField
         ? user[cohortField]
             .split(',')
@@ -585,13 +582,14 @@ async function submitUsers() {
                     const schoolId = await getOrgId(
                       pluralizeFirestoreCollection(orgType),
                       schoolName,
-                      ref(siteId),
+                      ref({ id: siteId }),
                       ref(undefined),
                     );
                     orgInfo.schools.push(schoolId);
                     schoolFound = true;
                     break; // Found valid parent, move to next school
                   } catch (error) {
+                    console.error('Error getting school ID: ', error);
                     // Try next site
                     continue;
                   }
@@ -611,12 +609,12 @@ async function submitUsers() {
                   for (const schoolName of schools) {
                     try {
                       const siteId = await getOrgId('districts', siteName);
-                      const schoolId = await getOrgId('schools', schoolName);
+                      const schoolId = await getOrgId('schools', schoolName, ref({ id: siteId }), ref(undefined));
                       const classId = await getOrgId(
                         pluralizeFirestoreCollection(orgType),
                         className,
-                        ref(siteId),
-                        ref(schoolId),
+                        ref({ id: siteId }),
+                        ref({ id: schoolId }),
                       );
                       orgInfo.classes.push(classId);
                       classFound = true;
@@ -637,7 +635,7 @@ async function submitUsers() {
                 const cohortId = await getOrgId(
                   pluralizeFirestoreCollection('groups'),
                   cohortName,
-                  ref(undefined),
+                  ref({ id: currentSite.value }),
                   ref(undefined),
                 );
                 orgInfo.cohorts.push(cohortId);
@@ -729,7 +727,6 @@ async function submitUsers() {
         // Ensure the key is exactly 'userType' and handle potential casing issues
         if (userTypeField) {
           const userTypeValue = user[userTypeField];
-
           // Set the key to 'userType' regardless of original casing
           processedUser.userType = userTypeValue;
           // Remove the original field if the casing was different
@@ -746,9 +743,7 @@ async function submitUsers() {
         return processedUser;
       });
 
-      // This is the most likely place for an error, due to
-      // permissions, etc. If so, drop to Catch block
-      const res = await authStore.createUsers(processedUsers);
+      const res = await createUsers({users: processedUsers, siteId: currentSite.value});
       logger.capture('Admin: Add Users', { processedUsers });
       const currentRegisteredUsers = res.data.data;
 
@@ -897,8 +892,15 @@ const orgIds = {
  */
 const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentSchool = ref(null)) => {
   const normalizedOrgName = normalizeToLowercase(orgName);
+  
+  // For schools and classes, include parent IDs in cache key to avoid cross-site conflicts
+  const parentDistrictId = parentDistrict?.value?.id || null;
+  const parentSchoolId = parentSchool?.value?.id || null;
+  const cacheKey = parentDistrictId || parentSchoolId 
+    ? `${normalizedOrgName}__${parentDistrictId || ''}__${parentSchoolId || ''}` 
+    : normalizedOrgName;
 
-  if (orgIds[orgType][normalizedOrgName]) return orgIds[orgType][normalizedOrgName];
+  if (orgIds[orgType][cacheKey]) return orgIds[orgType][cacheKey];
 
   // Array of objects. Ex: [{id: 'lut54353jkler'}]
   const orgs = await fetchOrgByName(orgType, normalizedOrgName, parentDistrict, parentSchool);
@@ -913,13 +915,13 @@ const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentScho
     }
   }
 
-  orgIds[orgType][normalizedOrgName] = orgs[0].id;
+  orgIds[orgType][cacheKey] = orgs[0].id;
 
   return orgs[0].id;
 };
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .extra-height {
   min-height: 33vh;
 }
@@ -948,7 +950,7 @@ const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentScho
   display: flex;
   flex-direction: column;
   width: 100%;
-  margin-top: 2rem;
+  margin: 1rem 0 0;
   align-items: flex-start;
 }
 
@@ -961,27 +963,10 @@ const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentScho
 }
 
 .download-button {
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  height: 2.5rem;
-  width: auto;
-}
-
-.continue-button {
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  height: 3.5rem;
-  width: auto;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  &:hover {
+    background: var(--primary-color);
+    color: white;
+  }
 }
 
 .error {
@@ -991,6 +976,7 @@ const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentScho
 .datatable {
   border: 1px solid var(--surface-d);
   border-radius: 5px;
+  margin: 1rem 0 0;
 }
 
 .error-container {

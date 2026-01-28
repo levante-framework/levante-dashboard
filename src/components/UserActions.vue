@@ -1,27 +1,41 @@
 <template>
   <div>
     <div v-if="props.isBasicView">
-      <div class="flex gap-2 align-items-center justify-content-center">
+      <div class="flex gap-5 align-items-center justify-content-center">
+        <div class="flex align-items-center gap-2">
+          <PvAvatar
+            :label="userInitial"
+            shape="circle"
+            style="background: var(--red-100); font-weight: 500; color: var(--primary-color)"
+          />
+          <div>
+            <p v-if="userData?.displayName || userData?.username" class="m-0 p-0 font-semibold text-sm">
+              {{ userData?.displayName || userData?.username }}
+            </p>
+            <p class="m-0 p-0 text-xs">{{ userData?.email }}</p>
+          </div>
+        </div>
+
         <PvButton data-cy="button-sign-out" @click="() => signOut()">
           <i class="pi pi-sign-out"></i> {{ $t('navBar.signOut') }}
         </PvButton>
       </div>
     </div>
     <div v-else class="flex gap-2 options-wrapper">
-
-      <div v-if="authStore.shouldUsePermissions">
+      <div v-if="shouldUsePermissions" class="flex align-items-center gap-2">
         <label for="site-select">Site:</label>
         <PvSelect
           :options="siteOptions"
-          :value="authStore.currentSite"
+          :modelValue="currentSite"
           :optionValue="(o) => o.value"
           :optionLabel="(o) => o.label"
           class="options-site"
+          data-cy="site-select"
           @change="handleSiteChange"
         >
           <template #value>
-            <i class="pi pi-building"></i>
-            </template>
+            <span>{{ currentSiteName || 'Select a site' }}</span>
+          </template>
         </PvSelect>
       </div>
 
@@ -56,7 +70,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed } from 'vue';
+import { storeToRefs } from 'pinia';
 import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import PvButton from 'primevue/button';
 import PvSelect from 'primevue/select';
@@ -64,6 +79,8 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { APP_ROUTES } from '@/constants/routes';
 import { useAuthStore } from '@/store/auth';
+import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
+import PvAvatar from 'primevue/avatar';
 
 interface Props {
   isBasicView: boolean;
@@ -78,22 +95,55 @@ interface DropdownChangeEvent {
   value: string;
 }
 
+interface SiteOption {
+  siteId: string;
+  siteName: string;
+}
+
 const authStore = useAuthStore();
-const siteOptions = ref<DropdownOption[]>([]);
+const { shouldUsePermissions, currentSite, currentSiteName, userData } = storeToRefs(authStore);
 const i18n = useI18n();
 const router = useRouter();
 const { mutate: signOut } = useSignOutMutation();
 const feedbackButton = ref<HTMLButtonElement | null>(null);
 
-onMounted(() => {
-  siteOptions.value = (authStore.sites as {siteId: string, siteName: string}[]).map((site: {siteId: string, siteName: string}) => ({ label: site.siteName, value: site.siteId }));
+const props = defineProps<Props>();
+
+const userInitial = computed(() => {
+  const data: string =
+    (userData.value?.displayName as string) ||
+    (userData.value?.username as string) ||
+    (userData.value?.email as string);
+
+  return data[0]!.toUpperCase();
+});
+
+const { data: districtsData = [], isLoading: isLoadingDistricts } = useDistrictsListQuery();
+
+const siteOptions = computed<DropdownOption[]>(() => {
+  if (authStore.isUserSuperAdmin()) {
+    if (isLoadingDistricts.value || !districtsData?.value) {
+      if (currentSite.value && currentSiteName.value) {
+        return [{ label: currentSiteName.value, value: currentSite.value }];
+      }
+      return [];
+    }
+    const formattedSites = districtsData.value.map((district: { name: string; id: string }) => ({
+      label: district?.name,
+      value: district?.id,
+    }));
+    return [{ label: 'All Sites', value: 'any' }, ...formattedSites];
+  }
+  return authStore.sites.map((site: SiteOption) => ({
+    label: site.siteName,
+    value: site.siteId,
+  }));
 });
 
 const handleSiteChange = (e: DropdownChangeEvent): void => {
-  authStore.currentSite = e.value;
+  const selectedOption = siteOptions.value.find((opt) => opt.value === e.value);
+  authStore.setCurrentSite(e.value, selectedOption?.label ?? null);
 };
-
-const props = defineProps<Props>();
 
 const helpOptions: DropdownOption[] = [
   { label: 'Researcher Documentation', value: 'researcherDocumentation' },
@@ -130,11 +180,16 @@ const handleProfileChange = (e: DropdownChangeEvent): void => {
     }
   }
 }
+
 .nav-user-wrapper {
   display: flex;
   align-items: center;
   outline: 1.2px solid rgba(0, 0, 0, 0.1);
   border-radius: 0.3rem;
   padding: 0.5rem 0.8rem;
+}
+
+.options-site {
+  max-width: 300px;
 }
 </style>

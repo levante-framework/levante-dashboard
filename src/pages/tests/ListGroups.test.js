@@ -2,7 +2,7 @@ import * as VueQuery from '@tanstack/vue-query';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import ListGroups from '../groups/ListGroups.vue';
 
@@ -37,18 +37,36 @@ vi.mock('@/store/auth', () => ({
     roarfirekit: ref({
       restConfig: true,
     }),
+    isUserSuperAdmin: vi.fn(() => true),
+    currentSite: ref('test-site'),
+    shouldUsePermissions: ref(false),
+    userClaims: ref({
+      claims: {
+        adminOrgs: {
+          districts: [],
+          schools: [],
+          classes: [],
+          groups: [],
+          families: [],
+        },
+      },
+    }),
   })),
 }));
 
 vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
   default: () => ({
-    data: {
-      value: {
-        claims: {
-          //
+    data: ref({
+      claims: {
+        adminOrgs: {
+          districts: [],
+          schools: [],
+          classes: [],
+          groups: [],
+          families: [],
         },
       },
-    },
+    }),
   }),
 }));
 
@@ -57,8 +75,59 @@ vi.mock('@/composables/usePermissions', () => ({
     can: vi.fn(() => true),
     canGlobal: vi.fn(() => true),
     hasRole: vi.fn(() => true),
+    hasMinimumRole: vi.fn(() => true),
+    userRole: ref('siteAdmin'),
     permissions: ref({}),
     permissionsLoaded: ref(true),
+  }),
+}));
+
+vi.mock('@/composables/queries/_useDistrictsQuery', () => ({
+  default: () => ({
+    data: ref([]),
+    isLoading: ref(false),
+  }),
+}));
+
+vi.mock('@/composables/queries/_useSchoolsQuery', () => ({
+  default: () => ({
+    data: ref([]),
+    isLoading: ref(false),
+  }),
+}));
+
+// Mock query composables
+vi.mock('@/composables/queries/useDistrictsListQuery', () => ({
+  default: () => ({
+    isLoading: ref(false),
+    data: ref([]),
+  }),
+}));
+
+vi.mock('@/composables/queries/useDistrictSchoolsQuery', () => ({
+  default: () => ({
+    isLoading: ref(false),
+    data: ref([]),
+  }),
+}));
+
+vi.mock('@/composables/queries/useOrgsTableQuery', () => ({
+  default: () => ({
+    isLoading: ref(false),
+    isFetching: ref(false),
+    data: ref([]),
+    isError: ref(false),
+    error: ref(null),
+  }),
+}));
+
+vi.mock('@/composables/queries/useAdministrationsListQuery', () => ({
+  useFullAdministrationsListQuery: () => ({
+    isLoading: ref(false),
+    isFetching: ref(false),
+    data: ref([]),
+    isError: ref(false),
+    error: ref(null),
   }),
 }));
 
@@ -69,8 +138,56 @@ vi.mock('@/components/PermissionGuard.vue', () => ({
   },
 }));
 
+vi.mock('@/components/EditOrgsForm.vue', () => ({
+  default: {
+    name: 'EditOrgsForm',
+    template: '<div class="edit-orgs-form">Edit Orgs Form</div>',
+  },
+}));
+
+vi.mock('@/components/modals/RoarModal.vue', () => ({
+  default: {
+    name: 'RoarModal',
+    template: '<div class="roar-modal"><slot /></div>',
+  },
+}));
+
+vi.mock('@/components/RoarDataTable.vue', () => ({
+  default: {
+    name: 'RoarDataTable',
+    template: '<div class="roar-data-table" data-cy="roar-data-table">Data Table</div>',
+  },
+}));
+
+vi.mock('@/components/modals/AddGroupModal.vue', () => ({
+  default: {
+    name: 'AddGroupModal',
+    template: '<div class="add-group-modal">Add Group Modal</div>',
+  },
+}));
+
+vi.mock('@/components/modals/GroupAssignmentsModal.vue', () => ({
+  default: {
+    name: 'GroupAssignmentsModal',
+    template: '<div class="group-assignments-modal">Group Assignments Modal</div>',
+  },
+}));
+
 beforeEach(() => {
   setActivePinia(createPinia());
+});
+
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.runAllTimers();
+  vi.useRealTimers();
+});
+
+afterAll(() => {
+  vi.useRealTimers();
 });
 
 const mountOptions = {

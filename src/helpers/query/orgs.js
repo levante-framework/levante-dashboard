@@ -1,6 +1,5 @@
 import { toValue } from 'vue';
 import _intersection from 'lodash/intersection';
-import _uniq from 'lodash/uniq';
 import _flattenDeep from 'lodash/flattenDeep';
 import _isEmpty from 'lodash/isEmpty';
 import _without from 'lodash/without';
@@ -8,31 +7,31 @@ import _zip from 'lodash/zip';
 import _uniqBy from 'lodash/uniqBy';
 import {
   batchGetDocs,
-  convertValues,
   fetchDocById,
+  fetchDocumentsById,
   getAxiosInstance,
   mapFields,
-  orderByDefault,
   getBaseDocumentPath,
+  orderByNameASC,
 } from '@/helpers/query/utils';
 import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 
 export const getOrgsRequestBody = ({
-  orgType,
+  aggregationQuery,
+  orderBy,
   orgNormalizedName,
+  orgType,
+  page,
+  pageLimit,
+  paginate = true,
   parentDistrict,
   parentSchool,
-  orderBy,
-  aggregationQuery,
-  pageLimit,
-  page,
-  paginate = true,
   select = ['id', 'name', 'tags'],
 }) => {
   const requestBody = {
     structuredQuery: {
-      orderBy: orderBy ?? orderByDefault,
+      orderBy: orderBy ?? orderByNameASC,
     },
   };
 
@@ -56,7 +55,7 @@ export const getOrgsRequestBody = ({
 
   const filters = [];
 
-  if (orgNormalizedName && !(parentDistrict || parentSchool)) {
+  if (orgNormalizedName) {
     filters.push({
       fieldFilter: {
         field: { fieldPath: 'normalizedName' },
@@ -64,6 +63,28 @@ export const getOrgsRequestBody = ({
         value: { stringValue: orgNormalizedName },
       },
     });
+  }
+
+  if (orgType === ORG_TYPES.SCHOOLS && parentDistrict) {
+    filters.push({
+      fieldFilter: {
+        field: { fieldPath: 'districtId' },
+        op: 'EQUAL',
+        value: { stringValue: parentDistrict },
+      },
+    });
+  }
+
+  if (orgType === ORG_TYPES.CLASSES) {
+    if (parentSchool) {
+      filters.push({
+        fieldFilter: {
+          field: { fieldPath: 'schoolId' },
+          op: 'EQUAL',
+          value: { stringValue: parentSchool },
+        },
+      });
+    }
 
     if (parentDistrict) {
       filters.push({
@@ -74,61 +95,9 @@ export const getOrgsRequestBody = ({
         },
       });
     }
-  } else if ((orgType === 'schools' && parentDistrict) || (orgType === 'classes' && parentDistrict && !parentSchool)) {
-    if (orgNormalizedName) {
-      filters.push(
-        {
-          fieldFilter: {
-            field: { fieldPath: 'normalizedName' },
-            op: 'EQUAL',
-            value: { stringValue: orgNormalizedName },
-          },
-        },
-        {
-          fieldFilter: {
-            field: { fieldPath: 'districtId' },
-            op: 'EQUAL',
-            value: { stringValue: parentDistrict },
-          },
-        },
-      );
-    } else {
-      filters.push({
-        fieldFilter: {
-          field: { fieldPath: 'districtId' },
-          op: 'EQUAL',
-          value: { stringValue: parentDistrict },
-        },
-      });
-    }
-  } else if (orgType === 'classes' && parentSchool) {
-    if (orgNormalizedName) {
-      filters.push(
-        {
-          fieldFilter: {
-            field: { fieldPath: 'normalizedName' },
-            op: 'EQUAL',
-            value: { stringValue: orgNormalizedName },
-          },
-        },
-        {
-          fieldFilter: {
-            field: { fieldPath: 'schoolId' },
-            op: 'EQUAL',
-            value: { stringValue: parentSchool },
-          },
-        },
-      );
-    } else {
-      filters.push({
-        fieldFilter: {
-          field: { fieldPath: 'schoolId' },
-          op: 'EQUAL',
-          value: { stringValue: parentSchool },
-        },
-      });
-    }
-  } else if (orgType === 'groups' && parentDistrict) {
+  }
+
+  if (orgType === ORG_TYPES.GROUPS && parentDistrict) {
     filters.push({
       fieldFilter: {
         field: { fieldPath: 'parentOrgId' },
@@ -164,87 +133,11 @@ export const getOrgsRequestBody = ({
   return requestBody;
 };
 
-export const orgCounter = async (activeOrgType, selectedDistrict, selectedSchool, orderBy, isSuperAdmin, adminOrgs) => {
-  if (isSuperAdmin.value) {
-    const axiosInstance = getAxiosInstance();
-    const requestBody = getOrgsRequestBody({
-      orgType: activeOrgType.value,
-      parentDistrict: selectedDistrict.value,
-      parentSchool: selectedSchool.value,
-      aggregationQuery: true,
-      orderBy: orderBy.value,
-      paginate: false,
-      select: ['name', 'id'],
-    });
-    console.log(`Fetching count for ${activeOrgType.value}`);
-    return axiosInstance.post(':runAggregationQuery', requestBody).then(({ data }) => {
-      return Number(convertValues(data[0].result?.aggregateFields?.count));
-    });
-  } else {
-    console.log('Org Counter, not super admin');
-    if (['groups', 'families'].includes(activeOrgType.value)) {
-      return adminOrgs.value[activeOrgType.value]?.length ?? 0;
-    }
-
-    const { districts: districtIds = [], schools: schoolIds = [], classes: classIds = [] } = adminOrgs.value;
-
-    if (activeOrgType.value === 'districts') {
-      // Count all of the districts in the adminOrgs but also add districts from admin schools and classes
-      const schoolPromises = schoolIds.map((schoolId) => {
-        return fetchDocById('schools', schoolId, ['districtId']);
-      });
-
-      const classPromises = classIds.map((classId) => {
-        return fetchDocById('classes', classId, ['districtId']);
-      });
-
-      const schools = await Promise.all(schoolPromises);
-      const classes = await Promise.all(classPromises);
-
-      districtIds.push(...schools.map(({ districtId }) => districtId));
-      districtIds.push(...classes.map(({ districtId }) => districtId));
-      return _uniq(districtIds).length;
-    } else if (activeOrgType.value === 'schools') {
-      return fetchDocById('districts', selectedDistrict.value, ['schools']).then(async ({ schools }) => {
-        if (districtIds.includes(selectedDistrict.value)) {
-          return schools?.length ?? 0;
-        } else if (schoolIds.length > 0) {
-          return _intersection(schools ?? [], schoolIds).length ?? 0;
-        } else if (classIds.length > 0) {
-          // If we get here, there's no way that the selectedDistrict is not also the parent district of their admin class(es).
-          const classPromises = classIds.map((classId) => {
-            return fetchDocById('classes', classId, ['schoolId']);
-          });
-
-          const classes = await Promise.all(classPromises);
-          return _intersection(
-            schools,
-            classes.map(({ schoolId }) => schoolId),
-          ).length;
-        }
-
-        return 0;
-      });
-    } else if (activeOrgType.value === 'classes') {
-      if (selectedSchool.value) {
-        return fetchDocById('schools', selectedSchool.value, ['classes']).then((school) => {
-          console.log('in orgs counter', districtIds);
-          if (districtIds.includes(selectedDistrict.value) || schoolIds.includes(selectedSchool.value)) {
-            return school.classes?.length ?? 0;
-          }
-          return _intersection(school.classes ?? [], classIds).length;
-        });
-      }
-      return 0;
-    }
-  }
-};
-
 export const fetchOrgByName = async (orgType, orgNormalizedName, selectedDistrict, selectedSchool, orderBy = null) => {
   const axiosInstance = getAxiosInstance();
   const requestBody = getOrgsRequestBody({
     orgType,
-    parentDistrict: orgType === 'schools' ? selectedDistrict?.value?.id : null,
+    parentDistrict: orgType === 'schools' || orgType === 'classes' || orgType === 'groups' ? selectedDistrict?.value?.id : null,
     parentSchool: orgType === 'classes' ? selectedSchool?.value?.id : null,
     aggregationQuery: false,
     orgNormalizedName,
@@ -256,16 +149,10 @@ export const fetchOrgByName = async (orgType, orgNormalizedName, selectedDistric
   return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
 };
 
-export const orgFetcher = async (
-  orgType,
-  selectedDistrict,
-  isSuperAdmin,
-  adminOrgs,
-  select = ['name', 'id', 'tags', 'currentActivationCode'],
-) => {
-  const districtId = toValue(selectedDistrict);
+export const orgFetcher = async (orgType, selectedDistrict, isSuperAdmin, adminOrgs, select = ['name', 'id']) => {
+  const districtId = toValue(selectedDistrict) === 'any' ? null : toValue(selectedDistrict);
 
-  if (isSuperAdmin) {
+  if (isSuperAdmin.value) {
     const axiosInstance = getAxiosInstance();
     const requestBody = getOrgsRequestBody({
       orgType: orgType,
@@ -275,23 +162,14 @@ export const orgFetcher = async (
       select: select,
     });
 
-    if (orgType === 'districts') {
-      console.log(`Fetching ${orgType}`);
-    } else if (orgType === 'schools') {
-      console.log(`Fetching ${orgType} for ${districtId}`);
-    }
-
     return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
   } else {
-    if (['groups', 'families'].includes(orgType)) {
+    if (orgType === 'groups') {
       const promises = (adminOrgs.value[orgType] ?? []).map((orgId) => {
         return fetchDocById(orgType, orgId, select);
       });
       const districts = await Promise.all(promises);
-      return _uniqBy(
-        districts.filter(Boolean),
-        (district) => district.id,
-      );
+      return _uniqBy(districts.filter(Boolean), (district) => district.id);
     } else if (orgType === 'districts') {
       // First grab all the districts in adminOrgs
       const promises = (adminOrgs.value[orgType] ?? []).map((orgId) => {
@@ -350,115 +228,100 @@ export const orgFetcher = async (
   }
 };
 
-export const orgPageFetcher = async (
-  activeOrgType,
-  selectedDistrict,
-  selectedSchool,
-  orderBy,
-  pageLimit,
-  page,
-  isSuperAdmin,
-  adminOrgs,
-  select = ['id', 'name', 'tags'],
-) => {
-  const axiosInstance = getAxiosInstance();
-  const requestBody = getOrgsRequestBody({
-    orgType: activeOrgType.value,
-    parentDistrict: selectedDistrict.value,
-    parentSchool: selectedSchool.value,
-    aggregationQuery: false,
-    orderBy: orderBy.value,
-    pageLimit: pageLimit.value,
-    paginate: true,
-    page: page.value,
-    select,
-  });
-
-  if (isSuperAdmin) {
-    return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
-  } else {
-    if (activeOrgType.value === 'schools' && (adminOrgs.value['districts'] ?? []).includes(selectedDistrict.value)) {
-      const query = axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => {
-        return mapFields(data);
-      });
-      return query;
-    } else if (
-      activeOrgType.value === 'classes' &&
-      ((adminOrgs.value['schools'] ?? []).includes(selectedSchool.value) ||
-        (adminOrgs.value['districts'] ?? []).includes(selectedDistrict.value))
-    ) {
-      return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
-    }
-
-    const orgIds = adminOrgs.value[activeOrgType.value] ?? [];
-    // @TODO: Refactor to a single query for all orgs instead of multiple parallel queries.
-    const promises = orgIds.map((orgId) => fetchDocById(activeOrgType.value, orgId, select));
-    const orderField = (orderBy?.value ?? orderByDefault)[0].field.fieldPath;
-    const orderDirection = (orderBy?.value ?? orderByDefault)[0].direction;
-    let orgs = await Promise.all(promises);
-
-    if (activeOrgType.value === 'groups' && selectedDistrict.value) {
-      orgs = orgs.filter((org) => org?.parentOrgId === selectedDistrict.value);
-    }
-
-    orgs = orgs.sort((a, b) => {
-      if (orderDirection === 'ASCENDING') return 2 * +(a[orderField] > b[orderField]) - 1;
-      if (orderDirection === 'DESCENDING') return 2 * +(b[orderField] > a[orderField]) - 1;
-      return 0;
-    });
-
-    return orgs.slice(page.value * pageLimit.value, (page.value + 1) * pageLimit.value);
-  }
-};
-
 export const orgFetchAll = async (
   activeOrgType,
   selectedDistrict,
   selectedSchool,
   orderBy,
-  isSuperAdmin,
-  adminOrgs,
-  select,
+  select = ['id', 'name', 'tags'],
+  includeCreators = false,
 ) => {
-  const axiosInstance = getAxiosInstance();
-  const requestBody = getOrgsRequestBody({
-    orgType: activeOrgType.value,
-    parentDistrict: selectedDistrict.value,
-    parentSchool: selectedSchool.value,
-    aggregationQuery: false,
-    orderBy: orderBy.value,
-    paginate: false,
-    select,
-  });
+  const districtId = selectedDistrict.value === 'any' ? null : selectedDistrict.value;
 
-  if (isSuperAdmin.value) {
+  let orgs;
+
+  // When a specific site is selected, only fetch that one site
+  if (activeOrgType.value === ORG_TYPES.DISTRICTS && districtId) {
     try {
-      return await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => {
-        return mapFields(data);
-      });
+      const district = await fetchDocById(ORG_TYPES.DISTRICTS, districtId, select);
+      orgs = district ? [district] : [];
     } catch (error) {
-      console.error('orgFetchAll: Error fetching all orgs for super admin:', error);
+      console.error('orgFetchAll: Error fetching district by ID:', error);
       return [];
     }
   } else {
+    // Otherwise, fetch all sites (only available to super admins)
+    const axiosInstance = getAxiosInstance();
+    const requestBody = getOrgsRequestBody({
+      aggregationQuery: false,
+      orderBy: orderBy.value,
+      orgType: activeOrgType.value,
+      paginate: false,
+      parentDistrict: districtId,
+      parentSchool: selectedSchool.value,
+      select,
+    });
+
     try {
-      return await orgPageFetcher(
-        activeOrgType,
-        selectedDistrict,
-        selectedSchool,
-        orderBy,
-        // Set page limit to max array length in javascript.
-        { value: 2 ** 31 - 1 },
-        { value: 0 },
-        isSuperAdmin,
-        adminOrgs,
-        select,
-      );
+      orgs = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => {
+        return mapFields(data);
+      });
     } catch (error) {
-      console.error('orgFetchAll: Error fetching all orgs for non-super admin:', error);
+      console.error('orgFetchAll: Error fetching orgs:', error);
       return [];
     }
   }
+
+  // @TODO: Add admin's name to group documents to avoid extra queries
+  // Add creator data if requested
+  if (includeCreators) {
+    try {
+      // Extract unique creator IDs
+      const creatorIds = [...new Set(orgs.map((org) => org.createdBy).filter(Boolean))];
+
+      if (creatorIds.length > 0) {
+        // Fetch creator data in batch
+        let creatorsData = [];
+        try {
+          creatorsData = await fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, creatorIds, ['displayName', 'name']);
+        } catch (error) {
+          console.error('orgFetchAll: Error fetching creator data from Firestore:', error);
+          creatorsData = [];
+        }
+
+        // Create a map for quick lookup
+        const creatorsMap = new Map();
+        creatorsData.forEach((creator) => {
+          creatorsMap.set(creator.id, creator);
+        });
+
+        // Add creator data to orgs
+        orgs = orgs.map((org) => {
+          let creatorName = '--';
+          if (org.createdBy) {
+            const creatorData = creatorsMap.get(org.createdBy);
+            if (creatorData) {
+              if (creatorData.displayName) {
+                creatorName = creatorData.displayName;
+              } else if (creatorData.name && creatorData.name.first && creatorData.name.last) {
+                creatorName = `${creatorData.name.first} ${creatorData.name.last}`;
+              }
+            }
+          }
+
+          return {
+            ...org,
+            creatorName,
+          };
+        });
+      }
+    } catch (error) {
+      console.error('orgFetchAll: Error fetching creator data:', error);
+      // Continue without creator data if fetching fails
+    }
+  }
+
+  return orgs;
 };
 
 /**
@@ -656,4 +519,122 @@ export const fetchTreeOrgs = async (administrationId, assignedOrgs) => {
   });
 
   return treeTableOrgs;
+};
+
+export const fetchDistricts = async (districts = null) => {
+  const axiosInstance = getAxiosInstance();
+
+  // If districts is null, fetch all districts
+  if (districts === null) {
+    const requestBody = getOrgsRequestBody({
+      orgType: ORG_TYPES.DISTRICTS,
+      aggregationQuery: false,
+      paginate: false,
+      select: ['id', 'name', 'tags'],
+    });
+
+    return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
+  }
+
+  // If districts is an array of objects with siteId, fetch specific districts by ID
+  if (Array.isArray(districts) && districts.length > 0) {
+    const promises = districts.map((district) => {
+      return fetchDocById(ORG_TYPES.DISTRICTS, district.siteId, ['id', 'name', 'tags']);
+    });
+
+    return Promise.all(promises);
+  }
+
+  // If districts is empty array or invalid, return empty array
+  return Promise.resolve([]);
+};
+
+export const fetchSchools = async (districts = null) => {
+  const axiosInstance = getAxiosInstance();
+
+  // If districts is null, fetch all schools
+  if (districts === null) {
+    const requestBody = getOrgsRequestBody({
+      orgType: ORG_TYPES.SCHOOLS,
+      aggregationQuery: false,
+      paginate: false,
+      select: ['id', 'name', 'tags', 'districtId'],
+    });
+
+    return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
+  }
+
+  // If districts is an array of objects with siteId, fetch schools for those districts
+  if (Array.isArray(districts) && districts.length > 0) {
+    const requestBody = getOrgsRequestBody({
+      orgType: ORG_TYPES.SCHOOLS,
+      aggregationQuery: false,
+      paginate: false,
+      select: ['id', 'name', 'tags', 'districtId'],
+    });
+
+    // Add filter for districtId IN the provided district IDs
+    requestBody.structuredQuery.where = {
+      fieldFilter: {
+        field: { fieldPath: 'districtId' },
+        op: 'IN',
+        value: {
+          arrayValue: {
+            values: districts.map((id) => ({ stringValue: id })),
+          },
+        },
+      },
+    };
+
+    return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
+  }
+
+  // If districts is empty array or invalid, return empty array
+  return Promise.resolve([]);
+};
+
+export const fetchOrgsBySite = async (siteId = null) => {
+  if (!siteId) return null;
+
+  const axiosInstance = getAxiosInstance();
+  const promises = [];
+
+  // Fetch schools where districtId === siteId
+  const schoolsRequestBody = getOrgsRequestBody({
+    orgType: ORG_TYPES.SCHOOLS,
+    aggregationQuery: false,
+    paginate: false,
+    parentDistrict: siteId,
+    select: ['id'],
+  });
+  promises.push(
+    axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, schoolsRequestBody).then(({ data }) => mapFields(data)),
+  );
+
+  // Fetch classes where districtId === siteId
+  const classesRequestBody = getOrgsRequestBody({
+    orgType: ORG_TYPES.CLASSES,
+    aggregationQuery: false,
+    paginate: false,
+    parentDistrict: siteId,
+    select: ['id'],
+  });
+  promises.push(
+    axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, classesRequestBody).then(({ data }) => mapFields(data)),
+  );
+
+  // Fetch groups where parentOrgId === siteId
+  const groupsRequestBody = getOrgsRequestBody({
+    orgType: ORG_TYPES.GROUPS,
+    aggregationQuery: false,
+    paginate: false,
+    parentDistrict: siteId,
+    select: ['id'],
+  });
+  promises.push(
+    axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, groupsRequestBody).then(({ data }) => mapFields(data)),
+  );
+
+  const results = await Promise.all(promises);
+  return _flattenDeep(results);
 };

@@ -4,19 +4,18 @@
       <div>
         <div class="flex flex-column">
           <div class="flex flex-row flex-wrap align-items-center justify-content-between mb-3 gap-3">
-            <div class="flex flex-column gap-2">
+            <div class="flex flex-1 flex-column gap-2">
               <div class="flex align-items-center flex-wrap gap-3 mb-2">
                 <div class="admin-page-header">All Assignments</div>
               </div>
-              <div class="text-md text-gray-500">
-                This page lists all the assignments that are administered to your users.
-              </div>
-              <div class="text-md text-gray-500 mb-1">
-                You can view and monitor completion and create new bundles of tasks, surveys, and questionnaires to be
-                administered as assignments.
+
+              <div class="text-md text-gray-500 mb-1 line-height-3">
+                This page lists all the assignments that are administered to your users. You can view and monitor
+                completion and create new bundles of tasks, surveys, and questionnaires to be administered as
+                assignments.
               </div>
             </div>
-            <div class="flex align-items-center gap-2 mt-2">
+            <div class="flex flex-1 justify-content-end align-items-center gap-2 mt-2">
               <div class="flex gap-3 align-items-stretch justify-content-start">
                 <div class="flex flex-column gap-1">
                   <small id="search-help" class="text-gray-400">Search by name</small>
@@ -109,17 +108,16 @@
                     v-for="item in slotProps.items"
                     :id="item.id"
                     :key="item.id"
-                    :title="getTitle(item, isSuperAdmin)"
+                    :title="getTitle(item, isUserSuperAdmin())"
                     :stats="item.stats"
                     :dates="item.dates"
                     :assignees="item.assignedOrgs"
                     :assessments="item.assessments"
                     :public-name="item.publicName ?? item.name"
-                    :show-params="isSuperAdmin"
-                    :is-super-admin="isSuperAdmin"
-                    :creator="item.creator"
+                    :show-params="isUserSuperAdmin()"
+                    :is-super-admin="isUserSuperAdmin()"
+                    :creator-name="item.creatorName"
                     data-cy="h2-card-admin"
-                    :on-delete-administration="onDeleteAdministration"
                   />
                 </div>
               </template>
@@ -154,8 +152,6 @@ import PvInputGroup from 'primevue/inputgroup';
 import { useAuthStore } from '@/store/auth';
 import { orderByNameASC } from '@/helpers/query/utils';
 import { getTitle } from '@/helpers/query/administrations';
-import useUserType from '@/composables/useUserType';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
 import CardAdministration from '@/components/CardAdministration.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
@@ -174,8 +170,8 @@ const filteredAdministrations = ref([]);
 const fetchTestAdministrations = ref(false);
 
 const authStore = useAuthStore();
-
-const { roarfirekit } = storeToRefs(authStore);
+const { currentSite, roarfirekit } = storeToRefs(authStore);
+const { isUserSuperAdmin } = authStore;
 
 let unsubscribeInitializer;
 const init = () => {
@@ -190,12 +186,6 @@ unsubscribeInitializer = authStore.$subscribe(async (mutation, state) => {
 onMounted(() => {
   if (roarfirekit.value.restConfig) init();
 });
-
-const { data: userClaims } = useUserClaimsQuery({
-  enabled: initialized,
-});
-
-const { isSuperAdmin } = useUserType(userClaims);
 
 /**
  * Generate search tokens for autocomplete.
@@ -218,13 +208,16 @@ const generateAutoCompleteSearchTokens = () => {
   searchTokens.value = [...new Set(searchTokens.value)];
 };
 
-const {
-  isLoading: isLoadingAdministrations,
-  isFetching: isFetchingAdministrations,
-  data: administrations,
-} = useAdministrationsListQuery(orderBy, fetchTestAdministrations, {
-  enabled: initialized,
-});
+const { isLoading: isLoadingAdministrations, data: administrations } = useAdministrationsListQuery(
+  currentSite,
+  orderBy,
+  fetchTestAdministrations,
+  {
+    enabled: initialized,
+    staleTime: 0,
+    gcTime: 0,
+  },
+);
 
 /**
  * Administration data watcher
@@ -379,25 +372,9 @@ const onSortChange = (event) => {
   const value = event.value.value;
   const sortValue = event.value;
 
-  if (!isSuperAdmin.value && sortValue[0].field.fieldPath === 'name') {
-    // catches edge case where a partner admin should sort by the public name attribute
-    sortField.value = 'publicName';
-  } else {
-    sortField.value = value[0].field?.fieldPath;
-  }
-  if (value[0].direction === 'DESCENDING') {
-    sortOrder.value = -1;
-  } else {
-    sortOrder.value = 1;
-  }
-
+  sortField.value = value[0].field?.fieldPath;
+  sortOrder.value = value[0].direction === 'DESCENDING' ? -1 : 1;
   sortKey.value = sortValue;
-};
-
-const onDeleteAdministration = (administrationId) => {
-  filteredAdministrations.value = filteredAdministrations.value.filter(
-    (administration) => administration?.id !== administrationId,
-  );
 };
 </script>
 
