@@ -115,8 +115,8 @@
         <div class="flex flex-column justify-content-center mt-5">
           <div class="flex flex-column mt-2 align-items-center justify-content-center">
             <div class="flex">
-              <label style="font-weight: bold" class="mb-2 mx-2"
-                >Sequential Task Order<span class="required-asterisk">*</span></label
+              <label class="mb-2 mx-2 font-semibold"
+                >Sequential Task Order <span class="required-asterisk">*</span></label
               >
               <span class="flex gap-2">
                 <PvRadioButton v-model="state.sequential" input-id="Yes" :value="true" />
@@ -139,7 +139,9 @@
             </div>
           </div>
           <div class="divider mx-2 my-3" />
-          <div class="mb-2 w-full flex justify-content-center">
+          <div class="mb-2 w-full flex justify-content-center gap-3">
+            <PvButton v-if="adminId" severity="danger" variant="outlined" @click="onClickCancelBtn">Cancel</PvButton>
+
             <PvButton
               :label="submitLabel"
               class="text-white bg-primary border-none border-round h-3rem p-3 hover:bg-red-900"
@@ -235,6 +237,8 @@ const creatorName = computed(() => {
 
   return userData.value?.displayName || `${firstName} ${middleName} ${lastName}`;
 });
+
+const onClickCancelBtn = () => router.back();
 
 // +------------------------------------------------------------------------------------------------------------------+
 // | Fetch Variants with Params
