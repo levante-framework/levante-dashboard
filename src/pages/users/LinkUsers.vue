@@ -82,7 +82,7 @@
 </template>
 
 <script setup>
-import { ref, toRaw } from 'vue';
+import { ref, toRaw, watch } from 'vue';
 import { csvFileToJson } from '@/helpers';
 import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/store/auth';
@@ -96,7 +96,12 @@ import _startCase from 'lodash/startCase';
 import _isEmpty from 'lodash/isEmpty';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import PvDivider from 'primevue/divider';
+import { useLevanteStore } from '@/store/levante';
+import { storeToRefs } from 'pinia';
 
+const levanteStore = useLevanteStore();
+const { hasUserConfirmed } = storeToRefs(levanteStore);
+const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const authStore = useAuthStore();
 const toast = useToast();
 const isFileUploaded = ref(false);
@@ -139,10 +144,18 @@ const allFields = [
   },
 ];
 
-const onFileUpload = async (event) => {
+const resetUserProgress = () => {
+  isFileUploaded.value = false;
   uploadedFile.value = null;
-
   showErrorTable.value = false;
+
+  // Reset user confirmation
+  setHasUserConfirmed(false);
+};
+
+const onFileUpload = async (event) => {
+  resetUserProgress();
+
   // Read the file
   const file = event.files[event.files.length - 1];
   uploadedFile.value = file;
@@ -216,6 +229,9 @@ const onFileUpload = async (event) => {
       detail: 'File Successfully Uploaded',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
+
+    // Wait for user confirmation before changing the selected site
+    setShouldUserConfirm(true);
   }
 };
 
@@ -356,7 +372,7 @@ const submitUsers = async () => {
       return normalizedUser;
     });
 
-    await authStore.roarfirekit.linkUsers({users: normalizedUsers, siteId: authStore.currentSite});
+    await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: authStore.currentSite });
     isFileUploaded.value = false;
 
     toast.add({
@@ -413,6 +429,10 @@ function addErrorUser(user, error) {
     error,
   });
 }
+
+watch(hasUserConfirmed, (userConfirmed) => {
+  if (userConfirmed) resetUserProgress();
+});
 </script>
 
 <style scoped>
