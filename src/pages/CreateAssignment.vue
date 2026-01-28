@@ -200,6 +200,7 @@ import { useQueryClient } from '@tanstack/vue-query';
 import useAssignmentExistsQuery from '@/composables/queries/useAssignmentExistsQuery';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import { useLevanteStore } from '@/store/levante';
 
 const initialized = ref(false);
 const isFormPopulated = ref(false);
@@ -209,6 +210,9 @@ const queryClient = useQueryClient();
 
 const { mutate: upsertAdministration, isPending: isSubmitting } = useUpsertAdministrationMutation();
 
+const levanteStore = useLevanteStore();
+const { hasUserConfirmed } = storeToRefs(levanteStore);
+const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const authStore = useAuthStore();
 const { roarfirekit, userData } = storeToRefs(authStore);
 
@@ -741,6 +745,30 @@ const submit = async () => {
   });
 };
 
+const resetUserProgress = () => {
+  state.administrationName = '';
+  state.administrationPublicName = '';
+  state.dateStarted = null;
+  state.dateClosed = null;
+  state.sequential = null;
+  state.legal = null;
+  state.consent = null;
+  state.assent = null;
+  state.districts = [];
+  state.schools = [];
+  state.classes = [];
+  state.groups = [];
+  state.amount = '';
+  state.expectedTime = '';
+
+  // Reset tasks
+  variants.value = [];
+  preSelectedVariants.value = [];
+
+  // Reset user confirmation
+  setHasUserConfirmed(false);
+};
+
 // +------------------------------------------------------------------------------------------------------------------+
 // | Lifecycle hooks and subscriptions
 // +------------------------------------------------------------------------------------------------------------------+
@@ -756,6 +784,41 @@ unsubscribe = authStore.$subscribe(async (mutation, state) => {
 
 onMounted(async () => {
   if (roarfirekit.value.restConfig) init();
+});
+
+watch(
+  [state, variants],
+  ([newState, newVariants]) => {
+    if (
+      newState.administrationName !== '' ||
+      newState.administrationPublicName !== '' ||
+      newState.dateStarted !== null ||
+      newState.dateClosed !== null ||
+      newState.sequential !== null ||
+      newState.legal !== null ||
+      newState.consent !== null ||
+      newState.assent !== null ||
+      newState.schools.length > 0 ||
+      newState.classes.length > 0 ||
+      newState.groups.length > 0 ||
+      newState.amount !== '' ||
+      newState.expectedTime !== '' ||
+      newVariants.length > 0
+    ) {
+      // If there is any progress, user should confirm the site changing
+      setShouldUserConfirm(true);
+    } else {
+      // Otherwise, don't ask for confirmation
+      setShouldUserConfirm(false);
+    }
+  },
+  {
+    deep: true,
+  },
+);
+
+watch(hasUserConfirmed, (userConfirmed) => {
+  if (userConfirmed) resetUserProgress();
 });
 
 watch([existingAdministrationData, allVariants], ([adminInfo, allVariantInfo]) => {

@@ -132,7 +132,11 @@ import { useRouter } from 'vue-router';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { logger } from '@/logger';
 import { storeToRefs } from 'pinia';
+import { useLevanteStore } from '@/store/levante';
 
+const levanteStore = useLevanteStore();
+const { hasUserConfirmed } = storeToRefs(levanteStore);
+const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const authStore = useAuthStore();
 const { currentSite, currentSiteName, shouldUsePermissions } = storeToRefs(authStore);
 const { createUsers } = authStore;
@@ -185,7 +189,6 @@ const allFields = [
   },
 ];
 
-
 // Error Users Table refs
 const errorTable = ref();
 const errorUsers = ref([]);
@@ -211,9 +214,7 @@ watch(
   { deep: true },
 );
 
-// Functions supporting the uploader
-const onFileUpload = async (event) => {
-  // Reset all error states and data
+const resetUserProgress = () => {
   uploadedFile.value = null;
   errorUsers.value = [];
   errorUserColumns.value = [];
@@ -224,6 +225,15 @@ const onFileUpload = async (event) => {
   isFileUploaded.value = false; // Reset the file uploaded state
   registeredUsers.value = []; // Clear any previously registered users
   activeSubmit.value = false; // Reset the submit flag
+
+  // Reset user confirmation
+  setHasUserConfirmed(false);
+};
+
+// Functions supporting the uploader
+const onFileUpload = async (event) => {
+  // Reset all error states and data
+  resetUserProgress();
 
   // Read the file. In case of multiple files, use the last one.
   const file = event.files[event.files.length - 1];
@@ -426,6 +436,9 @@ const onFileUpload = async (event) => {
       detail: 'File Successfully Uploaded',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
+
+    // Wait for user confirmation before changing the selected site
+    setShouldUserConfirm(true);
   }
 };
 
@@ -743,7 +756,7 @@ async function submitUsers() {
         return processedUser;
       });
 
-      const res = await createUsers({users: processedUsers, siteId: currentSite.value});
+      const res = await createUsers({ users: processedUsers, siteId: currentSite.value });
       logger.capture('Admin: Add Users', { processedUsers });
       const currentRegisteredUsers = res.data.data;
 
@@ -892,13 +905,14 @@ const orgIds = {
  */
 const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentSchool = ref(null)) => {
   const normalizedOrgName = normalizeToLowercase(orgName);
-  
+
   // For schools and classes, include parent IDs in cache key to avoid cross-site conflicts
   const parentDistrictId = parentDistrict?.value?.id || null;
   const parentSchoolId = parentSchool?.value?.id || null;
-  const cacheKey = parentDistrictId || parentSchoolId 
-    ? `${normalizedOrgName}__${parentDistrictId || ''}__${parentSchoolId || ''}` 
-    : normalizedOrgName;
+  const cacheKey =
+    parentDistrictId || parentSchoolId
+      ? `${normalizedOrgName}__${parentDistrictId || ''}__${parentSchoolId || ''}`
+      : normalizedOrgName;
 
   if (orgIds[orgType][cacheKey]) return orgIds[orgType][cacheKey];
 
@@ -919,6 +933,10 @@ const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentScho
 
   return orgs[0].id;
 };
+
+watch(hasUserConfirmed, (userConfirmed) => {
+  if (userConfirmed) resetUserProgress();
+});
 </script>
 
 <style lang="scss" scoped>
