@@ -22,22 +22,7 @@
       </div>
     </div>
     <div v-else class="flex gap-2 options-wrapper">
-      <div v-if="shouldUsePermissions" class="flex align-items-center gap-2">
-        <label for="site-select">Site:</label>
-        <PvSelect
-          :options="siteOptions"
-          :modelValue="currentSite"
-          :optionValue="(o) => o.value"
-          :optionLabel="(o) => o.label"
-          class="options-site"
-          data-cy="site-select"
-          @change="handleSiteChange"
-        >
-          <template #value>
-            <span>{{ currentSiteName || 'Select a site' }}</span>
-          </template>
-        </PvSelect>
-      </div>
+      <SiteSelector v-if="shouldUsePermissions" />
 
       <!-- Help dropdown -->
       <PvSelect
@@ -79,8 +64,8 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { APP_ROUTES } from '@/constants/routes';
 import { useAuthStore } from '@/store/auth';
-import useDistrictsListQuery from '@/composables/queries/useDistrictsListQuery';
 import PvAvatar from 'primevue/avatar';
+import SiteSelector from './SiteSelector.vue';
 
 interface Props {
   isBasicView: boolean;
@@ -95,13 +80,8 @@ interface DropdownChangeEvent {
   value: string;
 }
 
-interface SiteOption {
-  siteId: string;
-  siteName: string;
-}
-
 const authStore = useAuthStore();
-const { shouldUsePermissions, currentSite, currentSiteName, userData } = storeToRefs(authStore);
+const { shouldUsePermissions, userData } = storeToRefs(authStore);
 const i18n = useI18n();
 const router = useRouter();
 const { mutate: signOut } = useSignOutMutation();
@@ -117,33 +97,6 @@ const userInitial = computed(() => {
 
   return data[0]!.toUpperCase();
 });
-
-const { data: districtsData = [], isLoading: isLoadingDistricts } = useDistrictsListQuery();
-
-const siteOptions = computed<DropdownOption[]>(() => {
-  if (authStore.isUserSuperAdmin()) {
-    if (isLoadingDistricts.value || !districtsData?.value) {
-      if (currentSite.value && currentSiteName.value) {
-        return [{ label: currentSiteName.value, value: currentSite.value }];
-      }
-      return [];
-    }
-    const formattedSites = districtsData.value.map((district: { name: string; id: string }) => ({
-      label: district?.name,
-      value: district?.id,
-    }));
-    return [{ label: 'All Sites', value: 'any' }, ...formattedSites];
-  }
-  return authStore.sites.map((site: SiteOption) => ({
-    label: site.siteName,
-    value: site.siteId,
-  }));
-});
-
-const handleSiteChange = (e: DropdownChangeEvent): void => {
-  const selectedOption = siteOptions.value.find((opt) => opt.value === e.value);
-  authStore.setCurrentSite(e.value, selectedOption?.label ?? null);
-};
 
 const helpOptions: DropdownOption[] = [
   { label: 'Researcher Documentation', value: 'researcherDocumentation' },
@@ -179,17 +132,5 @@ const handleProfileChange = (e: DropdownChangeEvent): void => {
       display: none;
     }
   }
-}
-
-.nav-user-wrapper {
-  display: flex;
-  align-items: center;
-  outline: 1.2px solid rgba(0, 0, 0, 0.1);
-  border-radius: 0.3rem;
-  padding: 0.5rem 0.8rem;
-}
-
-.options-site {
-  max-width: 300px;
 }
 </style>
