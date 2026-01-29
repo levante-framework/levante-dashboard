@@ -299,7 +299,7 @@ export const orgFetchAll = async (
 
         // Add creator data to orgs
         orgs = orgs.map((org) => {
-          let creatorName = '--';
+          let creatorName = 'Unknown User';
           if (org.createdBy) {
             const creatorData = creatorsMap.get(org.createdBy);
             if (creatorData) {
