@@ -356,7 +356,10 @@ const submitUsers = async () => {
       return normalizedUser;
     });
 
-    await authStore.roarfirekit.linkUsers({users: normalizedUsers, siteId: authStore.currentSite});
+    await authStore.linkUsersWithSite(
+      { users: normalizedUsers, siteId: authStore.currentSite },
+      { siteId: authStore.currentSite, districtId: authStore.currentSite },
+    );
     isFileUploaded.value = false;
 
     toast.add({
