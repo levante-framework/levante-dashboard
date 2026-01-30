@@ -3,19 +3,19 @@ import { AdministrationType } from '@levante-framework/levante-zod';
 
 export const isCurrent = (assignment: AdministrationType) => {
   const now = new Date();
-  const opened = new Date(assignment?.dateOpened);
-  const closed = new Date(assignment?.dateClosed);
+  const opened = new Date(assignment?.dateOpened || assignment?.dates?.start);
+  const closed = new Date(assignment?.dateClosed || assignment?.dates?.end);
   return opened <= now && closed >= now;
 };
 
 export const isPast = (assignment: AdministrationType) => {
   const now = new Date();
-  return new Date(assignment?.dateClosed) < now;
+  return new Date(assignment?.dateClosed || assignment?.dates?.end) < now;
 };
 
 export const isUpcoming = (assignment: AdministrationType) => {
   const now = new Date();
-  return new Date(assignment?.dateOpened) > now;
+  return new Date(assignment?.dateOpened || assignment?.dates?.start) > now;
 };
 
 export const getAssignmentStatus = (assignment: AdministrationType) => {
