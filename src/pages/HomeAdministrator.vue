@@ -394,6 +394,8 @@ const onSortChange = (event) => {
 
   setAssignmentsDefaultSorting(sortValue);
 };
+
+onSortChange({ value: sortKey.value });
 </script>
 
 <style lang="scss">
