@@ -50,6 +50,18 @@
                   @change="onSortChange($event)"
                 />
               </div>
+
+              <div class="flex flex-column gap-1">
+                <small for="dd-sort" class="text-gray-400">Status</small>
+                <PvSelect
+                  v-model="filterKey"
+                  input-id="dd-filter"
+                  :options="filterOptions"
+                  option-label="label"
+                  data-cy="dropdown-filter-administrations"
+                  @change="onFilterChange($event)"
+                />
+              </div>
             </div>
           </div>
 
@@ -102,6 +114,12 @@
               paginator
               paginator-position="both"
             >
+              <template v-if="filteredAdministrations?.length" #paginatorend>
+                <span class="text-sm">
+                  <span class="font-semibold">Total:</span> {{ filteredAdministrations?.length }}
+                </span>
+              </template>
+
               <template #list="slotProps">
                 <div class="mb-2 w-full">
                   <CardAdministration
@@ -121,6 +139,7 @@
                   />
                 </div>
               </template>
+
               <template #empty>
                 <div class="flex flex-column align-items-center justify-content-center py-8">
                   <h1 class="text-xl font-bold mb-4">No Assignments Yet</h1>
@@ -156,6 +175,7 @@ import useAdministrationsListQuery from '@/composables/queries/useAdministration
 import CardAdministration from '@/components/CardAdministration.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { useLevanteStore } from '@/store/levante';
+import { isCurrent, isPast, isUpcoming } from '@/helpers/assignments';
 
 const initialized = ref(false);
 const pageLimit = ref(10);
@@ -171,8 +191,8 @@ const filteredAdministrations = ref([]);
 const fetchTestAdministrations = ref(false);
 
 const levanteStore = useLevanteStore();
-const { assignmentsDefaultSorting } = storeToRefs(levanteStore);
-const { setAssignmentsDefaultSorting } = levanteStore;
+const { assignmentsSelectedFilter, assignmentsSelectedSorting } = storeToRefs(levanteStore);
+const { setAssignmentsSelectedFilter, setAssignmentsSelectedSorting } = levanteStore;
 const authStore = useAuthStore();
 const { currentSite, roarfirekit } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
@@ -251,6 +271,26 @@ watch(
   { immediate: true },
 );
 
+const filterOptions = ref([
+  { label: 'All', value: null },
+  { label: 'Open', value: 'open' },
+  { label: 'Upcoming', value: 'upcoming' },
+  { label: 'Closed', value: 'closed' },
+]);
+
+const getAssignmentsSelectedFilter = () => {
+  if (assignmentsSelectedFilter.value) return assignmentsSelectedFilter.value;
+
+  const defaultLabel = 'All';
+  const defaultOption = filterOptions.value.find((option) => option.label === defaultLabel) || filterOptions.value[0];
+
+  setAssignmentsSelectedFilter(defaultOption);
+
+  return defaultOption;
+};
+
+const filterKey = ref(getAssignmentsSelectedFilter());
+
 // Table sort options
 const sortOptions = ref([
   {
@@ -327,18 +367,18 @@ const sortOptions = ref([
   },
 ]);
 
-const getAssignmentsDefaultSorting = () => {
-  if (assignmentsDefaultSorting.value) return assignmentsDefaultSorting.value;
+const getAssignmentsSelectedSorting = () => {
+  if (assignmentsSelectedSorting.value) return assignmentsSelectedSorting.value;
 
   const defaultLabel = 'Start date (descending)';
   const defaultOption = sortOptions.value.find((option) => option.label === defaultLabel) || sortOptions.value[0];
 
-  setAssignmentsDefaultSorting(defaultOption);
+  setAssignmentsSelectedSorting(defaultOption);
 
   return defaultOption;
 };
 
-const sortKey = ref(getAssignmentsDefaultSorting());
+const sortKey = ref(getAssignmentsSelectedSorting());
 const sortOrder = ref();
 const sortField = ref();
 const dataViewKey = ref(0);
@@ -377,6 +417,27 @@ const autocomplete = () => {
   });
 };
 
+const onFilterChange = (event) => {
+  dataViewKey.value += 1;
+  page.value = 0;
+  const filterValue = event.value;
+
+  filteredAdministrations.value = administrations.value?.filter((assignment) => {
+    switch (filterValue.value) {
+      case 'open':
+        return isCurrent(assignment) && assignment;
+      case 'upcoming':
+        return isUpcoming(assignment) && assignment;
+      case 'closed':
+        return isPast(assignment) && assignment;
+      default:
+        return assignment;
+    }
+  });
+
+  setAssignmentsSelectedFilter(filterValue);
+};
+
 /**
  * Sort change event handler
  * @param {*} event – The sort event object emitted by PrimeVue
@@ -392,9 +453,10 @@ const onSortChange = (event) => {
   sortOrder.value = value[0].direction === 'DESCENDING' ? -1 : 1;
   sortKey.value = sortValue;
 
-  setAssignmentsDefaultSorting(sortValue);
+  setAssignmentsSelectedSorting(sortValue);
 };
 
+onFilterChange({ value: filterKey.value });
 onSortChange({ value: sortKey.value });
 </script>
 
