@@ -92,15 +92,15 @@
           <PvBlockUI>
             <PvDataView
               :key="dataViewKey"
+              :rows-per-page-options="[3, 5, 10, 25]"
+              :rows="pageLimit"
+              :sort-field="sortField"
+              :sort-order="sortOrder"
+              :total-records="filteredAdministrations?.length"
               :value="filteredAdministrations"
+              data-key="id"
               paginator
               paginator-position="both"
-              :total-records="filteredAdministrations?.length"
-              :rows="pageLimit"
-              :rows-per-page-options="[3, 5, 10, 25]"
-              data-key="id"
-              :sort-order="sortOrder"
-              :sort-field="sortField"
             >
               <template #list="slotProps">
                 <div class="mb-2 w-full">
@@ -155,6 +155,7 @@ import { getTitle } from '@/helpers/query/administrations';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
 import CardAdministration from '@/components/CardAdministration.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import { useLevanteStore } from '@/store/levante';
 
 const initialized = ref(false);
 const pageLimit = ref(10);
@@ -169,6 +170,9 @@ const search = ref('');
 const filteredAdministrations = ref([]);
 const fetchTestAdministrations = ref(false);
 
+const levanteStore = useLevanteStore();
+const { assignmentsDefaultSorting } = storeToRefs(levanteStore);
+const { setAssignmentsDefaultSorting } = levanteStore;
 const authStore = useAuthStore();
 const { currentSite, roarfirekit } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
@@ -322,7 +326,19 @@ const sortOptions = ref([
     ],
   },
 ]);
-const sortKey = ref(sortOptions.value[0]);
+
+const getAssignmentsDefaultSorting = () => {
+  if (assignmentsDefaultSorting.value) return assignmentsDefaultSorting.value;
+
+  const defaultLabel = 'Start date (descending)';
+  const defaultOption = sortOptions.value.find((option) => option.label === defaultLabel) || sortOptions.value[0];
+
+  setAssignmentsDefaultSorting(defaultOption);
+
+  return defaultOption;
+};
+
+const sortKey = ref(getAssignmentsDefaultSorting());
 const sortOrder = ref();
 const sortField = ref();
 const dataViewKey = ref(0);
@@ -375,6 +391,8 @@ const onSortChange = (event) => {
   sortField.value = value[0].field?.fieldPath;
   sortOrder.value = value[0].direction === 'DESCENDING' ? -1 : 1;
   sortKey.value = sortValue;
+
+  setAssignmentsDefaultSorting(sortValue);
 };
 </script>
 
