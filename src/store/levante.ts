@@ -5,29 +5,37 @@ export const useLevanteStore = defineStore(
   'levanteStore',
   () => {
     // State
-    const assignmentsDefaultSorting: Ref<any> = ref(null);
+    const assignmentsSelectedFilter: Ref<any> = ref(null);
+    const assignmentsSelectedSorting: Ref<any> = ref(null);
 
     // Actions
     function $reset(): void {
-      assignmentsDefaultSorting.value = null;
+      assignmentsSelectedFilter.value = null;
+      assignmentsSelectedSorting.value = null;
     }
 
-    function setAssignmentsDefaultSorting(sorting: any): void {
-      assignmentsDefaultSorting.value = sorting;
+    function setAssignmentsSelectedFilter(filter: any): void {
+      assignmentsSelectedFilter.value = filter;
+    }
+
+    function setAssignmentsSelectedSorting(sorting: any): void {
+      assignmentsSelectedSorting.value = sorting;
     }
 
     return {
       // State
-      assignmentsDefaultSorting,
+      assignmentsSelectedFilter,
+      assignmentsSelectedSorting,
 
       // Actions
       $reset,
-      setAssignmentsDefaultSorting,
+      setAssignmentsSelectedFilter,
+      setAssignmentsSelectedSorting,
     };
   },
   {
     persist: {
-      paths: ['assignmentsDefaultSorting'],
+      paths: ['assignmentsSelectedFilter', 'assignmentsSelectedSorting'],
       storage: sessionStorage,
     },
   },
