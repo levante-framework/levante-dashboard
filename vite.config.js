@@ -16,7 +16,7 @@ export default defineConfig({
   },
   plugins: [
     Vue({
-      include: [/\.vue$/, /\.md$/],
+      include: [/\.vue$/],
     }),
     UnheadVite(),
     ...(process.env.VITE_HTTPS === 'TRUE' ? [mkcert()] : []),

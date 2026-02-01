@@ -31,7 +31,7 @@ This dashboard uses Crowdin to manage translations. Locally, translations are ma
     - Loads existing baseline locales and auto-imports any `**-componentTranslations.json`
     - Automatically registers new locales in `languageOptions`
 - Generated per-locale files (output of CSV → JSON)
-  - `src/translations/<lang>/<region?>/<locale>-componentTranslations.json`
+- `src/translations/&lt;lang&gt;/&lt;region?&gt;/&lt;locale&gt;-componentTranslations.json`
   - Examples: `en/en-componentTranslations.json`, `es/co/es-co-componentTranslations.json`, `de/ch/de-ch-componentTranslations.json`
 
 ---
@@ -70,7 +70,7 @@ Key scripts (see [`package.json`](../../package.json)):
       - Required columns present (`identifier`, `label`)
       - No empty or duplicate identifiers across all files
       - Coverage report per locale (non-empty vs total)
-    - Optional gate: set `I18N_FAIL_ON_LOW_COVERAGE=TRUE` with `I18N_COVERAGE_THRESHOLD=<percent>`
+    - Optional gate: set `I18N_FAIL_ON_LOW_COVERAGE=TRUE` with `I18N_COVERAGE_THRESHOLD=&lt;percent&gt;`
   - `npm run i18n:add-locale` (new)
     - Adds a new locale column to every consolidated CSV
     - Usage:
@@ -99,14 +99,14 @@ Notes:
 ## Adding a new locale
 
 1. Add a column to each CSV:
-   - `I18N_NEW_LOCALE=<locale> [I18N_SEED_FROM=<base>] npm run i18n:add-locale`
+  - `I18N_NEW_LOCALE=&lt;locale&gt; [I18N_SEED_FROM=&lt;base&gt;] npm run i18n:add-locale`
 2. Upload sources to Crowdin:
    - `npm run i18n:crowdin:upload`
 3. Translators update strings in Crowdin
 4. Pull updates and generate JSON:
    - `npm run i18n:crowdin:download && npm run i18n:csv-to-json`
 
-The CSV → JSON step will detect the new locale, create the appropriate directory structure under `src/translations/`, and emit `<locale>-componentTranslations.json`. `i18n.ts` will auto-import and register it at runtime.
+The CSV → JSON step will detect the new locale, create the appropriate directory structure under `src/translations/`, and emit `&lt;locale&gt;-componentTranslations.json`. `i18n.ts` will auto-import and register it at runtime.
 
 ---
 
@@ -212,7 +212,7 @@ Implementation details to reduce flakiness:
 
 Scripts (in [`scripts/`](../../scripts/)):
 
-- [`seed-dev-user-admin.js`](../../scripts/seed-dev-user-admin.js): uses `firebase-admin` to upsert `users/<uid>` (preferred)
+- [`seed-dev-user-admin.js`](../../scripts/seed-dev-user-admin.js): uses `firebase-admin` to upsert `users/&lt;uid&gt;` (preferred)
   - Requires `FIREBASE_ADMIN_CREDENTIALS` (inline JSON) or `GOOGLE_APPLICATION_CREDENTIALS` (file path)
 - [`seed-dev-user.js`](../../scripts/seed-dev-user.js): client sign-in to obtain ID token and write the Firestore doc via REST
 - [`seed-dev-participant.js`](../../scripts/seed-dev-participant.js): sign-up-or-sign-in a participant, then upsert the user doc
@@ -269,7 +269,7 @@ Secrets/Env to configure in the repository:
   - Check for missing `identifier`/`label`, duplicates across files, or malformed values
 - Locale not visible
   - Ensure column exists in CSVs and re-run `i18n:csv-to-json`
-  - Verify that `<locale>-componentTranslations.json` was generated
+  - Verify that `&lt;locale&gt;-componentTranslations.json` was generated
 - Cypress detachment errors
   - Confirm tests use re-queries and `{selectall}{backspace}` before typing
 
@@ -380,7 +380,7 @@ npm test
 
 1. Verify the language column exists in downloaded CSVs
 2. Re-run `npm run i18n:csv-to-json`
-3. Check that `<locale>-componentTranslations.json` was generated
+3. Check that `&lt;locale&gt;-componentTranslations.json` was generated
 4. Restart the dev server
 
 #### Issue 4: Consolidation Script Issues
