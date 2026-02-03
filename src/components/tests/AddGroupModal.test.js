@@ -61,7 +61,7 @@ vi.mock('@/composables/mutations/useUpsertOrgMutation', () => ({
   })),
 }));
 
-vi.mock('@/composables/queries/useOrgNameExistsQuery', () => ({
+vi.mock('@/firestore/queries/orgs/useOrgNameExistsQuery', () => ({
   default: vi.fn(() => ({
     refetch: vi.fn().mockResolvedValue({
       data: mockOrgNameExists,
