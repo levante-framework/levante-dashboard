@@ -13,6 +13,7 @@ export const GROUPS_LIST_QUERY_KEY: string = 'groups-list';
 export const GROUPS_QUERY_KEY: string = 'groups';
 export const LEGAL_DOCS_QUERY_KEY: string = 'legal-docs';
 export const ORG_MUTATION_KEY: string = 'org-mutation';
+export const ORG_NAME_QUERY_KEY: string = 'org-name';
 export const ORG_USERS_QUERY_KEY: string = 'org-users';
 export const ORGS_TABLE_QUERY_KEY: string = 'orgs-table';
 export const SCHOOL_CLASSES_QUERY_KEY: string = 'school-classes';
