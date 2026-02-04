@@ -14,16 +14,25 @@
         </PvTabList>
 
         <PvTabPanels>
-          <PvTabPanel v-for="header in orgHeaders" :key="header.value" :value="header.value" class="mt-3">
-            <div v-if="header.value === 'classes'" class="mb-3">
+          <PvTabPanel v-for="header in orgHeaders" :key="header.value" :value="header.value">
+            <small v-if="header.value === FIRESTORE_COLLECTIONS.DISTRICTS" class="block">
+              - Selecting a <span class="font-bold">site</span> will assign all schools, classes, and cohorts within it.
+            </small>
+
+            <small v-if="header.value === FIRESTORE_COLLECTIONS.SCHOOLS" class="block">
+              - Selecting a <span class="font-bold">school</span> will assign all classes within it.
+            </small>
+
+            <div v-if="header.value === FIRESTORE_COLLECTIONS.CLASSES" class="mt-3">
               <PvFloatLabel>
                 <PvSelect
                   v-model="selectedSchool"
                   :loading="isLoadingSchoolsData"
-                  :options="schoolsData"
+                  :options="schoolOptions"
                   class="w-full"
                   data-cy="dropdown-selected-school"
                   input-id="school"
+                  option-disabled="disabled"
                   option-label="name"
                   option-value="id"
                   showClear
@@ -35,10 +44,14 @@
             <PvListbox
               v-model="selectedOrgs[activeHeader]"
               checkmark
+              class="mt-3"
+              filter
               multiple
+              option-disabled="disabled"
               option-label="name"
               :empty-message="isLoadingOrgsData ? 'Loading options...' : 'No available options'"
-              :options="orgsData"
+              :filter-placeholder="`Search for ${header.label}`"
+              :options="!isLoadingOrgsData ? orgOptions : []"
             />
           </PvTabPanel>
         </PvTabPanels>
@@ -78,6 +91,7 @@
 <script setup lang="ts">
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
 import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { convertToGroupName } from '@/helpers';
 import { orderByDefault } from '@/helpers/query/utils';
 import { useAuthStore } from '@/store/auth';
@@ -127,7 +141,7 @@ const { currentSite } = storeToRefs(authStore);
 const emit = defineEmits<Emits>();
 const props = defineProps<Props>();
 
-const activeHeader = ref('districts');
+const activeHeader = ref<string>(FIRESTORE_COLLECTIONS.DISTRICTS);
 const orderBy = ref(orderByDefault);
 const selectedSchool = ref<string | undefined>(undefined);
 const selectedOrgs = reactive<OrgCollection>({
@@ -139,11 +153,14 @@ const selectedOrgs = reactive<OrgCollection>({
 });
 
 const orgHeaders = computed(() => [
-  { value: 'districts', label: 'Sites' },
-  { value: 'schools', label: 'Schools' },
-  { value: 'classes', label: 'Classes' },
-  { value: 'groups', label: 'Cohorts' },
+  { value: FIRESTORE_COLLECTIONS.DISTRICTS, label: 'Sites' },
+  { value: FIRESTORE_COLLECTIONS.SCHOOLS, label: 'Schools' },
+  { value: FIRESTORE_COLLECTIONS.CLASSES, label: 'Classes' },
+  { value: FIRESTORE_COLLECTIONS.GROUPS, label: 'Cohorts' },
 ]);
+
+const schoolOptions = ref<any>([]);
+const orgOptions = ref<any>([]);
 
 const { data: orgsData, isLoading: isLoadingOrgsData } = useOrgsTableQuery(
   activeHeader,
@@ -154,6 +171,51 @@ const { data: orgsData, isLoading: isLoadingOrgsData } = useOrgsTableQuery(
 );
 
 const { isLoading: isLoadingSchoolsData, data: schoolsData } = _useSchoolsQuery(currentSite);
+
+const isChildOfSelectedOrg = (
+  activeHeader: string,
+  org: OrgItem,
+  districtIds: string[],
+  schoolIds: string[],
+): boolean => {
+  switch (activeHeader) {
+    case FIRESTORE_COLLECTIONS.SCHOOLS:
+      return districtIds.includes(org.districtId);
+
+    case FIRESTORE_COLLECTIONS.GROUPS:
+      return districtIds.includes(org.parentOrgId);
+
+    case FIRESTORE_COLLECTIONS.CLASSES:
+      return schoolIds.includes(org.schoolId);
+
+    default:
+      return false;
+  }
+};
+
+watch(
+  [activeHeader, orgsData, selectedOrgs, schoolsData],
+  ([activeHeader, orgsData, selectedOrgs, schoolsData]) => {
+    if (!activeHeader || !orgsData || !selectedOrgs || !schoolsData) return;
+
+    const districtIds = (selectedOrgs[FIRESTORE_COLLECTIONS.DISTRICTS] ?? []).map((org) => org.id);
+    const schoolIds = (selectedOrgs[FIRESTORE_COLLECTIONS.SCHOOLS] ?? []).map((org) => org.id);
+
+    const orgs = orgsData.map((org: OrgItem) =>
+      isChildOfSelectedOrg(activeHeader, org, districtIds, schoolIds) ? { ...org, disabled: true } : org,
+    );
+
+    const schools = schoolsData.map((school: any) =>
+      isChildOfSelectedOrg(activeHeader, school, districtIds, schoolIds) ? { ...school, disabled: true } : school,
+    );
+
+    const shouldHideOptions = activeHeader === FIRESTORE_COLLECTIONS.CLASSES && !selectedSchool.value;
+
+    orgOptions.value = shouldHideOptions ? [] : orgs;
+    schoolOptions.value = schools;
+  },
+  { deep: true },
+);
 
 const removeSelectedOrg = (orgHeader: string, selectedOrg: OrgItem) => {
   const rawSelectedOrgs = toRaw(selectedOrgs);
@@ -208,9 +270,3 @@ watch(selectedOrgs, (newSelectedOrgs) => {
   emit('selection', newSelectedOrgs || selectedOrgs);
 });
 </script>
-
-<style lang="scss">
-.selected-groups-scroll-panel {
-  height: 20rem;
-}
-</style>
