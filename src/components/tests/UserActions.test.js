@@ -8,12 +8,20 @@ import PvSelect from 'primevue/select';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import { createI18n } from 'vue-i18n';
+import { createRouter, createMemoryHistory } from 'vue-router';
+import { useAuthStore } from '@/store/auth';
 
 vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
   default: vi.fn(() => ({
     data: ref({
       //
     }),
+  })),
+}));
+vi.mock('@/composables/queries/useDistrictsListQuery', () => ({
+  default: vi.fn(() => ({
+    data: ref([]),
+    isLoading: ref(false),
   })),
 }));
 
@@ -40,10 +48,24 @@ beforeEach(() => {
 describe('UserActions', () => {
   it('should redirect user to notion after selecting Report an Issue in the dropdown', async () => {
     const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => {});
+    const authStore = useAuthStore();
+    authStore.userData = {
+      email: 'test@example.com',
+      displayName: 'Test User',
+    };
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', component: { template: '<div />' } }],
+    });
+    await router.push('/');
+    await router.isReady();
 
     const wrapper = mount(UserActions, {
+      props: {
+        isBasicView: false,
+      },
       global: {
-        plugins: [VueQuery.VueQueryPlugin, PrimeVue, i18n],
+        plugins: [VueQuery.VueQueryPlugin, PrimeVue, i18n, router],
         components: {
           PvButton,
           PvSelect,

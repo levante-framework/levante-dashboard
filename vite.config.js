@@ -3,7 +3,6 @@ import { fileURLToPath, URL } from 'url';
 import { defineConfig } from 'vite';
 import Vue from '@vitejs/plugin-vue';
 import mkcert from 'vite-plugin-mkcert';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import UnheadVite from '@unhead/addons/vite';
 import * as child from 'child_process';
 
@@ -17,12 +16,7 @@ export default defineConfig({
   },
   plugins: [
     Vue({
-      include: [/\.vue$/, /\.md$/],
-    }),
-    nodePolyfills({
-      globals: {
-        process: true,
-      },
+      include: [/\.vue$/],
     }),
     UnheadVite(),
     ...(process.env.VITE_HTTPS === 'TRUE' ? [mkcert()] : []),
