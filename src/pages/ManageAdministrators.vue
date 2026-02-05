@@ -9,13 +9,13 @@
     <template v-else>
       <div class="flex align-items-center gap-2">
         <div class="flex flex-column flex-1">
-          <h2 class="admin-page-header m-0">Administrators</h2>
+          <h2 class="admin-page-header m-0">Researchers</h2>
           <span v-if="currentSiteName" class="flex align-items-center gap-1 m-0 mt-1 text-lg text-gray-500">
             <i class="pi pi-building"></i>{{ currentSiteName }}
           </span>
         </div>
         <PermissionGuard :required-role="ROLES.ADMIN">
-          <PvButton :disabled="isAdminsLoading || isAdminsFetching || isAdminsRefetching || isAllSitesSelected" @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Administrator</PvButton>
+          <PvButton :disabled="isAdminsLoading || isAdminsFetching || isAdminsRefetching || isAllSitesSelected" @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Researcher</PvButton>
         </PermissionGuard>
       </div>
 
@@ -47,17 +47,17 @@
       >
         <div class="flex flex-column gap-3">
           <p class="text-sm text-gray-600">
-            To remove this administrator from the site, type
+            To remove this researcher from the site, type
             <span class="font-semibold text-gray-900">{{ removalTargetLabel }}</span>
             and select Remove. This action cannot be undone.
           </p>
 
           <div class="flex flex-column gap-2">
-            <label class="text-sm font-medium text-gray-700">Administrator name</label>
+            <label class="text-sm font-medium text-gray-700">Researcher name</label>
             <PvInputText
               v-model="removalConfirmationInput"
               autofocus
-              placeholder="Type administrator name"
+              placeholder="Type researcher name"
               class="w-full"
             />
           </div>
@@ -296,8 +296,8 @@ const onClickRemoveBtn = (admin: AdministratorRecord) => {
   administrator.value = admin;
 
   confirm.require({
-    message: 'You are about to remove this administrator from the site. Are you sure you want to do this?',
-    header: 'Remove Administrator from Site',
+    message: 'You are about to remove this researcher from the site. Are you sure you want to do this?',
+    header: 'Remove Researcher from Site',
     icon: 'pi pi-exclamation-triangle',
     rejectClass: 'p-button-secondary p-button-outlined',
     rejectLabel: 'No',
@@ -327,7 +327,7 @@ async function executeAdministratorRemoval() {
     toast.add({
       severity: 'warn',
       summary: 'Missing Site',
-      detail: 'Select a site before removing an administrator.',
+      detail: 'Select a site before removing a researcher.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
 
@@ -347,11 +347,11 @@ async function executeAdministratorRemoval() {
     toast.add({
       severity: 'success',
       summary: 'Success',
-      detail: 'Administrator account removed successfully',
+      detail: 'Researcherremoved from site successfully',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unexpected error removing administrator';
+    const errorMessage = error instanceof Error ? error.message : 'Unexpected error removing researcher';
 
     toast.add({
       severity: 'error',
@@ -360,7 +360,7 @@ async function executeAdministratorRemoval() {
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
 
-    console.error('Error removing administrator from site', error);
+    console.error('Error removing researcher from site.', error);
   } finally {
     administrator.value = null;
     closeRemovalVerificationModal();

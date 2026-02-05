@@ -52,7 +52,7 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
   },
   {
     title: 'Researchers',
-    buttonLink: { name: 'ManageAdministrators' },
+    buttonLink: { name: 'ManageResearchers' },
     allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
     category: 'Researchers',
   }
