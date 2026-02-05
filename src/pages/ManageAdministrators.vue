@@ -347,7 +347,7 @@ async function executeAdministratorRemoval() {
     toast.add({
       severity: 'success',
       summary: 'Success',
-      detail: 'Researcherremoved from site successfully',
+      detail: 'Researcher removed from site successfully',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   } catch (error: unknown) {
