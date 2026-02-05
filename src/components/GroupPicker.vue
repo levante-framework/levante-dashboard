@@ -180,13 +180,13 @@ const isChildOfSelectedOrg = (
 ): boolean => {
   switch (activeHeader) {
     case FIRESTORE_COLLECTIONS.SCHOOLS:
-      return districtIds.includes(org.districtId);
+      return districtIds.includes(org?.districtId);
 
     case FIRESTORE_COLLECTIONS.GROUPS:
-      return districtIds.includes(org.parentOrgId);
+      return districtIds.includes(org?.parentOrgId);
 
     case FIRESTORE_COLLECTIONS.CLASSES:
-      return schoolIds.includes(org.schoolId);
+      return districtIds.includes(org?.districtId) || schoolIds.includes(org?.schoolId);
 
     default:
       return false;
@@ -194,25 +194,23 @@ const isChildOfSelectedOrg = (
 };
 
 watch(
-  [activeHeader, orgsData, selectedOrgs, schoolsData],
-  ([activeHeader, orgsData, selectedOrgs, schoolsData]) => {
+  [activeHeader, orgsData, selectedOrgs, schoolsData, selectedSchool],
+  ([activeHeader, orgsData, selectedOrgs, schoolsData, selectedSchool]) => {
     if (!activeHeader || !orgsData || !selectedOrgs || !schoolsData) return;
 
     const districtIds = (selectedOrgs[FIRESTORE_COLLECTIONS.DISTRICTS] ?? []).map((org) => org.id);
     const schoolIds = (selectedOrgs[FIRESTORE_COLLECTIONS.SCHOOLS] ?? []).map((org) => org.id);
 
-    const orgs = orgsData.map((org: OrgItem) =>
-      isChildOfSelectedOrg(activeHeader, org, districtIds, schoolIds) ? { ...org, disabled: true } : org,
-    );
-
     const schools = schoolsData.map((school: any) =>
       isChildOfSelectedOrg(activeHeader, school, districtIds, schoolIds) ? { ...school, disabled: true } : school,
     );
-
-    const shouldHideOptions = activeHeader === FIRESTORE_COLLECTIONS.CLASSES && !selectedSchool.value;
-
-    orgOptions.value = shouldHideOptions ? [] : orgs;
     schoolOptions.value = schools;
+
+    const orgs = orgsData.map((org: OrgItem) =>
+      isChildOfSelectedOrg(activeHeader, org, districtIds, schoolIds) ? { ...org, disabled: true } : org,
+    );
+    const shouldHideOptions = activeHeader === FIRESTORE_COLLECTIONS.CLASSES && !selectedSchool;
+    orgOptions.value = shouldHideOptions ? [] : orgs;
   },
   { deep: true },
 );
