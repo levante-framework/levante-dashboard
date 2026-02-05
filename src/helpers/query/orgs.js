@@ -137,7 +137,8 @@ export const fetchOrgByName = async (orgType, orgNormalizedName, selectedDistric
   const axiosInstance = getAxiosInstance();
   const requestBody = getOrgsRequestBody({
     orgType,
-    parentDistrict: orgType === 'schools' || orgType === 'classes' || orgType === 'groups' ? selectedDistrict?.value?.id : null,
+    parentDistrict:
+      orgType === 'schools' || orgType === 'classes' || orgType === 'groups' ? selectedDistrict?.value?.id : null,
     parentSchool: orgType === 'classes' ? selectedSchool?.value?.id : null,
     aggregationQuery: false,
     orgNormalizedName,
@@ -235,6 +236,7 @@ export const orgFetchAll = async (
   orderBy,
   select = ['id', 'name', 'tags'],
   includeCreators = false,
+  loggedInUserId = null,
 ) => {
   const districtId = selectedDistrict.value === 'any' ? null : selectedDistrict.value;
 
@@ -297,7 +299,7 @@ export const orgFetchAll = async (
 
         // Add creator data to orgs
         orgs = orgs.map((org) => {
-          let creatorName = '--';
+          let creatorName = 'Unknown User';
           if (org.createdBy) {
             const creatorData = creatorsMap.get(org.createdBy);
             if (creatorData) {
@@ -306,6 +308,10 @@ export const orgFetchAll = async (
               } else if (creatorData.name && creatorData.name.first && creatorData.name.last) {
                 creatorName = `${creatorData.name.first} ${creatorData.name.last}`;
               }
+            }
+
+            if (loggedInUserId && loggedInUserId === org.createdBy) {
+              creatorName += ' (You)';
             }
           }
 
