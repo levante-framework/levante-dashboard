@@ -51,12 +51,11 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     category: 'Users',
   },
   {
-    title: 'Manage Administrators',
-    icon: 'pi pi-users',
+    title: 'Researchers',
     buttonLink: { name: 'ManageAdministrators' },
     allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
-    category: 'Users',
-  },
+    category: 'Researchers',
+  }
 ] as const;
 
 interface GetNavbarActionsParams {
