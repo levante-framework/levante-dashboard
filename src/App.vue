@@ -21,7 +21,7 @@
 
     <router-view :key="$route.fullPath" />
 
-    <!-- <SessionTimer v-if="loadSessionTimeoutHandler" /> -->
+    <SessionTimer v-if="loadSessionTimeoutHandler" />
   </div>
   <div v-else data-cy="app-initializing">
     <LevanteSpinner fullscreen />
@@ -42,8 +42,9 @@ import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import NavBar from '@/components/NavBar.vue';
 import { NAVBAR_BLACKLIST } from './constants';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
+import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 
-// const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
+const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>
   import('@tanstack/vue-query-devtools').then((module) => module.VueQueryDevtools),
 );
@@ -53,6 +54,12 @@ const showDevtools = ref(false);
 
 const authStore = useAuthStore();
 const route = useRoute();
+
+const loadSessionTimeoutHandler = computed(() => {
+  if (!authStore.isAuthenticated()) return false;
+  if (route.name && allowedUnauthenticatedRoutes.includes(route.name)) return false;
+  return true;
+});
 
 // Initialize page event tracking for global analytics
 usePageEventTracking();
