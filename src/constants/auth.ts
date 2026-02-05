@@ -7,7 +7,7 @@ import { oneMinuteInMs, oneSecondInMs } from './time';
  * @constant {number} AUTH_SESSION_TIMEOUT_COUNTDOWN_DURATION - Session timeout countdown duration (in ms).
  */
 export const AUTH_SESSION_TIMEOUT_IDLE_THRESHOLD: number =
-  parseInt(import.meta.env.VITE_AUTH_SESSION_TIMEOUT_IDLE_THRESHOLD, 10) || 90 * oneMinuteInMs;
+  parseInt(import.meta.env.VITE_AUTH_SESSION_TIMEOUT_IDLE_THRESHOLD, 10) || 60 * oneMinuteInMs;
 export const AUTH_SESSION_TIMEOUT_COUNTDOWN_DURATION: number =
   parseInt(import.meta.env.VITE_AUTH_SESSION_TIMEOUT_COUNTDOWN_DURATION, 10) || 60 * oneSecondInMs;
 
