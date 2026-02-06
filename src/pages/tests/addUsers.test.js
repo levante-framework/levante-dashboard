@@ -227,7 +227,7 @@ describe('Add Users Page', () => {
       await wrapper.vm.onFileUpload(mockEventData);
       expect(wrapper.vm.errorUsers.length).toBeGreaterThan(0);
       expect(wrapper.vm.errorUsers[0].error).toContain(
-        'userType: userType must be one of: child, parent, teacher',
+        'userType: userType must be one of: child, caregiver, teacher',
       );
       expect(wrapper.vm.showErrorTable).toBe(true);
       expect(wrapper.vm.isFileUploaded).toBe(false);

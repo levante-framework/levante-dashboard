@@ -428,7 +428,7 @@ async function submitUsers() {
             } else if (orgType === 'class') {
               // Need site and school for classes - try each class with each site/school combination
               if (sites.length === 0 || schools.length === 0) {
-                throw new Error('Classes specified but no site or school provided');
+                throw new Error('Classes must be within schools. Classes specified but no school provided');
               }
               for (const className of orgNames) {
                 let classFound = false;
