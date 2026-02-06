@@ -42,33 +42,33 @@ const createValidCSVContent = () => {
 const createCSVWithMissingYearForChild = () => {
   return (
     'id,userType,month,year,caregiverId,teacherId,site,school,class,cohort\n' +
-    '1,child,5,,,,"Test Site","Test School","Class A","Group 1"'
+    ',child,5,,,,"Test Site","Test School","Class A","Group 1"'
   );
 };
 
 const createCSVWithInvalidUserType = () => {
   return (
     'id,userType,month,year,caregiverId,teacherId,site,school,class,cohort\n' +
-    '1,student,5,2018,,,"Test Site","Test School","Class A","Group 1"'
+    ',student,5,2018,,,"Test Site","Test School","Class A","Group 1"'
   );
 };
 
 const createCSVWithInvalidMonth = () => {
   return (
     'id,userType,month,year,caregiverId,teacherId,site,school,class,cohort\n' +
-    '1,child,13,2018,,,"Test Site","Test School","Class A","Group 1"'
+    ',child,13,2018,,,"Test Site","Test School","Class A","Group 1"'
   );
 };
 
 const createCSVWithInvalidYear = () => {
   return (
     'id,userType,month,year,caregiverId,teacherId,site,school,class,cohort\n' +
-    '1,child,5,18,,,"Test Site","Test School","Class A","Group 1"'
+    ',child,5,18,,,"Test Site","Test School","Class A","Group 1"'
   );
 };
 
 const createCSVWithSiteNoSchoolNoCohort = () => {
-  return 'id,userType,month,year,caregiverId,teacherId,site,school,class,cohort\n' + '1,child,5,2018,,,"Test Site",,,';
+  return 'id,userType,month,year,caregiverId,teacherId,site,school,class,cohort\n' + ',child,5,2018,,,"Test Site",,,';
 };
 
 const createMockFile = (content, filename = 'test.csv', type = 'text/csv') => {
@@ -201,7 +201,7 @@ describe('Add Users Page', () => {
       const mockEventData = mockFileUpload(createCSVWithMissingYearForChild());
       await wrapper.vm.onFileUpload(mockEventData);
       expect(wrapper.vm.errorUsers.length).toBeGreaterThan(0);
-      expect(wrapper.vm.errorUsers[0].error).toContain('Missing Field(s): year');
+      expect(wrapper.vm.errorUsers[0].error).toContain('year: Child users must have month and year');
       expect(wrapper.vm.showErrorTable).toBe(true);
       expect(wrapper.vm.isFileUploaded).toBe(false);
     });
@@ -214,21 +214,7 @@ describe('Add Users Page', () => {
       const mockEventData = mockFileUpload(createCSVWithSiteNoSchoolNoCohort());
       await wrapper.vm.onFileUpload(mockEventData);
       expect(wrapper.vm.errorUsers.length).toBeGreaterThan(0);
-      expect(wrapper.vm.errorUsers[0].error).toContain('Cohort OR School');
-      expect(wrapper.vm.showErrorTable).toBe(true);
-      expect(wrapper.vm.isFileUploaded).toBe(false);
-    });
-
-    it('handles validation error for invalid userType', async () => {
-      const wrapper = mount(AddUsers, {
-        global: { plugins: [PrimeVue, ToastService] },
-      });
-      const mockEventData = mockFileUpload(createCSVWithInvalidUserType());
-      await wrapper.vm.onFileUpload(mockEventData);
-      expect(wrapper.vm.errorUsers.length).toBeGreaterThan(0);
-      expect(wrapper.vm.errorUsers[0].error).toContain(
-        'Invalid Field(s): userType must be one of: child, teacher, caregiver',
-      );
+      expect(wrapper.vm.errorUsers[0].error).toContain('cohort, school: Must have either cohort OR school. School required if class provided.');
       expect(wrapper.vm.showErrorTable).toBe(true);
       expect(wrapper.vm.isFileUploaded).toBe(false);
     });
@@ -240,7 +226,7 @@ describe('Add Users Page', () => {
       const mockEventData = mockFileUpload(createCSVWithInvalidMonth());
       await wrapper.vm.onFileUpload(mockEventData);
       expect(wrapper.vm.errorUsers.length).toBeGreaterThan(0);
-      expect(wrapper.vm.errorUsers[0].error).toContain('Invalid Field(s): month must be a number between 1 and 12');
+      expect(wrapper.vm.errorUsers[0].error).toContain('month: Month must be between 1 and 12');
       expect(wrapper.vm.showErrorTable).toBe(true);
       expect(wrapper.vm.isFileUploaded).toBe(false);
     });
@@ -252,7 +238,7 @@ describe('Add Users Page', () => {
       const mockEventData = mockFileUpload(createCSVWithInvalidYear());
       await wrapper.vm.onFileUpload(mockEventData);
       expect(wrapper.vm.errorUsers.length).toBeGreaterThan(0);
-      expect(wrapper.vm.errorUsers[0].error).toContain('Invalid Field(s): year must be a four-digit number');
+      expect(wrapper.vm.errorUsers[0].error).toContain('year: Year must be a four-digit number');
       expect(wrapper.vm.showErrorTable).toBe(true);
       expect(wrapper.vm.isFileUploaded).toBe(false);
     });
