@@ -48,7 +48,7 @@
             <PvButton
               :label="activeSubmit ? 'Linking Users' : 'Start Linking'"
               :icon="activeSubmit ? 'pi pi-spin pi-spinner' : 'pi pi-link'"
-              :disabled="activeSubmit"
+              :disabled="activeSubmit || isAllSitesSelected"
               @click="submitUsers"
             />
           </div>
@@ -82,7 +82,7 @@
 </template>
 
 <script setup>
-import { ref, toRaw } from 'vue';
+import { computed, ref, toRaw } from 'vue';
 import { csvFileToJson } from '@/helpers';
 import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/store/auth';
@@ -97,8 +97,11 @@ import _isEmpty from 'lodash/isEmpty';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import PvDivider from 'primevue/divider';
 import { validateLinkUsersCsv, validateCsvHeaders } from '@levante-framework/levante-zod';
+import { storeToRefs } from 'pinia';
 
 const authStore = useAuthStore();
+const { currentSite, shouldUsePermissions } = storeToRefs(authStore);
+const isAllSitesSelected = computed(() => shouldUsePermissions.value && currentSite.value === 'any');
 const toast = useToast();
 const isFileUploaded = ref(false);
 const uploadedFile = ref(null);
@@ -318,6 +321,16 @@ const submitUsers = async () => {
     return;
   }
 
+  if (!currentSite.value || isAllSitesSelected.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Please select a specific site before linking users',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    return;
+  }
+
   activeSubmit.value = true;
   showErrorTable.value = false;
   errorUsers.value = [];
@@ -354,7 +367,7 @@ const submitUsers = async () => {
       return normalizedUser;
     });
 
-    await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: authStore.currentSite });
+    await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: currentSite.value });
     isFileUploaded.value = false;
 
     toast.add({

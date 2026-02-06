@@ -345,14 +345,39 @@ async function submitUsers() {
     return;
   }
 
+  const siteName = currentSiteName.value;
+
+  if (!siteName || isAllSitesSelected.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Cannot Submit',
+      detail: 'Please select a specific site before adding users',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    activeSubmit.value = false;
+    return;
+  }
+
+  let selectedSiteId;
+  try {
+    selectedSiteId = await getOrgId('districts', siteName, ref(undefined), ref(undefined));
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Invalid Site',
+      detail: error.message,
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    activeSubmit.value = false;
+    return;
+  }
+
   for (const { user, index } of usersToBeRegistered) {
     try {
       // Find fields case-insensitively
       const schoolField = Object.keys(user).find((key) => key.toLowerCase() === 'school');
       const classField = Object.keys(user).find((key) => key.toLowerCase() === 'class');
       const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
-
-      const sites = [currentSiteName.value];
 
       const schools = schoolField
         ? user[schoolField]
@@ -376,7 +401,6 @@ async function submitUsers() {
         : [];
 
       const orgNameMap = {
-        site: sites,
         school: schools,
         class: classes,
         cohort: cohorts,
@@ -386,7 +410,7 @@ async function submitUsers() {
       // Only groups are allowed to be an array however, we've only been using one group per user.
       // TODO: Figure out if we want to allow multiple orgs
       const orgInfo = {
-        sites: [],
+        sites: [selectedSiteId],
         schools: [],
         classes: [],
         cohorts: [],
@@ -399,61 +423,44 @@ async function submitUsers() {
         if (orgNames && orgNames.length > 0) {
           try {
             if (orgType === 'school') {
-              // Need a site for schools - try each school with each site
-              if (sites.length === 0) {
+              // Need a site for schools - try each school in the selected site
+              if (!selectedSiteId) {
                 throw new Error('Schools specified but no site provided');
               }
               for (const schoolName of orgNames) {
-                let schoolFound = false;
-                for (const siteName of sites) {
+                const schoolId = await getOrgId(
+                  pluralizeFirestoreCollection(orgType),
+                  schoolName,
+                  ref({ id: selectedSiteId }),
+                  ref(undefined),
+                );
+                orgInfo.schools.push(schoolId);
+              }
+            } else if (orgType === 'class') {
+              // Need site and school for classes - try each class with each school in the selected site
+              if (!selectedSiteId || schools.length === 0) {
+                throw new Error('Classes must be within schools. Classes specified but no school provided');
+              }
+              for (const className of orgNames) {
+                let classFound = false;
+                for (const schoolName of schools) {
                   try {
-                    const siteId = await getOrgId('districts', siteName);
-                    const schoolId = await getOrgId(
+                    const schoolId = await getOrgId('schools', schoolName, ref({ id: selectedSiteId }), ref(undefined));
+                    const classId = await getOrgId(
                       pluralizeFirestoreCollection(orgType),
-                      schoolName,
-                      ref({ id: siteId }),
-                      ref(undefined),
+                      className,
+                      ref({ id: selectedSiteId }),
+                      ref({ id: schoolId }),
                     );
-                    orgInfo.schools.push(schoolId);
-                    schoolFound = true;
+                    orgInfo.classes.push(classId);
+                    classFound = true;
                     break;
                   } catch {
                     continue;
                   }
                 }
-                if (!schoolFound) {
-                  throw new Error(`School '${schoolName}' not found in any of the specified sites`);
-                }
-              }
-            } else if (orgType === 'class') {
-              // Need site and school for classes - try each class with each site/school combination
-              if (sites.length === 0 || schools.length === 0) {
-                throw new Error('Classes must be within schools. Classes specified but no school provided');
-              }
-              for (const className of orgNames) {
-                let classFound = false;
-                for (const siteName of sites) {
-                  for (const schoolName of schools) {
-                    try {
-                      const siteId = await getOrgId('districts', siteName);
-                      const schoolId = await getOrgId('schools', schoolName, ref({ id: siteId }), ref(undefined));
-                      const classId = await getOrgId(
-                        pluralizeFirestoreCollection(orgType),
-                        className,
-                        ref({ id: siteId }),
-                        ref({ id: schoolId }),
-                      );
-                      orgInfo.classes.push(classId);
-                      classFound = true;
-                      break;
-                    } catch {
-                      continue;
-                    }
-                  }
-                  if (classFound) break; // Break out of site loop if class was found
-                }
                 if (!classFound) {
-                  throw new Error(`Class '${className}' not found in any of the specified site/school combinations`);
+                  throw new Error(`Class '${className}' not found in the selected school(s)`);
                 }
               }
             } else if (orgType === 'cohort') {
@@ -465,16 +472,6 @@ async function submitUsers() {
                   ref(undefined),
                 );
                 orgInfo.cohorts.push(cohortId);
-              }
-            } else if (orgType === 'site') {
-              for (const siteName of orgNames) {
-                const siteId = await getOrgId(
-                  pluralizeFirestoreCollection('districts'),
-                  siteName,
-                  ref(undefined),
-                  ref(undefined),
-                );
-                orgInfo.sites.push(siteId);
               }
             }
           } catch (error) {
