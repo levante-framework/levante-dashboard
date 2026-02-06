@@ -56,7 +56,7 @@
             </div>
           </div>
 
-          <div v-if="!assignmentData?.length || !adminStats?.length" class="empty-user-list">
+          <div v-if="!assignmentData?.length || !adminStats?.assignment" class="empty-user-list">
             <div class="text-lg font-semibold text-gray-700">Could not find users for {{ orgData?.name }}.</div>
             <div class="mt-2 text-sm text-gray-500">
               <a href="/add-users">Add users</a> to <span class="font-bold">{{ orgData?.name }}</span> to see the
