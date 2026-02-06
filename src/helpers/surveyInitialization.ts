@@ -21,6 +21,7 @@ interface UserData {
   selectedAdminId: string | null;
   surveyResponsesData: any;
   childIds?: (string | number)[];
+  childLinks?: { current: (string | number)[] };
   classes?: { current: (string | number)[] };
   currentSurveyAudioSource: { stop: () => void } | null;
   isGeneralSurveyComplete: boolean;
@@ -149,7 +150,7 @@ export function setupSurveyEventHandlers({
 }: SetupSurveyEventHandlersParams): void {
   let specificIds: (string | number)[] = [];
   if (userType === 'parent') {
-    specificIds = userData.childIds || [];
+    specificIds = userData.childLinks?.current ?? userData.childIds ?? [];
   } else if (userType === 'teacher') {
     specificIds = userData.classes?.current || [];
   }

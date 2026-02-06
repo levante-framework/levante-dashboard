@@ -94,7 +94,7 @@
 
                   <div v-if="props.userData.userType === 'parent'">
                     <div
-                      v-for="(child, i) in props.userData?.childIds"
+                      v-for="(child, i) in parentChildIds"
                       :key="child"
                       class="flex flex-wrap align-items-center mb-2"
                     >
@@ -232,6 +232,9 @@ interface UserData {
   birthYear?: number;
   assessmentPid?: string;
   childIds?: string[];
+  childLinks?: {
+    current: string[];
+  };
   classes?: {
     current: string[];
   };
@@ -267,6 +270,7 @@ const assignmentsStore = useAssignmentsStore();
 const { selectedAssignment } = storeToRefs(assignmentsStore);
 const queryClient = useQueryClient();
 const surveyData = queryClient.getQueryData(['surveyResponses', props.userData.id]);
+const parentChildIds = computed(() => props.userData?.childLinks?.current ?? props.userData?.childIds ?? []);
 
 const getGeneralSurveyProgress = computed((): number => {
   if (surveyStore.isGeneralSurveyComplete) return 100;

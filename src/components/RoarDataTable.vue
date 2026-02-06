@@ -703,7 +703,14 @@ const onFreezeToggle = (selected) => {
 };
 
 // Pass through data table events
-const emit = defineEmits(['export-all', 'selection', 'reset-filters', 'export-selected', 'export-org-users']);
+const emit = defineEmits([
+  'export-all',
+  'selection',
+  'reset-filters',
+  'export-selected',
+  'export-org-users',
+  'edit-button',
+]);
 defineExpose({ onColumnToggle, selectedColumns });
 </script>
 

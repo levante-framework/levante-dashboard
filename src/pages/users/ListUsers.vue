@@ -50,41 +50,15 @@
           v-if="!showPassword"
           :user-data="currentEditUser"
           :edit-mode="true"
+          :school-options="schoolOptions"
+          :class-options="classOptions"
+          :teacher-options="teacherOptions"
+          :caregiver-options="caregiverOptions"
           @update:user-data="localUserData = $event"
         />
-        <div v-if="showPassword">
-          <div class="flex" style="gap: 1rem">
-            <div class="form-field" style="width: 100%">
-              <label>New Password</label>
-              <PvInputText v-model="v$.password.$model" :class="{ 'p-invalid': v$.password.$invalid && submitted }" />
-              <small v-if="v$.password.$invalid && submitted" class="p-error"
-                >Password must be at least 6 characters long.</small
-              >
-            </div>
-            <div class="form-field" style="width: 100%">
-              <label>Confirm New Password</label>
-              <PvInputText
-                v-model="v$.confirmPassword.$model"
-                :class="{
-                  'p-invalid': v$.confirmPassword.$invalid && submitted,
-                }"
-              />
-              <small v-if="v$.confirmPassword.$invalid && submitted" class="p-error">Passwords do not match.</small>
-            </div>
-          </div>
-        </div>
-        <div class="flex justify-content-center mt-3 w-full">
-          <PvButton
-            v-if="!showPassword"
-            class="border-none border-round bg-primary text-white p-2 hover:surface-400 mr-auto ml-auto"
-            @click="showPassword = true"
-            >Change Password</PvButton
-          >
-        </div>
-
         <template #footer>
           <div>
-            <div v-if="!showPassword" class="flex gap-2">
+            <div class="flex gap-2">
               <PvButton
                 tabindex="0"
                 class="border-none border-round bg-white text-primary p-2 hover:surface-200"
@@ -96,25 +70,8 @@
               <PvButton
                 tabindex="0"
                 class="border-none border-round bg-primary text-white p-2 hover:surface-400"
-                label="Save"
+                label="Save Changes"
                 @click="updateUserData"
-                ><i v-if="isSubmitting" class="pi pi-spinner pi-spin"></i
-              ></PvButton>
-            </div>
-            <div v-else-if="showPassword" class="flex gap-2">
-              <PvButton
-                tabindex="0"
-                class="border-none border-round bg-white text-primary p-2 hover:surface-200"
-                text
-                label="Back to User Information"
-                outlined
-                @click="showPassword = false"
-              ></PvButton>
-              <PvButton
-                tabindex="0"
-                class="border-none border-round bg-primary text-white p-2 hover:surface-400"
-                label="Save Password"
-                @click="updatePassword"
                 ><i v-if="isSubmitting" class="pi pi-spinner pi-spin"></i
               ></PvButton>
             </div>
@@ -127,13 +84,13 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useVuelidate } from '@vuelidate/core';
-import { required, sameAs, minLength } from '@vuelidate/validators';
 import { useToast } from 'primevue/usetoast';
 import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
 import _isEmpty from 'lodash/isEmpty';
 import { singularizeFirestoreCollection } from '@/helpers';
+import { orgFetchAll } from '@/helpers/query/orgs';
+import { ORG_TYPES } from '@/constants/orgTypes';
 import { useAuthStore } from '@/store/auth';
 import useOrgUsersQuery from '@/composables/queries/useOrgUsersQuery';
 import AppSpinner from '@/components/AppSpinner.vue';
@@ -219,13 +176,13 @@ const columns = ref([
     dataType: 'string',
     sort: false,
   },
-  // {
-  //   header: 'Edit',
-  //   button: true,
-  //   eventName: 'edit-button',
-  //   buttonIcon: 'pi pi-user-edit',
-  //   sort: false,
-  // },
+  {
+    header: 'Edit',
+    button: true,
+    eventName: 'edit-button',
+    buttonIcon: 'pi pi-user-edit',
+    sort: false,
+  },
 ]);
 
 const displayOrgType = computed(() => {
@@ -240,15 +197,90 @@ const displayOrgType = computed(() => {
 
 const currentEditUser = ref(null);
 const isModalEnabled = ref(false);
+const schoolOptions = ref([]);
+const classOptions = ref([]);
+
+const selectedDistrict = ref(null);
+const selectedSchool = ref(null);
+const orgOrderBy = ref(null);
+
+const teacherOptions = computed(() => {
+  if (!users.value) return [];
+  return users.value
+    .filter((user) => user.userType === 'teacher')
+    .map((user) => {
+      const name = user.name?.first || user.name?.last ? `${user.name?.first ?? ''} ${user.name?.last ?? ''}`.trim() : '';
+      const label = name || user.email || user.username || user.id;
+      return {
+        id: user.id,
+        label,
+        schools: user.schools?.current ?? [],
+        classes: user.classes?.current ?? [],
+      };
+    });
+});
+
+const caregiverOptions = computed(() => {
+  if (!users.value) return [];
+  return users.value
+    .filter((user) => user.userType === 'parent')
+    .map((user) => {
+      const name = user.name?.first || user.name?.last ? `${user.name?.first ?? ''} ${user.name?.last ?? ''}`.trim() : '';
+      const label = name || user.email || user.username || user.id;
+      return {
+        id: user.id,
+        label,
+        schools: user.schools?.current ?? [],
+        classes: user.classes?.current ?? [],
+      };
+    });
+});
 
 // +-----------------+
 // | Edit User Modal |
 // +-----------------+
 const localUserData = ref(null);
 
+const loadEditOptions = async (user) => {
+  const districtId = user?.districts?.current?.[0] ?? (props.orgType === 'districts' ? props.orgId : null);
+  selectedDistrict.value = districtId ?? 'any';
+  selectedSchool.value = user?.schools?.current?.[0] ?? null;
+
+  try {
+    schoolOptions.value = await orgFetchAll(
+      ref(ORG_TYPES.SCHOOLS),
+      selectedDistrict,
+      ref(null),
+      orgOrderBy,
+      ['id', 'name'],
+      false,
+      authStore.userData?.id ?? null,
+    );
+  } catch (error) {
+    console.error('Error loading schools:', error);
+    schoolOptions.value = [];
+  }
+
+  try {
+    classOptions.value = await orgFetchAll(
+      ref(ORG_TYPES.CLASSES),
+      selectedDistrict,
+      selectedSchool,
+      orgOrderBy,
+      ['id', 'name', 'schoolId'],
+      false,
+      authStore.userData?.id ?? null,
+    );
+  } catch (error) {
+    console.error('Error loading classes:', error);
+    classOptions.value = [];
+  }
+};
+
 const onEditButtonClick = (event) => {
   currentEditUser.value = event;
   isModalEnabled.value = true;
+  loadEditOptions(event);
   console.log(event);
 };
 
@@ -259,22 +291,64 @@ const updateUserData = async () => {
   if (!localUserData.value) return;
   isSubmitting.value = true;
 
-  await roarfirekit.value
-    .updateUserData(currentEditUser.value.id, localUserData.value)
-    .then(() => {
-      isSubmitting.value = false;
-      closeModal();
-      toast.add({
-        severity: 'success',
-        summary: 'Updated',
-        detail: 'User has been updated',
-        life: 3000,
+  const { teacherLinkIds, caregiverLinkIds, orgIds, birthMonth, birthYear, email, ...userData } = localUserData.value;
+
+  try {
+    const selectedSchoolName = schoolOptions.value.find((option) => option.id === orgIds?.schools?.[0])?.name;
+    const selectedClassName = classOptions.value.find((option) => option.id === orgIds?.classes?.[0])?.name;
+
+    const editPayload = {
+      uid: currentEditUser.value.id,
+      month: birthMonth ? String(birthMonth) : undefined,
+      year: birthYear ? String(birthYear) : undefined,
+      school: selectedSchoolName,
+      class: selectedClassName,
+    };
+
+    await roarfirekit.value.editUsers([editPayload]);
+
+    if (currentEditUser.value?.userType === 'student') {
+      const teacherIdsCsv = Array.isArray(teacherLinkIds) ? teacherLinkIds.join(',') : '';
+      const caregiverIdsCsv = Array.isArray(caregiverLinkIds) ? caregiverLinkIds.join(',') : '';
+      const usersPayload = [
+        {
+          id: currentEditUser.value.id,
+          uid: currentEditUser.value.id,
+          userType: 'child',
+          teacherId: teacherIdsCsv,
+          parentId: caregiverIdsCsv,
+        },
+        ...(teacherLinkIds ?? []).map((teacherId) => ({
+          id: teacherId,
+          uid: teacherId,
+          userType: 'teacher',
+        })),
+        ...(caregiverLinkIds ?? []).map((parentId) => ({
+          id: parentId,
+          uid: parentId,
+          userType: 'parent',
+        })),
+      ];
+
+      await roarfirekit.value.linkUsers({
+        users: usersPayload,
+        siteId: authStore.currentSite,
+        replaceLinks: true,
       });
-    })
-    .catch((error) => {
-      console.log('Error occurred during submission:', error);
-      isSubmitting.value = false;
+    }
+
+    isSubmitting.value = false;
+    closeModal();
+    toast.add({
+      severity: 'success',
+      summary: 'Updated',
+      detail: 'User has been updated',
+      life: 3000,
     });
+  } catch (error) {
+    console.log('Error occurred during submission:', error);
+    isSubmitting.value = false;
+  }
 };
 
 const closeModal = () => {
@@ -293,52 +367,5 @@ const onSort = (event) => {
 // +-----------------+
 // | Update Password |
 // +-----------------+
-const submitted = ref(false);
-const showPassword = ref(false);
-const passwordRef = computed(() => state.password);
-const rules = {
-  password: {
-    required,
-    minLength: minLength(6),
-  },
-  confirmPassword: {
-    required,
-    minLength: minLength(6),
-    sameAsPassword: sameAs(passwordRef),
-  },
-};
-const state = reactive({
-  password: '',
-  confirmPassword: '',
-});
-const v$ = useVuelidate(rules, state);
-
-async function updatePassword() {
-  submitted.value = true;
-  if (!v$.value.$invalid) {
-    isSubmitting.value = true;
-    await roarfirekit.value
-      .updateUserData(currentEditUser.value.id, { password: state.password })
-      .then(() => {
-        submitted.value = false;
-        isSubmitting.value = false;
-        state.password = '';
-        state.confirmPassword = '';
-        showPassword.value = false;
-        toast.add({
-          severity: 'success',
-          summary: 'Updated',
-          detail: 'Password Updated!',
-          life: 3000,
-        });
-      })
-      .catch(() => {
-        toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Unable to update password',
-        });
-      });
-  }
-}
+// Password update removed for mockup parity
 </script>

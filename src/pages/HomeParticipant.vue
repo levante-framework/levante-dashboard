@@ -530,7 +530,9 @@ watch(
 
     // Calculate number of specific surveys for teachers/parents
     const numOfSpecificSurveys =
-      userType.value === 'parent' ? userData.value?.childIds?.length : userData.value?.classes?.current?.length;
+      userType.value === 'parent'
+        ? (userData.value?.childLinks?.current ?? userData.value?.childIds ?? []).length
+        : userData.value?.classes?.current?.length;
 
     if (surveyResponseDoc) {
       if (userType.value === 'student') {
@@ -577,8 +579,9 @@ watch(
       try {
         let fetchConfig = [];
         // Only fetch docs if the user has children or classes. It's possible the user has no children or classes linked yet.
-        if (userType.value === 'parent' && userData.value.childIds) {
-          fetchConfig = userData.value.childIds.map((childId) => ({
+        if (userType.value === 'parent' && (userData.value.childLinks?.current || userData.value.childIds)) {
+          const parentChildIds = userData.value.childLinks?.current ?? userData.value.childIds ?? [];
+          fetchConfig = parentChildIds.map((childId) => ({
             collection: 'users',
             docId: childId,
             select: ['birthMonth', 'birthYear'],
