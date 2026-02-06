@@ -67,13 +67,13 @@ const getFallbackLocale = () => {
   const localeFromStorage = sessionStorage.getItem('levante') || '';
 
   if (localeFromStorage.includes('es')) {
-    console.log('Setting fallback local to es-CO');
+    console.log('Setting fallback locale to es-CO');
     return 'es-CO';
   } else if (localeFromStorage.includes('de')) {
-    console.log('Setting fallback local to de');
+    console.log('Setting fallback locale to de');
     return 'de';
   } else {
-    console.log('Setting fallback local to en-US');
+    console.log('Setting fallback locale to en-US');
     return 'en-US';
   }
 };
