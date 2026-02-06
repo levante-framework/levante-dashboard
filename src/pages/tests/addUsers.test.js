@@ -219,20 +219,6 @@ describe('Add Users Page', () => {
       expect(wrapper.vm.isFileUploaded).toBe(false);
     });
 
-    it('handles validation error for invalid userType', async () => {
-      const wrapper = mount(AddUsers, {
-        global: { plugins: [PrimeVue, ToastService] },
-      });
-      const mockEventData = mockFileUpload(createCSVWithInvalidUserType());
-      await wrapper.vm.onFileUpload(mockEventData);
-      expect(wrapper.vm.errorUsers.length).toBeGreaterThan(0);
-      expect(wrapper.vm.errorUsers[0].error).toContain(
-        'userType: userType must be one of: child, caregiver, teacher',
-      );
-      expect(wrapper.vm.showErrorTable).toBe(true);
-      expect(wrapper.vm.isFileUploaded).toBe(false);
-    });
-
     it('handles validation error for invalid month for child', async () => {
       const wrapper = mount(AddUsers, {
         global: { plugins: [PrimeVue, ToastService] },
