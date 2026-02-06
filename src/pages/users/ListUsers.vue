@@ -17,24 +17,59 @@
                   <b> {{ orgName }} </b>
                 </div>
               </div>
-              <div class="flex flex-wrap gap-2 justify-content-between">
-                <div class="uppercase font-light font-sm text-gray-400 mb-1">Student Count</div>
-                <div class="text-xl text-gray-600">
-                  <b> {{ users?.length }} </b>
+              <div class="flex flex-column gap-2">
+                <div 
+                  class="flex flex-wrap gap-2 justify-content-between align-items-center cursor-pointer"
+                  @click="isUserCountExpanded = !isUserCountExpanded"
+                >
+                  <div class="uppercase font-light font-sm text-gray-400 mb-1"><i 
+                      :class="[
+                        'pi text-gray-400 transition-transform transition-duration-200',
+                        isUserCountExpanded ? 'pi-chevron-down' : 'pi-chevron-right'
+                      ]"
+                    ></i>User Count</div>
+                  <div class="flex align-items-center gap-2">
+                    <div class="text-xl text-gray-600">
+                      <b> {{ users?.length }} </b>
+                    </div>
+                    
+                  </div>
+                </div>
+                <div v-if="isUserCountExpanded" class="flex flex-column gap-2 pl-3" style="border-left: 2px solid var(--gray-300);">
+                  <div class="flex flex-wrap gap-2 justify-content-between">
+                    <div class="uppercase font-light font-sm text-gray-400 mb-1">Children</div>
+                    <div class="text-l text-gray-600">
+                      <b> {{ childrenCount }} </b>
+                    </div>
+                  </div>
+                  <div class="flex flex-wrap gap-2 justify-content-between">
+                    <div class="uppercase font-light font-sm text-gray-400 mb-1">Caregivers</div>
+                    <div class="text-l text-gray-600">
+                      <b> {{ caregiversCount }} </b>
+                    </div>
+                  </div>
+                  <div class="flex flex-wrap gap-2 justify-content-between">
+                    <div class="uppercase font-light font-sm text-gray-400 mb-1">Teachers</div>
+                    <div class="text-l text-gray-600">
+                      <b> {{ teachersCount }} </b>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="text-md text-gray-500 ml-6">View users for the selected Group.</div>
+          <div class="text-md text-gray-500 ml-6">View users for {{ displayOrgType }} {{ orgName }}.</div>
         </div>
 
         <RoarDataTable
           v-if="users"
           :columns="columns"
-          :data="users"
+          :data="transformedUsers"
           :loading="isLoading || isFetching"
           :allow-export="false"
           :allow-filtering="false"
+          :allow-row-selection="false"
+          :show-options="false"
           @sort="onSort($event)"
           @edit-button="onEditButtonClick($event)"
         />
@@ -125,7 +160,7 @@
   </main>
 </template>
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useVuelidate } from '@vuelidate/core';
 import { required, sameAs, minLength } from '@vuelidate/validators';
@@ -188,16 +223,47 @@ const {
   enabled: initialized,
 });
 
+watch(users, (newUsers) => {
+  console.log('Raw users data from query:', newUsers);
+  console.log('Number of users:', newUsers?.length);
+  if (newUsers?.length > 0) {
+    console.log('First user example:', newUsers[0]);
+    console.log('User types in data:', newUsers.map(u => u.userType));
+  }
+}, { immediate: true });
+
+const isUserCountExpanded = ref(false);
+
+const childrenCount = computed(() => {
+  return users.value?.filter((user) => user.userType === 'student').length ?? 0;
+});
+
+const caregiversCount = computed(() => {
+  return users.value?.filter((user) => user.userType === 'parent').length ?? 0;
+});
+
+const teachersCount = computed(() => {
+  return users.value?.filter((user) => user.userType === 'teacher').length ?? 0;
+});
+
+const transformedUsers = computed(() => {
+  if (!users.value) return [];
+  return users.value.map((user) => ({
+    ...user,
+    userType: user.userType === 'student' ? 'child' : user.userType === 'parent' ? 'caregiver' : user.userType,
+  }));
+});
+
 const columns = ref([
+  //{
+  //  field: 'id',
+  //  header: 'UID',
+  //  dataType: 'string',
+  //  sort: false,
+  //},
   {
-    field: 'id',
-    header: 'UID',
-    dataType: 'string',
-    sort: false,
-  },
-  {
-    field: 'username',
-    header: 'Username',
+    field: 'email',
+    header: 'User login',
     dataType: 'string',
     sort: false,
   },
