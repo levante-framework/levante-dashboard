@@ -12,6 +12,7 @@ import { ROLES } from '@/constants/roles';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { logger } from '@/logger';
 import { fetchOrgsBySite } from './orgs';
+import { USE_BACKEND_MIGRATED_QUERIES } from '@/constants/featureFlags';
 
 export function getTitle(item, isSuperAdmin) {
   if (isSuperAdmin) {
@@ -106,6 +107,15 @@ export const administrationPageFetcher = async (selectedDistrictId, fetchTestDat
   const authStore = useAuthStore();
   const { roarfirekit } = storeToRefs(authStore);
 
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const result = await roarfirekit.value.getAdministrationsPage({
+      selectedDistrictId: selectedDistrictId.value,
+      fetchTestData: toValue(fetchTestData),
+      orderBy: orderBy?.value,
+    });
+    return result;
+  }
+
   const siteId =
     selectedDistrictId.value.trim() && selectedDistrictId.value !== 'any' ? selectedDistrictId.value : null;
 
@@ -193,6 +203,12 @@ export const getAdministrationsByOrg = (orgId, orgType, administrations) => {
 };
 
 export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABASES.ADMIN) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getAdminsBySite({ siteId: siteId.value });
+  }
+
   const axiosInstance = getAxiosInstance(db);
 
   let requestBody;

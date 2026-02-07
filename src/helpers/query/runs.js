@@ -6,6 +6,9 @@ import _uniq from 'lodash/uniq';
 import _without from 'lodash/without';
 import { convertValues, getAxiosInstance, mapFields, getBaseDocumentPath } from './utils';
 import { pluralizeFirestoreCollection } from '@/helpers';
+import { USE_BACKEND_MIGRATED_QUERIES } from '@/constants/featureFlags';
+import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
 
 /**
  * Constructs the request body for fetching runs based on the provided parameters.
@@ -158,6 +161,16 @@ export const getRunsRequestBody = ({
  * @returns {Promise<number>} The count of runs.
  */
 export const runCounter = async (administrationId, orgType, orgId) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.countRuns({
+      administrationId: toValue(administrationId),
+      orgType: toValue(orgType),
+      orgId: toValue(orgId),
+    });
+  }
+
   const axiosInstance = getAxiosInstance();
   const requestBody = getRunsRequestBody({
     administrationId: toValue(administrationId),
@@ -198,6 +211,23 @@ export const runPageFetcher = async ({
   scoreKey = 'scores.computed.composite',
   paginate = true,
 }) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getRunsPage({
+      administrationId: toValue(administrationId),
+      userId: toValue(userId),
+      orgType: toValue(orgType),
+      orgId: toValue(orgId),
+      taskId: toValue(taskId),
+      pageLimit: toValue(pageLimit),
+      page: toValue(page),
+      select: toValue(select),
+      scoreKey,
+      paginate: toValue(paginate),
+    });
+  }
+
   const adminAxiosInstance = getAxiosInstance();
   const requestBody = getRunsRequestBody({
     administrationId: toValue(administrationId),

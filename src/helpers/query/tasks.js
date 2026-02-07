@@ -4,6 +4,9 @@ import _uniq from 'lodash/uniq';
 import _without from 'lodash/without';
 import { convertValues, getAxiosInstance, mapFields, fetchDocsById, getBaseDocumentPath } from './utils';
 import { FIRESTORE_DATABASES, FIRESTORE_COLLECTIONS } from '../../constants/firebase';
+import { USE_BACKEND_MIGRATED_QUERIES } from '@/constants/featureFlags';
+import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
 
 export const getTasksRequestBody = ({
   registered = true,
@@ -69,6 +72,12 @@ export const getTasksRequestBody = ({
 };
 
 export const taskFetcher = async (registered = true, allData = false, select = ['name', 'testData', 'demoData']) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getTasks({ registered, allData, select });
+  }
+
   const axiosInstance = getAxiosInstance();
   const requestBody = getTasksRequestBody({
     registered,
@@ -88,6 +97,12 @@ export const taskFetcher = async (registered = true, allData = false, select = [
  * @returns {Promise<Array<Object>>} The array of task documents.
  */
 export const fetchByTaskId = async (taskIds) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getTasksById({ taskIds: toValue(taskIds) });
+  }
+
   const taskDocs = toValue(taskIds).map((taskId) => ({
     collection: FIRESTORE_COLLECTIONS.TASKS,
     docId: taskId,
@@ -141,6 +156,12 @@ export const getVariantsRequestBody = ({ registered = false, aggregationQuery, p
 };
 
 export const variantsFetcher = async (registered = false) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getVariants({ registered });
+  }
+
   const axiosInstance = getAxiosInstance();
   const requestBody = getVariantsRequestBody({
     registered,

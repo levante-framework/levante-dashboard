@@ -11,6 +11,9 @@ import _isEmpty from 'lodash/isEmpty';
 import { convertValues, getAxiosInstance, getBaseDocumentPath, getProjectId, mapFields } from './utils';
 import { pluralizeFirestoreCollection, isLevante } from '@/helpers';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { USE_BACKEND_MIGRATED_QUERIES } from '@/constants/featureFlags';
+import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
 
 const userSelectFields = ['name', 'assessmentPid', 'username', 'studentData', 'schools', 'classes', 'userType'];
 
@@ -533,6 +536,41 @@ export const getScoresRequestBody = ({
 };
 
 export const assignmentCounter = (adminId, orgType, orgId, filters = [], orderBy = []) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+
+    let nonOrgFilter = null;
+    let orgFilters = null;
+    let gradeFilters = null;
+    filters.forEach((filter) => {
+      if (filter.collection === 'schools') {
+        orgFilters = filter;
+      } else if (filter.collection === 'grade') {
+        gradeFilters = filter;
+      } else if (filter.collection !== 'schools') {
+        if (nonOrgFilter) {
+          throw new Error('You may specify at most one filter');
+        }
+        nonOrgFilter = filter;
+      }
+    });
+
+    const orgArray = orgFilters?.value?.length ? orgFilters.value : null;
+    const grades = gradeFilters?.value ?? null;
+    const useScoresFilter = nonOrgFilter?.collection === 'scores';
+
+    return roarfirekit.value.countAssignments({
+      adminId,
+      orgType: orgArray ? 'school' : orgType,
+      orgId: orgArray ? null : orgId,
+      orgArray,
+      filter: nonOrgFilter,
+      grades,
+      useScoresFilter,
+    });
+  }
+
   const adminAxiosInstance = getAxiosInstance();
 
   // Only allow one non-org filter
@@ -616,6 +654,24 @@ export const assignmentPageFetcher = async (
   filters = [],
   orderBy = [],
 ) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getAssignmentsPage({
+      adminId,
+      orgType,
+      orgId,
+      pageLimit: toValue(pageLimit),
+      page: toValue(page),
+      includeScores,
+      includeSurveyResponses,
+      select,
+      paginate,
+      filters,
+      orderBy: toRaw(orderBy),
+    });
+  }
+
   const adminAxiosInstance = getAxiosInstance();
   const adminProjectId = getProjectId();
 
@@ -1058,6 +1114,12 @@ export const assignmentPageFetcher = async (
  * @returns {Promise<Array>} - A promise that resolves to an array of all assignments for the user.
  */
 export const getUserAssignments = async (roarUid) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getUserAssignments({ roarUid: toValue(roarUid) });
+  }
+
   const adminAxiosInstance = getAxiosInstance();
   const assignmentRequest = getAssignmentsRequestBody({
     aggregationQuery: false,
@@ -1095,6 +1157,17 @@ export const assignmentFetchAll = async (
 };
 
 export const fetchAssignmentsByNameAndSite = async (name, normalizedName, siteId, adminId) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getAssignmentsByNameAndSite({
+      name,
+      normalizedName,
+      siteId,
+      adminId,
+    });
+  }
+
   const axiosInstance = getAxiosInstance();
 
   const filters = [
