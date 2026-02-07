@@ -16,6 +16,9 @@ import {
 } from '@/helpers/query/utils';
 import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { USE_BACKEND_MIGRATED_QUERIES } from '@/constants/featureFlags';
+import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
 
 export const getOrgsRequestBody = ({
   aggregationQuery,
@@ -134,6 +137,20 @@ export const getOrgsRequestBody = ({
 };
 
 export const fetchOrgByName = async (orgType, orgNormalizedName, selectedDistrict, selectedSchool, orderBy = null) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getOrgByName({
+      orgType,
+      orgNormalizedName,
+      parentDistrict:
+        orgType === 'schools' || orgType === 'classes' || orgType === 'groups' ? selectedDistrict?.value?.id : null,
+      parentSchool: orgType === 'classes' ? selectedSchool?.value?.id : null,
+      orderBy,
+      select: ['id', 'name', 'normalizedName'],
+    });
+  }
+
   const axiosInstance = getAxiosInstance();
   const requestBody = getOrgsRequestBody({
     orgType,
@@ -151,6 +168,16 @@ export const fetchOrgByName = async (orgType, orgNormalizedName, selectedDistric
 };
 
 export const orgFetcher = async (orgType, selectedDistrict, isSuperAdmin, adminOrgs, select = ['name', 'id']) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getOrgsForAdmin({
+      orgType,
+      selectedDistrict: toValue(selectedDistrict) === 'any' ? null : toValue(selectedDistrict),
+      select,
+    });
+  }
+
   const districtId = toValue(selectedDistrict) === 'any' ? null : toValue(selectedDistrict);
 
   if (isSuperAdmin.value) {
@@ -238,6 +265,20 @@ export const orgFetchAll = async (
   includeCreators = false,
   loggedInUserId = null,
 ) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getOrgsAll({
+      orgType: activeOrgType.value,
+      parentDistrict: selectedDistrict.value === 'any' ? null : selectedDistrict.value,
+      parentSchool: selectedSchool.value,
+      orderBy: orderBy.value,
+      select,
+      includeCreators,
+      loggedInUserId,
+    });
+  }
+
   const districtId = selectedDistrict.value === 'any' ? null : selectedDistrict.value;
 
   let orgs;
@@ -338,6 +379,12 @@ export const orgFetchAll = async (
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of org objects.
  */
 export const fetchTreeOrgs = async (administrationId, assignedOrgs) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getTreeOrgs({ administrationId, assignedOrgs });
+  }
+
   const orgTypes = [ORG_TYPES.DISTRICTS, ORG_TYPES.SCHOOLS, ORG_TYPES.GROUPS, ORG_TYPES.FAMILIES];
 
   const orgPaths = _flattenDeep(
@@ -528,6 +575,12 @@ export const fetchTreeOrgs = async (administrationId, assignedOrgs) => {
 };
 
 export const fetchDistricts = async (districts = null) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getDistricts({ districts });
+  }
+
   const axiosInstance = getAxiosInstance();
 
   // If districts is null, fetch all districts
@@ -556,6 +609,12 @@ export const fetchDistricts = async (districts = null) => {
 };
 
 export const fetchSchools = async (districts = null) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getSchools({ districts });
+  }
+
   const axiosInstance = getAxiosInstance();
 
   // If districts is null, fetch all schools
@@ -601,6 +660,12 @@ export const fetchSchools = async (districts = null) => {
 
 export const fetchOrgsBySite = async (siteId = null) => {
   if (!siteId) return null;
+
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getOrgsBySite({ siteId });
+  }
 
   const axiosInstance = getAxiosInstance();
   const promises = [];

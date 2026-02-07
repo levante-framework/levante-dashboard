@@ -1,5 +1,8 @@
 import { toValue } from 'vue';
 import { convertValues, getAxiosInstance, mapFields, getBaseDocumentPath } from './utils';
+import { USE_BACKEND_MIGRATED_QUERIES } from '@/constants/featureFlags';
+import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
 
 /**
  * Constructs the request body for fetching users.
@@ -128,6 +131,20 @@ export const getUsersRequestBody = ({
  * @returns {Promise<Object>} The fetched users data.
  */
 export const fetchUsersByOrg = async (orgType, orgId, pageLimit, page, orderBy, restrictToActiveUsers = false) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.getUsersByOrg({
+      orgType: toValue(orgType),
+      orgId: toValue(orgId),
+      pageLimit: toValue(pageLimit),
+      page: toValue(page),
+      orderBy: toValue(orderBy),
+      restrictToActiveUsers: restrictToActiveUsers,
+      select: ['id', 'username', 'name', 'email', 'studentData', 'userType', 'archived'],
+    });
+  }
+
   const axiosInstance = getAxiosInstance();
   const requestBody = getUsersRequestBody({
     orgType: toValue(orgType),
@@ -155,6 +172,16 @@ export const fetchUsersByOrg = async (orgType, orgId, pageLimit, page, orderBy, 
  * @returns {Promise<number>} The count of users.
  */
 export const countUsersByOrg = async (orgType, orgId, orderBy, restrictToActiveUsers = false) => {
+  if (USE_BACKEND_MIGRATED_QUERIES) {
+    const authStore = useAuthStore();
+    const { roarfirekit } = storeToRefs(authStore);
+    return roarfirekit.value.countUsersByOrg({
+      orgType: toValue(orgType),
+      orgId: toValue(orgId),
+      restrictToActiveUsers: restrictToActiveUsers,
+    });
+  }
+
   const axiosInstance = getAxiosInstance();
   const requestBody = getUsersRequestBody({
     orgType: toValue(orgType),
