@@ -6,7 +6,7 @@ import _uniq from 'lodash/uniq';
 import _without from 'lodash/without';
 import { convertValues, getAxiosInstance, mapFields, getBaseDocumentPath } from './utils';
 import { pluralizeFirestoreCollection } from '@/helpers';
-import { USE_BACKEND_MIGRATED_QUERIES } from '@/constants/featureFlags';
+import { USE_BACKEND_MIGRATED_QUERIES_RUNS } from '@/constants/featureFlags';
 import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 
@@ -161,7 +161,7 @@ export const getRunsRequestBody = ({
  * @returns {Promise<number>} The count of runs.
  */
 export const runCounter = async (administrationId, orgType, orgId) => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_RUNS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.countRuns({
@@ -211,7 +211,7 @@ export const runPageFetcher = async ({
   scoreKey = 'scores.computed.composite',
   paginate = true,
 }) => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_RUNS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.getRunsPage({

@@ -16,7 +16,7 @@ import {
 } from '@/helpers/query/utils';
 import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
-import { USE_BACKEND_MIGRATED_QUERIES } from '@/constants/featureFlags';
+import { USE_BACKEND_MIGRATED_QUERIES_ORGS } from '@/constants/featureFlags';
 import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 
@@ -137,7 +137,7 @@ export const getOrgsRequestBody = ({
 };
 
 export const fetchOrgByName = async (orgType, orgNormalizedName, selectedDistrict, selectedSchool, orderBy = null) => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_ORGS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.getOrgByName({
@@ -168,7 +168,7 @@ export const fetchOrgByName = async (orgType, orgNormalizedName, selectedDistric
 };
 
 export const orgFetcher = async (orgType, selectedDistrict, isSuperAdmin, adminOrgs, select = ['name', 'id']) => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_ORGS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.getOrgsForAdmin({
@@ -265,7 +265,7 @@ export const orgFetchAll = async (
   includeCreators = false,
   loggedInUserId = null,
 ) => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_ORGS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.getOrgsAll({
@@ -379,7 +379,7 @@ export const orgFetchAll = async (
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of org objects.
  */
 export const fetchTreeOrgs = async (administrationId, assignedOrgs) => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_ORGS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.getTreeOrgs({ administrationId, assignedOrgs });
@@ -575,7 +575,7 @@ export const fetchTreeOrgs = async (administrationId, assignedOrgs) => {
 };
 
 export const fetchDistricts = async (districts = null) => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_ORGS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.getDistricts({ districts });
@@ -609,7 +609,7 @@ export const fetchDistricts = async (districts = null) => {
 };
 
 export const fetchSchools = async (districts = null) => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_ORGS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.getSchools({ districts });
@@ -661,7 +661,7 @@ export const fetchSchools = async (districts = null) => {
 export const fetchOrgsBySite = async (siteId = null) => {
   if (!siteId) return null;
 
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_ORGS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.getOrgsBySite({ siteId });

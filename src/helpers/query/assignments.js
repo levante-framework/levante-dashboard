@@ -11,7 +11,7 @@ import _isEmpty from 'lodash/isEmpty';
 import { convertValues, getAxiosInstance, getBaseDocumentPath, getProjectId, mapFields } from './utils';
 import { pluralizeFirestoreCollection, isLevante } from '@/helpers';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
-import { USE_BACKEND_MIGRATED_QUERIES } from '@/constants/featureFlags';
+import { USE_BACKEND_MIGRATED_QUERIES_ASSIGNMENTS } from '@/constants/featureFlags';
 import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 
@@ -536,7 +536,7 @@ export const getScoresRequestBody = ({
 };
 
 export const assignmentCounter = (adminId, orgType, orgId, filters = [], orderBy = []) => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_ASSIGNMENTS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
 
@@ -654,7 +654,7 @@ export const assignmentPageFetcher = async (
   filters = [],
   orderBy = [],
 ) => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_ASSIGNMENTS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.getAssignmentsPage({
@@ -1114,7 +1114,7 @@ export const assignmentPageFetcher = async (
  * @returns {Promise<Array>} - A promise that resolves to an array of all assignments for the user.
  */
 export const getUserAssignments = async (roarUid) => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_ASSIGNMENTS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.getUserAssignments({ roarUid: toValue(roarUid) });
@@ -1157,7 +1157,7 @@ export const assignmentFetchAll = async (
 };
 
 export const fetchAssignmentsByNameAndSite = async (name, normalizedName, siteId, adminId) => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_ASSIGNMENTS) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.getAssignmentsByNameAndSite({

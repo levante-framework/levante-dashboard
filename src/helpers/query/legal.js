@@ -1,6 +1,6 @@
 import _capitalize from 'lodash/capitalize';
 import { convertValues, getAxiosInstance } from './utils';
-import { USE_BACKEND_MIGRATED_QUERIES } from '@/constants/featureFlags';
+import { USE_BACKEND_MIGRATED_QUERIES_LEGAL } from '@/constants/featureFlags';
 import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 
@@ -10,7 +10,7 @@ import { storeToRefs } from 'pinia';
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of legal document objects.
  */
 export const fetchLegalDocs = () => {
-  if (USE_BACKEND_MIGRATED_QUERIES) {
+  if (USE_BACKEND_MIGRATED_QUERIES_LEGAL) {
     const authStore = useAuthStore();
     const { roarfirekit } = storeToRefs(authStore);
     return roarfirekit.value.getLegalDocs();
