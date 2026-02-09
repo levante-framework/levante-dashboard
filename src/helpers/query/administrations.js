@@ -27,7 +27,6 @@ export function getTitle(item, isSuperAdmin) {
 const mapAdministrations = async (data) => {
   // First format the administration documents
   const administrationData = data
-    .map((a) => a.data)
     .map((a) => {
       let assignedOrgs = {
         districts: a.districts,
@@ -66,37 +65,10 @@ export const administrationPageFetcher = async (selectedDistrictId, fetchTestDat
 
   let orgs = [];
 
-  const administrationIds = await roarfirekit.value.getAdministrations({
+  const administrationData = await roarfirekit.value.getAdministrations({
     testData: toValue(fetchTestData),
+    idsOnly: false,
   });
-
-  const axiosInstance = getAxiosInstance();
-  const documents = administrationIds.map((id) => `${getBaseDocumentPath()}/administrations/${id}`);
-
-  let data = [];
-
-  try {
-    data = await axiosInstance.post(`${getBaseDocumentPath()}:batchGet`, { documents });
-  } catch (error) {
-    console.error('Error fetching administration data:', error);
-    return { sortedAdministrations: [], administrations: [] };
-  }
-
-  const administrationData = _without(
-    data.data.map(({ found }) => {
-      if (found) {
-        return {
-          name: found.name,
-          data: {
-            id: _last(found.name.split('/')),
-            ..._mapValues(found.fields, (value) => convertValues(value)),
-          },
-        };
-      }
-      return undefined;
-    }),
-    undefined,
-  );
 
   let administrations = await mapAdministrations(administrationData);
 
