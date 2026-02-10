@@ -22,39 +22,11 @@ export function getTitle(item, isSuperAdmin) {
   }
 }
 
-const processBatchStats = async (axiosInstance, statsPaths, batchSize = 5) => {
-  const batchStatsDocs = [];
-  const statsPathChunks = _chunk(statsPaths, batchSize);
-  for (const batch of statsPathChunks) {
-    const { data } = await axiosInstance.post(`${getBaseDocumentPath()}:batchGet`, {
-      documents: batch,
-    });
-
-    const processedBatch = _without(
-      data.map(({ found }) => {
-        if (found) {
-          return {
-            name: found.name,
-            data: _mapValues(found.fields, (value) => convertValues(value)),
-          };
-        }
-        return undefined;
-      }),
-      undefined,
-    );
-
-    batchStatsDocs.push(...processedBatch);
-  }
-
-  return batchStatsDocs;
-};
-
 // TODO: Remove this function. Fields that we want should be passed into the query, not filtered from the whole data of the document on the client side.
 // Netowrk call should be done in the query function, not here.
 const mapAdministrations = async (data) => {
   // First format the administration documents
   const administrationData = data
-    .map((a) => a.data)
     .map((a) => {
       let assignedOrgs = {
         districts: a.districts,
@@ -81,25 +53,7 @@ const mapAdministrations = async (data) => {
       };
     });
 
-  // Create a list of all the stats document paths we need to get
-  const statsPaths = data
-    // First filter out any missing administration documents
-    .filter((item) => item.name !== undefined)
-    // Then map to the total stats document
-    .map(({ name }) => `${name}/stats/total`);
-
-  const axiosInstance = getAxiosInstance();
-  const batchStatsDocs = await processBatchStats(axiosInstance, statsPaths);
-
-  const administrations = administrationData?.map((administration) => {
-    const thisAdminStats = batchStatsDocs.find((statsDoc) => statsDoc.name.includes(administration.id));
-    return {
-      ...administration,
-      stats: { total: thisAdminStats?.data },
-    };
-  });
-
-  return administrations;
+  return administrationData;
 };
 
 export const administrationPageFetcher = async (selectedDistrictId, fetchTestData = false, orderBy) => {
@@ -111,37 +65,10 @@ export const administrationPageFetcher = async (selectedDistrictId, fetchTestDat
 
   let orgs = [];
 
-  const administrationIds = await roarfirekit.value.getAdministrations({
+  const administrationData = await roarfirekit.value.getAdministrations({
     testData: toValue(fetchTestData),
+    idsOnly: false,
   });
-
-  const axiosInstance = getAxiosInstance();
-  const documents = administrationIds.map((id) => `${getBaseDocumentPath()}/administrations/${id}`);
-
-  let data = [];
-
-  try {
-    data = await axiosInstance.post(`${getBaseDocumentPath()}:batchGet`, { documents });
-  } catch (error) {
-    console.error('Error fetching administration data:', error);
-    return { sortedAdministrations: [], administrations: [] };
-  }
-
-  const administrationData = _without(
-    data.data.map(({ found }) => {
-      if (found) {
-        return {
-          name: found.name,
-          data: {
-            id: _last(found.name.split('/')),
-            ..._mapValues(found.fields, (value) => convertValues(value)),
-          },
-        };
-      }
-      return undefined;
-    }),
-    undefined,
-  );
 
   let administrations = await mapAdministrations(administrationData);
 
