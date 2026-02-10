@@ -1,6 +1,6 @@
 <template>
   <div v-if="props.adminId && !isFormPopulated" class="levante-spinner-wrapper">
-    <LevanteSpinner />
+    <LevanteSpinner fullscreen />
   </div>
 
   <main v-else class="container main">
