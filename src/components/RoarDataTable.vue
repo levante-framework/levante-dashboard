@@ -114,6 +114,7 @@
           @row-unselect="onSelectionChange"
         >
           <PvColumn
+            v-if="props.allowRowSelection"
             selection-mode="multiple"
             header-style="background-color: var(--primary-color); border:none;"
             :reorderable-column="false"
@@ -454,6 +455,7 @@ const props = defineProps({
   showOptionsControl: { type: Boolean, default: true },
   showOptions: { type: Boolean, default: false },
   rowClass: { type: Function, default: null },
+  allowRowSelection: { type: Boolean, default: true },
 });
 
 /*
@@ -786,6 +788,12 @@ g {
   color: white;
   padding: 5px;
   margin-left: 10px;
+}
+
+.p-datatable .p-datatable-thead > tr > th {
+  min-height: 3rem !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
 }
 
 .p-datatable .p-datatable-tbody > tr > td {
