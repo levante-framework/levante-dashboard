@@ -144,11 +144,11 @@ import { storeToRefs } from 'pinia';
 import { validateAddUsersFileUpload } from '@levante-framework/levante-zod';
 
 const authStore = useAuthStore();
-const { currentSite, currentSiteName, shouldUsePermissions } = storeToRefs(authStore);
+const { currentSite, currentSiteName } = storeToRefs(authStore);
 const { createUsers } = authStore;
 const toast = useToast();
 
-const isAllSitesSelected = computed(() => shouldUsePermissions.value && currentSite.value === 'any');
+const isAllSitesSelected = computed(() => currentSite.value === 'any');
 
 const isFileUploaded = ref(false);
 const uploadedFile = ref(null);
@@ -250,7 +250,7 @@ const onFileUpload = async (event) => {
     return;
   }
 
-  const validation = validateAddUsersFileUpload(parsedData, shouldUsePermissions.value);
+  const validation = validateAddUsersFileUpload(parsedData, !!currentSite.value);
 
   if (validation.headerErrors && validation.headerErrors.length > 0) {
     const missingHeaders = validation.headerErrors.map((e) => e.field).join(', ');
@@ -570,7 +570,7 @@ async function submitUsers() {
         users: processedUsers,
       };
 
-      if (shouldUsePermissions.value && currentSite.value && currentSite.value !== 'any') {
+      if (currentSite.value && currentSite.value !== 'any') {
         createUsersPayload.siteId = currentSite.value;
       } else if (processedUsers.length > 0 && processedUsers[0].orgIds?.districts?.length > 0) {
         createUsersPayload.siteId = processedUsers[0].orgIds.districts[0];

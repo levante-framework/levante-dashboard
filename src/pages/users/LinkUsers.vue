@@ -100,8 +100,8 @@ import { validateLinkUsersCsv, validateCsvHeaders } from '@levante-framework/lev
 import { storeToRefs } from 'pinia';
 
 const authStore = useAuthStore();
-const { currentSite, shouldUsePermissions } = storeToRefs(authStore);
-const isAllSitesSelected = computed(() => shouldUsePermissions.value && currentSite.value === 'any');
+const { currentSite } = storeToRefs(authStore);
+const isAllSitesSelected = computed(() => currentSite.value === 'any');
 const toast = useToast();
 const isFileUploaded = ref(false);
 const uploadedFile = ref(null);
