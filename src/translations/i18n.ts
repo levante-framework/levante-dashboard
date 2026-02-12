@@ -44,7 +44,11 @@ export const languageOptions: Record<string, { translations: any; language: stri
     language: 'Español (Colombia)',
     code: 'col',
   },
-  de: { translations: deTranslations, language: 'Deutsch', code: 'de' },
+  'de-DE': {
+    translations: deTranslations,
+    language: 'Deutsch',
+    code: 'de' 
+  },
 };
 
 const browserLocale = window.navigator.language;
@@ -63,19 +67,54 @@ const getLocale = (localeFromBrowser: string) => {
 
 export const formattedLocale = getLocale(browserLocale);
 
-const getFallbackLocale = () => {
-  const localeFromStorage = sessionStorage.getItem('levante') || '';
+/**
+ * Finds the best matching locale from available languageOptions.
+ *
+ * - If exact match exists, returns it
+ * - If no exact match, finds first available locale with matching language prefix
+ * - Falls back to 'en-US' if no match found
+ *
+ * @param locale - The locale to match (e.g., 'en-US', 'en-GB', 'de', 'de-CH')
+ * @returns The best matching locale from languageOptions, or 'en-US' as fallback
+ */
+export function findBestMatchingLocale(locale: string | undefined | null): string {
+  if (!locale) return 'en-US';
 
-  if (localeFromStorage.includes('es')) {
-    console.log('Setting fallback locale to es-CO');
-    return 'es-CO';
-  } else if (localeFromStorage.includes('de')) {
-    console.log('Setting fallback locale to de');
-    return 'de';
-  } else {
-    console.log('Setting fallback locale to en-US');
-    return 'en-US';
+  // Get available locales from languageOptions keys
+  const availableLocales = Object.keys(languageOptions);
+
+  // Normalize the input locale to lowercase for comparison
+  const normalizedLocale = locale.toLowerCase();
+
+  // First, check for exact match (case-insensitive)
+  const exactMatch = availableLocales.find(
+    (available) => available.toLowerCase() === normalizedLocale,
+  );
+  if (exactMatch) {
+    return exactMatch;
   }
+
+  // Extract the language prefix (e.g., 'en' from 'en-GB', 'de' from 'de-CH' or just 'de')
+  const languagePrefix = normalizedLocale.split('-')[0];
+
+  // Find the first available locale that starts with the same language prefix
+  const prefixMatch = availableLocales.find((available) =>
+    available.toLowerCase().startsWith(languagePrefix + '-'),
+  );
+
+  if (prefixMatch) {
+    return prefixMatch;
+  }
+
+  // If no match found, default to en-US
+  return 'en-US';
+}
+
+const getFallbackLocale = () => {
+  const storageKey = `${isLevante ? 'levante' : 'roar'}PlatformLocale`;
+  const localeFromStorage = sessionStorage.getItem(storageKey);
+  const localeToUse = localeFromStorage || browserLocale;
+  return findBestMatchingLocale(localeToUse);
 };
 
 // Map flat keys to nested paths for backward compatibility
@@ -127,7 +166,7 @@ function addFlatKeys(messages: Record<string, any>): Record<string, any> {
 const baseMessages: Record<string, any> = {
   'en-US': addFlatKeys({ ...enUSTranslations, ...enUSIndividualScoreReport }),
   'es-CO': addFlatKeys({ ...esCOTranslations, ...esCOIndividualScoreReport }),
-  de: addFlatKeys(deTranslations),
+  'de-DE': addFlatKeys(deTranslations),
   // Legacy fallbacks for backward compatibility
   // es: addFlatKeys({ ...esTranslations, ...esIndividualScoreReport }),
 };
