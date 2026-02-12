@@ -48,7 +48,7 @@
             <PvButton
               :label="activeSubmit ? 'Linking Users' : 'Start Linking'"
               :icon="activeSubmit ? 'pi pi-spin pi-spinner' : 'pi pi-link'"
-              :disabled="activeSubmit"
+              :disabled="activeSubmit || isAllSitesSelected"
               @click="submitUsers"
             />
           </div>
@@ -82,7 +82,7 @@
 </template>
 
 <script setup>
-import { ref, toRaw } from 'vue';
+import { computed, ref, toRaw } from 'vue';
 import { csvFileToJson } from '@/helpers';
 import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/store/auth';
@@ -96,8 +96,12 @@ import _startCase from 'lodash/startCase';
 import _isEmpty from 'lodash/isEmpty';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import PvDivider from 'primevue/divider';
+import { validateLinkUsersCsv, validateCsvHeaders } from '@levante-framework/levante-zod';
+import { storeToRefs } from 'pinia';
 
 const authStore = useAuthStore();
+const { currentSite } = storeToRefs(authStore);
+const isAllSitesSelected = computed(() => currentSite.value === 'any');
 const toast = useToast();
 const isFileUploaded = ref(false);
 const uploadedFile = ref(null);
@@ -147,19 +151,21 @@ const onFileUpload = async (event) => {
   const file = event.files[event.files.length - 1];
   uploadedFile.value = file;
 
-  // Parse the file directly with csvFileToJson
   const parsedData = await csvFileToJson(file);
-
-  // Normalize userType field values by trimming whitespace
-  parsedData.forEach((user) => {
-    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-    if (userTypeField && typeof user[userTypeField] === 'string') {
-      user[userTypeField] = user[userTypeField].trim();
-    }
+  const filteredData = parsedData.filter((user) => {
+    if (!user || typeof user !== 'object') return false;
+    const keys = Object.keys(user);
+    if (keys.length === 0) return false;
+    const hasAnyValue = keys.some((key) => {
+      const val = user[key];
+      if (val === null || val === undefined) return false;
+      const strVal = String(val).trim();
+      return strVal !== '';
+    });
+    return hasAnyValue;
   });
 
-  // Check if there's any data
-  if (!parsedData || parsedData.length === 0) {
+  if (!filteredData || filteredData.length === 0) {
     toast.add({
       severity: 'error',
       summary: 'Error: Empty File',
@@ -169,44 +175,48 @@ const onFileUpload = async (event) => {
     return;
   }
 
-  // Store the parsed data
-  rawUserFile.value = parsedData;
+  rawUserFile.value = filteredData;
 
-  // Get all column names from the first row, case-insensitive check
   const firstRow = toRaw(rawUserFile.value[0]);
-  const allColumns = Object.keys(firstRow).map((col) => col.toLowerCase());
-  console.log('allColumns: ', allColumns);
+  const headers = Object.keys(firstRow);
+  const requiredHeaders = ['id', 'usertype', 'uid'];
 
-  // First check if the required columns are present (case-insensitive)
-  const hasId = allColumns.includes('id');
-  const hasUserType = allColumns.includes('usertype');
-  const hasUid = allColumns.includes('uid');
-
-  const missingColumns = [];
-
-  if (!hasId) {
-    missingColumns.push('id');
-  }
-  if (!hasUserType) {
-    missingColumns.push('userType');
-  }
-  if (!hasUid) {
-    missingColumns.push('uid');
-  }
-
-  if (missingColumns.length > 0) {
+  const headerValidation = validateCsvHeaders(headers, requiredHeaders);
+  if (!headerValidation.success) {
+    const missingHeaders = headerValidation.errors.map((e) => e.field).join(', ');
     toast.add({
       severity: 'error',
       summary: 'Error: Missing Column',
-      detail: `Missing required column(s): ${missingColumns.join(', ')}`,
+      detail: `Missing required column(s): ${missingHeaders}`,
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     return;
   }
 
-  // parentId and teacherId are now optional, so we don't check for them here
+  const validation = validateLinkUsersCsv(filteredData);
 
-  validateUsers();
+  const usersWithZodErrors = new Set();
+
+  if (!validation.success) {
+    const errorsByUser = new Map();
+    validation.errors.forEach((error) => {
+      const userIndex = error.row - 1;
+      if (userIndex >= 0 && userIndex < filteredData.length) {
+        const user = filteredData[userIndex];
+        usersWithZodErrors.add(user);
+        if (!errorsByUser.has(user)) {
+          errorsByUser.set(user, []);
+        }
+        const fieldName = error.field === 'usertype' ? 'userType' : error.field;
+        errorsByUser.get(user).push(`${fieldName}: ${error.message}`);
+      }
+    });
+    errorsByUser.forEach((errors, user) => {
+      addErrorUser(user, errors.join('; '));
+    });
+  }
+
+  validateUsers(usersWithZodErrors);
 
   if (errorUsers.value.length === 0) {
     isFileUploaded.value = true;
@@ -219,34 +229,25 @@ const onFileUpload = async (event) => {
   }
 };
 
-const validateUsers = () => {
+const validateUsers = (usersWithZodErrors = new Set()) => {
   errorUsers.value = [];
-  const userMap = new Map(toRaw(rawUserFile.value).map((user) => [user.id.toString(), user]));
-
-  const requiredFields = ['id', 'usertype', 'uid'];
+  const userMap = new Map(
+    toRaw(rawUserFile.value).map((user) => {
+      const idField = Object.keys(user).find((key) => key.toLowerCase() === 'id');
+      return [idField ? user[idField].toString() : '', user];
+    }),
+  );
 
   rawUserFile.value.forEach((user) => {
-    console.log('user: ', user);
+    if (usersWithZodErrors.has(user)) return;
+
     const missingFields = [];
 
-    // Check for required fields (case-insensitive)
-    requiredFields.forEach((requiredField) => {
-      // Find the actual field name in the user object (case-insensitive)
-      const actualField = Object.keys(user).find((key) => key.toLowerCase() === requiredField);
-      if (!actualField || !user[actualField]) {
-        missingFields.push(requiredField === 'usertype' ? 'userType' : requiredField);
-      }
-    });
-
-    // Check parentId and teacherId if they exist (now optional)
-    // Find userType field (case-insensitive)
     const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
 
-    if (userTypeField && user[userTypeField].toLowerCase() === 'child') {
-      // Find parentId field (case-insensitive)
+    if (userTypeField && user[userTypeField] && user[userTypeField].toLowerCase() === 'child') {
       const caregiverIdField = Object.keys(user).find((key) => key.toLowerCase() === 'caregiverid');
 
-      // Only validate parentId if it exists
       if (caregiverIdField && user[caregiverIdField] && user[caregiverIdField].trim() !== '') {
         const caregiverIds =
           typeof user[caregiverIdField] === 'string'
@@ -254,12 +255,9 @@ const validateUsers = () => {
             : [user[caregiverIdField].toString()];
 
         caregiverIds.forEach((caregiverId) => {
-          console.log('caregiverId in loop:', caregiverId);
-
           if (!userMap.has(caregiverId)) {
             missingFields.push(`Caregiver with ID ${caregiverId} not found`);
           } else {
-            // Find userType field in caregiver (case-insensitive)
             const caregiverUserTypeField = Object.keys(userMap.get(caregiverId)).find(
               (key) => key.toLowerCase() === 'usertype',
             );
@@ -274,10 +272,8 @@ const validateUsers = () => {
         });
       }
 
-      // Find teacherId field (case-insensitive)
       const teacherIdField = Object.keys(user).find((key) => key.toLowerCase() === 'teacherid');
 
-      // Only validate teacherId if it exists
       if (teacherIdField && user[teacherIdField] && user[teacherIdField].trim() !== '') {
         const teacherIds =
           typeof user[teacherIdField] === 'string'
@@ -288,7 +284,6 @@ const validateUsers = () => {
           if (!userMap.has(teacherId)) {
             missingFields.push(`Teacher with ID ${teacherId} not found`);
           } else {
-            // Find userType field in teacher (case-insensitive)
             const teacherUserTypeField = Object.keys(userMap.get(teacherId)).find(
               (key) => key.toLowerCase() === 'usertype',
             );
@@ -307,23 +302,44 @@ const validateUsers = () => {
   });
 
   if (errorUsers.value.length > 0) {
-    console.log('errorUsers: ', errorUsers.value);
     toast.add({
       severity: 'error',
-      summary: 'Missing Fields. See below for details.',
+      summary: 'Validation Errors. See below for details.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   }
 };
 
 const submitUsers = async () => {
+  if (errorUsers.value.length > 0) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Please fix all errors before submitting',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    return;
+  }
+
+  if (!currentSite.value || isAllSitesSelected.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Please select a specific site before linking users',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    return;
+  }
+
   activeSubmit.value = true;
+  showErrorTable.value = false;
+  errorUsers.value = [];
+  errorUserColumns.value = [];
+
   try {
-    // Normalize field names for the backend
     const normalizedUsers = toRaw(rawUserFile.value).map((user) => {
       const normalizedUser = {};
 
-      // Process required fields
       const idField = Object.keys(user).find((key) => key.toLowerCase() === 'id');
       const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
       const uidField = Object.keys(user).find((key) => key.toLowerCase() === 'uid');
@@ -331,23 +347,18 @@ const submitUsers = async () => {
       if (idField) normalizedUser.id = user[idField];
       if (userTypeField) {
         const userTypeValue = user[userTypeField];
-        // Change 'caregiver' to 'parent' before sending to backend
         normalizedUser.userType = userTypeValue.toLowerCase() === 'caregiver' ? 'parent' : userTypeValue;
       }
       if (uidField) normalizedUser.uid = user[uidField];
 
-      // Process optional fields
       const caregiverIdField = Object.keys(user).find((key) => key.toLowerCase() === 'caregiverid');
       const teacherIdField = Object.keys(user).find((key) => key.toLowerCase() === 'teacherid');
 
-      // Rename caregiverId to parentId
       if (caregiverIdField && user[caregiverIdField]) normalizedUser.parentId = user[caregiverIdField];
       if (teacherIdField && user[teacherIdField]) normalizedUser.teacherId = user[teacherIdField];
 
-      // Include any other fields that might be in the original data
       Object.keys(user).forEach((key) => {
         const lowerCaseKey = key.toLowerCase();
-        // Ensure original fields (case-insensitive) and already processed fields are not copied again
         if (!['id', 'usertype', 'uid', 'caregiverid', 'teacherid', 'parentid'].includes(lowerCaseKey)) {
           normalizedUser[key] = user[key];
         }
@@ -356,7 +367,7 @@ const submitUsers = async () => {
       return normalizedUser;
     });
 
-    await authStore.roarfirekit.linkUsers({users: normalizedUsers, siteId: authStore.currentSite});
+    await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: currentSite.value });
     isFileUploaded.value = false;
 
     toast.add({
@@ -366,7 +377,6 @@ const submitUsers = async () => {
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   } catch (error) {
-    console.error(error);
     toast.add({
       severity: 'error',
       summary: 'Error',
