@@ -46,7 +46,7 @@ export const languageOptions: Record<string, { translations: any; language: stri
   },
   'de-DE': {
     translations: deTranslations,
-    language: 'Deutsch',
+    language: 'Deutsch (Deutschland)',
     code: 'de' 
   },
 };
