@@ -56,11 +56,16 @@
             </div>
           </div>
 
-          <div v-if="assignmentData?.length">
-            <div
-              v-if="!isEmpty(adminStats)"
-              class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card"
-            >
+          <div v-if="!assignmentData?.length || !adminStats?.assignment" class="empty-user-list">
+            <div class="text-lg font-semibold text-gray-700">Could not find users for {{ orgData?.name }}.</div>
+            <div class="mt-2 text-sm text-gray-500">
+              <a href="/add-users">Add users</a> to <span class="font-bold">{{ orgData?.name }}</span> to see the
+              progress report.
+            </div>
+          </div>
+
+          <div v-else>
+            <div class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card">
               <div class="flex flex-column gap-1 mx-5 mb-5">
                 <div class="text-sm uppercase text-gray-500">Progress by Task</div>
                 <div
@@ -84,7 +89,7 @@
                 <div class="flex justify-content-between align-items-center">
                   <div class="text-xl font-bold text-gray-600 w-full">
                     Total
-                    <span class="font-light text-sm"> (Assigned to {{ adminStats.assignment.assigned }} users) </span>
+                    <span class="font-light text-sm"> (Assigned to {{ adminStats?.assignment?.assigned }} users) </span>
                   </div>
                   <PvChart
                     type="bar"
@@ -118,6 +123,7 @@
                 <div v-if="!isLevante" class="font-light uppercase text-xs text-gray-500 my-1">Legend</div>
               </div>
             </div>
+
             <RoarDataTable
               v-if="progressReportColumns?.length ?? 0 > 0"
               :data="filteredTableData"
@@ -129,44 +135,34 @@
               :allow-filtering="!isLevante"
               :reset-filters="resetFilters"
               :allow-export="true"
-              :allow-column-selection="!isLevante"
               :lazy-pre-sorting="orderBy"
-              :show-options-control="false"
+              :show-options-control="true"
+              :show-options="true"
               @export-selected="exportSelected"
               @export-all="exportAll"
             >
               <template #filterbar>
-                <div v-if="!isLevante">
-                  <div v-if="districtSchoolsData" class="flex flex-row gap-2">
+                <div class="inline-flex gap-1">
+                  <div class="w-8">
                     <PvFloatLabel>
-                      <PvMultiSelect
-                        id="ms-school-filter"
-                        v-model="filterSchools"
-                        style="width: 20rem; max-width: 25rem"
-                        :options="districtSchoolsData"
-                        option-label="name"
-                        option-value="name"
-                        :show-toggle-all="false"
-                        selected-items-label="{0} schools selected"
-                        data-cy="filter-by-school"
-                      />
-                      <label for="ms-school-filter">Filter by School</label>
+                      <PvInputText v-model="searchInput" class="w-full" :maxlength="50" />
+                      <label>Search UID...</label>
                     </PvFloatLabel>
                   </div>
-                  <div class="flex flex-row gap-2">
+                  <div class="w-5">
                     <PvFloatLabel>
                       <PvMultiSelect
-                        id="ms-grade-filter"
-                        v-model="filterGrades"
-                        style="width: 20rem; max-width: 25rem"
-                        :options="gradeOptions"
+                        v-model="selectedUserTypes"
+                        class="w-full"
+                        filter
+                        filter-placeholder="Search..."
                         option-label="label"
                         option-value="value"
-                        :show-toggle-all="false"
-                        selected-items-label="{0} grades selected"
-                        data-cy="filter-by-grade"
+                        selected-items-label="{0} user types selected"
+                        :max-selected-labels="2"
+                        :options="userTypeOptions"
                       />
-                      <label for="ms-school-filter">Filter by Grade</label>
+                      <label>User types</label>
                     </PvFloatLabel>
                   </div>
                 </div>
@@ -192,22 +188,21 @@ import PvMultiSelect from 'primevue/multiselect';
 import PvSelectButton from 'primevue/selectbutton';
 import { useAuthStore } from '@/store/auth';
 import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
-import useAdministrationsStatsQuery from '@/composables/queries/useAdministrationsStatsQuery';
+import useAdministrationsStatsQuery from '@/firestore/queries/administrations/useAdministrationsStatsQuery';
 import useOrgQuery from '@/composables/queries/useOrgQuery';
-import useDistrictSchoolsQuery from '@/composables/queries/useDistrictSchoolsQuery';
 import useAdministrationAssignmentsQuery from '@/composables/queries/useAdministrationAssignmentsQuery';
 import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
 import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
 import { exportCsv } from '@/helpers/query/utils';
-import { taskDisplayNames, gradeOptions } from '@/helpers/reports';
+import { taskDisplayNames } from '@/helpers/reports';
 import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
-import { isLevante, getTooltip } from '@/helpers';
+import { isLevante, getTooltip, normalizeToLowercase } from '@/helpers';
 import { APP_ROUTES } from '@/constants/routes';
-import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import RoarDataTable from '@/components/RoarDataTable.vue';
-import { isEmpty } from 'lodash';
 import PvFloatLabel from 'primevue/floatlabel';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import PvInputText from 'primevue/inputtext';
+import _capitalize from 'lodash/capitalize';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -230,6 +225,9 @@ const props = defineProps({
 });
 
 const initialized = ref(false);
+const userTypeOptions = ref([]);
+const selectedUserTypes = ref([]);
+const searchInput = ref('');
 
 const { data: tasksDictionary, isLoading: isLoadingTasksDictionary } = useTasksDictionaryQuery({
   enabled: initialized,
@@ -243,13 +241,9 @@ const { data: administrationData, isLoading: isLoadingAdministration } = useAdmi
   },
 );
 
-const { data: adminStats, isLoading: isLoadingAdminStats } = useAdministrationsStatsQuery([props.administrationId], {
-  enabled: initialized,
-  select: (data) => data[0],
-});
-
-const { data: districtSchoolsData, isLoading: isLoadingDistrictSchools } = useDistrictSchoolsQuery(props.orgId, {
-  enabled: props.orgType === SINGULAR_ORG_TYPES.DISTRICTS && initialized,
+const { data: adminStats, isLoading: isLoadingAdministrationsStats } = useAdministrationsStatsQuery({
+  administrationIds: [props.administrationId],
+  queryOptions: { select: (data) => data[0] },
 });
 
 const { data: orgData, isLoading: isLoadingOrg } = useOrgQuery(props.orgType, [props.orgId], {
@@ -276,12 +270,14 @@ const creatorName = computed(() => {
 });
 
 const displayOrgType = computed(() => {
-  if (props.orgType === 'district') {
-    return 'Site';
-  } else if (props.orgType === 'group') {
-    return 'Cohort';
+  switch (props.orgType) {
+    case 'district':
+      return 'Site';
+    case 'group':
+      return 'Cohort';
+    default:
+      return _capitalize(props.orgType);
   }
-  return props.orgType;
 });
 
 const isLoading = computed(
@@ -290,8 +286,7 @@ const isLoading = computed(
     isLoadingAssignments.value ||
     isLoadingTasksDictionary.value ||
     isLoadingAdministration.value ||
-    isLoadingAdminStats.value ||
-    isLoadingDistrictSchools.value ||
+    isLoadingAdministrationsStats.value ||
     isLoadingOrg.value,
 );
 
@@ -487,6 +482,7 @@ const progressReportColumns = computed(() => {
       sort: true,
     });
   }
+
   return tableColumns;
 });
 
@@ -495,6 +491,13 @@ const filteredTableData = ref(computedProgressData.value);
 watch(computedProgressData, (newValue) => {
   // Update filteredTableData when computedProgressData changes
   filteredTableData.value = newValue;
+
+  userTypeOptions.value = Array.from(new Set(newValue?.map((item) => item?.user?.userType))).map((userType) => ({
+    label: _startCase(userType),
+    value: userType,
+  }));
+
+  selectedUserTypes.value = Array.from(new Set(newValue?.map((item) => item?.user?.userType)));
 });
 
 watch([filterSchools, filterGrades], ([newSchools, newGrades]) => {
@@ -515,6 +518,24 @@ watch([filterSchools, filterGrades], ([newSchools, newGrades]) => {
   } else {
     filteredTableData.value = computedProgressData.value;
   }
+});
+
+watch([searchInput, selectedUserTypes], ([newSearchInput, newSelectedUserTypes]) => {
+  let filteredData = computedProgressData.value;
+
+  if (newSearchInput) {
+    const normalizedSearchInput = normalizeToLowercase(newSearchInput);
+    filteredData = filteredData?.filter((data) => {
+      const normalizedUID = normalizeToLowercase(data?.user?.username);
+      return normalizedUID.includes(normalizedSearchInput);
+    });
+  }
+
+  if (newSelectedUserTypes) {
+    filteredData = filteredData?.filter((data) => newSelectedUserTypes.includes(data?.user?.userType));
+  }
+
+  filteredTableData.value = filteredData;
 });
 
 let unsubscribe;
@@ -624,5 +645,16 @@ onMounted(async () => {
 }
 .details-card {
   max-width: 100%;
+}
+
+.empty-user-list {
+  display: flex-column;
+  align-items: center;
+  width: 100%;
+  height: auto;
+  margin: 2rem 0 0;
+  padding: 1.5rem 0 0;
+  border-top: 1px solid var(--gray-100);
+  text-align: center;
 }
 </style>

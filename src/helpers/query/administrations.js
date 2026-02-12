@@ -22,39 +22,11 @@ export function getTitle(item, isSuperAdmin) {
   }
 }
 
-const processBatchStats = async (axiosInstance, statsPaths, batchSize = 5) => {
-  const batchStatsDocs = [];
-  const statsPathChunks = _chunk(statsPaths, batchSize);
-  for (const batch of statsPathChunks) {
-    const { data } = await axiosInstance.post(`${getBaseDocumentPath()}:batchGet`, {
-      documents: batch,
-    });
-
-    const processedBatch = _without(
-      data.map(({ found }) => {
-        if (found) {
-          return {
-            name: found.name,
-            data: _mapValues(found.fields, (value) => convertValues(value)),
-          };
-        }
-        return undefined;
-      }),
-      undefined,
-    );
-
-    batchStatsDocs.push(...processedBatch);
-  }
-
-  return batchStatsDocs;
-};
-
 // TODO: Remove this function. Fields that we want should be passed into the query, not filtered from the whole data of the document on the client side.
 // Netowrk call should be done in the query function, not here.
 const mapAdministrations = async (data) => {
   // First format the administration documents
   const administrationData = data
-    .map((a) => a.data)
     .map((a) => {
       let assignedOrgs = {
         districts: a.districts,
@@ -63,15 +35,37 @@ const mapAdministrations = async (data) => {
         groups: a.groups,
         families: a.families,
       };
+       // Convert dates to Date objects, handling both timestamp strings and Date objects
+      const convertToDate = (dateValue) => {
+        if (!dateValue) return null;
+        if (dateValue instanceof Date) return dateValue;
+
+
+         // If it's already a Date object, return it
+         if (dateValue instanceof Date) {
+          return isNaN(dateValue.getTime()) ? null : dateValue;
+        }
+        
+        // If it's a Firestore Timestamp object with toDate method
+        if (typeof dateValue === 'object' && typeof dateValue.toDate === 'function') {
+          return dateValue.toDate();
+        }
+        if (typeof dateValue === 'object' && typeof dateValue._seconds === 'number') {
+          const seconds = dateValue._seconds || 0;
+          const nanoseconds = dateValue._nanoseconds || 0;
+          return new Date(seconds * 1000 + nanoseconds / 1000000);
+        }
+        
+      };
 
       return {
         id: a.id,
         name: a.name,
         publicName: a.publicName,
         dates: {
-          start: a.dateOpened,
-          end: a.dateClosed,
-          created: a.dateCreated,
+          start: convertToDate(a.dateOpened),
+          end: convertToDate(a.dateClosed),
+          created: convertToDate(a.dateCreated),
         },
         assessments: a.assessments,
         assignedOrgs,
@@ -81,25 +75,7 @@ const mapAdministrations = async (data) => {
       };
     });
 
-  // Create a list of all the stats document paths we need to get
-  const statsPaths = data
-    // First filter out any missing administration documents
-    .filter((item) => item.name !== undefined)
-    // Then map to the total stats document
-    .map(({ name }) => `${name}/stats/total`);
-
-  const axiosInstance = getAxiosInstance();
-  const batchStatsDocs = await processBatchStats(axiosInstance, statsPaths);
-
-  const administrations = administrationData?.map((administration) => {
-    const thisAdminStats = batchStatsDocs.find((statsDoc) => statsDoc.name.includes(administration.id));
-    return {
-      ...administration,
-      stats: { total: thisAdminStats?.data },
-    };
-  });
-
-  return administrations;
+  return administrationData;
 };
 
 export const administrationPageFetcher = async (selectedDistrictId, fetchTestData = false, orderBy) => {
@@ -111,37 +87,10 @@ export const administrationPageFetcher = async (selectedDistrictId, fetchTestDat
 
   let orgs = [];
 
-  const administrationIds = await roarfirekit.value.getAdministrations({
+  const administrationData = await roarfirekit.value.getAdministrations({
     testData: toValue(fetchTestData),
+    idsOnly: false,
   });
-
-  const axiosInstance = getAxiosInstance();
-  const documents = administrationIds.map((id) => `${getBaseDocumentPath()}/administrations/${id}`);
-
-  let data = [];
-
-  try {
-    data = await axiosInstance.post(`${getBaseDocumentPath()}:batchGet`, { documents });
-  } catch (error) {
-    console.error('Error fetching administration data:', error);
-    return { sortedAdministrations: [], administrations: [] };
-  }
-
-  const administrationData = _without(
-    data.data.map(({ found }) => {
-      if (found) {
-        return {
-          name: found.name,
-          data: {
-            id: _last(found.name.split('/')),
-            ..._mapValues(found.fields, (value) => convertValues(value)),
-          },
-        };
-      }
-      return undefined;
-    }),
-    undefined,
-  );
 
   let administrations = await mapAdministrations(administrationData);
 
@@ -197,104 +146,39 @@ export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABAS
 
   let requestBody;
 
-  if (siteId.value === 'any') {
-    requestBody = {
-      structuredQuery: {
-        from: [{ collectionId: FIRESTORE_COLLECTIONS.USERS }],
-        where: {
-          fieldFilter: {
-            field: { fieldPath: 'userType' },
-            op: 'EQUAL',
-            value: { stringValue: AUTH_USER_TYPE.ADMIN },
-          },
-        },
+  // NOTE:
+  // Firestore `ARRAY_CONTAINS` on objects requires an exact match of the entire object.
+  // In PROD we have pre-existing admins whose `users.roles[]` entries may not include `siteName` (or may include
+  // a different/empty `siteName`), which makes exact-match queries brittle and can hide admins for a selected site.
+  //
+  // To keep this robust across old/new role shapes, we fetch all admin users and filter by `roles` client-side
+  // using only `siteId` + `role` (ignoring `siteName`).
+  requestBody = {
+    structuredQuery: {
+      from: [{ collectionId: FIRESTORE_COLLECTIONS.USERS }],
+      select: {
+        fields: [
+          { fieldPath: 'email' },
+          { fieldPath: 'name' },
+          { fieldPath: 'roles' },
+          { fieldPath: 'adminOrgs' },
+          { fieldPath: 'createdAt' },
+        ],
       },
-    };
-  } else {
-    const filters = [
-      {
+      where: {
         fieldFilter: {
-          field: { fieldPath: 'roles' },
-          op: 'ARRAY_CONTAINS',
-          value: {
-            mapValue: {
-              fields: {
-                siteId: { stringValue: 'any' },
-                role: { stringValue: ROLES.SUPER_ADMIN },
-              },
-            },
-          },
+          field: { fieldPath: 'userType' },
+          op: 'EQUAL',
+          value: { stringValue: AUTH_USER_TYPE.ADMIN },
         },
       },
-    ];
-
-    if (siteName) {
-      filters.push(
-        {
-          fieldFilter: {
-            field: { fieldPath: 'roles' },
-            op: 'ARRAY_CONTAINS',
-            value: {
-              mapValue: {
-                fields: {
-                  siteId: { stringValue: siteId.value },
-                  siteName: { stringValue: siteName.value },
-                  role: { stringValue: ROLES.ADMIN },
-                },
-              },
-            },
-          },
-        },
-        {
-          fieldFilter: {
-            field: { fieldPath: 'roles' },
-            op: 'ARRAY_CONTAINS',
-            value: {
-              mapValue: {
-                fields: {
-                  siteId: { stringValue: siteId.value },
-                  siteName: { stringValue: siteName.value },
-                  role: { stringValue: ROLES.SITE_ADMIN },
-                },
-              },
-            },
-          },
-        },
-        {
-          fieldFilter: {
-            field: { fieldPath: 'roles' },
-            op: 'ARRAY_CONTAINS',
-            value: {
-              mapValue: {
-                fields: {
-                  siteId: { stringValue: siteId.value },
-                  siteName: { stringValue: siteName.value },
-                  role: { stringValue: ROLES.RESEARCH_ASSISTANT },
-                },
-              },
-            },
-          },
-        },
-      );
-    }
-
-    requestBody = {
-      structuredQuery: {
-        from: [{ collectionId: FIRESTORE_COLLECTIONS.USERS }],
-        where: {
-          compositeFilter: {
-            op: 'OR',
-            filters,
-          },
-        },
-      },
-    };
-  }
+    },
+  };
 
   try {
     const response = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
 
-    return response.data
+    const admins = response.data
       .filter((user) => user.document)
       .map((user) => {
         const doc = user.document;
@@ -304,6 +188,26 @@ export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABAS
           ..._mapValues(doc.fields, (value) => convertValues(value)),
         };
       });
+
+    if (siteId.value === 'any') {
+      return admins;
+    }
+
+    const selectedSiteId = siteId.value;
+    const allowedSiteRoles = new Set([ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.RESEARCH_ASSISTANT]);
+
+    return admins.filter((admin) => {
+      const roles = Array.isArray(admin.roles) ? admin.roles : [];
+
+      return roles.some((r) => {
+        const rSiteId = r?.siteId;
+        const rRole = r?.role;
+        if (!rSiteId || !rRole) return false;
+
+        // Site-scoped roles: show admins assigned to the selected site regardless of siteName shape.
+        return rSiteId === selectedSiteId && allowedSiteRoles.has(rRole);
+      });
+    });
   } catch (error) {
     console.error('fetchAdminsBySite: Error fetching admins by siteId:', error);
     logger.error(error, { context: { function: 'fetchAdminsBySite', siteId, siteName } });

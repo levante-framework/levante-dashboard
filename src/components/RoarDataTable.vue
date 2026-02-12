@@ -11,11 +11,11 @@
         class="text-red-700 cursor-pointer options-toggle"
         @click.prevent="toggleControls"
       >
-        {{ showControls ? 'Hide Options' : 'Show Options' }}
+        {{ showOptions ? 'Hide Options' : 'Show Options' }}
       </button>
     </div>
     <div
-      v-if="showControls && shouldRenderToolbar"
+      v-if="showOptions && shouldRenderToolbar"
       class="w-full gap-1 pt-1 flex justify-content-center align-items-center flex-wrap mb-4"
     >
       <div
@@ -27,12 +27,14 @@
           <PvMultiSelect
             id="ms-columns"
             v-tooltip.top="getTooltip('Show and hide columns')"
-            :model-value="selectedColumns"
-            :options="inputColumns"
             option-label="header"
-            :max-selected-labels="3"
             class="w-2 w-10rem"
             selected-items-label="{0} columns selected"
+            filter
+            filter-placeholder="Search..."
+            :model-value="selectedColumns"
+            :options="inputColumns"
+            :max-selected-labels="3"
             @update:model-value="onColumnToggle"
           />
           <label for="ms-columns" class="view-label2">Select Columns</label>
@@ -112,6 +114,7 @@
           @row-unselect="onSelectionChange"
         >
           <PvColumn
+            v-if="props.allowRowSelection"
             selection-mode="multiple"
             header-style="background-color: var(--primary-color); border:none;"
             :reorderable-column="false"
@@ -450,7 +453,9 @@ const props = defineProps({
   allowFiltering: { type: Boolean, default: true },
   allowColumnSelection: { type: Boolean, default: true },
   showOptionsControl: { type: Boolean, default: true },
+  showOptions: { type: Boolean, default: false },
   rowClass: { type: Function, default: null },
+  allowRowSelection: { type: Boolean, default: true },
 });
 
 /*
@@ -476,14 +481,12 @@ Array of objects consisting of a field and header at minimum.
       scrolled left-to-right. It is suggested that this only be used on
       the leftmost column.
 */
-const shouldRenderToolbar = computed(
-  () => props.allowFiltering || props.allowColumnSelection || props.allowExport,
-);
+const shouldRenderToolbar = computed(() => props.allowFiltering || props.allowColumnSelection || props.allowExport);
 
-const showControls = ref(!props.showOptionsControl && shouldRenderToolbar.value);
+const showOptions = ref(props.showOptions && shouldRenderToolbar.value);
 const toggleControls = () => {
   if (!props.showOptionsControl || !shouldRenderToolbar.value) return;
-  showControls.value = !showControls.value;
+  showOptions.value = !showOptions.value;
 };
 const authStore = useAuthStore();
 const { currentSite } = storeToRefs(authStore);
@@ -659,13 +662,13 @@ function getRole(roles) {
 function getRoleTagSeverity(roles) {
   switch (getRole(roles)) {
     case ROLES.SUPER_ADMIN:
-        return 'danger';
+      return 'danger';
     case ROLES.SITE_ADMIN:
-        return 'info';
+      return 'info';
     case ROLES.ADMIN:
-        return 'success';
+      return 'success';
     case ROLES.RESEARCH_ASSISTANT:
-        return 'warn';
+      return 'warn';
     default:
       return null;
   }
@@ -674,11 +677,11 @@ function getRoleTagSeverity(roles) {
 function getRoleTagLabel(roles) {
   switch (getRole(roles)) {
     case ROLES.SUPER_ADMIN:
-        return 'Super Admin';
+      return 'Super Admin';
     case ROLES.SITE_ADMIN:
-        return 'Site Admin';
+      return 'Site Admin';
     case ROLES.ADMIN:
-        return 'Admin';
+      return 'Admin';
     case ROLES.RESEARCH_ASSISTANT:
       return 'Research Assistant';
     default:
@@ -785,6 +788,12 @@ g {
   color: white;
   padding: 5px;
   margin-left: 10px;
+}
+
+.p-datatable .p-datatable-thead > tr > th {
+  min-height: 3rem !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
 }
 
 .p-datatable .p-datatable-tbody > tr > td {

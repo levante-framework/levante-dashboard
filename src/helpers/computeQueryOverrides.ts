@@ -5,7 +5,7 @@ import type { UseQueryOptions, QueryKey } from '@tanstack/vue-query'; // Import 
 type Condition = MaybeRefOrGetter<boolean>;
 
 // Use a generic type for QueryOptions, assuming it at least might have 'enabled'
-type QueryOptionsWithEnabled = UseQueryOptions<any, Error, any, QueryKey> & {
+export type QueryOptionsWithEnabled = UseQueryOptions<any, Error, any, QueryKey> & {
   enabled?: Condition;
 };
 

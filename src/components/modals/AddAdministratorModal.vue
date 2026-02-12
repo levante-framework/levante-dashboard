@@ -145,9 +145,9 @@ const toast = useToast();
 
 const isEditMode = computed(() => Boolean(props?.data));
 const administratorName = computed(() => [props.data?.name?.first, props.data?.name?.middle, props.data?.name?.last].filter(Boolean).join(' ').trim());
-const modalTitle = computed(() => (isEditMode.value ? 'Update Administrator Roles' : 'Add Administrator'));
-const submitBtnLabel = computed(() => (isEditMode.value ? 'Update Administrator' : 'Add Administrator'));
-const submittingBtnLabel = computed(() => (isEditMode.value ? 'Updating Administrator' : 'Adding Administrator'));
+const modalTitle = computed(() => (isEditMode.value ? 'Update Researcher Roles' : 'Add Researcher'));
+const submitBtnLabel = computed(() => (isEditMode.value ? 'Update Researcher' : 'Add Researcher'));
+const submittingBtnLabel = computed(() => (isEditMode.value ? 'Updating Researcher' : 'Adding Researcher'));
 const roleOptions = computed(() => {
   // Always use 'create' permission - the question is "can I assign this role to someone?"
   // The edit button visibility already gates who we can edit (based on their current role)
@@ -310,7 +310,7 @@ async function submit() {
         toast.add({
           severity: 'success',
           summary: 'Success',
-          detail: 'Administrator account updated successfully',
+          detail: 'Researcher account updated successfully',
           life: TOAST_DEFAULT_LIFE_DURATION,
         });
 
@@ -328,7 +328,7 @@ async function submit() {
           life: TOAST_DEFAULT_LIFE_DURATION,
         });
 
-        console.error('Error updating administrator', error);
+        console.error('Error updating researcher', error);
       });
   }
 
@@ -340,7 +340,7 @@ async function submit() {
       toast.add({
         severity: 'success',
         summary: 'Success',
-        detail: 'Administrator account created successfully',
+        detail: 'Researcher account created successfully',
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
 
@@ -358,7 +358,7 @@ async function submit() {
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
 
-      console.error('Error creating administrator', error);
+      console.error('Error creating researcher', error);
     });
 }
 </script>

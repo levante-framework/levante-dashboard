@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/vue-query';
 import { orgFetchAll } from '@/helpers/query/orgs';
 import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
 import { ORG_TYPES } from '@/constants/orgTypes';
+import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
 
 export interface OrgItem {
   id: string;
@@ -41,6 +43,9 @@ const useOrgsTableQuery = (
   includeCreators = true,
   queryOptions?: { enabled?: boolean | Ref<boolean> | ComputedRef<boolean> },
 ) => {
+  const authStore = useAuthStore();
+  const { userData } = storeToRefs(authStore);
+
   const selectFields = computed<string[]>(() => {
     const orgType = activeOrgType.value;
     if (orgType === ORG_TYPES.GROUPS) {
@@ -59,7 +64,9 @@ const useOrgsTableQuery = (
         orderBy,
         selectFields.value,
         includeCreators,
+        userData.value.id,
       );
+
       return result as OrgItem[];
     },
     ...queryOptions,
