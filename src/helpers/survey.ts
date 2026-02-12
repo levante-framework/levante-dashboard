@@ -11,6 +11,7 @@ import type { ToastServiceMethods } from 'primevue/toastservice';
 import type { UseSurveyStore } from '@/store/survey';
 import type { useAssignmentsStore } from '@/store/assignments';
 import { LEVANTE_BUCKET_SURVEY_AUDIO, LEVANTE_BUCKET_URL } from '@/constants/bucket';
+import { findBestMatchingLocale } from '@/translations/i18n';
 
 export interface AudioLinkMap {
   [locale: string]: {
@@ -147,7 +148,7 @@ export const fetchAudioLinks = async (surveyType: string): Promise<AudioLinkMap>
 };
 
 export function getParsedLocale(locale: string | undefined | null): string {
-  return (locale || '').split('-')?.[0] || 'en';
+  return findBestMatchingLocale(locale);
 }
 
 function finishedLoading({
