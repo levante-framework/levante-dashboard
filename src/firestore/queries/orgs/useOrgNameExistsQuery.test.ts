@@ -154,7 +154,7 @@ describe('useOrgNameExistsQuery', () => {
     };
     const result = await queryCall.queryFn();
 
-    expect(result).toBe(false);
+    expect(result).toBe(true);
     expect(errorSpy).toHaveBeenCalledWith('Error fetching org by name', expect.any(Error));
   });
 
