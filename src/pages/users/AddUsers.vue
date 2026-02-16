@@ -29,6 +29,15 @@
         </div>
 
         <div v-if="isFileUploaded && !errorMissingColumns && !errorUsers.length">
+          <div v-if="hasMultipleSites" class="mt-3 mb-4 p-3 bg-yellow-100 border-1 border-yellow-300 border-round">
+            <div class="flex align-items-center gap-2">
+              <i class="pi pi-exclamation-triangle text-yellow-600"></i>
+              <span class="text-yellow-800 font-semibold">
+                Multiple sites detected. Users will only be created for the currently selected
+                site<template v-if="currentSiteName">: {{ currentSiteName }}</template>.
+              </span>
+            </div>
+          </div>
           <PvDataTable
             ref="dataTable"
             :value="rawUserFile"
@@ -132,18 +141,20 @@ import { useRouter } from 'vue-router';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { logger } from '@/logger';
 import { storeToRefs } from 'pinia';
+import { validateAddUsersFileUpload } from '@levante-framework/levante-zod';
 
 const authStore = useAuthStore();
-const { currentSite, currentSiteName, shouldUsePermissions } = storeToRefs(authStore);
+const { currentSite, currentSiteName } = storeToRefs(authStore);
 const { createUsers } = authStore;
 const toast = useToast();
 
-const isAllSitesSelected = computed(() => shouldUsePermissions.value && currentSite.value === 'any');
+const isAllSitesSelected = computed(() => currentSite.value === 'any');
 
 const isFileUploaded = ref(false);
 const uploadedFile = ref(null);
 const rawUserFile = ref({});
 const registeredUsers = ref([]);
+const hasMultipleSites = ref(false);
 
 // Primary Table & Dropdown refs
 const dataTable = ref();
@@ -185,7 +196,6 @@ const allFields = [
   },
 ];
 
-
 // Error Users Table refs
 const errorTable = ref();
 const errorUsers = ref([]);
@@ -213,7 +223,6 @@ watch(
 
 // Functions supporting the uploader
 const onFileUpload = async (event) => {
-  // Reset all error states and data
   uploadedFile.value = null;
   errorUsers.value = [];
   errorUserColumns.value = [];
@@ -221,25 +230,16 @@ const onFileUpload = async (event) => {
   errorMessage.value = '';
   errorTable.value = null;
   errorMissingColumns.value = false;
-  isFileUploaded.value = false; // Reset the file uploaded state
-  registeredUsers.value = []; // Clear any previously registered users
-  activeSubmit.value = false; // Reset the submit flag
+  isFileUploaded.value = false;
+  registeredUsers.value = [];
+  activeSubmit.value = false;
+  hasMultipleSites.value = false;
 
-  // Read the file. In case of multiple files, use the last one.
   const file = event.files[event.files.length - 1];
   uploadedFile.value = file;
 
-  // Parse the file directly with csvFileToJson
   const parsedData = await csvFileToJson(file);
 
-  parsedData.forEach((user) => {
-    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-    if (userTypeField && typeof user[userTypeField] === 'string') {
-      user[userTypeField] = user[userTypeField].trim();
-    }
-  });
-
-  // Check if there's any data
   if (!parsedData || parsedData.length === 0) {
     toast.add({
       severity: 'error',
@@ -250,173 +250,33 @@ const onFileUpload = async (event) => {
     return;
   }
 
-  // Store the parsed data
-  rawUserFile.value = parsedData;
+  const validation = validateAddUsersFileUpload(parsedData, !!currentSite.value);
 
-  // REGISTRATION
-  // Required: userType
-  // Conditional (child): Month, Year
-  // Conditional (Either): Cohort OR Site + School
-
-  // Get all column names from the first row, case-insensitive check for userType
-  const firstRow = toRaw(rawUserFile.value[0]);
-  const allColumns = Object.keys(firstRow).map((col) => col.toLowerCase());
-
-  // Check if userType column exists (case-insensitive)
-  const hasUserType = allColumns.includes('usertype');
-  if (!hasUserType) {
+  if (validation.headerErrors && validation.headerErrors.length > 0) {
+    const missingHeaders = validation.headerErrors.map((e) => e.field).join(', ');
     toast.add({
       severity: 'error',
       summary: 'Error: Missing Column',
-      detail: 'Missing required column(s): userType',
+      detail: `Missing required column(s): ${missingHeaders}`,
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     errorMissingColumns.value = true;
     return;
   }
 
-  // Check conditional columns are present
-  const hasChild = rawUserFile.value.some((user) => {
-    const userTypeValue = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-    return userTypeValue && user[userTypeValue].toLowerCase() === 'child';
-  });
+  rawUserFile.value = validation.data;
+  hasMultipleSites.value = validation.hasMultipleSites;
 
-  // If we have child users, they MUST have month and year
-  if (hasChild) {
-    const hasMonth = allColumns.includes('month');
-    const hasYear = allColumns.includes('year');
-    if (!hasMonth || !hasYear) {
-      toast.add({
-        severity: 'error',
-        summary: 'Error: Missing Column',
-        detail: 'Missing required column(s): Month or Year',
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
-      errorMissingColumns.value = true;
-      return;
-    }
-  }
-
-  // Conditional (Either): Cohort OR Site + School
-  const hasCohort = allColumns.includes('cohort');
-  const hasSchool = allColumns.includes('school');
-  if (!hasCohort && !hasSchool) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Missing Column',
-      detail: 'Missing required column(s): Cohort OR School',
-      life: TOAST_DEFAULT_LIFE_DURATION,
+  if (validation.errors.length > 0) {
+    validation.errors.forEach(({ user, error }) => {
+      addErrorUser(user, error);
     });
-    return;
-  }
-
-  // Check required fields are not empty
-  const childRequiredInfo = ['usertype', 'month', 'year'];
-  const careGiverRequiredInfo = ['usertype'];
-
-  rawUserFile.value.forEach((user) => {
-    const missingFields = [];
-    const invalidFields = []; // Store fields with invalid format/value
-
-    // Get the actual userType field name (preserving original case)
-    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-    const userTypeValue = userTypeField ? user[userTypeField]?.toLowerCase() : null;
-
-    // --- Field Presence Checks ---
-    if (!userTypeField || !userTypeValue) {
-      missingFields.push('userType');
-    } else {
-      // --- Field Value/Format Validation ---
-      const validUserTypes = ['child', 'teacher', 'caregiver'];
-      if (!validUserTypes.includes(userTypeValue)) {
-        invalidFields.push(`userType must be one of: ${validUserTypes.join(', ')}`);
-      }
-
-      // --- Child Specific Checks ---
-      if (userTypeValue === 'child') {
-        // Check required fields for child
-        childRequiredInfo.forEach((requiredField) => {
-          const actualField = Object.keys(user).find((key) => key.toLowerCase() === requiredField);
-          if (!actualField || !user[actualField]) {
-            missingFields.push(requiredField === 'usertype' ? 'userType' : requiredField);
-          } else {
-            // Validate month and year format if present
-            if (requiredField === 'month') {
-              const monthField = Object.keys(user).find((key) => key.toLowerCase() === 'month');
-              const monthValue = monthField ? parseInt(user[monthField], 10) : NaN;
-              if (isNaN(monthValue) || monthValue < 1 || monthValue > 12) {
-                invalidFields.push('month must be a number between 1 and 12');
-              }
-            }
-            if (requiredField === 'year') {
-              const yearField = Object.keys(user).find((key) => key.toLowerCase() === 'year');
-              const yearValue = yearField ? user[yearField] : '';
-              if (!/^\d{4}$/.test(yearValue)) {
-                // Check if it's exactly 4 digits
-                invalidFields.push('year must be a four-digit number');
-              }
-            }
-          }
-        });
-      } else if (userTypeValue === 'caregiver' || userTypeValue === 'teacher') {
-        // Check required fields for caregiver/teacher
-        careGiverRequiredInfo.forEach((requiredField) => {
-          const actualField = Object.keys(user).find((key) => key.toLowerCase() === requiredField);
-          if (!actualField || !user[actualField]) {
-            missingFields.push(requiredField === 'usertype' ? 'userType' : requiredField);
-          }
-        });
-      }
-    }
-
-    // --- Org Presence Checks (Cohort OR Site+School) ---
-    const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
-    const schoolField = Object.keys(user).find((key) => key.toLowerCase() === 'school');
-
-    // Parse and check if arrays are non-empty after splitting and trimming
-    const hasCohort =
-      cohortField &&
-      user[cohortField] &&
-      user[cohortField]
-        .split(',')
-        .map((s) => s.trim())
-        .filter((s) => s).length > 0;
-
-    const hasSchool =
-      schoolField &&
-      user[schoolField] &&
-      user[schoolField]
-        .split(',')
-        .map((s) => s.trim())
-        .filter((s) => s).length > 0;
-
-    if (!hasCohort && !hasSchool) {
-      missingFields.push('Cohort OR School');
-    }
-
-    // --- Aggregate Errors and Add User to Error List if Needed ---
-    let errorMessages = [];
-    if (missingFields.length > 0) {
-      errorMessages.push(`Missing Field(s): ${missingFields.join(', ')}`);
-    }
-    if (invalidFields.length > 0) {
-      errorMessages.push(`Invalid Field(s): ${invalidFields.join('; ')}`);
-    }
-
-    if (errorMessages.length > 0) {
-      addErrorUser(user, errorMessages.join('. '));
-    }
-  });
-
-  // --- Post-Loop Error Handling & Success Notification ---
-  if (errorUsers.value.length) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Errors. See below for details.', // Updated summary
+      summary: 'Validation Errors. See below for details.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   } else {
-    // Only set isFileUploaded to true if there are NO errors at all
     isFileUploaded.value = true;
     errorMissingColumns.value = false;
     showErrorTable.value = false;
@@ -489,15 +349,39 @@ async function submitUsers() {
     return;
   }
 
+  const siteName = currentSiteName.value;
+
+  if (!siteName || isAllSitesSelected.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Cannot Submit',
+      detail: 'Please select a specific site before adding users',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    activeSubmit.value = false;
+    return;
+  }
+
+  let selectedSiteId;
+  try {
+    selectedSiteId = await getOrgId('districts', siteName, ref(undefined), ref(undefined));
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Invalid Site',
+      detail: error.message,
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    activeSubmit.value = false;
+    return;
+  }
+
   for (const { user, index } of usersToBeRegistered) {
     try {
       // Find fields case-insensitively
       const schoolField = Object.keys(user).find((key) => key.toLowerCase() === 'school');
       const classField = Object.keys(user).find((key) => key.toLowerCase() === 'class');
       const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
-
-      // Get values using the actual field names and parse as comma-separated arrays
-      const sites = [currentSiteName.value];
 
       const schools = schoolField
         ? user[schoolField]
@@ -520,34 +404,7 @@ async function submitUsers() {
             .filter((s) => s)
         : [];
 
-      // At least, one site is required for every user
-      if (sites.length <= 0) {
-        toast.add({
-          severity: 'error',
-          summary: 'Required field missing',
-          detail: 'At least, one site is required for every user.',
-          life: TOAST_DEFAULT_LIFE_DURATION,
-        });
-
-        activeSubmit.value = false;
-        return;
-      }
-
-      // At least, one school or cohort is required for every user
-      if (schools.length <= 0 && cohorts.length <= 0) {
-        toast.add({
-          severity: 'error',
-          summary: 'Required field missing',
-          detail: 'At least, one school or cohort is required for every user.',
-          life: TOAST_DEFAULT_LIFE_DURATION,
-        });
-
-        activeSubmit.value = false;
-        return;
-      }
-
       const orgNameMap = {
-        site: sites,
         school: schools,
         class: classes,
         cohort: cohorts,
@@ -557,7 +414,7 @@ async function submitUsers() {
       // Only groups are allowed to be an array however, we've only been using one group per user.
       // TODO: Figure out if we want to allow multiple orgs
       const orgInfo = {
-        sites: [],
+        sites: [selectedSiteId],
         schools: [],
         classes: [],
         cohorts: [],
@@ -570,64 +427,44 @@ async function submitUsers() {
         if (orgNames && orgNames.length > 0) {
           try {
             if (orgType === 'school') {
-              // Need a site for schools - try each school with each site
-              if (sites.length === 0) {
+              // Need a site for schools - try each school in the selected site
+              if (!selectedSiteId) {
                 throw new Error('Schools specified but no site provided');
               }
               for (const schoolName of orgNames) {
-                let schoolFound = false;
-                for (const siteName of sites) {
-                  try {
-                    const siteId = await getOrgId('districts', siteName);
-                    const schoolId = await getOrgId(
-                      pluralizeFirestoreCollection(orgType),
-                      schoolName,
-                      ref({ id: siteId }),
-                      ref(undefined),
-                    );
-                    orgInfo.schools.push(schoolId);
-                    schoolFound = true;
-                    break; // Found valid parent, move to next school
-                  } catch (error) {
-                    console.error('Error getting school ID: ', error);
-                    // Try next site
-                    continue;
-                  }
-                }
-                if (!schoolFound) {
-                  throw new Error(`School '${schoolName}' not found in any of the specified sites`);
-                }
+                const schoolId = await getOrgId(
+                  pluralizeFirestoreCollection(orgType),
+                  schoolName,
+                  ref({ id: selectedSiteId }),
+                  ref(undefined),
+                );
+                orgInfo.schools.push(schoolId);
               }
             } else if (orgType === 'class') {
-              // Need site and school for classes - try each class with each site/school combination
-              if (sites.length === 0 || schools.length === 0) {
-                throw new Error('Classes specified but no site or school provided');
+              // Need site and school for classes - try each class with each school in the selected site
+              if (!selectedSiteId || schools.length === 0) {
+                throw new Error('Classes must be within schools. Classes specified but no school provided');
               }
               for (const className of orgNames) {
                 let classFound = false;
-                for (const siteName of sites) {
-                  for (const schoolName of schools) {
-                    try {
-                      const siteId = await getOrgId('districts', siteName);
-                      const schoolId = await getOrgId('schools', schoolName, ref({ id: siteId }), ref(undefined));
-                      const classId = await getOrgId(
-                        pluralizeFirestoreCollection(orgType),
-                        className,
-                        ref({ id: siteId }),
-                        ref({ id: schoolId }),
-                      );
-                      orgInfo.classes.push(classId);
-                      classFound = true;
-                      break; // Found valid parent, move to next class
-                    } catch (error) {
-                      // Try next site/school combination
-                      continue;
-                    }
+                for (const schoolName of schools) {
+                  try {
+                    const schoolId = await getOrgId('schools', schoolName, ref({ id: selectedSiteId }), ref(undefined));
+                    const classId = await getOrgId(
+                      pluralizeFirestoreCollection(orgType),
+                      className,
+                      ref({ id: selectedSiteId }),
+                      ref({ id: schoolId }),
+                    );
+                    orgInfo.classes.push(classId);
+                    classFound = true;
+                    break;
+                  } catch {
+                    continue;
                   }
-                  if (classFound) break; // Break out of site loop if class was found
                 }
                 if (!classFound) {
-                  throw new Error(`Class '${className}' not found in any of the specified site/school combinations`);
+                  throw new Error(`Class '${className}' not found in the selected school(s)`);
                 }
               }
             } else if (orgType === 'cohort') {
@@ -639,16 +476,6 @@ async function submitUsers() {
                   ref(undefined),
                 );
                 orgInfo.cohorts.push(cohortId);
-              }
-            } else if (orgType === 'site') {
-              for (const siteName of orgNames) {
-                const siteId = await getOrgId(
-                  pluralizeFirestoreCollection('districts'),
-                  siteName,
-                  ref(undefined),
-                  ref(undefined),
-                );
-                orgInfo.sites.push(siteId);
               }
             }
           } catch (error) {
@@ -708,13 +535,9 @@ async function submitUsers() {
     activeSubmit.value = false;
     return;
   }
-
   // TODO: Figure out deadline-exceeded error with 700+ users. (Registration works fine, creates all documents but the client recieves the error)
   const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 700);
 
-  // Begin submit process
-  // Org must be created before users can be created
-  let processedUserCount = 0;
   for (const users of chunkedUsersToBeRegistered) {
     try {
       // Ensure each user has the proper userType field name for the backend
@@ -743,7 +566,17 @@ async function submitUsers() {
         return processedUser;
       });
 
-      const res = await createUsers({users: processedUsers, siteId: currentSite.value});
+      const createUsersPayload = {
+        users: processedUsers,
+      };
+
+      if (currentSite.value && currentSite.value !== 'any') {
+        createUsersPayload.siteId = currentSite.value;
+      } else if (processedUsers.length > 0 && processedUsers[0].orgIds?.districts?.length > 0) {
+        createUsersPayload.siteId = processedUsers[0].orgIds.districts[0];
+      }
+
+      const res = await createUsers(createUsersPayload);
       logger.capture('Admin: Add Users', { processedUsers });
       const currentRegisteredUsers = res.data.data;
 
@@ -763,8 +596,6 @@ async function submitUsers() {
 
       registeredUsers.value.push(...currentRegisteredUsers);
 
-      // Update the count of processed users
-      processedUserCount += currentRegisteredUsers.length;
       toast.add({
         severity: 'success',
         summary: 'User Creation Successful',
@@ -841,6 +672,25 @@ function downloadCSV() {
 }
 
 function addErrorUser(user, error) {
+  // Check if this user is already in the error list
+  const userKey = JSON.stringify(user);
+  const alreadyExists = errorUsers.value.some((errUser) => {
+    const errUserKey = JSON.stringify({ ...errUser, error: undefined });
+    return errUserKey === userKey;
+  });
+
+  if (alreadyExists) {
+    // Update existing error message
+    const existingIndex = errorUsers.value.findIndex((errUser) => {
+      const errUserKey = JSON.stringify({ ...errUser, error: undefined });
+      return errUserKey === userKey;
+    });
+    if (existingIndex >= 0) {
+      errorUsers.value[existingIndex].error += `; ${error}`;
+    }
+    return;
+  }
+
   // If there are no error users yet, generate the
   //  columns before displaying the table.
   if (_isEmpty(errorUserColumns.value)) {
@@ -892,13 +742,14 @@ const orgIds = {
  */
 const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentSchool = ref(null)) => {
   const normalizedOrgName = normalizeToLowercase(orgName);
-  
+
   // For schools and classes, include parent IDs in cache key to avoid cross-site conflicts
   const parentDistrictId = parentDistrict?.value?.id || null;
   const parentSchoolId = parentSchool?.value?.id || null;
-  const cacheKey = parentDistrictId || parentSchoolId 
-    ? `${normalizedOrgName}__${parentDistrictId || ''}__${parentSchoolId || ''}` 
-    : normalizedOrgName;
+  const cacheKey =
+    parentDistrictId || parentSchoolId
+      ? `${normalizedOrgName}__${parentDistrictId || ''}__${parentSchoolId || ''}`
+      : normalizedOrgName;
 
   if (orgIds[orgType][cacheKey]) return orgIds[orgType][cacheKey];
 
