@@ -19,6 +19,11 @@ interface OrgNameExistsParams extends UseOrgNameExistsQueryParams {
 }
 
 const orgNameExists = async ({ districtId, orgName, orgType }: OrgNameExistsParams) => {
+  if (toValue(districtId) === 'any') {
+    console.error('Please select a site');
+    return true; // Returning "true" will prevent the org creation
+  }
+
   const normalizedOrgName = normalizeToLowercase(toValue(orgName));
   const axios = getAxiosInstance();
   const documentPath = getBaseDocumentPath();
@@ -92,8 +97,7 @@ const orgNameExists = async ({ districtId, orgName, orgType }: OrgNameExistsPara
     return Array.isArray(mappedData) && mappedData?.length > 0;
   } catch (error) {
     console.error('Error fetching org by name', error);
-    // If something fails, "true" will prevent the org creation
-    return true;
+    return true; // Returning "true" will prevent the org creation
   }
 };
 
