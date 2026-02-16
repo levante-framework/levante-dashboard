@@ -92,7 +92,8 @@ const orgNameExists = async ({ districtId, orgName, orgType }: OrgNameExistsPara
     return Array.isArray(mappedData) && mappedData?.length > 0;
   } catch (error) {
     console.error('Error fetching org by name', error);
-    return false;
+    // If something fails, "true" will prevent the org creation
+    return true;
   }
 };
 
