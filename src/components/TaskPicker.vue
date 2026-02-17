@@ -354,7 +354,7 @@ watch(
     if (!newVariants) return;
     // @TODO: Fix this as it's not working as expected. When updating the data set in the parent component, the data is
     // added twice to the selectedVariants array, despite the _union call.
-    selectedVariants.value = _union(selectedVariants.value, newVariants);
+    selectedVariants.value = _cloneDeep(newVariants ?? []);
 
     // Update the conditions for the variants that were pre-existing
     selectedVariants.value = selectedVariants.value.map((variant) => {

@@ -33,8 +33,10 @@
             <div class="flex align-items-center gap-2">
               <i class="pi pi-exclamation-triangle text-yellow-600"></i>
               <span class="text-yellow-800 font-semibold">
-                Multiple sites detected. Users will only be created for the currently selected
-                site<template v-if="currentSiteName">: {{ currentSiteName }}</template>.
+                Multiple sites detected. Users will only be created for the currently selected site<template
+                  v-if="currentSiteName"
+                  >: {{ currentSiteName }}</template
+                >.
               </span>
             </div>
           </div>
@@ -142,7 +144,11 @@ import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { logger } from '@/logger';
 import { storeToRefs } from 'pinia';
 import { validateAddUsersFileUpload } from '@levante-framework/levante-zod';
+import { useLevanteStore } from '@/store/levante';
 
+const levanteStore = useLevanteStore();
+const { hasUserConfirmed } = storeToRefs(levanteStore);
+const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const authStore = useAuthStore();
 const { currentSite, currentSiteName } = storeToRefs(authStore);
 const { createUsers } = authStore;
@@ -221,8 +227,7 @@ watch(
   { deep: true },
 );
 
-// Functions supporting the uploader
-const onFileUpload = async (event) => {
+const resetUserProgress = () => {
   uploadedFile.value = null;
   errorUsers.value = [];
   errorUserColumns.value = [];
@@ -235,6 +240,16 @@ const onFileUpload = async (event) => {
   activeSubmit.value = false;
   hasMultipleSites.value = false;
 
+  // Reset user confirmation
+  setHasUserConfirmed(false);
+};
+
+// Functions supporting the uploader
+const onFileUpload = async (event) => {
+  // Reset all error states and data
+  resetUserProgress();
+
+  // Read the file. In case of multiple files, use the last one.
   const file = event.files[event.files.length - 1];
   uploadedFile.value = file;
 
@@ -286,6 +301,9 @@ const onFileUpload = async (event) => {
       detail: 'File Successfully Uploaded',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
+
+    // Wait for user confirmation before changing the selected site
+    setShouldUserConfirm(true);
   }
 };
 
@@ -770,6 +788,10 @@ const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentScho
 
   return orgs[0].id;
 };
+
+watch(hasUserConfirmed, (userConfirmed) => {
+  if (userConfirmed) resetUserProgress();
+});
 </script>
 
 <style lang="scss" scoped>
