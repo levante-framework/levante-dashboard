@@ -27,3 +27,14 @@ What types of changes does this pull request introduce?
 ## Additional Notes
 
 <!-- List any additional information that may be helpful to review or know about this change -->
+
+## Data Contract Change Checklist
+
+<!-- Required when changing data model, keys/cardinality, or downstream exports -->
+
+- [ ] I reviewed `docs/DATA_CONTRACT_CHANGE_CHECKLIST.md`.
+- [ ] This PR does **not** change Firestore path/key/cardinality contracts; OR I documented the impact below.
+- [ ] I attached evidence for upstream/downstream contract validation runs.
+- [ ] If keys/cardinality changed, I linked a migration/backfill plan.
+
+Contract impact notes and evidence links:

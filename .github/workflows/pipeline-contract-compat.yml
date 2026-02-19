@@ -1,0 +1,75 @@
+name: Pipeline Contract Compatibility
+
+on:
+  schedule:
+    - cron: '15 5 * * *'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  contract-compatibility:
+    if: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'pipeline-contract-check') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout dashboard
+        uses: actions/checkout@v4
+        with:
+          path: levante-dashboard
+
+      - name: Checkout platform contracts
+        uses: actions/checkout@v4
+        with:
+          repository: levante-framework/levante-platform
+          path: levante-platform
+
+      - name: Checkout firebase functions
+        uses: actions/checkout@v4
+        with:
+          repository: levante-framework/levante-firebase-functions
+          path: levante-firebase-functions
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: levante-firebase-functions/package-lock.json
+
+      - name: Install firebase-functions dependencies
+        working-directory: levante-firebase-functions
+        run: npm ci
+
+      - name: Validate upstream contract invariants
+        working-directory: levante-firebase-functions
+        env:
+          PIPELINE_CONTRACT_PATH: ${{ github.workspace }}/levante-platform/schema_tools/PIPELINE_DATA_CONTRACT.json
+        run: |
+          npm run contract:check
+          npx vitest run "__tests__/save-survey-results.contract.test.ts"
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+
+      - name: Install R dependencies for fixture checks
+        run: |
+          Rscript -e "install.packages(c('dplyr','here','jsonlite','readr','tibble'), repos='https://cloud.r-project.org')"
+
+      - name: Validate pilots fixture compatibility (stages 01-04)
+        working-directory: levante-platform
+        env:
+          PIPELINE_CONTRACT_PATH: ${{ github.workspace }}/levante-platform/schema_tools/PIPELINE_DATA_CONTRACT.json
+        run: |
+          Rscript schema_tools/pipeline-contract/validate_fixture_contracts.R
+          Rscript schema_tools/pipeline-contract/validate_stage02_contracts.R
+          Rscript schema_tools/pipeline-contract/validate_stage03_contracts.R
+          Rscript schema_tools/pipeline-contract/validate_stage03_explore_contracts.R
+          Rscript schema_tools/pipeline-contract/validate_stage04_papers_contracts.R
+          Rscript schema_tools/pipeline-contract/validate_pipeline_boundaries.R
