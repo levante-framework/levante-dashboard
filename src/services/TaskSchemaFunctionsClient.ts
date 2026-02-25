@@ -22,7 +22,6 @@ interface UpsertTaskSchemaResult {
 function pickLatestSchema(result: TaskSchemaResultItem[]): TaskSchemaResultItem | null {
   if (!result?.length) return null;
   const first = result[0] as TaskSchemaResultItem;
-  console.log('mark://pickLatestSchema', first);
   return result.reduce<TaskSchemaResultItem>(
     (latest, item) => (item.version > latest.version ? item : latest),
     first,

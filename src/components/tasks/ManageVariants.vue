@@ -325,13 +325,23 @@
             !schemaForUpdateTask &&
             !isSchemaLoading
           "
-          class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-red-500"
+          class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-blue-500 flex-wrap"
         >
-          <i class="pi pi-exclamation-triangle text-red-600" />
-          <span class="text-red-800">
-            No schema exists for this task's game params. Create a schema in the <strong>Schemas</strong> tab to
-            validate and edit game params.
+          <i class="pi pi-info-circle text-blue-600 flex-shrink-0" />
+          <span class="text-blue-800 flex-grow-1">
+            No schema exists for this task yet. Create a schema from the current config below; it will be saved and
+            the variant will get the new schema version.
           </span>
+          <PvButton
+            label="Create schema from current config"
+            icon="pi pi-plus"
+            severity="secondary"
+            size="small"
+            :loading="isSyncingSchemaFromConfig"
+            :disabled="isSyncingSchemaFromConfig"
+            class="flex-shrink-0"
+            @click="syncSchemaFromCurrentConfig"
+          />
         </div>
         <div class="flex flex-column w-full">
           <label for="fieldsOutput">
@@ -348,7 +358,7 @@
                 </label>
                 <PvInputText id="inputEditVariantType" :placeholder="typeof value" disabled class="w-2 text-center" />
                 <PvInputText
-                  v-if="typeof value === 'string'"
+                  v-if="typeof value === 'string' || value === null"
                   v-model="updatedVariantData[key]"
                   :placeholder="value"
                   class="flex-grow-1"
@@ -446,7 +456,7 @@
           </div>
         </div>
 
-        <div v-if="selectedVariant.params" class="flex flex-column w-full">
+        <div v-if="updateVariantParamList.length > 0" class="flex flex-column w-full">
           <label for="paramsOutput">
             <strong>Game Params</strong>
             <span v-if="schemaForUpdateTask?.paramDefinitions" class="text-sm text-gray-500 ml-2">
@@ -476,80 +486,55 @@
               @click="syncSchemaFromCurrentConfig"
             />
           </div>
-          <div v-for="(param, paramName) in selectedVariant.params" id="paramsOutput" :key="paramName" class="mb-1">
+          <div
+            v-for="item in updateVariantParamList"
+            id="paramsOutput"
+            :key="item.paramName"
+            class="mb-1"
+          >
             <div
-              v-if="updatedVariantData.params[paramName] !== undefined"
               class="flex align-items-center justify-content-end column-gap-2 p-2 border-round border-1"
               :class="
-                schemaForUpdateTask?.paramDefinitions && !schemaForUpdateTask.paramDefinitions[paramName]
+                schemaForUpdateTask?.paramDefinitions && !item.isInSchema
                   ? 'border-red-500 bg-red-50'
                   : 'border-transparent'
               "
             >
-              <label :for="paramName" class="w-2">
-                <em :class="{ 'text-red-600': schemaForUpdateTask?.paramDefinitions && !schemaForUpdateTask.paramDefinitions[paramName] }">
-                  {{ paramName }}
-                  <span v-if="schemaForUpdateTask?.paramDefinitions?.[paramName]?.required" class="text-red-500">*</span>
+              <label :for="item.paramName" class="w-2">
+                <em :class="{ 'text-red-600': schemaForUpdateTask?.paramDefinitions && !item.isInSchema }">
+                  {{ item.paramName }}
+                  <span v-if="item.isRequired" class="text-red-500">*</span>
                 </em>
               </label>
               <PvInputText
-                :id="`inputEditParamType-${paramName}`"
+                :id="`inputEditParamType-${item.paramName}`"
                 class="w-2"
                 disabled
-                :value="schemaForUpdateTask?.paramDefinitions?.[paramName]?.type ?? typeof param"
+                :value="item.type"
               />
               <PvInputText
-                v-if="typeof param === 'string'"
-                v-model="updatedVariantData.params[paramName]"
-                :placeholder="param"
+                v-if="item.type === 'string'"
+                v-model="updatedVariantData.params[item.paramName]"
+                placeholder="Value"
                 class="flex-grow-1"
               />
               <PvInputNumber
-                v-else-if="typeof param === 'number'"
-                v-model="updatedVariantData.params[paramName]"
+                v-else-if="item.type === 'number'"
+                v-model="updatedVariantData.params[item.paramName]"
                 class="flex-grow-1"
               />
               <PvDropdown
-                v-else-if="typeof param === 'boolean'"
-                v-model="updatedVariantData.params[paramName]"
+                v-else-if="item.type === 'boolean'"
+                v-model="updatedVariantData.params[item.paramName]"
                 :options="booleanDropDownOptions"
                 option-label="label"
                 option-value="value"
                 class="flex-grow-1"
               />
-              <PvButton type="button" @click="deleteParam(paramName)">Delete</PvButton>
-            </div>
-          </div>
-          <div v-if="addedParams.length > 0">
-            <div v-for="(field, index) in addedParams" :key="index" class="flex align-items-center column-gap-2 mb-1">
-              <PvInputText v-model="field.name" placeholder="Field Name" />
-              <PvDropdown v-model="field.type" :options="['string', 'number', 'boolean']" placeholder="Field Type" />
-              <PvInputText
-                v-if="field.type === 'string'"
-                v-model="field.value"
-                placeholder="Field Value"
-                class="flex-grow-1"
-              />
-              <PvInputNumber
-                v-if="field.type === 'number'"
-                v-model="field.value"
-                placeholder="Field Value"
-                class="flex-grow-1"
-              />
-              <PvDropdown
-                v-if="field.type === 'boolean'"
-                v-model="field.value"
-                placeholder="Field Value"
-                :options="booleanDropDownOptions"
-                option-label="label"
-                option-value="value"
-                class="flex-grow-1"
-              />
-              <PvButton type="button" @click="removeField(field.name, addedParams)">Delete</PvButton>
+              <PvButton type="button" @click="deleteParam(item.paramName)">Delete</PvButton>
             </div>
           </div>
         </div>
-        <PvButton label="Add Param" text icon="pi pi-plus" class="my-4" @click="addParam" />
       </section>
 
       <section class="flex flex-column gap-3 mt-4">
@@ -608,8 +593,6 @@ let updatedVariantData = reactive(cloneDeep(selectedVariant.value));
 let addedFields = reactive([]);
 
 // Array of objects which models the new params added to the variant
-// This array of objects is later converted back into an object and spread into the updatedVariantData object
-let addedParams = reactive([]);
 // Array of objects which models the new params added to the variant to be created
 // This array of objects is later converted back into an object and spread into the variantParams object
 
@@ -660,6 +643,14 @@ const languageDropdownOptions = computed(() => {
 
 watch(selectedVariant, (newVal) => {
   updatedVariantData = reactive(cloneDeep(newVal));
+  deletedUpdateParamNames.value = new Set();
+  if (updatedVariantData.params && typeof updatedVariantData.params === 'object') {
+    for (const k of Object.keys(updatedVariantData.params)) {
+      if (updatedVariantData.params[k] == null) {
+        updatedVariantData.params[k] = '';
+      }
+    }
+  }
 });
 
 let unsubscribe;
@@ -721,11 +712,60 @@ const { schema: schemaForUpdateTask } = useTaskSchemasQuery(
   { enabled: computed(() => initialized.value) },
 );
 
+watch(
+  () => [selectedVariant.value, schemaForUpdateTask.value],
+  () => {
+    const schema = schemaForUpdateTask.value;
+    if (!schema?.paramDefinitions || !selectedVariant.value || !updatedVariantData) return;
+    if (!updatedVariantData.params || typeof updatedVariantData.params !== 'object') {
+      updatedVariantData.params = {};
+    }
+    for (const [key, def] of Object.entries(schema.paramDefinitions)) {
+      if (updatedVariantData.params[key] === undefined) {
+        const defaultVal =
+          def.type === 'number' ? 0 : def.type === 'boolean' ? false : '';
+        updatedVariantData.params[key] = defaultVal;
+      }
+    }
+  },
+  { immediate: true },
+);
+
 const hasParamsNotInSchema = computed(() => {
   const schema = schemaForUpdateTask.value;
-  const params = selectedVariant.value?.params;
+  const params = updatedVariantData.params;
   if (!schema?.paramDefinitions || !params || typeof params !== 'object') return false;
   return Object.keys(params).some((key) => !(key in schema.paramDefinitions));
+});
+
+const deletedUpdateParamNames = ref(new Set());
+
+const updateVariantParamList = computed(() => {
+  const schema = schemaForUpdateTask.value;
+  const paramDefs = schema?.paramDefinitions ?? {};
+  const configParams = updatedVariantData.params ?? {};
+  const schemaKeys = Object.keys(paramDefs);
+  const configKeys = Object.keys(configParams).filter(
+    (k) =>
+      configParams[k] == null || ['string', 'number', 'boolean'].includes(typeof configParams[k]),
+  );
+  const allKeys = [...new Set([...schemaKeys, ...configKeys])];
+  const deleted = deletedUpdateParamNames.value;
+  return allKeys
+    .filter((paramName) => !deleted.has(paramName))
+    .map((paramName) => {
+      const def = paramDefs[paramName];
+      const configVal = configParams[paramName];
+      const type =
+        def?.type ??
+        (configVal == null ? 'string' : typeof configVal === 'object' ? 'string' : typeof configVal);
+      return {
+        paramName,
+        type: type === 'object' ? 'string' : type,
+        isInSchema: !!def,
+        isRequired: !!def?.required,
+      };
+    });
 });
 
 // Validation rules for variantFields
@@ -808,12 +848,14 @@ const moveToDeletedParams = (paramName) => {
   delete createVariantParamsValues[paramName];
 };
 
-// Delete the param from the updatedVariantData object when updating a variant
-const deleteParam = (param) => {
-  if (updatedVariantData['params'][param] !== undefined) {
-    delete updatedVariantData['params'][param];
+const deleteParam = (paramName) => {
+  if (updatedVariantData.params && updatedVariantData.params[paramName] !== undefined) {
+    delete updatedVariantData.params[paramName];
   }
-  delete updatedVariantData[param];
+  if (updatedVariantData[paramName] !== undefined) {
+    delete updatedVariantData[paramName];
+  }
+  deletedUpdateParamNames.value = new Set([...deletedUpdateParamNames.value, paramName]);
 };
 
 // Add a new field to the updatedVariantData object when updating a variant
@@ -825,11 +867,6 @@ const addField = () => {
 const removeField = (field, array) => {
   const updatedFields = array.filter((item) => item.name !== field);
   array.splice(0, array.length, ...updatedFields);
-};
-
-// Add a new param to the updatedVariantData object when updating a variant
-const addParam = () => {
-  addedParams.push({ name: '', value: '', type: 'string' });
 };
 
 // Add a new param to the newParams array when creating a new variant
@@ -947,8 +984,7 @@ function buildParamDefinitionsFromParams(params) {
 
 const syncSchemaFromCurrentConfig = async () => {
   if (!selectedTask.value || !selectedVariant.value || !authStore.currentSite) return;
-  const convertedParams = convertParamsToObj(addedParams);
-  const mergedParams = { ...(updatedVariantData.params ?? {}), ...convertedParams };
+  const mergedParams = updatedVariantData.params ?? {};
   const paramDefinitions = buildParamDefinitionsFromParams(mergedParams);
   if (Object.keys(paramDefinitions).length === 0) {
     toast.add({
@@ -975,7 +1011,7 @@ const syncSchemaFromCurrentConfig = async () => {
         ...updatedVariantData,
         ...convertedFields,
         schemaVersion: newVersion,
-        params: mergedParams,
+        params: { ...mergedParams },
       },
     };
     await updateVariant(variantData, {
@@ -1049,8 +1085,7 @@ const handleUpdateVariant = async () => {
   }
 
   const convertedFields = convertParamsToObj(addedFields);
-  const convertedParams = convertParamsToObj(addedParams);
-  const mergedParams = { ...(updatedVariantData.params ?? {}), ...convertedParams };
+  const mergedParams = updatedVariantData.params ?? {};
 
   if (schema?.paramDefinitions) {
     const paramKeysNotInSchema = Object.keys(mergedParams).filter(
@@ -1088,10 +1123,7 @@ const handleUpdateVariant = async () => {
       ...updatedVariantData,
       ...convertedFields,
       ...(latestSchemaVersion != null && { schemaVersion: latestSchemaVersion }),
-      params: {
-        ...(updatedVariantData.params ?? {}),
-        ...convertedParams,
-      },
+      params: { ...(updatedVariantData.params ?? {}) },
     },
   };
 
@@ -1215,12 +1247,12 @@ const resetUpdateVariantForm = () => {
   selectedTask.value = null;
   selectedVariant.value = null;
   updatedVariantData = {};
+  deletedUpdateParamNames.value = new Set();
   clearFieldParamArrays();
 };
 
 const clearFieldParamArrays = () => {
   addedFields = reactive([]);
-  addedParams = reactive([]);
   newParams = reactive([]);
   deletedParams.value = [];
 };
