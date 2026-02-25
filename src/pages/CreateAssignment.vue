@@ -115,8 +115,8 @@
         <div class="flex flex-column justify-content-center mt-5">
           <div class="flex flex-column mt-2 align-items-center justify-content-center">
             <div class="flex">
-              <label style="font-weight: bold" class="mb-2 mx-2"
-                >Sequential Task Order<span class="required-asterisk">*</span></label
+              <label class="mb-2 mx-2 font-semibold"
+                >Sequential Task Order <span class="required-asterisk">*</span></label
               >
               <span class="flex gap-2">
                 <PvRadioButton v-model="state.sequential" input-id="Yes" :value="true" />
@@ -139,7 +139,9 @@
             </div>
           </div>
           <div class="divider mx-2 my-3" />
-          <div class="mb-2 w-full flex justify-content-center">
+          <div class="mb-2 w-full flex justify-content-center gap-3">
+            <PvButton v-if="adminId" severity="danger" variant="outlined" @click="onClickCancelBtn">Cancel</PvButton>
+
             <PvButton
               :label="submitLabel"
               class="text-white bg-primary border-none border-round h-3rem p-3 hover:bg-red-900"
@@ -200,6 +202,7 @@ import { useQueryClient } from '@tanstack/vue-query';
 import useAssignmentExistsQuery from '@/composables/queries/useAssignmentExistsQuery';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import { useLevanteStore } from '@/store/levante';
 
 const initialized = ref(false);
 const isFormPopulated = ref(false);
@@ -209,6 +212,9 @@ const queryClient = useQueryClient();
 
 const { mutate: upsertAdministration, isPending: isSubmitting } = useUpsertAdministrationMutation();
 
+const levanteStore = useLevanteStore();
+const { hasUserConfirmed } = storeToRefs(levanteStore);
+const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const authStore = useAuthStore();
 const { roarfirekit, userData } = storeToRefs(authStore);
 
@@ -231,6 +237,8 @@ const creatorName = computed(() => {
 
   return userData.value?.displayName || `${firstName} ${middleName} ${lastName}`;
 });
+
+const onClickCancelBtn = () => router.back();
 
 // +------------------------------------------------------------------------------------------------------------------+
 // | Fetch Variants with Params
@@ -741,6 +749,30 @@ const submit = async () => {
   });
 };
 
+const resetUserProgress = () => {
+  state.administrationName = '';
+  state.administrationPublicName = '';
+  state.dateStarted = null;
+  state.dateClosed = null;
+  state.sequential = null;
+  state.legal = null;
+  state.consent = null;
+  state.assent = null;
+  state.districts = [];
+  state.schools = [];
+  state.classes = [];
+  state.groups = [];
+  state.amount = '';
+  state.expectedTime = '';
+
+  // Reset tasks
+  variants.value = [];
+  preSelectedVariants.value = [];
+
+  // Reset user confirmation
+  setHasUserConfirmed(false);
+};
+
 // +------------------------------------------------------------------------------------------------------------------+
 // | Lifecycle hooks and subscriptions
 // +------------------------------------------------------------------------------------------------------------------+
@@ -756,6 +788,41 @@ unsubscribe = authStore.$subscribe(async (mutation, state) => {
 
 onMounted(async () => {
   if (roarfirekit.value.restConfig) init();
+});
+
+watch(
+  [state, variants],
+  ([newState, newVariants]) => {
+    if (
+      newState.administrationName !== '' ||
+      newState.administrationPublicName !== '' ||
+      newState.dateStarted !== null ||
+      newState.dateClosed !== null ||
+      newState.sequential !== null ||
+      newState.legal !== null ||
+      newState.consent !== null ||
+      newState.assent !== null ||
+      newState.schools.length > 0 ||
+      newState.classes.length > 0 ||
+      newState.groups.length > 0 ||
+      newState.amount !== '' ||
+      newState.expectedTime !== '' ||
+      newVariants.length > 0
+    ) {
+      // If there is any progress, user should confirm the site changing
+      setShouldUserConfirm(true);
+    } else {
+      // Otherwise, don't ask for confirmation
+      setShouldUserConfirm(false);
+    }
+  },
+  {
+    deep: true,
+  },
+);
+
+watch(hasUserConfirmed, (userConfirmed) => {
+  if (userConfirmed) resetUserProgress();
 });
 
 watch([existingAdministrationData, allVariants], ([adminInfo, allVariantInfo]) => {

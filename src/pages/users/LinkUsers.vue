@@ -82,7 +82,7 @@
 </template>
 
 <script setup>
-import { computed, ref, toRaw } from 'vue';
+import { ref, toRaw, watch, computed } from 'vue';
 import { csvFileToJson } from '@/helpers';
 import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/store/auth';
@@ -97,8 +97,12 @@ import _isEmpty from 'lodash/isEmpty';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import PvDivider from 'primevue/divider';
 import { validateLinkUsersCsv, validateCsvHeaders } from '@levante-framework/levante-zod';
+import { useLevanteStore } from '@/store/levante';
 import { storeToRefs } from 'pinia';
 
+const levanteStore = useLevanteStore();
+const { hasUserConfirmed } = storeToRefs(levanteStore);
+const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const authStore = useAuthStore();
 const { currentSite } = storeToRefs(authStore);
 const isAllSitesSelected = computed(() => currentSite.value === 'any');
@@ -143,10 +147,18 @@ const allFields = [
   },
 ];
 
-const onFileUpload = async (event) => {
+const resetUserProgress = () => {
+  isFileUploaded.value = false;
   uploadedFile.value = null;
-
   showErrorTable.value = false;
+
+  // Reset user confirmation
+  setHasUserConfirmed(false);
+};
+
+const onFileUpload = async (event) => {
+  resetUserProgress();
+
   // Read the file
   const file = event.files[event.files.length - 1];
   uploadedFile.value = file;
@@ -226,6 +238,9 @@ const onFileUpload = async (event) => {
       detail: 'File Successfully Uploaded',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
+
+    // Wait for user confirmation before changing the selected site
+    setShouldUserConfirm(true);
   }
 };
 
@@ -423,6 +438,10 @@ function addErrorUser(user, error) {
     error,
   });
 }
+
+watch(hasUserConfirmed, (userConfirmed) => {
+  if (userConfirmed) resetUserProgress();
+});
 </script>
 
 <style scoped>
