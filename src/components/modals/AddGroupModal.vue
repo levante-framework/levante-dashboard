@@ -104,7 +104,6 @@ import PvFloatLabel from 'primevue/floatlabel';
 import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
-import useOrgNameExistsQuery from '@/composables/queries/useOrgNameExistsQuery';
 import useUpsertOrgMutation from '@/composables/mutations/useUpsertOrgMutation';
 import useVuelidate from '@vuelidate/core';
 import { usePermissions } from '@/composables/usePermissions';
@@ -112,6 +111,7 @@ import { useAuthStore } from '@/store/auth';
 import { ROLES } from '@/constants/roles';
 import { useQueryClient } from '@tanstack/vue-query';
 import { DISTRICTS_QUERY_KEY, ORGS_TABLE_QUERY_KEY, SCHOOLS_QUERY_KEY } from '@/constants/queryKeys';
+import useOrgNameExistsQuery from '@/firestore/queries/orgs/useOrgNameExistsQuery';
 
 interface OrgType {
   firestoreCollection: string;
@@ -218,16 +218,14 @@ const { mutate: upsertOrg, isPending: isSubmittingOrg } = useUpsertOrgMutation()
 
 const { isFetching: isFetchingSchools, data: schools } = _useSchoolsQuery(selectedSite);
 
-const { isRefetching: isCheckingOrgName, refetch: doesOrgNameExist } = useOrgNameExistsQuery(
+const { isRefetching: isRefetchingOrgNameExists, refetch: refetchOrgNameExists } = useOrgNameExistsQuery({
   orgName,
   orgType,
-  parentDistrict,
-  parentSchool,
-);
+});
 
 // Watch for changes in loading states, with proper undefined handling
 watch(
-  () => [isCheckingOrgName?.value ?? false, isSubmittingOrg?.value ?? false],
+  () => [isRefetchingOrgNameExists?.value ?? false, isSubmittingOrg?.value ?? false],
   ([isChecking, isSubmitting]) => {
     isSubmitBtnDisabled.value = Boolean(isChecking) || Boolean(isSubmitting);
   },
@@ -366,7 +364,7 @@ const submit = async () => {
     });
   }
 
-  const { data: orgNameExists } = await doesOrgNameExist();
+  const { data: orgNameExists } = await refetchOrgNameExists();
 
   if (orgNameExists) {
     const errorTitle = `${orgTypeLabel.value} Creation Error`;
