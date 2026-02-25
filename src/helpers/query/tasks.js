@@ -4,6 +4,7 @@ import _uniq from 'lodash/uniq';
 import _without from 'lodash/without';
 import { convertValues, getAxiosInstance, mapFields, fetchDocsById, getBaseDocumentPath } from './utils';
 import { FIRESTORE_DATABASES, FIRESTORE_COLLECTIONS } from '../../constants/firebase';
+import { taskVariantFunctionsClient } from '@/services/TaskVariantFunctionsClient';
 
 export const getTasksRequestBody = ({
   registered = true,
@@ -214,4 +215,9 @@ export const variantsFetcher = async (registered = false) => {
       console.error(error);
       return [];
     });
+};
+
+export const registerTaskVariant = async (variant) => {
+  const result = await taskVariantFunctionsClient.upsertTaskVariant(variant);
+  return result;
 };

@@ -18,6 +18,7 @@ export const ORGS_TABLE_QUERY_KEY: string = 'orgs-table';
 export const SCHOOL_CLASSES_QUERY_KEY: string = 'school-classes';
 export const SCHOOLS_QUERY_KEY: string = 'schools';
 export const SURVEY_RESPONSES_QUERY_KEY: string = 'survey-responses';
+export const TASK_SCHEMAS_QUERY_KEY: string = 'task-schemas';
 export const TASK_VARIANTS_QUERY_KEY: string = 'task-variants';
 export const TASKS_QUERY_KEY: string = 'tasks';
 export const USE_ASSIGNMENT_EXISTS_QUERY_KEY: string = 'useAssignmentByNameQuery';
