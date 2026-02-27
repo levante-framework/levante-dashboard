@@ -37,6 +37,13 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     category: 'Assignments',
   },
   {
+    title: 'Manage Tasks',
+    icon: 'pi pi-pencil',
+    buttonLink: { name: 'ManageTasksVariants' },
+    allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
+    category: 'Assignments',
+  },
+  {
     title: 'Add Users',
     icon: 'pi pi-user-plus',
     buttonLink: { name: 'Add Users' },
