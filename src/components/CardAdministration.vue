@@ -343,15 +343,24 @@ const { data: polledAdministrations } = useAdministrationsQuery(administrationId
 const polledSyncStatus = computed((): SyncStatus | undefined => {
   const admins = polledAdministrations.value;
   if (!admins?.length) return undefined;
-  const status = admins[0]?.syncStatus;
+  const doc = admins[0];
+  const status = doc?.syncStatus ?? (doc as Record<string, unknown>)?.['sync_status'];
   return status === 'pending' || status === 'completed' || status === 'failure' ? status : undefined;
 });
 
 const displayedSyncStatus = computed((): SyncStatus => polledSyncStatus.value ?? props.syncStatus);
 
 watch(polledSyncStatus, (newStatus) => {
-  if (newStatus && newStatus !== 'pending') {
-    queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_LIST_QUERY_KEY] });
+  if (newStatus && newStatus !== 'pending' && props.id) {
+    queryClient.setQueriesData(
+      { queryKey: [ADMINISTRATIONS_LIST_QUERY_KEY], exact: false },
+      (oldData: unknown) => {
+        if (!Array.isArray(oldData)) return oldData;
+        return oldData.map((admin: { id?: string }) =>
+          admin?.id === props.id ? { ...admin, syncStatus: newStatus } : admin,
+        );
+      },
+    );
   }
 });
 
