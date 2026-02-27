@@ -222,7 +222,7 @@ interface Assignees {
   [key: string]: any;
 }
 
-type SyncStatus = 'pending' | 'completed' | 'failure';
+type SyncStatus = 'pending' | 'complete' | 'failure';
 
 interface Props {
   id: string;
@@ -290,7 +290,7 @@ const queryClient = useQueryClient();
 
 const props = withDefaults(defineProps<Props>(), {
   creatorName: '--',
-  syncStatus: 'completed',
+  syncStatus: 'complete',
   currentPage: 1,
   rowsPerPage: 10,
   cardIndexInPage: 0,
@@ -345,7 +345,7 @@ const polledSyncStatus = computed((): SyncStatus | undefined => {
   if (!admins?.length) return undefined;
   const doc = admins[0];
   const status = doc?.syncStatus ?? (doc as Record<string, unknown>)?.['sync_status'];
-  return status === 'pending' || status === 'completed' || status === 'failure' ? status : undefined;
+  return status === 'pending' || status === 'complete' || status === 'failure' ? status : undefined;
 });
 
 const displayedSyncStatus = computed((): SyncStatus => polledSyncStatus.value ?? props.syncStatus);
@@ -712,7 +712,7 @@ const onExpand = async (node: TreeNode): Promise<void> => {
     color: var(--bright-yellow);
   }
 
-  &.sync-status-completed {
+  &.sync-status-complete {
     background-color: rgba(var(--bright-green-rgb), 0.2);
     color: var(--bright-green);
   }

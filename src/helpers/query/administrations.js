@@ -73,7 +73,7 @@ const mapAdministrations = async (data) => {
         testData: a.testData ?? false,
         creatorName: a.creatorName,
         stats: a.stats,
-        syncStatus: a.syncStatus ?? 'completed',
+        syncStatus: a.syncStatus ?? 'complete',
       };
     });
 
