@@ -103,8 +103,8 @@
         <div v-else>
           <PvBlockUI>
             <PvDataView
-              v-model:first="dataViewFirst"
               :key="dataViewKey"
+              v-model:first="dataViewFirst"
               :rows-per-page-options="[3, 5, 10, 25]"
               :rows="pageLimit"
               :sort-field="sortField"
@@ -125,8 +125,8 @@
                 <div class="mb-2 w-full">
                   <CardAdministration
                     v-for="(item, cardIndexInPage) in slotProps.items"
-                    :key="item.id"
                     :id="item.id"
+                    :key="item.id"
                     :card-index-in-page="cardIndexInPage"
                     :current-page="currentPage"
                     :rows-per-page="pageLimit"

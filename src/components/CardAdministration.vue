@@ -45,9 +45,7 @@
         <span :class="['status-badge', administrationStatusBadge]">
           {{ administrationStatus }}
         </span>
-        <span :class="['status-badge', 'sync-status', `sync-status-${displayedSyncStatus}`]">
-          {{ displayedSyncStatus }}
-        </span>
+        <SyncStatusBadge :status="displayedSyncStatus" class="status-badge" />
       </div>
       <div class="card-admin-assessments">
         <span class="mr-1"><strong>Tasks</strong>:</span>
@@ -164,7 +162,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch, watchEffect } from 'vue';
+import { computed, onMounted, ref, watchEffect } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
@@ -194,7 +192,9 @@ import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toast
 import { isLevante, getTooltip } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
 import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
+import { useAdministrationSyncStatus, type SyncStatus } from '@/composables/useAdministrationSyncStatus';
 import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
+import SyncStatusBadge from '@/components/SyncStatusBadge.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
 
@@ -221,8 +221,6 @@ interface Dates {
 interface Assignees {
   [key: string]: any;
 }
-
-type SyncStatus = 'pending' | 'complete' | 'failure';
 
 interface Props {
   id: string;
@@ -340,28 +338,16 @@ const { data: polledAdministrations } = useAdministrationsQuery(administrationId
   refetchInterval: 5000,
 } as never);
 
-const polledSyncStatus = computed((): SyncStatus | undefined => {
+const administrationDataRef = computed(() => {
   const admins = polledAdministrations.value;
-  if (!admins?.length) return undefined;
-  const doc = admins[0];
-  const status = doc?.syncStatus ?? (doc as Record<string, unknown>)?.['sync_status'];
-  return status === 'pending' || status === 'complete' || status === 'failure' ? status : undefined;
+  if (admins?.length) return admins[0];
+  return { syncStatus: props.syncStatus };
 });
 
-const displayedSyncStatus = computed((): SyncStatus => polledSyncStatus.value ?? props.syncStatus);
-
-watch(polledSyncStatus, (newStatus) => {
-  if (newStatus && newStatus !== 'pending' && props.id) {
-    queryClient.setQueriesData(
-      { queryKey: [ADMINISTRATIONS_LIST_QUERY_KEY], exact: false },
-      (oldData: unknown) => {
-        if (!Array.isArray(oldData)) return oldData;
-        return oldData.map((admin: { id?: string }) =>
-          admin?.id === props.id ? { ...admin, syncStatus: newStatus } : admin,
-        );
-      },
-    );
-  }
+const { displayedSyncStatus } = useAdministrationSyncStatus(administrationDataRef, {
+  defaultStatus: props.syncStatus,
+  administrationId: props.id,
+  updateListCacheOnChange: true,
 });
 
 const speedDialItems = computed((): SpeedDialItem[] => {
@@ -703,23 +689,6 @@ const onExpand = async (node: TreeNode): Promise<void> => {
   &.upcoming {
     background-color: rgba(var(--bright-yellow-rgb), 0.2);
     color: var(--bright-yellow);
-  }
-}
-
-.sync-status {
-  &.sync-status-pending {
-    background-color: rgba(var(--bright-yellow-rgb), 0.2);
-    color: var(--bright-yellow);
-  }
-
-  &.sync-status-complete {
-    background-color: rgba(var(--bright-green-rgb), 0.2);
-    color: var(--bright-green);
-  }
-
-  &.sync-status-failure {
-    background-color: rgba(var(--bright-red-rgb), 0.2);
-    color: var(--bright-red);
   }
 }
 
