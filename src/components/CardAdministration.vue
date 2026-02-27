@@ -45,6 +45,9 @@
         <span :class="['status-badge', administrationStatusBadge]">
           {{ administrationStatus }}
         </span>
+        <span :class="['status-badge', 'sync-status', `sync-status-${displayedSyncStatus}`]">
+          {{ displayedSyncStatus }}
+        </span>
       </div>
       <div class="card-admin-assessments">
         <span class="mr-1"><strong>Tasks</strong>:</span>
@@ -161,7 +164,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watchEffect } from 'vue';
+import { computed, onMounted, ref, watch, watchEffect } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
@@ -190,6 +193,7 @@ import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { isLevante, getTooltip } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
+import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
 import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
@@ -218,6 +222,8 @@ interface Assignees {
   [key: string]: any;
 }
 
+type SyncStatus = 'pending' | 'completed' | 'failure';
+
 interface Props {
   id: string;
   title: string;
@@ -231,6 +237,10 @@ interface Props {
   showParams: boolean;
   isSuperAdmin: boolean;
   creatorName: string;
+  syncStatus?: SyncStatus;
+  currentPage?: number;
+  rowsPerPage?: number;
+  cardIndexInPage?: number;
   onDeleteAdministration?: (administrationId: string) => void;
 }
 
@@ -280,6 +290,10 @@ const queryClient = useQueryClient();
 
 const props = withDefaults(defineProps<Props>(), {
   creatorName: '--',
+  syncStatus: 'completed',
+  currentPage: 1,
+  rowsPerPage: 10,
+  cardIndexInPage: 0,
   onDeleteAdministration: () => {},
   stats: () => ({}),
 });
@@ -308,6 +322,38 @@ const administrationStatus = computed((): string => {
 });
 
 const administrationStatusBadge = computed((): string => administrationStatus.value.toLowerCase());
+
+const isOnCurrentPage = computed(() => {
+  const { currentPage, rowsPerPage, cardIndexInPage } = props;
+  if (currentPage == null || rowsPerPage == null || cardIndexInPage == null) return false;
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const globalIndex = startIndex + cardIndexInPage;
+  return globalIndex >= startIndex && globalIndex < endIndex;
+});
+
+const administrationIds = computed(() => (props.id ? [props.id] : []));
+const shouldPoll = computed(() => isOnCurrentPage.value && props.syncStatus === 'pending');
+
+const { data: polledAdministrations } = useAdministrationsQuery(administrationIds, {
+  enabled: shouldPoll,
+  refetchInterval: 5000,
+} as never);
+
+const polledSyncStatus = computed((): SyncStatus | undefined => {
+  const admins = polledAdministrations.value;
+  if (!admins?.length) return undefined;
+  const status = admins[0]?.syncStatus;
+  return status === 'pending' || status === 'completed' || status === 'failure' ? status : undefined;
+});
+
+const displayedSyncStatus = computed((): SyncStatus => polledSyncStatus.value ?? props.syncStatus);
+
+watch(polledSyncStatus, (newStatus) => {
+  if (newStatus && newStatus !== 'pending') {
+    queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_LIST_QUERY_KEY] });
+  }
+});
 
 const speedDialItems = computed((): SpeedDialItem[] => {
   const items: SpeedDialItem[] = [];
@@ -648,6 +694,23 @@ const onExpand = async (node: TreeNode): Promise<void> => {
   &.upcoming {
     background-color: rgba(var(--bright-yellow-rgb), 0.2);
     color: var(--bright-yellow);
+  }
+}
+
+.sync-status {
+  &.sync-status-pending {
+    background-color: rgba(var(--bright-yellow-rgb), 0.2);
+    color: var(--bright-yellow);
+  }
+
+  &.sync-status-completed {
+    background-color: rgba(var(--bright-green-rgb), 0.2);
+    color: var(--bright-green);
+  }
+
+  &.sync-status-failure {
+    background-color: rgba(var(--bright-red-rgb), 0.2);
+    color: var(--bright-red);
   }
 }
 

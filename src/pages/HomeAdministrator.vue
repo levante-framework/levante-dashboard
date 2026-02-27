@@ -103,6 +103,7 @@
         <div v-else>
           <PvBlockUI>
             <PvDataView
+              v-model:first="dataViewFirst"
               :key="dataViewKey"
               :rows-per-page-options="[3, 5, 10, 25]"
               :rows="pageLimit"
@@ -123,9 +124,12 @@
               <template #list="slotProps">
                 <div class="mb-2 w-full">
                   <CardAdministration
-                    v-for="item in slotProps.items"
-                    :id="item.id"
+                    v-for="(item, cardIndexInPage) in slotProps.items"
                     :key="item.id"
+                    :id="item.id"
+                    :card-index-in-page="cardIndexInPage"
+                    :current-page="currentPage"
+                    :rows-per-page="pageLimit"
                     :title="getTitle(item, isUserSuperAdmin())"
                     :stats="item.stats"
                     :dates="item.dates"
@@ -135,6 +139,7 @@
                     :show-params="isUserSuperAdmin()"
                     :is-super-admin="isUserSuperAdmin()"
                     :creator-name="item.creatorName"
+                    :sync-status="item.syncStatus"
                     data-cy="h2-card-admin"
                   />
                 </div>
@@ -160,7 +165,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import PvAutoComplete from 'primevue/autocomplete';
 import PvBlockUI from 'primevue/blockui';
@@ -180,6 +185,10 @@ import { isCurrent, isPast, isUpcoming } from '@/helpers/assignments';
 const initialized = ref(false);
 const pageLimit = ref(10);
 const page = ref(0);
+const dataViewFirst = ref(0);
+const currentPage = computed(() =>
+  pageLimit.value > 0 ? Math.floor(dataViewFirst.value / pageLimit.value) + 1 : 1,
+);
 
 const orderBy = ref(orderByNameASC);
 const searchSuggestions = ref([]);
@@ -420,6 +429,7 @@ const autocomplete = () => {
 const onFilterChange = (event) => {
   dataViewKey.value += 1;
   page.value = 0;
+  dataViewFirst.value = 0;
   const filterValue = event.value;
 
   filteredAdministrations.value = administrations.value?.filter((assignment) => {
@@ -446,6 +456,7 @@ const onFilterChange = (event) => {
 const onSortChange = (event) => {
   dataViewKey.value += 1;
   page.value = 0;
+  dataViewFirst.value = 0;
   const value = event.value.value;
   const sortValue = event.value;
 

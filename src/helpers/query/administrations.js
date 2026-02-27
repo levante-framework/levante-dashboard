@@ -72,6 +72,8 @@ const mapAdministrations = async (data) => {
         // If testData is not defined, default to false when mapping
         testData: a.testData ?? false,
         creatorName: a.creatorName,
+        stats: a.stats,
+        syncStatus: a.syncStatus ?? 'completed',
       };
     });
 
