@@ -11,8 +11,6 @@ import {
 import { FirebaseStorage, getStorage } from 'firebase/storage';
 import firebaseJSON from '../../firebase.json';
 
-// TODO: Find all and replace roarfirekit with the new firebase service
-
 const config = {
   dev: {
     apiKey: 'AIzaSyCOzRA9a2sDHtVlX7qnszxrgsRCBLyf5p0',
@@ -96,7 +94,7 @@ export class FirebaseService {
   private _name: string;
   private _project: FirebaseProject | null = null;
 
-  constructor({ config, emulatorConfig, name = 'default' }: FirebaseServiceOptions) {
+  constructor({ config, emulatorConfig, name = 'admin' }: FirebaseServiceOptions) {
     this._config = config;
     this._emulatorConfig = emulatorConfig;
     this._name = name;
@@ -191,20 +189,16 @@ export class FirebaseService {
   }
 
   // Cloud Functions
-  async getAdministrations({
-    restrictToOpenAdministrations = false,
-    testData = false,
-  }: {
-    restrictToOpenAdministrations: boolean;
-    testData: boolean;
-  }) {
+  // They can be moved to separate folders as members of subclasses
+  async getAdministrations() {
     this._ensureInitialized();
 
     const getAdministrationCallable = httpsCallable(this.functions!, 'getAdministrations');
 
     const response = (await getAdministrationCallable({
-      restrictToOpenAdministrations,
-      testData,
+      idsOnly: false,
+      restrictToOpenAdministrations: false,
+      testData: false,
     })) as HttpsCallableResult<{ status: string; data?: unknown }>;
 
     return response.data.data ?? [];
