@@ -45,6 +45,7 @@
         <span :class="['status-badge', administrationStatusBadge]">
           {{ administrationStatus }}
         </span>
+        <SyncStatusBadge :status="displayedSyncStatus" class="status-badge" />
       </div>
       <div class="card-admin-assessments">
         <span class="mr-1"><strong>Tasks</strong>:</span>
@@ -190,7 +191,10 @@ import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { isLevante, getTooltip } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
+import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
+import { useAdministrationSyncStatus, type SyncStatus } from '@/composables/useAdministrationSyncStatus';
 import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
+import SyncStatusBadge from '@/components/SyncStatusBadge.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
 
@@ -231,6 +235,10 @@ interface Props {
   showParams: boolean;
   isSuperAdmin: boolean;
   creatorName: string;
+  syncStatus?: SyncStatus;
+  currentPage?: number;
+  rowsPerPage?: number;
+  cardIndexInPage?: number;
   onDeleteAdministration?: (administrationId: string) => void;
 }
 
@@ -280,6 +288,10 @@ const queryClient = useQueryClient();
 
 const props = withDefaults(defineProps<Props>(), {
   creatorName: '--',
+  syncStatus: 'complete',
+  currentPage: 1,
+  rowsPerPage: 10,
+  cardIndexInPage: 0,
   onDeleteAdministration: () => {},
   stats: () => ({}),
 });
@@ -308,6 +320,35 @@ const administrationStatus = computed((): string => {
 });
 
 const administrationStatusBadge = computed((): string => administrationStatus.value.toLowerCase());
+
+const isOnCurrentPage = computed(() => {
+  const { currentPage, rowsPerPage, cardIndexInPage } = props;
+  if (currentPage == null || rowsPerPage == null || cardIndexInPage == null) return false;
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const globalIndex = startIndex + cardIndexInPage;
+  return globalIndex >= startIndex && globalIndex < endIndex;
+});
+
+const administrationIds = computed(() => (props.id ? [props.id] : []));
+const shouldPoll = computed(() => isOnCurrentPage.value && props.syncStatus === 'pending');
+
+const { data: polledAdministrations } = useAdministrationsQuery(administrationIds, {
+  enabled: shouldPoll,
+  refetchInterval: 5000,
+} as never);
+
+const administrationDataRef = computed(() => {
+  const admins = polledAdministrations.value;
+  if (admins?.length) return admins[0];
+  return { syncStatus: props.syncStatus };
+});
+
+const { displayedSyncStatus } = useAdministrationSyncStatus(administrationDataRef, {
+  defaultStatus: props.syncStatus,
+  administrationId: props.id,
+  updateListCacheOnChange: true,
+});
 
 const speedDialItems = computed((): SpeedDialItem[] => {
   const items: SpeedDialItem[] = [];
