@@ -8,6 +8,7 @@ import { logger } from '@/logger';
 import { RoarFirekit } from '@levante-framework/firekit';
 import { ref, type Ref } from 'vue';
 import { ROLES } from '@levante-framework/permissions-core';
+import { type FirebaseService, firebaseService } from '@/firestore';
 
 interface FirebaseUser {
   adminFirebaseUser: User | null;
@@ -62,6 +63,7 @@ export const useAuthStore = defineStore(
     const ssoProvider: Ref<string | null> = ref(null);
     const userClaims: Ref<UserClaims | null> = ref(null);
     const userData: Ref<UserData | null> = ref(null);
+    const firebase: Ref<FirebaseService | null> = ref(null);
 
     // Reset function
     function $reset(): void {
@@ -80,6 +82,7 @@ export const useAuthStore = defineStore(
       ssoProvider.value = null;
       userClaims.value = null;
       userData.value = null;
+      firebase.value = null;
     }
 
     // Getters
@@ -270,6 +273,14 @@ export const useAuthStore = defineStore(
       shouldUsePermissions.value = Boolean(claims?.claims?.useNewPermissions);
     }
 
+    async function initFirebase(): Promise<void> {
+      try {
+        firebase.value = await firebaseService.init();
+      } catch (error) {
+        console.error('Error initializing Firebase:', error);
+      }
+    }
+
     return {
       // State
       adminAuthStateListener,
@@ -286,6 +297,7 @@ export const useAuthStore = defineStore(
       ssoProvider,
       userClaims,
       userData,
+      firebase,
 
       // Getters
       getEmail,
@@ -318,6 +330,7 @@ export const useAuthStore = defineStore(
       signInWithGooglePopup,
       signInWithGoogleRedirect,
       signOut,
+      initFirebase,
     };
   },
   {
