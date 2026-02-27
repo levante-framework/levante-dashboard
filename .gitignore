@@ -48,4 +48,4 @@ coverage
 cypress/screenshots
 
 # Intl Hash
-.cache
+.cache/
