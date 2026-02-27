@@ -130,6 +130,7 @@ export const useAuthStore = defineStore(
     async function initFirekit(): Promise<void> {
       try {
         roarfirekit.value = await initNewFirekit();
+        await initFirebase(); // Maybe replace this
         setAuthStateListeners();
       } catch (error) {
         // @TODO: Improve error handling as this is a critical error.
