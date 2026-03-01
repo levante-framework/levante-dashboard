@@ -12,7 +12,7 @@ defineProps({
   status: {
     type: String,
     default: undefined,
-    validator: (v) => !v || ['pending', 'complete', 'failure'].includes(v),
+    validator: (v) => !v || ['pending', 'complete', 'failed'].includes(v),
   },
 });
 </script>
@@ -37,7 +37,7 @@ defineProps({
   color: var(--bright-green);
 }
 
-.sync-status-failure {
+.sync-status-failed {
   background-color: rgba(var(--bright-red-rgb), 0.2);
   color: var(--bright-red);
 }

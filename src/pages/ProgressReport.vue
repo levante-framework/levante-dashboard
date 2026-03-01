@@ -249,7 +249,7 @@ const { displayedSyncStatus } = useAdministrationSyncStatus(administrationData, 
 watch(
   [isLoadingAdministration, displayedSyncStatus],
   ([loading, status]) => {
-    if (!loading && (status === 'pending' || status === 'failure')) {
+    if (!loading && (status === 'pending' || status === 'failed')) {
       router.replace({ name: 'Administrator' });
     }
   },

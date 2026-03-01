@@ -2,7 +2,7 @@ import { type Ref, computed, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
 
-export type SyncStatus = 'pending' | 'complete' | 'failure';
+export type SyncStatus = 'pending' | 'complete' | 'failed';
 
 type AdministrationLike = {
   id?: string;
@@ -27,7 +27,8 @@ export function isAdministrationSyncPending(data: AdministrationLike | null | un
 }
 
 function normalizeSyncStatus(raw: string | undefined): SyncStatus | undefined {
-  if (raw === 'pending' || raw === 'failure') return raw;
+  if (raw === 'pending' || raw === 'failed') return raw;
+  if (raw === 'failure') return 'failed';
   if (raw === 'complete' || raw === 'completed') return 'complete';
   if (raw) return 'complete';
   return undefined;

@@ -46,6 +46,17 @@
           {{ administrationStatus }}
         </span>
         <SyncStatusBadge :status="displayedSyncStatus" class="status-badge" />
+        <PvButton
+          v-if="displayedSyncStatus === 'failed'"
+          v-tooltip.top="getTooltip('Retry assignment sync')"
+          :loading="isRetrying"
+          label="Retry"
+          severity="secondary"
+          size="small"
+          class="ml-2"
+          data-cy="button-retry-administration"
+          @click="onRetry"
+        />
       </div>
       <div class="card-admin-assessments">
         <span class="mr-1"><strong>Tasks</strong>:</span>
@@ -163,7 +174,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watchEffect } from 'vue';
+import { computed, onMounted, ref, toValue, watchEffect } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
@@ -187,6 +198,8 @@ import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
 import useDsgfOrgQuery from '@/composables/queries/useDsgfOrgQuery';
 import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
 import useDeleteAdministrationMutation from '@/composables/mutations/useDeleteAdministrationMutation';
+import useUpsertAdministrationMutation from '@/composables/mutations/useUpsertAdministrationMutation';
+import { buildRetryAdministrationArgs } from '@/helpers/administrations';
 import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
@@ -194,7 +207,8 @@ import { isLevante, getTooltip } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
 import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
 import { useAdministrationSyncStatus, type SyncStatus } from '@/composables/useAdministrationSyncStatus';
-import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
+import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY } from '@/constants/queryKeys';
+import { useAuthStore } from '@/store/auth';
 import SyncStatusBadge from '@/components/SyncStatusBadge.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
@@ -286,6 +300,7 @@ interface ChartOptions {
 
 const router = useRouter();
 const queryClient = useQueryClient();
+const authStore = useAuthStore();
 
 const props = withDefaults(defineProps<Props>(), {
   creatorName: '--',
@@ -303,6 +318,10 @@ const confirm = useConfirm();
 const toast = useToast();
 
 const { mutateAsync: deleteAdministration } = useDeleteAdministrationMutation();
+const {
+  mutate: upsertAdministration,
+  isPending: isRetrying,
+} = useUpsertAdministrationMutation();
 
 const now = computed(() => new Date());
 
@@ -333,10 +352,13 @@ const isOnCurrentPage = computed(() => {
 
 const administrationIds = computed(() => (props.id ? [props.id] : []));
 const shouldPoll = computed(() => isOnCurrentPage.value && props.syncStatus === 'pending');
+const shouldFetchForRetry = computed(
+  () => isOnCurrentPage.value && (props.syncStatus === 'pending' || props.syncStatus === 'failed'),
+);
 
 const { data: polledAdministrations } = useAdministrationsQuery(administrationIds, {
-  enabled: shouldPoll,
-  refetchInterval: 5000,
+  enabled: shouldFetchForRetry,
+  refetchInterval: computed(() => (shouldPoll.value ? 5000 : false)) as never,
 } as never);
 
 const administrationDataRef = computed(() => {
@@ -352,6 +374,43 @@ const { displayedSyncStatus } = useAdministrationSyncStatus(administrationDataRe
 });
 
 const isSyncComplete = computed(() => displayedSyncStatus.value === 'complete');
+
+const canRetry = computed(
+  () =>
+    displayedSyncStatus.value === 'failed' &&
+    administrationDataRef.value &&
+    typeof administrationDataRef.value === 'object' &&
+    'name' in administrationDataRef.value,
+);
+
+const onRetry = () => {
+  const admin = administrationDataRef.value;
+  if (!canRetry.value || !admin || typeof admin !== 'object' || !props.id) return;
+  const args = buildRetryAdministrationArgs(
+    admin as Record<string, unknown>,
+    toValue(authStore.currentSite) ?? undefined,
+  );
+  upsertAdministration(args, {
+    onSuccess: () => {
+      toast.add({
+        severity: TOAST_SEVERITIES.SUCCESS,
+        summary: 'Success',
+        detail: 'Assignment sync has been retried. Please check back in a few minutes.',
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+      queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_LIST_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_QUERY_KEY] });
+    },
+    onError: (error: Error) => {
+      toast.add({
+        severity: TOAST_SEVERITIES.ERROR,
+        summary: 'Error',
+        detail: error.message,
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+    },
+  });
+};
 
 const speedDialItems = computed((): SpeedDialItem[] => {
   const items: SpeedDialItem[] = [];
