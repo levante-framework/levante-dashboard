@@ -10,7 +10,7 @@
             — Created by <span class="font-bold">{{ props.creatorName }}</span></small
           >
         </div>
-        <div v-if="speedDialItems.length > 0" class="flex justify-content-end w-3">
+        <div v-if="speedDialItems.length > 0 && isSyncComplete" class="flex justify-content-end w-3">
           <PvSpeedDial
             :action-button-props="{
               rounded: true,
@@ -105,6 +105,7 @@
           <template #body="{ node }">
             <div v-if="node.data.id" class="flex m-0">
               <router-link
+                v-if="isSyncComplete"
                 :to="{
                   name: 'ProgressReport',
                   params: {
@@ -349,6 +350,8 @@ const { displayedSyncStatus } = useAdministrationSyncStatus(administrationDataRe
   administrationId: props.id,
   updateListCacheOnChange: true,
 });
+
+const isSyncComplete = computed(() => displayedSyncStatus.value === 'complete');
 
 const speedDialItems = computed((): SpeedDialItem[] => {
   const items: SpeedDialItem[] = [];

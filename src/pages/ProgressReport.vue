@@ -29,9 +29,8 @@
               </div>
               <div>
                 <div class="uppercase font-light text-gray-500 text-md">Assignment</div>
-                <div class="administration-name flex align-items-center gap-2">
+                <div class="administration-name">
                   {{ assignmentDisplayName }}
-                  <SyncStatusBadge :status="displayedSyncStatus" />
                 </div>
               </div>
               <div>
@@ -189,11 +188,7 @@ import PvMultiSelect from 'primevue/multiselect';
 import PvSelectButton from 'primevue/selectbutton';
 import { useAuthStore } from '@/store/auth';
 import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
-import {
-  useAdministrationSyncStatus,
-  isAdministrationSyncPending,
-} from '@/composables/useAdministrationSyncStatus';
-import SyncStatusBadge from '@/components/SyncStatusBadge.vue';
+import { useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
 import useAdministrationsStatsQuery from '@/firestore/queries/administrations/useAdministrationsStatsQuery';
 import useOrgQuery from '@/composables/queries/useOrgQuery';
 import useAdministrationAssignmentsQuery from '@/composables/queries/useAdministrationAssignmentsQuery';
@@ -239,27 +234,27 @@ const { data: tasksDictionary, isLoading: isLoadingTasksDictionary } = useTasksD
   enabled: initialized,
 });
 
-const shouldPollRef = ref(false);
 const { data: administrationData, isLoading: isLoadingAdministration } = useAdministrationsQuery(
   [props.administrationId],
   {
     enabled: initialized,
     select: (data) => data[0],
-    refetchInterval: computed(() => (shouldPollRef.value ? 5000 : false)),
   },
-);
-
-watch(
-  administrationData,
-  (data) => {
-    shouldPollRef.value = isAdministrationSyncPending(data);
-  },
-  { immediate: true },
 );
 
 const { displayedSyncStatus } = useAdministrationSyncStatus(administrationData, {
   defaultStatus: undefined,
 });
+
+watch(
+  [isLoadingAdministration, displayedSyncStatus],
+  ([loading, status]) => {
+    if (!loading && (status === 'pending' || status === 'failure')) {
+      router.replace({ name: 'Administrator' });
+    }
+  },
+  { immediate: true },
+);
 
 const { data: adminStats, isLoading: isLoadingAdministrationsStats } = useAdministrationsStatsQuery({
   administrationIds: [props.administrationId],
