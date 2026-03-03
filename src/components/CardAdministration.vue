@@ -10,7 +10,10 @@
             — Created by <span class="font-bold">{{ props.creatorName }}</span></small
           >
         </div>
-        <div v-if="speedDialItems.length > 0 && isSyncComplete" class="flex justify-content-end w-3">
+        <div
+          v-if="speedDialItems.length > 0 && (isSyncComplete || displayedSyncStatus === 'failed')"
+          class="flex justify-content-end w-3"
+        >
           <PvSpeedDial
             :action-button-props="{
               rounded: true,
@@ -46,17 +49,6 @@
           {{ administrationStatus }}
         </span>
         <SyncStatusBadge :status="displayedSyncStatus" class="status-badge" />
-        <PvButton
-          v-if="displayedSyncStatus === 'failed'"
-          v-tooltip.top="getTooltip('Retry assignment sync')"
-          :loading="isRetrying"
-          label="Retry"
-          severity="secondary"
-          size="small"
-          class="ml-2"
-          data-cy="button-retry-administration"
-          @click="onRetry"
-        />
       </div>
       <div class="card-admin-assessments">
         <span class="mr-1"><strong>Tasks</strong>:</span>
@@ -94,6 +86,7 @@
         </div>
       </div>
       <PvTreeTable
+        v-if="isSyncComplete"
         class="mt-3"
         lazy
         row-hover
@@ -416,7 +409,7 @@ const speedDialItems = computed((): SpeedDialItem[] => {
   const items: SpeedDialItem[] = [];
 
   // TODO: Change this to admin when edit assignment refactor is complete
-  if (isUpcoming.value && hasRole(ROLES.SUPER_ADMIN)) {
+  if (isSyncComplete.value && isUpcoming.value && hasRole(ROLES.SUPER_ADMIN)) {
     items.push({
       label: 'Delete',
       icon: 'pi pi-trash',
@@ -451,7 +444,7 @@ const speedDialItems = computed((): SpeedDialItem[] => {
       },
     });
   }
-  if (hasRole(ROLES.ADMIN)) {
+  if (hasRole(ROLES.ADMIN) && isSyncComplete.value) {
     items.push({
       label: 'Edit',
       icon: 'pi pi-pencil',
@@ -461,6 +454,13 @@ const speedDialItems = computed((): SpeedDialItem[] => {
           params: { adminId: props.id },
         });
       },
+    });
+  }
+  if (hasRole(ROLES.ADMIN) && displayedSyncStatus.value === 'failed' && canRetry.value) {
+    items.push({
+      label: 'Retry',
+      icon: 'pi pi-sync',
+      command: () => onRetry(),
     });
   }
   return items;
