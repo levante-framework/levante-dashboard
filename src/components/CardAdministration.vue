@@ -206,6 +206,8 @@ import SyncStatusBadge from '@/components/SyncStatusBadge.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
 
+const SHOW_DELETE_OPTION = false;
+
 interface Assessment {
   taskId: string;
   variantId?: string;
@@ -409,7 +411,7 @@ const speedDialItems = computed((): SpeedDialItem[] => {
   const items: SpeedDialItem[] = [];
 
   // TODO: Change this to admin when edit assignment refactor is complete
-  if (isSyncComplete.value && isUpcoming.value && hasRole(ROLES.SUPER_ADMIN)) {
+  if (SHOW_DELETE_OPTION && isSyncComplete.value && isUpcoming.value && hasRole(ROLES.SUPER_ADMIN)) {
     items.push({
       label: 'Delete',
       icon: 'pi pi-trash',
