@@ -229,6 +229,7 @@ const onFileUpload = async (event) => {
   }
 
   validateUsers(usersWithZodErrors);
+  showMissingLinkWarnings(filteredData);
 
   if (errorUsers.value.length === 0) {
     isFileUploaded.value = true;
@@ -352,7 +353,8 @@ const submitUsers = async () => {
   errorUserColumns.value = [];
 
   try {
-    const normalizedUsers = toRaw(rawUserFile.value).map((user) => {
+    const filteredUsers = toRaw(rawUserFile.value).filter((user) => isUserLinkable(user));
+    const normalizedUsers = filteredUsers.map((user) => {
       const normalizedUser = {};
 
       const idField = Object.keys(user).find((key) => key.toLowerCase() === 'id');
@@ -402,6 +404,122 @@ const submitUsers = async () => {
     activeSubmit.value = false;
   }
 };
+
+function getFieldValue(user, fieldName) {
+  const field = Object.keys(user).find((key) => key.toLowerCase() === fieldName.toLowerCase());
+  return field ? user[field] : undefined;
+}
+
+function parseIdList(value) {
+  if (value === null || value === undefined) return [];
+  return String(value)
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => id);
+}
+
+function getUserTypeValue(user) {
+  const userTypeValue = getFieldValue(user, 'usertype');
+  if (!userTypeValue) return '';
+  return String(userTypeValue).trim().toLowerCase();
+}
+
+function isUserLinkable(user) {
+  const userTypeValue = getUserTypeValue(user);
+  if (userTypeValue !== 'child') return true;
+  const caregiverIds = parseIdList(getFieldValue(user, 'caregiverid'));
+  const teacherIds = parseIdList(getFieldValue(user, 'teacherid'));
+  return caregiverIds.length > 0 || teacherIds.length > 0;
+}
+
+function getMissingLinkCounts(users) {
+  const linkedCaregiverIds = new Set();
+  const linkedTeacherIds = new Set();
+  let childRowsWithoutLinks = 0;
+
+  users.forEach((user) => {
+    if (getUserTypeValue(user) !== 'child') return;
+
+    const caregiverIds = parseIdList(getFieldValue(user, 'caregiverid'));
+    const teacherIds = parseIdList(getFieldValue(user, 'teacherid'));
+
+    if (caregiverIds.length === 0 && teacherIds.length === 0) {
+      childRowsWithoutLinks += 1;
+    }
+
+    caregiverIds.forEach((id) => linkedCaregiverIds.add(id));
+    teacherIds.forEach((id) => linkedTeacherIds.add(id));
+  });
+
+  const caregiverRowsWithoutLinks = users.filter((user) => {
+    const userTypeValue = getUserTypeValue(user);
+    if (userTypeValue !== 'caregiver' && userTypeValue !== 'parent') return false;
+    const idValue = String(getFieldValue(user, 'id') ?? '').trim();
+    if (!idValue) return false;
+    return !linkedCaregiverIds.has(idValue);
+  }).length;
+
+  const teacherRowsWithoutLinks = users.filter((user) => {
+    const userTypeValue = getUserTypeValue(user);
+    if (userTypeValue !== 'teacher') return false;
+    const idValue = String(getFieldValue(user, 'id') ?? '').trim();
+    if (!idValue) return false;
+    return !linkedTeacherIds.has(idValue);
+  }).length;
+
+  return {
+    childRowsWithoutLinks,
+    caregiverRowsWithoutLinks,
+    teacherRowsWithoutLinks,
+  };
+}
+
+function showMissingLinkWarnings(users) {
+  const { childRowsWithoutLinks, caregiverRowsWithoutLinks, teacherRowsWithoutLinks } = getMissingLinkCounts(users);
+  const totalMissing = childRowsWithoutLinks + caregiverRowsWithoutLinks + teacherRowsWithoutLinks;
+
+  if (totalMissing > 0) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Warning',
+      detail: `There are ${totalMissing} rows without links in the uploaded files.`,
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+  }
+
+  if (caregiverRowsWithoutLinks > 0) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Caregiver links missing',
+      detail:
+        `There are ${caregiverRowsWithoutLinks} caregiver rows without linked children. ` +
+        'Caregivers must be linked to children for surveys to assign correctly.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+  }
+
+  if (teacherRowsWithoutLinks > 0) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Teacher links missing',
+      detail:
+        `There are ${teacherRowsWithoutLinks} teacher rows without linked children. ` +
+        'Teachers can still be linked later through classes.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+  }
+
+  if (childRowsWithoutLinks > 0) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Child links missing',
+      detail:
+        `There are ${childRowsWithoutLinks} child rows without caregiver or teacher links. ` +
+        'These rows will be ignored during linking.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+  }
+}
 
 function generateColumns(rawJson) {
   let columns = [];
