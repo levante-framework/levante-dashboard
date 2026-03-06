@@ -3,8 +3,6 @@ import _chunk from 'lodash/chunk';
 import _last from 'lodash/last';
 import _mapValues from 'lodash/mapValues';
 import _without from 'lodash/without';
-import { storeToRefs } from 'pinia';
-import { useAuthStore } from '@/store/auth';
 import { AUTH_USER_TYPE } from '@/constants/auth';
 import { convertValues, getAxiosInstance, getBaseDocumentPath, orderByDefault } from './utils';
 import { FIRESTORE_DATABASES } from '@/constants/firebase';
@@ -12,6 +10,7 @@ import { ROLES } from '@/constants/roles';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { logger } from '@/logger';
 import { fetchOrgsBySite } from './orgs';
+import { administrationsRepository } from '@/firebase/repositories/AdministrationsRepository';
 
 export function getTitle(item, isSuperAdmin) {
   if (isSuperAdmin) {
@@ -22,72 +21,67 @@ export function getTitle(item, isSuperAdmin) {
   }
 }
 
+// Convert dates to Date objects, handling both timestamp strings and Date objects
+export const convertToDate = (dateValue) => {
+  if (!dateValue) return null;
+  if (dateValue instanceof Date) return dateValue;
+
+  // If it's already a Date object, return it
+  if (dateValue instanceof Date) {
+    return isNaN(dateValue.getTime()) ? null : dateValue;
+  }
+
+  // If it's a Firestore Timestamp object with toDate method
+  if (typeof dateValue === 'object' && typeof dateValue.toDate === 'function') {
+    return dateValue.toDate();
+  }
+  if (typeof dateValue === 'object' && typeof dateValue._seconds === 'number') {
+    const seconds = dateValue._seconds || 0;
+    const nanoseconds = dateValue._nanoseconds || 0;
+    return new Date(seconds * 1000 + nanoseconds / 1000000);
+  }
+};
+
 // TODO: Remove this function. Fields that we want should be passed into the query, not filtered from the whole data of the document on the client side.
 // Netowrk call should be done in the query function, not here.
 const mapAdministrations = async (data) => {
   // First format the administration documents
-  const administrationData = data
-    .map((a) => {
-      let assignedOrgs = {
-        districts: a.districts,
-        schools: a.schools,
-        classes: a.classes,
-        groups: a.groups,
-        families: a.families,
-      };
-       // Convert dates to Date objects, handling both timestamp strings and Date objects
-      const convertToDate = (dateValue) => {
-        if (!dateValue) return null;
-        if (dateValue instanceof Date) return dateValue;
+  const administrationData = data.map((a) => {
+    let assignedOrgs = {
+      districts: a.districts,
+      schools: a.schools,
+      classes: a.classes,
+      groups: a.groups,
+      families: a.families,
+    };
 
-
-         // If it's already a Date object, return it
-         if (dateValue instanceof Date) {
-          return isNaN(dateValue.getTime()) ? null : dateValue;
-        }
-        
-        // If it's a Firestore Timestamp object with toDate method
-        if (typeof dateValue === 'object' && typeof dateValue.toDate === 'function') {
-          return dateValue.toDate();
-        }
-        if (typeof dateValue === 'object' && typeof dateValue._seconds === 'number') {
-          const seconds = dateValue._seconds || 0;
-          const nanoseconds = dateValue._nanoseconds || 0;
-          return new Date(seconds * 1000 + nanoseconds / 1000000);
-        }
-        
-      };
-
-      return {
-        id: a.id,
-        name: a.name,
-        publicName: a.publicName,
-        dates: {
-          start: convertToDate(a.dateOpened),
-          end: convertToDate(a.dateClosed),
-          created: convertToDate(a.dateCreated),
-        },
-        assessments: a.assessments,
-        assignedOrgs,
-        // If testData is not defined, default to false when mapping
-        testData: a.testData ?? false,
-        creatorName: a.creatorName,
-      };
-    });
+    return {
+      id: a.id,
+      name: a.name,
+      publicName: a.publicName,
+      dates: {
+        start: convertToDate(a.dateOpened),
+        end: convertToDate(a.dateClosed),
+        created: convertToDate(a.dateCreated),
+      },
+      assessments: a.assessments,
+      assignedOrgs,
+      // If testData is not defined, default to false when mapping
+      testData: a.testData ?? false,
+      creatorName: a.creatorName,
+    };
+  });
 
   return administrationData;
 };
 
 export const administrationPageFetcher = async (selectedDistrictId, fetchTestData = false, orderBy) => {
-  const authStore = useAuthStore();
-  const { roarfirekit } = storeToRefs(authStore);
-
   const siteId =
     selectedDistrictId.value.trim() && selectedDistrictId.value !== 'any' ? selectedDistrictId.value : null;
 
   let orgs = [];
 
-  const administrationData = await roarfirekit.value.getAdministrations({
+  const administrationData = await administrationsRepository.getAdministrations({
     testData: toValue(fetchTestData),
     idsOnly: false,
   });
