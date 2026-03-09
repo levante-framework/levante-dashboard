@@ -6,9 +6,12 @@
           <h2 data-cy="h2-card-admin-title" class="sm:text-lg lg:text-lx m-0 h2-card-admin-title">
             {{ title }}
           </h2>
-          <small class="m-0 ml-1">
-            — Created by <span class="font-bold">{{ props.creatorName }}</span></small
-          >
+          <div class="flex flex-wrap align-items-center gap-2">
+            <small class="m-0 ml-1">
+              — Created by <span class="font-bold">{{ props.creatorName }}</span></small
+            >
+            <SyncStatusBadge :status="displayedSyncStatus" class="status-badge" />
+          </div>
         </div>
         <div
           v-if="speedDialItems.length > 0 && (isSyncComplete || displayedSyncStatus === 'failed')"
@@ -48,7 +51,6 @@
         <span :class="['status-badge', administrationStatusBadge]">
           {{ administrationStatus }}
         </span>
-        <SyncStatusBadge :status="displayedSyncStatus" class="status-badge" />
       </div>
       <div class="card-admin-assessments">
         <span class="mr-1"><strong>Tasks</strong>:</span>
