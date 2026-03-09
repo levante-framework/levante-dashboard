@@ -1,0 +1,322 @@
+<h1 id="i18n-key-usage-report">i18n Key Usage Report</h1>
+<h2 id="how-to-interpret">How To Interpret</h2>
+<ul>
+<li><p><strong>Used keys</strong>: static literal translation calls that
+resolve to known keys.</p></li>
+<li><p><strong>Unused keys</strong>: keys in
+<code>en-US-componentTranslations.json</code> not found via static or
+inferred dynamic call scanning.</p></li>
+<li><p><strong>Unresolved translation calls</strong>: literal
+translation calls that do not map to a known key (possible typo, missing
+key, or different namespace).</p></li>
+<li><p><strong>Dynamic translation callsites</strong>: non-literal
+translation calls (template strings/expressions). The report attempts
+wildcard inference (e.g., <code>gameTabs.*Name</code>) but this remains
+heuristic.</p></li>
+<li><p>Total keys scanned: 136</p></li>
+<li><p>Used keys (static literal): 67</p></li>
+<li><p>Used keys (dynamic inferred): 59</p></li>
+<li><p>Used keys (adjusted total): 107</p></li>
+<li><p>Unused keys (adjusted): 29</p></li>
+<li><p>Unresolved translation calls: 5</p></li>
+<li><p>Dynamic translation callsites (static unresolved): 8</p></li>
+</ul>
+<h2 id="unresolved-translation-calls">Unresolved Translation Calls</h2>
+<ul>
+<li><code>authSignIn.atLeastOneUppercase</code></li>
+<li><code>permissions.loading</code></li>
+<li><code>profile.settings.language</code></li>
+<li><code>profile.settings.languageDescription</code></li>
+<li><code>profile.settings.settings</code></li>
+</ul>
+<h2 id="dynamic-translation-callsites">Dynamic Translation
+Callsites</h2>
+<p><em>These calls use non-literal expressions and cannot be fully
+resolved without runtime tracing or deeper AST/data-flow
+analysis.</em></p>
+<ul>
+<li><code>src/components/ConsentModal.vue</code> -&gt;
+<code>consentModal.${_lowerCase(props.consentType)}UpdatedStatus</code></li>
+<li><code>src/components/GameTabs.vue</code> -&gt;
+<code>gameTabs.surveyName${_capitalize(props.userData.userType)}Part1</code></li>
+<li><code>src/components/GameTabs.vue</code> -&gt;
+<code>gameTabs.${normalizedTaskId}Name</code></li>
+<li><code>src/components/GameTabs.vue</code> -&gt;
+<code>gameTabs.${normalizedTaskId}</code></li>
+<li><code>src/components/GameTabs.vue</code> -&gt;
+<code>gameTabs.surveyDescription${_capitalize(props.userData.userType)}Part1</code></li>
+<li><code>src/components/GameTabs.vue</code> -&gt;
+<code>gameTabs.${normalizedTaskId}Description</code></li>
+<li><code>src/helpers/index.ts</code> -&gt; <code>-| |o|v</code></li>
+<li><code>src/pages/HomeParticipant.vue</code> -&gt;
+<code>participantSidebar.status${capitalize(getAssignmentStatus(selectedAssignment))}</code></li>
+</ul>
+<h2 id="inferred-dynamic-pattern-matches">Inferred Dynamic Pattern
+Matches</h2>
+<ul>
+<li><code>src/components/ConsentModal.vue</code> -&gt;
+<code>consentModal.${_lowerCase(props.consentType)}UpdatedStatus</code>
+<ul>
+<li>inferred pattern: <code>auth.consent.*UpdatedStatus</code></li>
+<li>matched keys: 1</li>
+<li>sample: <code>auth.consent.consentUpdatedStatus</code></li>
+</ul></li>
+<li><code>src/components/GameTabs.vue</code> -&gt;
+<code>gameTabs.surveyName${_capitalize(props.userData.userType)}Part1</code>
+<ul>
+<li>inferred pattern:
+<code>components.game-tabs.surveyName*Part1</code></li>
+<li>matched keys: 2</li>
+<li>sample: <code>components.game-tabs.surveyNameParentPart1</code>,
+<code>components.game-tabs.surveyNameTeacherPart1</code></li>
+</ul></li>
+<li><code>src/components/GameTabs.vue</code> -&gt;
+<code>gameTabs.${normalizedTaskId}Name</code>
+<ul>
+<li>inferred pattern: <code>components.game-tabs.*Name</code></li>
+<li>matched keys: 12</li>
+<li>sample: <code>components.game-tabs.egmaMathName</code>,
+<code>components.game-tabs.heartsAndFlowersName</code>,
+<code>components.game-tabs.introName</code>,
+<code>components.game-tabs.matrixReasoningName</code>,
+<code>components.game-tabs.mefsName</code>,
+<code>components.game-tabs.memoryGameName</code>,
+<code>components.game-tabs.mentalRotationName</code>,
+<code>components.game-tabs.roarInferenceName</code>,
+<code>components.game-tabs.sameDifferentSelectionName</code>,
+<code>components.game-tabs.theoryOfMindName</code>,
+<code>components.game-tabs.trogName</code>,
+<code>components.game-tabs.vocabName</code></li>
+</ul></li>
+<li><code>src/components/GameTabs.vue</code> -&gt;
+<code>gameTabs.${normalizedTaskId}</code>
+<ul>
+<li>inferred pattern: <code>components.game-tabs.*</code></li>
+<li>matched keys: 51</li>
+<li>sample: <code>components.game-tabs.clickToStart</code>,
+<code>components.game-tabs.egmaMathDescription</code>,
+<code>components.game-tabs.egmaMathName</code>,
+<code>components.game-tabs.heartsAndFlowersDescription</code>,
+<code>components.game-tabs.heartsAndFlowersName</code>,
+<code>components.game-tabs.introDescription</code>,
+<code>components.game-tabs.introName</code>,
+<code>components.game-tabs.matrixReasoningDescription</code>,
+<code>components.game-tabs.matrixReasoningName</code>,
+<code>components.game-tabs.mefsDescription</code>,
+<code>components.game-tabs.mefsName</code>,
+<code>components.game-tabs.memoryGameDescription</code></li>
+</ul></li>
+<li><code>src/components/GameTabs.vue</code> -&gt;
+<code>gameTabs.surveyDescription${_capitalize(props.userData.userType)}Part1</code>
+<ul>
+<li>inferred pattern:
+<code>components.game-tabs.surveyDescription*Part1</code></li>
+<li>matched keys: 2</li>
+<li>sample:
+<code>components.game-tabs.surveyDescriptionParentPart1</code>,
+<code>components.game-tabs.surveyDescriptionTeacherPart1</code></li>
+</ul></li>
+<li><code>src/components/GameTabs.vue</code> -&gt;
+<code>gameTabs.${normalizedTaskId}Description</code>
+<ul>
+<li>inferred pattern:
+<code>components.game-tabs.*Description</code></li>
+<li>matched keys: 15</li>
+<li>sample: <code>components.game-tabs.egmaMathDescription</code>,
+<code>components.game-tabs.heartsAndFlowersDescription</code>,
+<code>components.game-tabs.introDescription</code>,
+<code>components.game-tabs.matrixReasoningDescription</code>,
+<code>components.game-tabs.mefsDescription</code>,
+<code>components.game-tabs.memoryGameDescription</code>,
+<code>components.game-tabs.mentalRotationDescription</code>,
+<code>components.game-tabs.paDescription</code>,
+<code>components.game-tabs.roarInferenceDescription</code>,
+<code>components.game-tabs.sameDifferentSelectionDescription</code>,
+<code>components.game-tabs.sreDescription</code>,
+<code>components.game-tabs.swrDescription</code></li>
+</ul></li>
+<li><code>src/pages/HomeParticipant.vue</code> -&gt;
+<code>participantSidebar.status${capitalize(getAssignmentStatus(selectedAssignment))}</code>
+<ul>
+<li>inferred pattern:
+<code>components.participant-sidebar.status*</code></li>
+<li>matched keys: 7</li>
+<li>sample: <code>components.participant-sidebar.statusClose</code>,
+<code>components.participant-sidebar.statusClosed</code>,
+<code>components.participant-sidebar.statusCurrent</code>,
+<code>components.participant-sidebar.statusOpen</code>,
+<code>components.participant-sidebar.statusOpened</code>,
+<code>components.participant-sidebar.statusPast</code>,
+<code>components.participant-sidebar.statusUpcoming</code></li>
+</ul></li>
+</ul>
+<h2 id="unused-keys-adjusted">Unused Keys (Adjusted)</h2>
+<ul>
+<li><code>auth.consent.title</code></li>
+<li><code>auth.signin.atLeastOneNumber</code></li>
+<li><code>auth.signin.atLeastOneUpperCase</code></li>
+<li><code>auth.signin.pageTitle</code></li>
+<li><code>components.navbar.greeting</code></li>
+<li><code>components.sentry-form.buttonLabel</code></li>
+<li><code>components.sentry-form.cancelButtonLabel</code></li>
+<li><code>components.sentry-form.emailPlaceholder</code></li>
+<li><code>components.sentry-form.formTitle</code></li>
+<li><code>components.sentry-form.messageLabel</code></li>
+<li><code>components.sentry-form.messagePlaceholder</code></li>
+<li><code>components.sentry-form.namePlaceholder</code></li>
+<li><code>components.sentry-form.submitButtonLabel</code></li>
+<li><code>components.tasks.loading</code></li>
+<li><code>components.tasks.preparing</code></li>
+<li><code>pages.home-participant.assignments</code></li>
+<li><code>pages.home-participant.consentUpdatedStatus</code></li>
+<li><code>pages.home-participant.current</code></li>
+<li><code>pages.home-participant.loadingAssignments</code></li>
+<li><code>pages.home-participant.noCurrentAssignmentsFound</code></li>
+<li><code>pages.home-participant.noPastAssignmentsFound</code></li>
+<li><code>pages.home-participant.noUpcomingAssignmentsFound</code></li>
+<li><code>pages.home-participant.past</code></li>
+<li><code>pages.home-participant.selectAssignment</code></li>
+<li><code>pages.home-participant.showOptionalAssignments</code></li>
+<li><code>pages.home-participant.upcoming</code></li>
+<li><code>pages.home-selector.loading</code></li>
+<li><code>pages.signin.adminPrompt</code></li>
+<li><code>pages.signin.loginWith</code></li>
+</ul>
+<h2 id="used-keys-with-one-usage-file">Used Keys (with one usage
+file)</h2>
+<ul>
+<li><code>auth.consent.acceptButton</code> -&gt;
+<code>src/components/ConsentModal.vue</code></li>
+<li><code>auth.consent.assentTitle</code> -&gt;
+<code>src/components/ConsentModal.vue</code></li>
+<li><code>auth.consent.consentTitle</code> -&gt;
+<code>src/components/ConsentModal.vue</code></li>
+<li><code>auth.consent.header</code> -&gt;
+<code>src/components/ConsentModal.vue</code></li>
+<li><code>auth.consent.rejectButton</code> -&gt;
+<code>src/components/ConsentModal.vue</code></li>
+<li><code>auth.consent.toastHeader</code> -&gt;
+<code>src/components/ConsentModal.vue</code></li>
+<li><code>auth.signin.atLeastOneLowercase</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.atLeastOneNumeric</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.buttonLabel</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.continueWithGoogle</code> -&gt;
+<code>src/pages/SignIn.vue</code></li>
+<li><code>auth.signin.emailId</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.emailPlaceholder</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.forgotPassword</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.incorrectEmailOrPassword</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.invalidEmailPlaceholder</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.minimumCharacters</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.passwordId</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.passwordPlaceholder</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.pickPassword</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.selectLanguage</code> -&gt;
+<code>src/components/LanguageSelector.vue</code></li>
+<li><code>auth.signin.selectLanguageLabel</code> -&gt;
+<code>src/components/LanguageSelector.vue</code></li>
+<li><code>auth.signin.signInWithEmailLinkInstead</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.signInWithEmailLinkPlaceHolder</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.signInWithPasswordInstead</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>auth.signin.suggestions</code> -&gt;
+<code>src/components/auth/SignIn.vue</code></li>
+<li><code>components.game-tabs.clickToStart</code> -&gt;
+<code>src/components/GameTabs.vue</code></li>
+<li><code>components.game-tabs.surveyDescriptionChild</code> -&gt;
+<code>src/components/GameTabs.vue</code></li>
+<li><code>components.game-tabs.surveyNameChild</code> -&gt;
+<code>src/components/GameTabs.vue</code></li>
+<li><code>components.game-tabs.surveyProgressGeneral</code> -&gt;
+<code>src/components/GameTabs.vue</code></li>
+<li><code>components.game-tabs.surveyProgressGeneralParent</code> -&gt;
+<code>src/components/GameTabs.vue</code></li>
+<li><code>components.game-tabs.surveyProgressGeneralTeacher</code> -&gt;
+<code>src/components/GameTabs.vue</code></li>
+<li><code>components.game-tabs.surveyProgressSpecificParent</code> -&gt;
+<code>src/components/GameTabs.vue</code></li>
+<li><code>components.game-tabs.surveyProgressSpecificParentMonth</code>
+-&gt; <code>src/components/GameTabs.vue</code></li>
+<li><code>components.game-tabs.surveyProgressSpecificParentYear</code>
+-&gt; <code>src/components/GameTabs.vue</code></li>
+<li><code>components.game-tabs.taskCompleted</code> -&gt;
+<code>src/components/GameTabs.vue</code></li>
+<li><code>components.game-tabs.taskNoLongerAvailable</code> -&gt;
+<code>src/components/GameTabs.vue</code></li>
+<li><code>components.game-tabs.taskNotYetAvailable</code> -&gt;
+<code>src/components/GameTabs.vue</code></li>
+<li><code>components.navbar.signOut</code> -&gt;
+<code>src/components/UserActions.vue</code></li>
+<li><code>components.participant-sidebar.assignments</code> -&gt;
+<code>src/components/SideBar.vue</code></li>
+<li><code>components.participant-sidebar.grade</code> -&gt;
+<code>src/components/ParticipantSidebar.vue</code></li>
+<li><code>components.participant-sidebar.noCurrentAssignments</code>
+-&gt; <code>src/components/SideBar.vue</code></li>
+<li><code>components.participant-sidebar.noPastAssignments</code> -&gt;
+<code>src/components/SideBar.vue</code></li>
+<li><code>components.participant-sidebar.noUpcomingAssignments</code>
+-&gt; <code>src/components/SideBar.vue</code></li>
+<li><code>components.participant-sidebar.statusClose</code> -&gt;
+<code>src/pages/HomeParticipant.vue</code></li>
+<li><code>components.participant-sidebar.statusClosed</code> -&gt;
+<code>src/pages/HomeParticipant.vue</code></li>
+<li><code>components.participant-sidebar.statusCurrent</code> -&gt;
+<code>src/components/SideBar.vue</code></li>
+<li><code>components.participant-sidebar.statusOpen</code> -&gt;
+<code>src/pages/HomeParticipant.vue</code></li>
+<li><code>components.participant-sidebar.statusOpened</code> -&gt;
+<code>src/pages/HomeParticipant.vue</code></li>
+<li><code>components.participant-sidebar.statusPast</code> -&gt;
+<code>src/components/SideBar.vue</code></li>
+<li><code>components.participant-sidebar.statusUpcoming</code> -&gt;
+<code>src/components/SideBar.vue</code></li>
+<li><code>components.participant-sidebar.studentInfo</code> -&gt;
+<code>src/components/ParticipantSidebar.vue</code></li>
+<li><code>components.participant-sidebar.tasksCompleted</code> -&gt;
+<code>src/components/ParticipantSidebar.vue</code></li>
+<li><code>pages.home-participant.contactAdministrator</code> -&gt;
+<code>src/pages/HomeParticipant.vue</code></li>
+<li><code>pages.home-participant.noAssignments</code> -&gt;
+<code>src/pages/HomeParticipant.vue</code></li>
+<li><code>pages.home-selector.inactivityLogout</code> -&gt;
+<code>src/containers/SessionTimer/SessionTimer.vue</code></li>
+<li><code>pages.home-selector.inactivityLogoutAcceptLabel</code> -&gt;
+<code>src/containers/SessionTimer/SessionTimer.vue</code></li>
+<li><code>pages.not-found.label</code> -&gt;
+<code>src/pages/NotFound.vue</code></li>
+<li><code>pages.not-found.pageNotFound</code> -&gt;
+<code>src/pages/NotFound.vue</code></li>
+<li><code>pages.not-found.sorry</code> -&gt;
+<code>src/pages/NotFound.vue</code></li>
+<li><code>pages.signin.adminAction</code> -&gt;
+<code>src/pages/SignIn.vue</code></li>
+<li><code>pages.signin.adminInfoPrompt</code> -&gt;
+<code>src/pages/SignIn.vue</code></li>
+<li><code>pages.signin.havingTrouble</code> -&gt;
+<code>src/pages/SignIn.vue</code></li>
+<li><code>pages.signin.login</code> -&gt;
+<code>src/pages/SignIn.vue</code></li>
+<li><code>pages.signin.welcome</code> -&gt;
+<code>src/pages/SignIn.vue</code></li>
+<li><code>surveys.user-survey.specificRelationDescriptionChildA</code>
+-&gt; <code>src/pages/UserSurvey.vue</code></li>
+<li><code>surveys.user-survey.specificRelationDescriptionChildB</code>
+-&gt; <code>src/pages/UserSurvey.vue</code></li>
+<li><code>surveys.user-survey.specificRelationDescriptionClass</code>
+-&gt; <code>src/pages/UserSurvey.vue</code></li>
+</ul>
