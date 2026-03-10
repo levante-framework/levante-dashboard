@@ -33,6 +33,7 @@
               label="Sign in with Google"
               class="inline-flex surface-0 p-2 border-black-alpha-10 text-center text-black justify-content-center hover:border-primary hover:surface-ground"
               style="border-radius: 3rem; height: 3rem; color: black !important"
+              :disabled="isAuthEmulator"
               @click="authWithGoogle"
             >
               <img src="../assets/provider-google-logo.svg" alt="The Google Logo" class="flex mr-2 w-1" />
@@ -40,6 +41,13 @@
             </PvButton>
           </div>
           <small class="mt-3 text-center text-color-secondary">*{{ $t('pageSignIn.adminInfoPrompt') }}</small>
+          <small v-if="isAuthEmulator" class="mt-2 text-center text-color-secondary">
+            Google SSO is disabled while running with Firebase emulators. Use <code>npm run dev:db</code> to sign in
+            with Google in development.
+          </small>
+          <small v-if="googleSignInError" class="mt-2 text-center p-error">
+            {{ googleSignInError }}
+          </small>
         </section>
         <!-- <section class="signin-option-container signin-option-providers">
           <div class="flex flex-row justify-content-center w-full">
@@ -134,6 +142,8 @@ const authStore = useAuthStore();
 const assignmentsStore = useAssignmentsStore();
 const router = useRouter();
 const adminSignIn = ref(false);
+const isAuthEmulator = import.meta.env.VITE_EMULATOR === 'TRUE';
+const googleSignInError = ref('');
 
 const { spinner, ssoProvider, routeToProfile, roarfirekit } = storeToRefs(authStore);
 const warningModalOpen = ref(false);
@@ -155,6 +165,12 @@ const toggleAdminSignIn = () => {
 };
 
 const authWithGoogle = () => {
+  googleSignInError.value = '';
+
+  if (isAuthEmulator) {
+    return;
+  }
+
   if (isMobileBrowser()) {
     authStore.signInWithGoogleRedirect();
   } else {
@@ -181,7 +197,12 @@ const authWithGoogle = () => {
           // User tried to register with an email that is already linked to a firebase account.
           openWarningModal();
           spinner.value = false;
+        } else if (errorCode === 'auth/unauthorized-domain') {
+          googleSignInError.value =
+            'This dev URL is not authorized for Google sign-in in Firebase. Add this host in Firebase Auth > Authorized domains, or use npm run dev:db from localhost.';
+          spinner.value = false;
         } else {
+          googleSignInError.value = 'Google sign-in failed. Please try again or sign in with email/password.';
           console.log('caught error', e);
           spinner.value = false;
         }
