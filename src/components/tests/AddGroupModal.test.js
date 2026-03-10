@@ -74,9 +74,11 @@ vi.mock('@/composables/queries/useDistrictSchoolsQuery', () => ({
   })),
 }));
 
+const mockToastAdd = vi.fn();
+
 vi.mock('primevue/usetoast', () => ({
   useToast: () => ({
-    add: () => vi.fn(),
+    add: mockToastAdd,
   }),
 }));
 
@@ -100,6 +102,8 @@ const mountOptions = {
 
 beforeEach(() => {
   setActivePinia(createPinia());
+  mockToastAdd.mockClear();
+  mockUseUpsertOrgMutation.mockClear();
 });
 
 describe('AddGroupModal.vue', () => {
@@ -146,40 +150,6 @@ describe('AddGroupModal.vue', () => {
     const errorMessages = document.querySelectorAll('.p-error');
     // By default, we only have 2 required fields
     expect(errorMessages.length).toBe(2);
-
-    wrapper.unmount();
-  });
-
-  it('should NOT allow users to create 2 or more groups with the same name', async () => {
-    const wrapper = mount(AddGroupModal, mountOptions);
-    await nextTick();
-
-    // Programmatically select the Site org type (more stable than simulating PrimeVue dropdown in tests)
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    wrapper.vm.orgType = { firestoreCollection: 'districts', singular: 'district', label: 'Site' };
-    await nextTick();
-    await flushPromises();
-
-    // Now we provide a site name
-    const orgName = document.querySelector('[data-cy="input-org-name"]');
-    expect(orgName).not.toBeNull();
-    orgName.value = 'Test Site';
-    orgName.dispatchEvent(new Event('input'));
-    await nextTick();
-
-    // Mocking the vuelidate
-    wrapper.vm.v$.$validate = () => Promise.resolve(true);
-
-    const submitBtn = document.querySelector('[data-testid="submitBtn"]');
-    expect(submitBtn).not.toBeNull();
-    expect(submitBtn.textContent.trim()).toMatch(/Add(ing)?\s+Site/);
-
-    await submitBtn.click();
-    await flushPromises();
-
-    // Component does not yet validate duplicate names via useOrgNameExistsQuery; mutation is called
-    expect(mockUseUpsertOrgMutation).toHaveBeenCalledTimes(1);
 
     wrapper.unmount();
   });
@@ -255,6 +225,46 @@ describe('AddGroupModal.vue', () => {
     expect(errorMessages.length).toBe(0);
 
     expect(mockUseUpsertOrgMutation).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+  });
+
+  it('should display an error message when creating an org that already exists', async () => {
+    const wrapper = mount(AddGroupModal, mountOptions);
+    await nextTick();
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    wrapper.vm.orgType = { firestoreCollection: 'districts', singular: 'district', label: 'Site' };
+    await nextTick();
+    await flushPromises();
+
+    const orgName = document.querySelector('[data-cy="input-org-name"]');
+    expect(orgName).not.toBeNull();
+    orgName.value = 'Existing Site';
+    orgName.dispatchEvent(new Event('input'));
+    await nextTick();
+
+    wrapper.vm.v$.$validate = () => Promise.resolve(true);
+
+    const submitBtn = document.querySelector('[data-testid="submitBtn"]');
+    expect(submitBtn).not.toBeNull();
+    await submitBtn.click();
+    await flushPromises();
+
+    expect(mockUseUpsertOrgMutation).toHaveBeenCalledTimes(1);
+    const mutateCall = mockUseUpsertOrgMutation.mock.calls[0];
+    const options = mutateCall[1];
+    const alreadyExistsError = new Error('An organization with this name already exists');
+    options.onError(alreadyExistsError);
+
+    expect(mockToastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'An organization with this name already exists',
+      }),
+    );
 
     wrapper.unmount();
   });
