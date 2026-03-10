@@ -553,8 +553,9 @@ async function submitUsers() {
     activeSubmit.value = false;
     return;
   }
-  // TODO: Figure out deadline-exceeded error with 700+ users. (Registration works fine, creates all documents but the client recieves the error)
-  const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 100);
+  // Chunk and run: Not a transactional operation so partial success is possible
+  // TODO: Add some retry operations to handle partial successes
+  const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 50);
   const createUserPromises = [];
 
   for (const users of chunkedUsersToBeRegistered) {      // Ensure each user has the proper userType field name for the backend
