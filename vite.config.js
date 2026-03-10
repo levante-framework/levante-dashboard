@@ -1,5 +1,7 @@
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { fileURLToPath, URL } from 'url';
+import { createRequire } from 'module';
+import path from 'path';
 import { defineConfig } from 'vite';
 import Vue from '@vitejs/plugin-vue';
 import mkcert from 'vite-plugin-mkcert';
@@ -7,7 +9,9 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import UnheadVite from '@unhead/addons/vite';
 import * as child from 'child_process';
 
+const require = createRequire(import.meta.url);
 const commitHash = child.execSync('git rev-parse --short HEAD').toString();
+const primeiconsDir = path.dirname(require.resolve('primeicons/primeicons.css'));
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -44,7 +48,7 @@ export default defineConfig({
 
   server: {
     fs: {
-      allow: ['..'],
+      allow: ['..', primeiconsDir],
     },
     https: process.env.VITE_HTTPS === 'TRUE',
   },
