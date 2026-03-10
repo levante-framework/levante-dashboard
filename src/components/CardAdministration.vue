@@ -208,6 +208,7 @@ import SyncStatusBadge from '@/components/SyncStatusBadge.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
 
+// TODO: Remove this once we have a proper delete option
 const SHOW_DELETE_OPTION = false;
 
 interface Assessment {
