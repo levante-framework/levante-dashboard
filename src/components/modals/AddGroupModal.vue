@@ -37,7 +37,7 @@
                 <PvSelect
                   v-model="parentSchool"
                   :loading="isFetchingSchools"
-                  :options="(schools as SelectedOrg[]) ?? []"
+                  :options="schools ?? []"
                   class="w-full"
                   data-cy="dropdown-parent-school"
                   input-id="parentSchool"
@@ -102,7 +102,6 @@ import PvFloatLabel from 'primevue/floatlabel';
 import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
-import useOrgNameExistsQuery from '@/composables/queries/useOrgNameExistsQuery';
 import useUpsertOrgMutation from '@/composables/mutations/useUpsertOrgMutation';
 import useVuelidate from '@vuelidate/core';
 import { usePermissions } from '@/composables/usePermissions';
@@ -151,7 +150,20 @@ const queryClient = useQueryClient();
 
 const isDistrictTabActive = computed(() => props?.activeTabOrg?.singular === SINGULAR_ORG_TYPES.DISTRICTS);
 const isUserSuperAdmin = computed(() => userRole.value === ROLES.SUPER_ADMIN);
-const isSubmitBtnDisabled = computed(() => !authStore.currentSite || authStore.currentSite.toLowerCase() === 'any');
+const isSubmitBtnDisabled = ref(false);
+
+watch(
+  () => authStore.currentSite,
+  (newCurrentSite) => {
+    if (!newCurrentSite || newCurrentSite.toLowerCase() === 'any') {
+      isSubmitBtnDisabled.value = true;
+    } else {
+      isSubmitBtnDisabled.value = false;
+    }
+  },
+  { immediate: true },
+);
+
 const isSubmitting = ref(false);
 const orgName = ref('');
 const orgType = ref<OrgType | undefined>();
@@ -231,11 +243,13 @@ const { mutate: upsertOrg, isPending: isPendingOrg } = useUpsertOrgMutation();
 
 const { isFetching: isFetchingSchools, data: schools } = _useSchoolsQuery(selectedSite);
 
-const { isRefetching: isCheckingOrgName, refetch: doesOrgNameExist } = useOrgNameExistsQuery(
-  orgName,
-  orgType,
-  parentDistrict,
-  parentSchool,
+// Watch for changes in loading states, with proper undefined handling
+watch(
+  () => [isPendingOrg?.value ?? false],
+  ([isPending]) => {
+    isSubmitBtnDisabled.value = Boolean(isPending);
+    isSubmitting.value = Boolean(isPending);
+  },
 );
 
 const handleOnClose = () => {
@@ -333,14 +347,6 @@ const parseCreateOrgData = (data: CreateOrgType) => {
   }
 };
 
-// Watch for changes in loading states, with proper undefined handling
-watch(
-  () => [isCheckingOrgName?.value ?? false, isPendingOrg?.value ?? false],
-  ([isChecking, isPending]) => {
-    isSubmitting.value = Boolean(isChecking) || Boolean(isPending);
-  },
-);
-
 watch(
   () => ({
     activeTabOrg: props.activeTabOrg,
@@ -398,28 +404,6 @@ const submit = async () => {
       severity: 'error',
       summary: 'Error',
       detail: 'Please select a specific site to add a group',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  }
-
-  const { data: orgNameExists } = await doesOrgNameExist();
-
-  if (orgNameExists) {
-    const errorTitle = `${orgTypeLabel.value} Creation Error`;
-    let errorMessage = `${orgTypeLabel.value} with name ${orgName.value} already exists.`;
-
-    if (orgType.value?.singular === SINGULAR_ORG_TYPES.DISTRICTS) {
-      errorMessage += ` ${orgTypeLabel.value} names must be unique.`;
-    } else {
-      errorMessage += ` ${orgTypeLabel.value} names must be unique within a site.`;
-    }
-
-    isSubmitting.value = false;
-
-    return toast.add({
-      severity: 'error',
-      summary: errorTitle,
-      detail: errorMessage,
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   }
