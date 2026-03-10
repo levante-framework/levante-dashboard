@@ -83,9 +83,11 @@ vi.mock('@/composables/queries/useDistrictSchoolsQuery', () => ({
   })),
 }));
 
+const mockToastAdd = vi.fn();
+
 vi.mock('primevue/usetoast', () => ({
   useToast: () => ({
-    add: () => vi.fn(),
+    add: mockToastAdd,
   }),
 }));
 
@@ -111,6 +113,8 @@ beforeEach(() => {
   mockOrgNameExistsState.value = false;
   mockUseUpsertOrgMutation.mockClear();
   setActivePinia(createPinia());
+  mockToastAdd.mockClear();
+  mockUseUpsertOrgMutation.mockClear();
 });
 
 describe('AddGroupModal.vue', () => {
@@ -268,6 +272,46 @@ describe('AddGroupModal.vue', () => {
     expect(errorMessages.length).toBe(0);
 
     expect(mockUseUpsertOrgMutation).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+  });
+
+  it('should display an error message when creating an org that already exists', async () => {
+    const wrapper = mount(AddGroupModal, mountOptions);
+    await nextTick();
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    wrapper.vm.orgType = { firestoreCollection: 'districts', singular: 'district', label: 'Site' };
+    await nextTick();
+    await flushPromises();
+
+    const orgName = document.querySelector('[data-cy="input-org-name"]');
+    expect(orgName).not.toBeNull();
+    orgName.value = 'Existing Site';
+    orgName.dispatchEvent(new Event('input'));
+    await nextTick();
+
+    wrapper.vm.v$.$validate = () => Promise.resolve(true);
+
+    const submitBtn = document.querySelector('[data-testid="submitBtn"]');
+    expect(submitBtn).not.toBeNull();
+    await submitBtn.click();
+    await flushPromises();
+
+    expect(mockUseUpsertOrgMutation).toHaveBeenCalledTimes(1);
+    const mutateCall = mockUseUpsertOrgMutation.mock.calls[0];
+    const options = mutateCall[1];
+    const alreadyExistsError = new Error('An organization with this name already exists');
+    options.onError(alreadyExistsError);
+
+    expect(mockToastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'An organization with this name already exists',
+      }),
+    );
 
     wrapper.unmount();
   });
