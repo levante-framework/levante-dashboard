@@ -19,9 +19,9 @@ const props = defineProps({
 });
 
 const statusToLabel = {
-  pending: 'processing',
+  pending: 'assignment processing',
   complete: 'assigned',
-  failed: 'failed',
+  failed: 'assignment failed',
 };
 
 const displayLabel = computed(() =>
