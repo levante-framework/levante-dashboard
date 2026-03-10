@@ -1,6 +1,8 @@
 import { Repository } from '@/firebase/Repository';
 
 interface GroupsParams {
+  id?: string;
+  type: 'districts' | 'schools' | 'classes' | 'groups';
   [key: string]: unknown;
 }
 
