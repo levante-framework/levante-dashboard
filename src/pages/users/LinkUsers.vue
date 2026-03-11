@@ -451,7 +451,7 @@ function getMissingLinkCounts(users) {
     teacherIds.forEach((id) => linkedTeacherIds.add(id));
   });
 
-  const caregiverRowsWithoutLinks = users.filter((user) => {
+  const caregiversWithoutLinks = users.filter((user) => {
     const userTypeValue = getUserTypeValue(user);
     if (userTypeValue !== 'caregiver' && userTypeValue !== 'parent') return false;
     const idValue = String(getFieldValue(user, 'id') ?? '').trim();
@@ -459,7 +459,7 @@ function getMissingLinkCounts(users) {
     return !linkedCaregiverIds.has(idValue);
   }).length;
 
-  const teacherRowsWithoutLinks = users.filter((user) => {
+  const teachersWithoutLinks = users.filter((user) => {
     const userTypeValue = getUserTypeValue(user);
     if (userTypeValue !== 'teacher') return false;
     const idValue = String(getFieldValue(user, 'id') ?? '').trim();
@@ -469,14 +469,14 @@ function getMissingLinkCounts(users) {
 
   return {
     childRowsWithoutLinks,
-    caregiverRowsWithoutLinks,
-    teacherRowsWithoutLinks,
+    caregiversWithoutLinks,
+    teachersWithoutLinks,
   };
 }
 
 function showMissingLinkWarnings(users) {
-  const { childRowsWithoutLinks, caregiverRowsWithoutLinks, teacherRowsWithoutLinks } = getMissingLinkCounts(users);
-  const totalMissing = childRowsWithoutLinks + caregiverRowsWithoutLinks + teacherRowsWithoutLinks;
+  const { childRowsWithoutLinks, caregiversWithoutLinks, teachersWithoutLinks } = getMissingLinkCounts(users);
+  const totalMissing = childRowsWithoutLinks + caregiversWithoutLinks + teachersWithoutLinks;
 
   if (totalMissing > 0) {
     toast.add({
@@ -487,23 +487,23 @@ function showMissingLinkWarnings(users) {
     });
   }
 
-  if (caregiverRowsWithoutLinks > 0) {
+  if (caregiversWithoutLinks > 0) {
     toast.add({
       severity: 'warn',
       summary: 'Caregiver links missing',
       detail:
-        `There are ${caregiverRowsWithoutLinks} caregiver rows without linked children. ` +
+        `There are ${caregiversWithoutLinks} caregiver rows without linked children. ` +
         'Caregivers must be linked to children for surveys to assign correctly.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   }
 
-  if (teacherRowsWithoutLinks > 0) {
+  if (teachersWithoutLinks > 0) {
     toast.add({
       severity: 'warn',
       summary: 'Teacher links missing',
       detail:
-        `There are ${teacherRowsWithoutLinks} teacher rows without linked children. ` +
+        `There are ${teachersWithoutLinks} teacher rows without linked children. ` +
         'Teachers can still be linked later through classes.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
