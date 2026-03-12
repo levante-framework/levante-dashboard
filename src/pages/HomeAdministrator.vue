@@ -65,6 +65,10 @@
             </div>
           </div>
 
+          <div class="flex align-items-center mb-3">
+            <DocsButton href="https://researcher.levante-network.org/dashboard/before-you-start" label="Getting Started" />
+          </div>
+
           <div
             v-if="search.length > 0"
             class="flex align-items-center gap-3 text-gray-700 px-4 py-3 my-1 bg-gray-100 rounded"
@@ -178,6 +182,7 @@ import { orderByNameASC } from '@/helpers/query/utils';
 import { getTitle } from '@/helpers/query/administrations';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
 import CardAdministration from '@/components/CardAdministration.vue';
+import DocsButton from '@/components/DocsButton.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { useLevanteStore } from '@/store/levante';
 import { isCurrent, isPast, isUpcoming } from '@/helpers/assignments';

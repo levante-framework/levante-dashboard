@@ -7,16 +7,19 @@
     </template>
 
     <template v-else>
-      <div class="flex align-items-center gap-2">
-        <div class="flex flex-column flex-1">
+      <div class="flex flex-column gap-2">
+        <div class="flex flex-column">
           <h2 class="admin-page-header m-0">Researchers</h2>
           <span v-if="currentSiteName" class="flex align-items-center gap-1 m-0 mt-1 text-lg text-gray-500">
             <i class="pi pi-building"></i>{{ currentSiteName }}
           </span>
         </div>
-        <PermissionGuard :required-role="ROLES.ADMIN">
-          <PvButton :disabled="isAdminsLoading || isAdminsFetching || isAdminsRefetching || isAllSitesSelected" @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Researcher</PvButton>
-        </PermissionGuard>
+        <div class="flex align-items-center justify-content-between w-full">
+          <DocsButton href="https://researcher.levante-network.org/dashboard/administrator-log-in" label="Docs" />
+          <PermissionGuard :required-role="ROLES.ADMIN">
+            <PvButton :disabled="isAdminsLoading || isAdminsFetching || isAdminsRefetching || isAllSitesSelected" @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Researcher</PvButton>
+          </PermissionGuard>
+        </div>
       </div>
 
       <div class="m-0 mt-5">
@@ -92,6 +95,7 @@
 import { usePermissions } from '@/composables/usePermissions';
 import { AdminSubResource } from '@levante-framework/permissions-core';
 import AddAdministratorModal from '@/components/modals/AddAdministratorModal.vue';
+import DocsButton from '@/components/DocsButton.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import useAdminsBySiteQuery from '@/composables/queries/useAdminsBySiteQuery';

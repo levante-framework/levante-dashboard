@@ -2,9 +2,13 @@
   <main class="container main w-full">
     <section class="main-body">
       <div class="flex flex-column mb-5">
+        <div class="admin-page-header mb-3">Groups</div>
+        <div class="text-md text-gray-500 mb-1 line-height-3">
+                Users are added to groups in order to receive tasks and surveys through assignments. Before getting started, please read the documentation on creating groups.
+              </div>
         <div class="flex flex-column align-items-start mb-2 md:flex-row w-full justify-content-between">
           <div class="flex align-items-center gap-3 mb-4 md:mb-0">
-            <div class="admin-page-header mr-4">Groups</div>
+            <DocsButton href="https://researcher.levante-network.org/dashboard/create-a-group" label="Group Docs" />
             <PermissionGuard :requiredRole="ROLES.SITE_ADMIN">
               <PvButton
                 v-tooltip.bottom="currentSite === 'any' && 'Please select a specific site to add a group'"
@@ -219,6 +223,7 @@ import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toast
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import PvFloatLabel from 'primevue/floatlabel';
 import AddGroupModal from '@/components/modals/AddGroupModal.vue';
+import DocsButton from '@/components/DocsButton.vue';
 import GroupAssignmentsModal from '@/components/modals/GroupAssignmentsModal.vue';
 import PermissionGuard from '@/components/PermissionGuard.vue';
 import { ROLES } from '@/constants/roles';

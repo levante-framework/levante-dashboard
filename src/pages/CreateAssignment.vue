@@ -6,12 +6,14 @@
   <main v-else class="container main">
     <section class="main-body">
       <div class="flex flex-column mb-5">
-        <div class="flex justify-content-between mb-2">
+        <div class="flex justify-content-between align-items-center mb-2">
           <div class="flex align-items-center gap-3">
             <div class="admin-page-header">{{ header }}</div>
           </div>
+          
         </div>
         <div class="text-md text-gray-500">{{ description }}</div>
+        <div class="flex gap-2 mt-3"><DocsButton href="https://researcher.levante-network.org/dashboard/assignments" label="Create Assignment Docs" /></div>
       </div>
 
       <PvDivider />
@@ -194,6 +196,7 @@ import useTaskVariantsQuery from '@/composables/queries/useTaskVariantsQuery';
 import useUpsertAdministrationMutation from '@/composables/mutations/useUpsertAdministrationMutation';
 import TaskPicker from '@/components/TaskPicker.vue';
 import ConsentPicker from '@/components/ConsentPicker.vue';
+import DocsButton from '@/components/DocsButton.vue';
 import GroupPicker from '@/components/GroupPicker.vue';
 import { APP_ROUTES } from '@/constants/routes';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
@@ -225,7 +228,7 @@ const props = defineProps({
 const header = computed(() => (props.adminId ? 'Edit an assignment' : 'Create Assignment'));
 
 const description = computed(
-  () => 'An assignment is a collection of tasks assigned to users who are members of a group',
+  () => 'An assignment is a collection of tasks assigned to users who are members of a group. Before getting started, please read the documentation on creating assignments',
 );
 
 const submitLabel = computed(() => (props.adminId ? 'Update Assignment' : 'Create Assignment'));

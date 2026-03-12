@@ -2,61 +2,56 @@
   <PvPanel header="Add users" class="add-users-panel">
     <div class="info-message-container">
       <i class="pi pi-exclamation-circle"></i>
-      <p>Groups must be created before adding users. You cannot add users otherwise.</p>
+      <p>Your site must have groups before users are added, since users are required to be in either a school/class or cohort. <router-link :to="{ name: 'ListGroups' }">Add groups</router-link> before adding users.</p>
     </div>
 
     <div class="how-to-section">
       <h3>How to Add Users</h3>
-      <ol class="numbered-steps">
-        <li>
-          <span class="step-number">1</span>Download the template below or create your own CSV with the required columns
-        </li>
-        <li><span class="step-number">2</span>Fill in the CSV with the user data</li>
-        <li><span class="step-number">3</span>Upload the CSV file and click "Add Users from Uploaded File"</li>
-        <li>
-          <span class="step-number">4</span>When finished, a file called "registered_users.csv" will be downloaded. If
-          it is not in your downloads folder, click the "Download Users" button.
-        </li>
-        <li><span class="step-number">5</span>Click "Continue to Link Users" and get their login information.</li>
-      </ol>
+      <p class="flex align-items-center gap-2">
+        Before you begin, please read our full documentation on adding and linking users.
+        </p>
+        <p>
+        <DocsButton href="https://researcher.levante-network.org/dashboard/add-users" label="Add Users Documentation" />
+      </p>
+      <p>Before adding users, you must prepare a user information CSV file.</p>
+      <div class="download-button-container">
+      <PvButton
+        class="download-csv-btn"
+        data-testid="download-template"
+        severity="primary"
+        variant="outlined"
+        @click="downloadTemplate"
+      >
+        <i class="pi pi-download"></i>
+        Download CSV Template
+      </PvButton>
     </div>
+    </div>
+    <div class="file-requirements-section">
+      <h2>File Requirements</h2>
+      <p>Your add users file requires certain columns to be present and restricts or requires certain values in each row. If in doubt, refer to the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank">detailed add users documentation</a>.</p>
 
-    <p>
-      The following fields define the columns for your CSV file when adding users. Please refer to the legend below for
-      specific requirements on each field.
-    </p>
-    <p>Caregivers and Teachers need to have the same Groups as the children they relate to.</p>
-    <ul>
-      <li><b>id</b><span class="field-marker">*</span> - A unique identifier for the user in CSV file.</li>
-      <li><b>userType</b><span class="field-marker">*</span> - The type of user: child, caregiver, teacher.</li>
-      <li>
-        <b>month</b><span class="field-marker">**</span> - The month a child user was born (numeric; For Example, 5 for
-        May).
-      </li>
-      <li>
-        <b>year</b><span class="field-marker">**</span> - The year a child user was born (four-digit; For Example,
-        2017).
-      </li>
-      <li><b>caregiverId</b> - A unique identifier (id) for the child's caregiver.</li>
-      <li><b>teacherId</b> - A unique identifier (id) for the child's teacher.</li>
-      <li>
-        One of the following:<span class="field-marker">*</span>
-        <ul class="nested-list">
-          <li><b>cohort</b> - The name of the cohort.</li>
-          <li>
-            <b>school</b> - The name of the school.
-            <ul class="nested-list">
-              <li><b>class</b> - The name of the class. Must have a school as well. (Optional)</li>
+      <PvAccordion v-model:value="fileRequirementsAccordionValue" class="mb-4">
+        <PvAccordionPanel value="requirements">
+          <PvAccordionHeader>View requirements table and notes</PvAccordionHeader>
+          <PvAccordionContent>
+            <PvDataTable :value="fileRequirementsTableData" show-gridlines class="requirements-table mb-4">
+              <PvColumn field="column" header="Column" />
+              <PvColumn field="required" header="Value required?" />
+              <PvColumn field="definition" header="Definition" />
+              <PvColumn field="details" header="Details" />
+            </PvDataTable>
+            <p>Notes:</p>
+            <ul>
+              <li>Either a <code>cohort</code> <em>OR</em> a <code>school</code> and <code>class</code> must be listed for every user, but not both.</li>
+              <li>You can complete the fields with more than one value by putting a comma between values. For example, a child with two caregivers can have "internalid_001,internalid_002" in the <code>caregiverId</code> field.</li>
+              <li>Similarly, a teacher with multiple classes can have "classA,classB" in the <code>class</code> field.</li>
+              <li>When adult surveys are given to a class, teachers in that class will receive class-specific surveys for each class they belong to, as well as a general survey about themselves and their school.</li>
+              <li>Caregivers must belong to the same group(s) as the children they are linked to to receive the correct surveys.</li>
             </ul>
-          </li>
-        </ul>
-      </li>
-    </ul>
-
-    <p class="mb-6 legend">
-      <span class="field-marker">*</span> Required for this Step.<br />
-      <span class="field-marker">**</span> Required only for child users. Leave blank for caregiver or teacher users.
-    </p>
+          </PvAccordionContent>
+        </PvAccordionPanel>
+      </PvAccordion>
 
     <PvAccordion v-model:value="siteColumnAccordionValue" class="mb-6">
       <PvAccordionPanel value="site-column">
@@ -93,18 +88,6 @@
         class="csv-example-image"
       />
     </div>
-
-    <div class="download-button-container">
-      <PvButton
-        class="download-csv-btn"
-        data-testid="download-template"
-        severity="primary"
-        variant="outlined"
-        @click="downloadTemplate"
-      >
-        <i class="pi pi-download"></i>
-        Download CSV Template
-      </PvButton>
     </div>
   </PvPanel>
 </template>
@@ -114,6 +97,9 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
 import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
+import DocsButton from '@/components/DocsButton.vue';
+import PvColumn from 'primevue/column';
+import PvDataTable from 'primevue/datatable';
 import PvPanel from 'primevue/panel';
 import PvButton from 'primevue/button';
 import PvAccordion from 'primevue/accordion';
@@ -123,7 +109,20 @@ import PvAccordionContent from 'primevue/accordioncontent';
 
 const authStore = useAuthStore();
 const { shouldUsePermissions } = storeToRefs(authStore);
+const fileRequirementsAccordionValue = ref(null);
 const siteColumnAccordionValue = ref(null);
+
+const fileRequirementsTableData = [
+  { column: 'id', required: 'Yes', definition: 'Project id; A lab- or site-specific user identifier', details: 'Often a study acronym and a number. Example: hkl_012' },
+  { column: 'userType', required: 'Yes', definition: 'Type of dashboard user', details: 'Must be one of “child”, “caregiver”, or “teacher”' },
+  { column: 'month', required: 'Yes, for child users only', definition: 'Month the child user was born', details: 'A number from 1 to 12. Example: 5 for May' },
+  { column: 'year', required: 'Yes, for child users only', definition: 'Year the child user was born', details: 'Four-digit year. Example: 2017' },
+  { column: 'caregiverId', required: 'For linking step only', definition: 'id of the child’s caregiver', details: 'If you are ready to link users, you can include these fields in your new user information CSV file. If you are not ready, you can leave this field blank until later.' },
+  { column: 'teacherId', required: 'For linking step only', definition: 'id of the child’s teacher', details: 'If you are ready to link users, you can include these fields in your new user information CSV file. If you are not ready, you can leave this field blank until later.' },
+  { column: 'school', required: 'See notes', definition: 'Relevant school name you created in the “Add Groups” step.', details: 'Example: LEVANTE School' },
+  { column: 'class', required: 'See notes', definition: 'Relevant class name you created in the “Add Groups” step.', details: 'Example: Class A' },
+  { column: 'cohort', required: 'See notes', definition: 'Relevant cohort name you created in the “Add Groups” step.', details: 'Example: How Kids Learn Study' },
+];
 
 const generateTemplateFile = () => {
   const headers = ['id', 'userType', 'month', 'year', 'caregiverId', 'teacherId', 'site', 'school', 'class', 'cohort'];
@@ -153,10 +152,10 @@ const downloadTemplate = () => {
 <style lang="scss" scoped>
 .info-message-container {
   display: flex;
-  background-color: rgb(252, 252, 218);
-  border: 2px solid rgb(228, 206, 7);
+  background-color: rgb(236, 141, 124);
+  border: 2px solid rgb(228, 59, 7);
   border-radius: 0.5rem;
-  color: rgb(199, 180, 7);
+  color: rgb(131, 32, 2);
   margin-bottom: 1rem;
 
   p {
@@ -193,6 +192,10 @@ const downloadTemplate = () => {
 
 .add-users-panel :deep(.p-panel-header) {
   font-size: 2rem;
+}
+
+.file-requirements-section h2 {
+  font-weight: var(--p-panel-title-font-weight);
 }
 
 .download-button-container {
