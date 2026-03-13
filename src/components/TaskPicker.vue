@@ -272,7 +272,7 @@ const groupedTasks: Record<string, string[]> = {
   Reasoning: ['Pattern Matching'],
   'Spatial Cognition': ['Shape Rotation'],
   'Social Cognition': ['Stories'],
-  Attitudes: ['Survey'],
+  Attitudes: ['Teacher Survey', 'Caregiver Survey', 'Child Survey'],
 };
 
 const namedOnly = ref<boolean>(true);
@@ -516,7 +516,7 @@ const selectCard = (variant: VariantObject): void => {
       return; // Don't add the card if task is already selected
     }
 
-    const defaultedVariant = addChildDefaultCondition(variant);
+    const defaultedVariant = addUserDefaultCondition(variant);
     selectedVariants.value.push(defaultedVariant);
   } else {
     debounceToast();
@@ -544,15 +544,27 @@ const moveCardDown = (variant: VariantObject): void => {
 };
 
 // Default all tasks to child only, unless it is the survey (for LEVANTE).
-function addChildDefaultCondition(variant: VariantObject): VariantObject {
-  if (variant.task.id === 'survey') return variant;
-
+function addUserDefaultCondition(variant: VariantObject): VariantObject {
   const defaultedVariant = _cloneDeep(variant);
   defaultedVariant.variant['conditions'] = {};
-  defaultedVariant.variant['conditions']['assigned'] = {
+
+  if (variant.task.id === 'teacher-survey') {
+    defaultedVariant.variant['conditions']['assigned'] = {
+      op: 'AND',
+      conditions: [{ field: 'userType', op: 'EQUAL', value: 'teacher' }],
+    };
+  } else if (variant.task.id === 'caregiver-survey' || variant.task.id === 'adult-reasoning') {
+    defaultedVariant.variant['conditions']['assigned'] = {
+      op: 'AND',
+      conditions: [{ field: 'userType', op: 'EQUAL', value: 'parent' }],
+    };
+  } else {
+    defaultedVariant.variant['conditions']['assigned'] = {
     op: 'AND',
     conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }],
   };
+  }
+
   return defaultedVariant;
 }
 </script>
