@@ -77,7 +77,7 @@
                   </p>
                 </div>
 
-                <div v-if="game.taskId === 'survey'" class="mt-4 mb-4">
+                <div v-if="game.taskId === 'teacher-survey' || game.taskId === 'parent-survey'" class="mt-4 mb-4">
                   <div class="flex align-items-center mb-2">
                     <span class="mr-2 w-4"
                       ><b>{{ $t('gameTabs.surveyProgressGeneral') }} </b> -
@@ -393,7 +393,7 @@ const getRoutePath = (taskId: string, variantURL?: string, taskURL?: string): st
 
   const lowerCasedAndCamelizedTaskId = camelize(taskId.toLowerCase());
 
-  if (lowerCasedAndCamelizedTaskId === 'survey') {
+  if (lowerCasedAndCamelizedTaskId.toLowerCase().includes('survey')) {
     return '/survey';
   } else if (LEVANTE_TASK_IDS.some((taskId) => taskId === lowerCasedAndCamelizedTaskId)) {
     return '/game/core-tasks/' + taskId;
@@ -464,7 +464,7 @@ const returnVideoOptions = (videoURL: string): VideoOptions => {
 };
 
 const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: string): boolean => {
-  if (taskId === 'survey') {
+  if (taskId.toLowerCase().includes('survey')) {
     if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
       if (!surveyStore.isGeneralSurveyComplete) {
         return false;
