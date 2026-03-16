@@ -346,7 +346,7 @@ const getTaskName = (taskId: string, taskName: string): string => {
   const taskIdLowercased = taskId.toLowerCase();
   const normalizedTaskId = normalizeTaskId(taskId);
 
-  if (taskIdLowercased === 'survey') {
+  if (taskIdLowercased.includes('survey')) {
     if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
       return t(`gameTabs.surveyName${_capitalize(props.userData.userType)}Part1`);
     } else {
@@ -371,7 +371,7 @@ const getTaskDescription = (taskId: string, taskDescription: string): string => 
   const taskIdLowercased = taskId.toLowerCase();
   const normalizedTaskId = normalizeTaskId(taskId);
 
-  if (taskIdLowercased === 'survey') {
+  if (taskIdLowercased.includes('survey')) {
     if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
       return t(`gameTabs.surveyDescription${_capitalize(props.userData.userType)}Part1`);
     } else {
@@ -393,7 +393,7 @@ const getRoutePath = (taskId: string, variantURL?: string, taskURL?: string): st
 
   const lowerCasedAndCamelizedTaskId = camelize(taskId.toLowerCase());
 
-  if (lowerCasedAndCamelizedTaskId.toLowerCase().includes('survey')) {
+  if (lowerCasedAndCamelizedTaskId === 'teacherSurvey' || lowerCasedAndCamelizedTaskId === 'caregiverSurvey') {
     return '/survey';
   } else if (LEVANTE_TASK_IDS.some((taskId) => taskId === lowerCasedAndCamelizedTaskId)) {
     return '/game/core-tasks/' + taskId;
@@ -464,7 +464,7 @@ const returnVideoOptions = (videoURL: string): VideoOptions => {
 };
 
 const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: string): boolean => {
-  if (taskId.toLowerCase().includes('survey')) {
+  if (taskId === 'teacher-survey' || taskId === 'caregiver-survey') {
     if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
       if (!surveyStore.isGeneralSurveyComplete) {
         return false;

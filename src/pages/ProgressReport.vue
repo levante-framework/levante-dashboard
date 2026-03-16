@@ -268,7 +268,7 @@ const { data: orgData, isLoading: isLoadingOrg } = useOrgQuery(props.orgType, [p
 
 const hasSurveyInAssignment = computed(() => {
   const assessments = administrationData.value?.assessments ?? [];
-  return assessments.some(({ taskId }) => taskId === 'survey');
+  return assessments.some(({ taskId }) => taskId.includes('survey'));
 });
 
 const {
