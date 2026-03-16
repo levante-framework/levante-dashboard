@@ -7,7 +7,7 @@
             <div class="flex flex-1 flex-column gap-2">
               <div class="page-title-row flex align-items-center justify-content-start gap-2 mb-2">
                 <div class="admin-page-header m-0">All Assignments</div>
-                <DocsButton href="https://researcher.levante-network.org/dashboard/before-you-start" label="Documentation" />
+                <DocsButton href="https://researcher.levante-network.org/dashboard/monitor-completion" label="Documentation" />
               </div>
 
               <div class="text-md text-gray-500 mb-1 line-height-3">

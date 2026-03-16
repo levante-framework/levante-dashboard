@@ -262,9 +262,6 @@ const isAssignmentsModalVisible = ref(false);
 const selectedOrgId = ref('');
 const selectedOrgName = ref('');
 
-const addUsers = () => {
-  router.push({ name: 'Add Users' });
-};
 
 const authStore = useAuthStore();
 const { currentSite, roarfirekit, shouldUsePermissions, userClaims } = storeToRefs(authStore);

@@ -207,13 +207,11 @@ describe('ListGroups.vue', () => {
     const wrapper = mount(ListGroups, mountOptions);
 
     const addGroupBtn = wrapper.find('[data-testid="add-group-btn"]');
-    const addUsersBtn = wrapper.find('[data-testid="add-users-btn"]');
     // Updated selector for new PrimeVue Tabs component
     const tabHeaders = wrapper.findAll('.p-tab');
     const table = wrapper.find('[data-cy="roar-data-table"]');
 
     expect(addGroupBtn.exists()).toBe(true);
-    expect(addUsersBtn.exists()).toBe(true);
     expect(tabHeaders.length).toBe(4);
     expect(table.exists()).toBe(true);
   });
@@ -243,15 +241,4 @@ describe('ListGroups.vue', () => {
     expect(wrapper.vm.isAddGroupModalVisible).toBe(true);
   });
 
-  it('should redirect users to the page for creating users', () => {
-    const wrapper = mount(ListGroups, mountOptions);
-    const addUsersBtn = wrapper.find('[data-testid="add-users-btn"]');
-
-    expect(addUsersBtn.exists()).toBe(true);
-
-    addUsersBtn.trigger('click');
-
-    expect(routerPush).toHaveBeenCalledTimes(1);
-    expect(routerPush).toHaveBeenCalledWith({ name: 'Add Users' });
-  });
 });
