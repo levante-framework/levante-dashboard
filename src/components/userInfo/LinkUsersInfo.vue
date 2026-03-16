@@ -1,19 +1,22 @@
 <template>
-  <PvPanel header="Link Users" class="link-users-panel">
+  <PvPanel class="link-users-panel">
+    <template #header>
+      <div class="panel-header-content flex align-items-center justify-content-start gap-2">
+        <span class="p-panel-title">Link Users</span>
+        <DocsButton href="https://researcher.levante-network.org/dashboard/add-users" label="Documentation" />
+      </div>
+    </template>
     <div class="info-message-container">
       <i class="pi pi-exclamation-circle"></i>
       <p>
-        Make sure you are uploading a modified version of the registered users file that was provided after the add users step. This new file contains LEVANTE UIDs essential for linking users.
+        Add links as needed to the registered users csv file obtained from the Add Users step. Establishing links requires the LEVANTE <code>uid</code> assigned to each user in that step.
       </p>
     </div>
 
     <div class="how-to-section">
       <h3>How to Link Users</h3>
       <p>Before you begin, please read our full documentation on adding and linking users.</p>
-      <p>
-        <DocsButton href="https://researcher.levante-network.org/dashboard/add-users" label="Link Users Documentation" />
-      </p>
-      <p>Before linking users, update your registered users file with linkage information by populating the caregiverId and teacherId fields in relevant child user rows.</p>
+      <p>Before linking users, ensure your registered user information file contains linkage information in the <code>caregiverId</code> and <code>teacherId</code> fields for each child user.</p>
     </div>
 
 
@@ -80,6 +83,11 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
 
 .link-users-panel :deep(.p-panel-header) {
   font-size: 2rem;
+}
+
+.panel-header-content :deep(.docs-button) {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
 }
 
 .mb-6 {

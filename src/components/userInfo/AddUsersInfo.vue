@@ -1,19 +1,19 @@
 <template>
-  <PvPanel header="Add users" class="add-users-panel">
+  <PvPanel class="add-users-panel">
+    <template #header>
+      <div class="panel-header-content flex align-items-center justify-content-start gap-2">
+        <span class="p-panel-title">Add users</span>
+        <DocsButton href="https://researcher.levante-network.org/dashboard/add-users" label="Documentation" />
+      </div>
+    </template>
     <div class="info-message-container">
       <i class="pi pi-exclamation-circle"></i>
-      <p>Your site must have groups before users are added, since users are required to be in either a school/class or cohort. <router-link :to="{ name: 'ListGroups' }">Add groups</router-link> before adding users.</p>
+      <p>Users are added to groups. You cannot add users without first <router-link :to="{ name: 'ListGroups' }">creating their group(s)</router-link>.</p>
     </div>
 
     <div class="how-to-section">
       <h3>How to Add Users</h3>
-      <p class="flex align-items-center gap-2">
-        Before you begin, please read our full documentation on adding and linking users.
-        </p>
-        <p>
-        <DocsButton href="https://researcher.levante-network.org/dashboard/add-users" label="Add Users Documentation" />
-      </p>
-      <p>Before adding users, you must prepare a user information CSV file.</p>
+      <div class="text-md text-gray-500 mb-1 line-height-3">Before you begin, please read our full documentation on adding and linking users. Before adding users, you must prepare a user information CSV file. You should use the template provided below.</div>
       <div class="download-button-container">
       <PvButton
         class="download-csv-btn"
@@ -28,26 +28,28 @@
     </div>
     </div>
     <div class="file-requirements-section">
-      <h2>File Requirements</h2>
-      <p>Your add users file requires certain columns to be present and restricts or requires certain values in each row. If in doubt, refer to the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank">detailed add users documentation</a>.</p>
+      <h2>User Information File Requirements</h2>
+      <p>Formatting requirements for your user information file are detailed in the table below. For more information, refer to the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank">add users documentation</a>.</p>
 
       <PvAccordion v-model:value="fileRequirementsAccordionValue" class="mb-4">
         <PvAccordionPanel value="requirements">
           <PvAccordionHeader>View requirements table and notes</PvAccordionHeader>
           <PvAccordionContent>
             <PvDataTable :value="fileRequirementsTableData" show-gridlines class="requirements-table mb-4">
-              <PvColumn field="column" header="Column" />
-              <PvColumn field="required" header="Value required?" />
-              <PvColumn field="definition" header="Definition" />
-              <PvColumn field="details" header="Details" />
+              <PvColumn field="column" header="Column" body-class="text-left" header-class="text-left">
+                <template #body="{ data }">
+                  <code class="column-name-code">{{ data.column }}</code>
+                </template>
+              </PvColumn>
+              <PvColumn field="required" header="Value required?" body-class="text-left" header-class="text-left" />
+              <PvColumn field="definition" header="Definition" body-class="text-left" header-class="text-left" />
+              <PvColumn field="details" header="Details" body-class="text-left" header-class="text-left" />
             </PvDataTable>
             <p>Notes:</p>
             <ul>
-              <li>Either a <code>cohort</code> <em>OR</em> a <code>school</code> and <code>class</code> must be listed for every user, but not both.</li>
-              <li>You can complete the fields with more than one value by putting a comma between values. For example, a child with two caregivers can have "internalid_001,internalid_002" in the <code>caregiverId</code> field.</li>
-              <li>Similarly, a teacher with multiple classes can have "classA,classB" in the <code>class</code> field.</li>
-              <li>When adult surveys are given to a class, teachers in that class will receive class-specific surveys for each class they belong to, as well as a general survey about themselves and their school.</li>
-              <li>Caregivers must belong to the same group(s) as the children they are linked to to receive the correct surveys.</li>
+              <li>Reminder: Users either belong to a School and Class OR a Cohort.</li>
+              <li>Complete the appropriate column(s) according  to the users' Group membership (School and Class OR Cohort).</li>
+              <li>Caregivers and teachers must belong to the same group(s) as the children to which they are linked in order to receive the correct surveys.</li>
             </ul>
           </PvAccordionContent>
         </PvAccordionPanel>
@@ -58,18 +60,14 @@
         <PvAccordionHeader>What if my user file has a site column?</PvAccordionHeader>
         <PvAccordionContent>
           <p>
-            Early users of the dashboard may have user csv files which include a site column. 
-            This is no longer required for the add users process. 
-            The site to which users are added is now determined by the site selected in the site selector (top right). 
-            The Add Users process will only add users to the currently selected site, and will display a warning if your file contains a site column with values that do not match the currently selected site. 
-            Users in those rows will cause the add users process to fail. We recommend splitting up your user files by site.
+            Previously, <code>site</code> was a requiired column in the user information file. Now it is no longer required, because all users will be added to the site chosen within the site selector on the top right of the dashbaord. If <code>site</code> exists in your spreadsheet and its values do not match the selected site, you will see a warning. We recommend having a separate user information file for each site.
           </p>
         </PvAccordionContent>
       </PvAccordionPanel>
     </PvAccordion>
 
     <p>
-      Below is an example of what your CSV/spreadsheet should look like. Only the required columns will be processed.
+      Below is an example of what your CSV/spreadsheet should look like. Column names must match exactly. Columns with names that do not match exactly, including any additional columns, will not be processed or stored.
     </p>
 
     <div class="csv-example-image-container">
@@ -194,8 +192,33 @@ const downloadTemplate = () => {
   font-size: 2rem;
 }
 
+.panel-header-content :deep(.docs-button) {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
 .file-requirements-section h2 {
   font-weight: var(--p-panel-title-font-weight);
+}
+
+.requirements-table :deep(td),
+.requirements-table :deep(th),
+.requirements-table :deep([data-pc-section='bodycell']),
+.requirements-table :deep([data-pc-section='columnheader']) {
+  text-align: left !important;
+}
+
+.requirements-table :deep([data-pc-section='columnheadercontent']) {
+  justify-content: flex-start !important;
+}
+
+.requirements-table :deep(.column-name-code) {
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0.2em 0.4em;
+  background-color: #f1f3f4;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
 }
 
 .download-button-container {

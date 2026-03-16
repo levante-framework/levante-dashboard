@@ -2,13 +2,17 @@
   <main class="container main w-full">
     <section class="main-body">
       <div class="flex flex-column mb-5">
-        <div class="admin-page-header mb-3">Groups</div>
-        <div class="text-md text-gray-500 mb-1 line-height-3">
-                Users are added to groups in order to receive tasks and surveys through assignments. Before getting started, please read the documentation on creating groups.
-              </div>
+        <div class="page-title-row flex align-items-center justify-content-start gap-2 mb-3">
+          <div class="admin-page-header m-0">Groups</div>
+          <DocsButton href="https://researcher.levante-network.org/dashboard/create-a-group" label="Documentation" />
+        </div>
+
+        <div class="how-to-section mb-4">
+          <h3>How to create groups</h3>
+          <div class="text-md text-gray-500 mb-1 line-height-3">Users are added to groups in order to receive tasks and surveys through assignments. Which kinds of groups you need will depend on your study design. Before getting started, please read <a href="https://researcher.levante-network.org/dashboard/create-a-group" target="_blank">the documentation on creating groups.</a></div>
+        </div>
         <div class="flex flex-column align-items-start mb-2 md:flex-row w-full justify-content-between">
           <div class="flex align-items-center gap-3 mb-4 md:mb-0">
-            <DocsButton href="https://researcher.levante-network.org/dashboard/create-a-group" label="Group Docs" />
             <PermissionGuard :requiredRole="ROLES.SITE_ADMIN">
               <PvButton
                 v-tooltip.bottom="currentSite === 'any' && 'Please select a specific site to add a group'"
@@ -16,16 +20,9 @@
                 data-testid="add-group-btn"
                 data-cy="add-group-btn"
                 @click="isAddGroupModalVisible = true"
-                >Add Group</PvButton
+                >Create Group</PvButton
               >
             </PermissionGuard>
-            <PvButton
-              class="bg-primary text-white border-none p-2 ml-auto"
-              data-testid="add-users-btn"
-              data-cy="add-users-btn"
-              @click="addUsers"
-              >Add Users</PvButton
-            >
           </div>
           <div class="flex align-items-center justify-content-end w-full md:w-auto">
             <span class="p-input-icon-left p-input-icon-right">
@@ -683,6 +680,28 @@ const filteredTableData = computed(() => {
   return tableData.value || [];
 });
 </script>
+
+<style lang="scss" scoped>
+.page-title-row :deep(.docs-button) {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.how-to-section {
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin: 2rem 0;
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+}
+</style>
 
 <style lang="scss">
 .p-datatable-scrollable .p-datatable-frozen-column {

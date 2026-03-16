@@ -6,14 +6,15 @@
   <main v-else class="container main">
     <section class="main-body">
       <div class="flex flex-column mb-5">
-        <div class="flex justify-content-between align-items-center mb-2">
-          <div class="flex align-items-center gap-3">
-            <div class="admin-page-header">{{ header }}</div>
-          </div>
-          
+        <div class="page-title-row flex align-items-center justify-content-start gap-2 mb-2">
+          <div class="admin-page-header m-0">{{ header }}</div>
+          <DocsButton href="https://researcher.levante-network.org/dashboard/create-an-assignment" label="Documentation" />
         </div>
-        <div class="text-md text-gray-500">{{ description }}</div>
-        <div class="flex gap-2 mt-3"><DocsButton href="https://researcher.levante-network.org/dashboard/assignments" label="Create Assignment Docs" /></div>
+        <div class="text-md text-gray-500 mb-3">{{ description }}</div>
+        <div class="how-to-section mb-4">
+          <h3>How to create or edit an assignment</h3>
+          <p>Placeholder: Add step-by-step instructions for creating assignments (name, dates, groups, tasks, consent, and sequential order).</p>
+        </div>
       </div>
 
       <PvDivider />
@@ -861,6 +862,28 @@ watch([existingAdministrationData, allVariants], ([adminInfo, allVariantInfo]) =
   }
 });
 </script>
+
+<style lang="scss" scoped>
+.page-title-row :deep(.docs-button) {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.how-to-section {
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin: 2rem 0;
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+}
+</style>
 
 <style lang="scss">
 .required {

@@ -5,8 +5,9 @@
         <div class="flex flex-column">
           <div class="flex flex-row flex-wrap align-items-center justify-content-between mb-3 gap-3">
             <div class="flex flex-1 flex-column gap-2">
-              <div class="flex align-items-center flex-wrap gap-3 mb-2">
-                <div class="admin-page-header">All Assignments</div>
+              <div class="page-title-row flex align-items-center justify-content-start gap-2 mb-2">
+                <div class="admin-page-header m-0">All Assignments</div>
+                <DocsButton href="https://researcher.levante-network.org/dashboard/before-you-start" label="Documentation" />
               </div>
 
               <div class="text-md text-gray-500 mb-1 line-height-3">
@@ -65,9 +66,7 @@
             </div>
           </div>
 
-          <div class="flex align-items-center mb-3">
-            <DocsButton href="https://researcher.levante-network.org/dashboard/before-you-start" label="Getting Started" />
-          </div>
+  
 
           <div
             v-if="search.length > 0"
@@ -475,6 +474,28 @@ const onSortChange = (event) => {
 onFilterChange({ value: filterKey.value });
 onSortChange({ value: sortKey.value });
 </script>
+
+<style lang="scss" scoped>
+.page-title-row :deep(.docs-button) {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.how-to-section {
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin: 2rem 0;
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+}
+</style>
 
 <style lang="scss">
 .p-autocomplete-panel {
