@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import PvSelect from 'primevue/select';
-import { languageOptions } from '@/translations/i18n';
+import { languageOptions, getTranslations } from '@/translations/i18n';
 import { isLevante } from '@/helpers';
 import { useSurveyStore } from '@/store/survey';
 import { setupStudentAudio } from '@/helpers/surveyInitialization';
@@ -26,7 +26,6 @@ import { getParsedLocale } from '@/helpers/survey';
 
 interface LanguageOption {
   name: string;
-  code: string;
   value: string;
 }
 
@@ -49,7 +48,6 @@ const languageDropdownOptions = computed((): LanguageOption[] => {
   return Object.entries(sortedLanguageOptions).map(([key, value]) => {
     return {
       name: value.language,
-      code: value.code,
       value: key,
     };
   });
@@ -58,7 +56,7 @@ const languageDropdownOptions = computed((): LanguageOption[] => {
 async function onLanguageChange(event: LanguageChangeEvent): Promise<void> {
   sessionStorage.setItem(`${isLevante ? 'levante' : 'roar'}PlatformLocale`, event.value);
 
-  console.log('event', event.value);
+  await getTranslations(event.value);
 
   if (isLevante && surveyStore.survey) {
     console.log('setting survey locale');
