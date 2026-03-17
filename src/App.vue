@@ -37,7 +37,7 @@ import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
 import { useAuthStore } from '@/store/auth';
 import { fetchDocById } from '@/helpers/query/utils';
-import { i18n } from '@/translations/i18n';
+import { i18n, getTranslations } from '@/translations/i18n';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import NavBar from '@/components/NavBar.vue';
 import { NAVBAR_BLACKLIST } from './constants';
@@ -103,6 +103,9 @@ onBeforeMount(async () => {
 });
 
 onMounted(() => {
+  // Getting translations for i18n default locale
+  getTranslations();
+
   const isLocal = import.meta.env.MODE === 'development';
   const isDevToolsEnabled = import.meta.env.VITE_QUERY_DEVTOOLS_ENABLED === 'true';
 
