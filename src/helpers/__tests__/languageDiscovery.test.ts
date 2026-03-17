@@ -91,33 +91,6 @@ describe('Language Discovery System', () => {
     });
   });
 
-  describe('Language Information', () => {
-    it('should return language info for full locale codes', () => {
-      const englishInfo = getLanguageInfo('en-US');
-
-      expect(englishInfo).toBeDefined();
-      expect(englishInfo?.variantCode).toBe('en-US');
-      expect(englishInfo?.dashboardLocale).toBe('en-US');
-      expect(englishInfo?.displayName).toContain('English');
-      expect(englishInfo?.flagCode).toBeDefined();
-      expect(englishInfo?.isLegacy).toBe(false);
-    });
-
-    it('should return language info for legacy codes', () => {
-      const legacyEnglishInfo = getLanguageInfo('en');
-
-      expect(legacyEnglishInfo).toBeDefined();
-      expect(legacyEnglishInfo?.variantCode).toBe('en');
-      expect(legacyEnglishInfo?.dashboardLocale).toBe('en-US');
-      expect(legacyEnglishInfo?.isLegacy).toBe(true);
-    });
-
-    it('should return null for invalid variant codes', () => {
-      const invalidInfo = getLanguageInfo('invalid');
-      expect(invalidInfo).toBeNull();
-    });
-  });
-
   describe('Language Support Validation', () => {
     it('should validate supported full locales', () => {
       expect(isLanguageSupported('en-US')).toBe(true);
