@@ -32,22 +32,18 @@ function formatLocale(locale: string) {
   return region ? `${lang}-${region.toUpperCase()}` : lang;
 }
 
-export const languageOptions: Record<string, { translations: any; language: string; code: string }> = {
+export const languageOptions: Record<string, { translations: any; language: string }> = {
   'en-US': {
     translations: enUSTranslations,
     language: 'English (United States)',
-    code: 'usa',
   },
-  // es: { translations: esTranslations, language: 'Español (Spain)', code: 'es' },
   'es-CO': {
     translations: esCOTranslations,
     language: 'Español (Colombia)',
-    code: 'col',
   },
   'de-DE': {
     translations: deTranslations,
     language: 'Deutsch (Deutschland)',
-    code: 'de' 
   },
 };
 
@@ -87,9 +83,7 @@ export function findBestMatchingLocale(locale: string | undefined | null): strin
   const normalizedLocale = locale.toLowerCase();
 
   // First, check for exact match (case-insensitive)
-  const exactMatch = availableLocales.find(
-    (available) => available.toLowerCase() === normalizedLocale,
-  );
+  const exactMatch = availableLocales.find((available) => available.toLowerCase() === normalizedLocale);
   if (exactMatch) {
     return exactMatch;
   }
@@ -98,9 +92,7 @@ export function findBestMatchingLocale(locale: string | undefined | null): strin
   const languagePrefix = normalizedLocale.split('-')[0];
 
   // Find the first available locale that starts with the same language prefix
-  const prefixMatch = availableLocales.find((available) =>
-    available.toLowerCase().startsWith(languagePrefix + '-'),
-  );
+  const prefixMatch = availableLocales.find((available) => available.toLowerCase().startsWith(languagePrefix + '-'));
 
   if (prefixMatch) {
     return prefixMatch;
@@ -185,7 +177,7 @@ const baseMessages: Record<string, any> = {
 
 //   if (!baseMessages[locale]) baseMessages[locale] = {};
 //   deepMerge(baseMessages[locale] as Record<string, any>, content as Record<string, any>);
-  
+
 //   // Apply flat key transformation to dynamically loaded content
 //   baseMessages[locale] = addFlatKeys(baseMessages[locale]);
 
@@ -225,6 +217,43 @@ export const i18n = createI18n({
   legacy: false,
   globalInjection: true,
 });
+
+const remoteCache = new Map<string, Record<string, unknown>>();
+
+export async function getRemoteTranslations(locale: string): Promise<Record<string, unknown> | null> {
+  const cached = remoteCache.get(locale);
+  if (cached) return cached;
+
+  // Replace this hard-coded url with the final one as a const
+  const url = `https://storage.googleapis.com/levante-assets-draft/translations/dashboard-consolidated/live/${locale}/dashboard_translations.json`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as Record<string, unknown>;
+    if (!data || typeof data !== 'object') return null;
+
+    remoteCache.set(locale, data);
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch translations', error);
+    return null;
+  }
+}
+
+export async function getTranslations(locale: string): Promise<boolean> {
+  const currentLocale = locale || i18n.global.locale.value;
+  const remote = await getRemoteTranslations(currentLocale);
+  if (!remote) return false;
+
+  const bundled = baseMessages[currentLocale];
+  const merged = bundled ? deepMerge({ ...bundled }, remote as Record<string, any>) : (remote as Record<string, any>);
+  const withFlatKeys = addFlatKeys(merged);
+  i18n.global.setLocaleMessage(currentLocale, withFlatKeys);
+  baseMessages[currentLocale] = withFlatKeys;
+  return true;
+}
 
 // Export for debugging
 export { baseMessages };
