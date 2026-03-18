@@ -82,6 +82,8 @@ const pageTitle = computed(() => {
 });
 
 onBeforeMount(async () => {
+  await getTranslations();
+
   await authStore.initFirekit();
 
   await authStore.initStateFromRedirect().then(async () => {
@@ -103,9 +105,6 @@ onBeforeMount(async () => {
 });
 
 onMounted(() => {
-  // Getting translations for i18n default locale
-  getTranslations();
-
   const isLocal = import.meta.env.MODE === 'development';
   const isDevToolsEnabled = import.meta.env.VITE_QUERY_DEVTOOLS_ENABLED === 'true';
 
