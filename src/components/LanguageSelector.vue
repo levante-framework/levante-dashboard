@@ -11,7 +11,19 @@
       :placeholder="$t('authSignIn.selectLanguage')"
       :highlight-on-select="true"
       @change="onLanguageChange"
-    />
+    >
+      <template #option="slotProps">
+        <div class="flex gap-2 w-full">
+          <PvTag
+            v-if="slotProps.option.testing"
+            severity="warn"
+            value="Testing"
+            class="text-xs font-semibold uppercase"
+          />
+          <div>{{ slotProps.option.name }}</div>
+        </div>
+      </template>
+    </PvSelect>
   </div>
 </template>
 
@@ -23,6 +35,7 @@ import { isLevante } from '@/helpers';
 import { useSurveyStore } from '@/store/survey';
 import { setupStudentAudio } from '@/helpers/surveyInitialization';
 import { getParsedLocale } from '@/helpers/survey';
+import PvTag from 'primevue/tag';
 
 interface LanguageOption {
   name: string;
@@ -35,20 +48,12 @@ interface LanguageChangeEvent {
 
 const surveyStore = useSurveyStore();
 
-// Convert the object to an array of [key, value] pairs
-const languageOptionsArray: [string, any][] = Object.entries(languageOptions);
-
-// Sort the array by the key (language code)
-languageOptionsArray.sort((a, b) => a[0].localeCompare(b[1]));
-
-// Convert it back to an object
-const sortedLanguageOptions: Record<string, any> = Object.fromEntries(languageOptionsArray);
-
 const languageDropdownOptions = computed((): LanguageOption[] => {
-  return Object.entries(sortedLanguageOptions).map(([key, value]) => {
+  return Object.entries(languageOptions).map(([key, value]) => {
     return {
       name: value.language,
       value: key,
+      testing: value.testing,
     };
   });
 });
