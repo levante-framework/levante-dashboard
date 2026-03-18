@@ -77,7 +77,7 @@
                   </p>
                 </div>
 
-                <div v-if="game.taskId === 'teacher-survey' || game.taskId === 'parent-survey'" class="mt-4 mb-4">
+                <div v-if="game.taskId === 'teacher-survey' || game.taskId === 'caregiver-survey'" class="mt-4 mb-4">
                   <div class="flex align-items-center mb-2">
                     <span class="mr-2 w-4"
                       ><b>{{ $t('gameTabs.surveyProgressGeneral') }} </b> -
