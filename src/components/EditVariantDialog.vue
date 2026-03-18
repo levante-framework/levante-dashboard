@@ -327,7 +327,7 @@ onMounted((): void => {
   getAllConditions(props.assessment.task.id);
   // LEVANTE assigns surveys as assessments, so we add a defualt for child only so researchers
   // do not accidently assign tasks to parents and teachers
-  if (isLevante && !props.assessment.task.id.includes('survey')) {
+  if (isLevante && !props.assessment.task.id.toLowerCase().includes('survey')) {
     assignedConditions.value.push({
       field: { label: 'User Type', value: 'userType', project: 'LEVANTE' },
       op: { label: 'Equal', value: 'EQUAL' },
