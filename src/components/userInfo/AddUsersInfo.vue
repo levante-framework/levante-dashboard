@@ -29,7 +29,7 @@
     </div>
     <div class="file-requirements-section">
       <h2>User Information File Requirements</h2>
-      <p>Formatting requirements for your user information file are detailed in the table below. For more information, refer to the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank">add users documentation</a>.</p>
+      <p>Formatting requirements for your user information file are detailed in the table below. For more information, refer to the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">add users documentation</a>.</p>
 
       <PvAccordion v-model:value="fileRequirementsAccordionValue" class="mb-4">
         <PvAccordionPanel value="requirements">
@@ -48,7 +48,7 @@
             <p>Notes:</p>
             <ul>
               <li>Reminder: Users either belong to a School and Class OR a Cohort.</li>
-              <li>Complete the appropriate column(s) according  to the users' Group membership (School and Class OR Cohort).</li>
+              <li>Complete the appropriate column(s) according to the users' Group membership (School and Class OR Cohort).</li>
               <li>Caregivers and teachers must belong to the same group(s) as the children to which they are linked in order to receive the correct surveys.</li>
             </ul>
           </PvAccordionContent>
@@ -60,7 +60,7 @@
         <PvAccordionHeader>What if my user file has a site column?</PvAccordionHeader>
         <PvAccordionContent>
           <p>
-            Previously, <code>site</code> was a requiired column in the user information file. Now it is no longer required, because all users will be added to the site chosen within the site selector on the top right of the dashbaord. If <code>site</code> exists in your spreadsheet and its values do not match the selected site, you will see a warning. We recommend having a separate user information file for each site.
+            Previously, <code>site</code> was a required column in the user information file. Now it is no longer required, because all users will be added to the site chosen within the site selector on the top right of the dashboard. If <code>site</code> exists in your spreadsheet and its values do not match the selected site, you will see a warning. We recommend having a separate user information file for each site.
           </p>
         </PvAccordionContent>
       </PvAccordionPanel>

@@ -9,7 +9,7 @@
 
         <div class="how-to-section mb-4">
           <h3>How to create groups</h3>
-          <div class="text-md text-gray-500 mb-1 line-height-3">Users are added to groups in order to receive tasks and surveys through assignments. Which kinds of groups you need will depend on your study design. Before getting started, please read <a href="https://researcher.levante-network.org/dashboard/create-a-group" target="_blank">the documentation on creating groups.</a></div>
+          <div class="text-md text-gray-500 mb-1 line-height-3">Users are added to groups in order to receive tasks and surveys through assignments. Which kinds of groups you need will depend on your study design. Before getting started, please read <a href="https://researcher.levante-network.org/dashboard/create-a-group" target="_blank" rel="noopener noreferrer">the documentation on creating groups.</a></div>
         </div>
         <div class="flex flex-column align-items-start mb-2 md:flex-row w-full justify-content-between">
           <div class="flex align-items-center gap-3 mb-4 md:mb-0">
