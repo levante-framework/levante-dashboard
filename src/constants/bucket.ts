@@ -18,4 +18,4 @@ export const LEVANTE_BUCKET_SURVEY_AUDIO =
     : 'https://storage.googleapis.com/storage/v1/b/levante-assets-prod/o/';
 
 export const LEVANTE_TRANSLATIONS =
-  'https://storage.googleapis.com/levante-assets-draft/translations/dashboard-consolidated-flat';
+  'https://storage.googleapis.com/levante-assets-dev/translations/dashboard-consolidated-flat';
