@@ -1,6 +1,6 @@
 <template>
   <Head>
-    <title>Levante - {{ pageTitle }}</title>
+    <title>{{ pageTitle }}</title>
     <meta name="description" content="The LEVANTE Platform" />
 
     <!-- Social -->
@@ -43,6 +43,7 @@ import NavBar from '@/components/NavBar.vue';
 import { NAVBAR_BLACKLIST } from './constants';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
+import { useI18n } from 'vue-i18n';
 
 const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>
@@ -53,6 +54,7 @@ const isAuthStoreReady = ref(false);
 const showDevtools = ref(false);
 
 const authStore = useAuthStore();
+const { t } = useI18n();
 const route = useRoute();
 
 const loadSessionTimeoutHandler = computed(() => {
@@ -65,20 +67,15 @@ const loadSessionTimeoutHandler = computed(() => {
 usePageEventTracking();
 
 const pageTitle = computed(() => {
-  const locale = i18n.global.locale.value;
-  const fallbackLocale = i18n.global.fallbackLocale.value;
-  const titles = route.meta?.pageTitle;
+  const prefix = 'Levante';
+  const title = route.meta?.pageTitle;
 
-  if (typeof titles === 'object' && titles !== null) {
-    const localeTitle = titles[locale];
-    const fallbackTitle = titles[fallbackLocale];
-    if (typeof localeTitle === 'string') return localeTitle;
-    if (typeof fallbackTitle === 'string') return fallbackTitle;
-  }
-  if (typeof titles === 'string') {
-    return titles;
-  }
-  return 'Levante';
+  if (!title) return prefix;
+
+  if (typeof title === 'string') return `${prefix} — ${title}`;
+
+  const key = title.translationKey;
+  return key && i18n.global.te(key) ? `${prefix} — ${t(key)}` : prefix;
 });
 
 onBeforeMount(async () => {
