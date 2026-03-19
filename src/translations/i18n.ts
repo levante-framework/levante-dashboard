@@ -1,4 +1,4 @@
-import { LEVANTE_TRANSLATIONS, LEVANTE_TRANSLATIONS_LIVE, LEVANTE_TRANSLATIONS_TEST } from '@/constants/bucket';
+import { LEVANTE_TRANSLATIONS } from '@/constants/bucket';
 import { isLevante } from '@/helpers';
 import { createI18n } from 'vue-i18n';
 
