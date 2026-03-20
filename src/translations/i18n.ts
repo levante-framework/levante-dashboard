@@ -1,12 +1,18 @@
-import { LEVANTE_TRANSLATIONS } from '@/constants/bucket';
+import { LEVANTE_TRANSLATION_LANGUAGES, LEVANTE_TRANSLATIONS } from '@/constants/bucket';
 import { isLevante } from '@/helpers';
 import { createI18n } from 'vue-i18n';
 
-interface LanguageOption {
-  language: string;
+export interface LanguageOption {
+  languageMenu: string;
+  languageTaskPicker: string;
   isRTL?: boolean;
   testing?: boolean;
 }
+
+const isDev = import.meta.env.VITE_FIREBASE_PROJECT === 'DEV';
+// const isDev = import.meta.env.VITE_FIREBASE_PROJECT !== 'DEV'; // Simulating PROD
+
+export const languageOptions: Record<string, LanguageOption> = {};
 
 // Merge utility to deeply combine message trees
 function deepMerge(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
@@ -21,37 +27,6 @@ function deepMerge(target: Record<string, any>, source: Record<string, any>): Re
   }
   return target;
 }
-
-export const languageOptions: Record<string, LanguageOption> = {
-  // Frozen as first option
-  'en-US': {
-    language: 'English (United States)',
-  },
-  // Alphabetically sorted
-  'de-DE': {
-    language: 'Deutsch (Deutschland)',
-  },
-  'es-CO': {
-    language: 'Español (Colombia)',
-  },
-  // Testing languages
-  'ar-IL': {
-    // Arabic (Israel)
-    language: 'العربية',
-    isRTL: true,
-    testing: true,
-  },
-  'es-AR': {
-    language: 'Español (Argentina)',
-    testing: true,
-  },
-  'he-IL': {
-    // Hebrew (Israel)
-    language: 'עברית',
-    isRTL: true,
-    testing: true,
-  },
-};
 
 const browserLocale = window.navigator.language;
 
@@ -121,6 +96,50 @@ interface Translations {
   [key: string]: string | Translations;
 }
 
+export async function getLanguages(): Promise<void> {
+  const response = await fetch(LEVANTE_TRANSLATION_LANGUAGES);
+  const data: Record<string, LanguageOption> = await response.json();
+
+  const sortedEntries = Object.entries(data).sort(([, a], [, b]) => {
+    // Push testing languages to the end
+    if (a.testing && !b.testing) return 1;
+    if (!a.testing && b.testing) return -1;
+    return a.languageMenu.localeCompare(b.languageMenu);
+  });
+
+  const filteredEntries = sortedEntries.filter(([, options]: [string, LanguageOption]) => {
+    if (isDev) return true;
+    return options?.testing !== true;
+  });
+
+  const finalObject = Object.fromEntries(filteredEntries);
+  Object.assign(languageOptions, finalObject);
+}
+
+export async function getTranslations(locale?: string): Promise<boolean> {
+  const currentLocale = locale || i18n.global.locale.value;
+
+  const [liveTranslations, testTranslations] = await Promise.all([
+    fetchTranslations('live', currentLocale),
+    isDev ? fetchTranslations('test', currentLocale) : Promise.resolve(null),
+  ]);
+
+  const liveAndTestTranslations = deepMerge(liveTranslations ?? {}, testTranslations ?? {});
+
+  const bundled = baseMessages[currentLocale];
+
+  const merged = deepMerge(bundled ? { ...bundled } : {}, liveAndTestTranslations);
+
+  i18n.global.setLocaleMessage(currentLocale, merged);
+  baseMessages[currentLocale] = merged;
+
+  // Setting html dir (LTR/RTL) based on locale
+  const isRTL = (languageOptions[currentLocale]?.isRTL as boolean) ?? false;
+  document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
+
+  return true;
+}
+
 const remoteCache = new Map<string, Translations>();
 
 async function fetchTranslations(bucket: 'test' | 'live', locale: string): Promise<Translations | null> {
@@ -145,32 +164,6 @@ async function fetchTranslations(bucket: 'test' | 'live', locale: string): Promi
     console.error(`Failed to fetch ${bucket.toLowerCase()} translations`, error);
     return null;
   }
-}
-
-export async function getTranslations(locale?: string): Promise<boolean> {
-  const currentLocale = locale || i18n.global.locale.value;
-
-  const isDev = import.meta.env.VITE_FIREBASE_PROJECT === 'DEV';
-
-  const [liveTranslations, testTranslations] = await Promise.all([
-    fetchTranslations('live', currentLocale),
-    isDev ? fetchTranslations('test', currentLocale) : Promise.resolve(null),
-  ]);
-
-  const liveAndTestTranslations = deepMerge(liveTranslations ?? {}, testTranslations ?? {});
-
-  const bundled = baseMessages[currentLocale];
-
-  const merged = deepMerge(bundled ? { ...bundled } : {}, liveAndTestTranslations);
-
-  i18n.global.setLocaleMessage(currentLocale, merged);
-  baseMessages[currentLocale] = merged;
-
-  // Setting html dir (LTR/RTL) based on locale
-  const isRTL = (languageOptions[currentLocale]?.isRTL as boolean) ?? false;
-  document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
-
-  return true;
 }
 
 // Export for debugging
