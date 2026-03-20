@@ -19,3 +19,5 @@ export const LEVANTE_BUCKET_SURVEY_AUDIO =
 
 export const LEVANTE_TRANSLATIONS =
   'https://storage.googleapis.com/levante-assets-dev/translations/dashboard-consolidated-flat';
+
+export const LEVANTE_TRANSLATION_LANGUAGES = `${LEVANTE_TRANSLATIONS}/languageoptions.json`;
