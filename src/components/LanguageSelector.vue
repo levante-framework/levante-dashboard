@@ -30,17 +30,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import PvSelect from 'primevue/select';
-import { languageOptions, getTranslations } from '@/translations/i18n';
+import { languageOptions, getTranslations, LanguageOption } from '@/translations/i18n';
 import { isLevante } from '@/helpers';
 import { useSurveyStore } from '@/store/survey';
 import { setupStudentAudio } from '@/helpers/surveyInitialization';
 import { getParsedLocale } from '@/helpers/survey';
 import PvTag from 'primevue/tag';
-
-interface LanguageOption {
-  name: string;
-  value: string;
-}
 
 interface LanguageChangeEvent {
   value: string;
@@ -48,12 +43,12 @@ interface LanguageChangeEvent {
 
 const surveyStore = useSurveyStore();
 
-const languageDropdownOptions = computed((): LanguageOption[] => {
-  return Object.entries(languageOptions).map(([key, value]) => {
+const languageDropdownOptions = computed(() => {
+  return Object.entries(languageOptions).map(([key, options]: [string, LanguageOption]) => {
     return {
-      name: value.language,
+      name: options.languageMenu,
+      testing: options.testing,
       value: key,
-      testing: value.testing,
     };
   });
 });
