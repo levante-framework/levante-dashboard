@@ -37,7 +37,7 @@ import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
 import { useAuthStore } from '@/store/auth';
 import { fetchDocById } from '@/helpers/query/utils';
-import { i18n, getTranslations } from '@/translations/i18n';
+import { i18n, getTranslations, getLanguages } from '@/translations/i18n';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import NavBar from '@/components/NavBar.vue';
 import { NAVBAR_BLACKLIST } from './constants';
@@ -79,6 +79,7 @@ const pageTitle = computed(() => {
 });
 
 onBeforeMount(async () => {
+  await getLanguages();
   await getTranslations();
 
   await authStore.initFirekit();
