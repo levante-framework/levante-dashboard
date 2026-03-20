@@ -31,7 +31,7 @@
         <div class="pl-2 w-full">
           <p class="m-0">
             <span class="font-semibold">Variant name:</span>
-            {{ variant.variant.name }}
+            {{ formattedVariantName }}
           </p>
         </div>
         <PvPopover ref="op" append-to="body" style="width: 40vh">
@@ -122,7 +122,7 @@
         <div class="flex align-items-center gap-2">
           <p class="m-0 mt-1 ml-2">
             <span class="font-bold">Variant name:</span>
-            {{ variant.variant.name }} <br />
+            {{ formattedVariantName }} <br />
             <span v-if="formattedAssignedConditions">
               <span class="font-bold">Assigned to:</span>
               {{ formattedAssignedConditions }}<br />
@@ -277,8 +277,8 @@ import PvDialog from 'primevue/dialog';
 import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import EditVariantDialog from '@/components/EditVariantDialog.vue';
-import { getLanguageInfo } from '@/helpers/languageDiscovery';
 import { getTooltip } from '@/helpers';
+import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
 
 interface Condition {
   field: string;
@@ -339,6 +339,24 @@ const backupImage = '/src/assets/roar-logo.png';
 const showContent = ref<boolean>(false);
 const op = ref<any>(null);
 const visible = ref<boolean>(false);
+
+const isLocaleLike = (value: string): boolean => {
+  return /^[a-z]{2}(?:-[a-z]{2})?$/i.test(value.trim());
+};
+
+const formattedVariantName = computed((): string => {
+  const rawName = props.variant.variant?.name ?? '';
+  if (!rawName) return '';
+
+  const trimmedName = rawName.trim();
+  const exactMatch = languageOptions[trimmedName]?.languageTaskPicker;
+  if (exactMatch) return exactMatch;
+
+  if (!isLocaleLike(trimmedName)) return rawName;
+
+  const matchedLocale = findBestMatchingLocale(trimmedName);
+  return languageOptions[matchedLocale]?.languageTaskPicker ?? rawName;
+});
 
 const formattedAssignedConditions = computed((): string => {
   const conditions = props.variant.variant?.conditions?.assigned?.conditions;
