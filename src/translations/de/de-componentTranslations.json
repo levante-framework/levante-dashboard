@@ -65,6 +65,8 @@
       "adminAction": "hier",
       "adminInfoPrompt": "Wenn Sie sich mit einer Google-E-Mail oder Ihr E-Mail-Anbieter Google SSO verwendet, registriert haben.",
       "adminPrompt": "Sind Sie ein Administrator? Klicken Sie {action}, um sich anzumelden.",
+      "googleSignInGenericError": "Anmeldung fehlgeschlagen. Etwas ist schiefgelaufen. Bitte wenden Sie sich an Ihren Administrator.",
+      "googleSignInUserNotFound": "Für diese Anmeldung existiert kein Konto. Wenden Sie sich an Ihren Administrator, wenn Sie Zugang benötigen.",
       "havingTrouble": "Haben Sie Schwierigkeiten?",
       "login": "Melden Sie sich an, um auf Ihr Dashboard zuzugreifen",
       "loginWith": "Anmelden mit",
