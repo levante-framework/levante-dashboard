@@ -8,3 +8,6 @@ export const TASK_VARIANT_ADD_MUTATION_KEY = ['task-variant-add'] as const;
 export const TASK_VARIANT_UPDATE_MUTATION_KEY = ['task-variant-update'] as const;
 export const USER_UPDATE_MUTATION_KEY = ['user-update'] as const;
 export const COMPLETE_ASSESSMENT_MUTATION_KEY = ['assessment', 'complete'] as const;
+export const CREATE_UPDATE_SUPER_ADMIN_MUTATION_KEY = ['create-update-super-admin'] as const;
+export const CREATE_ADMINISTRATOR_MUTATION_KEY = ['create-administrator'] as const;
+export const UPDATE_ADMINISTRATOR_MUTATION_KEY = ['update-administrator'] as const;

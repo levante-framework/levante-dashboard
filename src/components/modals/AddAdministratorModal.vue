@@ -80,6 +80,9 @@
 </template>
 
 <script lang="ts" setup>
+import useCreateAdministratorMutation from '@/composables/mutations/useCreateAdministratorMutation';
+import useCreateUpdateSuperAdminMutation from '@/composables/mutations/useCreateUpdateSuperAdminMutation';
+import useUpdateAdministratorMutation from '@/composables/mutations/useUpdateAdministratorMutation';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
@@ -137,10 +140,14 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const authStore = useAuthStore();
-const { roarfirekit, currentSite, currentSiteName } = storeToRefs(authStore);
+const { currentSite, currentSiteName } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
 const { can } = usePermissions();
 const toast = useToast();
+
+const { mutateAsync: createUpdateSuperAdmin } = useCreateUpdateSuperAdminMutation();
+const { mutateAsync: createAdministrator } = useCreateAdministratorMutation();
+const { mutateAsync: updateAdministrator } = useUpdateAdministratorMutation();
 
 
 const isEditMode = computed(() => Boolean(props?.data));
@@ -300,65 +307,100 @@ async function submit() {
     },
   ];
 
-  // If props.data, we are updating an existing administrator.
-  if (props?.data?.id) {
-    return await roarfirekit
-      .value!.updateAdministrator({ adminUid: props.data.id, email: email.value, name, roles, isTestData: isTestData.value })
-      .then(() => {
-        isSubmitting.value = false;
+  if (selectedRole.value === ROLES.SUPER_ADMIN) {
+    const payload = {
+      email: email.value,
+      name,
+      roles,
+      isTestData: isTestData.value,
+      ...(props?.data?.id ? { adminUid: props.data.id } : {}),
+    };
 
-        toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'Researcher account updated successfully',
-          life: TOAST_DEFAULT_LIFE_DURATION,
-        });
-
-        emit('refetch');
-
-        handleOnClose();
-      })
-      .catch((error) => {
-        isSubmitting.value = false;
-
-        toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: error.message,
-          life: TOAST_DEFAULT_LIFE_DURATION,
-        });
-
-        console.error('Error updating researcher', error);
-      });
-  }
-
-  return await roarfirekit
-    .value!.createNewPermissionsAdmin({ email: email.value, name, roles, isTestData: isTestData.value })
-    .then(() => {
-      isSubmitting.value = false;
-
+    try {
+      await createUpdateSuperAdmin(payload);
       toast.add({
         severity: 'success',
         summary: 'Success',
-        detail: 'Researcher account created successfully',
+        detail: props?.data?.id
+          ? 'Super admin updated successfully'
+          : 'Super admin created successfully',
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
-
       emit('refetch');
-
       handleOnClose();
-    })
-    .catch((error) => {
-      isSubmitting.value = false;
-
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unexpected error';
       toast.add({
         severity: 'error',
         summary: 'Error',
-        detail: error.message,
+        detail: message,
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
+      console.error('Error creating or updating super admin', error);
+    } finally {
+      isSubmitting.value = false;
+    }
+    return;
+  }
 
-      console.error('Error creating researcher', error);
+  if (props?.data?.id) {
+    try {
+      await updateAdministrator({
+        adminUid: props.data.id,
+        email: email.value,
+        name,
+        roles,
+        isTestData: isTestData.value,
+      });
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'Researcher account updated successfully',
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+      emit('refetch');
+      handleOnClose();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unexpected error';
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: message,
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+      console.error('Error updating researcher', error);
+    } finally {
+      isSubmitting.value = false;
+    }
+    return;
+  }
+
+  try {
+    await createAdministrator({
+      email: email.value,
+      name,
+      roles,
+      isTestData: isTestData.value,
     });
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Researcher account created successfully',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    emit('refetch');
+    handleOnClose();
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unexpected error';
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: message,
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    console.error('Error creating researcher', error);
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 </script>
