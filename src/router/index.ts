@@ -1,9 +1,8 @@
-import { NAVBAR_BLACKLIST } from '@/constants';
+import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 import { ROLES } from '@/constants/roles';
 import { APP_ROUTES } from '@/constants/routes';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
-import { pageTitlesCO, pageTitlesES, pageTitlesUS } from '@/translations/exports';
 import { Role } from '@/types';
 import { storeToRefs } from 'pinia';
 import {
@@ -14,7 +13,6 @@ import {
   RouteRecordRaw,
   RouterScrollBehavior,
 } from 'vue-router';
-import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 
 function removeQueryParams(to: RouteLocationNormalized) {
   if (Object.keys(to.query).length) return { path: to.path, query: {}, hash: to.hash };
