@@ -553,82 +553,83 @@ async function submitUsers() {
     activeSubmit.value = false;
     return;
   }
-  // TODO: Figure out deadline-exceeded error with 700+ users. (Registration works fine, creates all documents but the client recieves the error)
-  const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 700);
+  // Chunk and run: Not a transactional operation so partial success is possible
+  // TODO: Add some retry operations to handle partial successes
+  const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 50);
+  const createUserPromises = [];
 
-  for (const users of chunkedUsersToBeRegistered) {
-    try {
-      // Ensure each user has the proper userType field name for the backend
-      const processedUsers = users.map(({ user }) => {
-        const processedUser = { ...user };
+  for (const users of chunkedUsersToBeRegistered) {      // Ensure each user has the proper userType field name for the backend
+    const processedUsers = users.map(({ user }) => {
+      const processedUser = { ...user };
 
-        // Find the userType field (case-insensitive)
-        const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
+      // Find the userType field (case-insensitive)
+      const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
 
-        // Ensure the key is exactly 'userType' and handle potential casing issues
-        if (userTypeField) {
-          const userTypeValue = user[userTypeField];
-          // Set the key to 'userType' regardless of original casing
-          processedUser.userType = userTypeValue;
-          // Remove the original field if the casing was different
-          if (userTypeField !== 'userType') {
-            delete processedUser[userTypeField];
-          }
-
-          // *** Add check to convert 'caregiver' value to 'parent' ***
-          if (typeof userTypeValue === 'string' && userTypeValue.toLowerCase() === 'caregiver') {
-            processedUser.userType = 'parent';
-          }
+      // Ensure the key is exactly 'userType' and handle potential casing issues
+      if (userTypeField) {
+        const userTypeValue = user[userTypeField];
+        // Set the key to 'userType' regardless of original casing
+        processedUser.userType = userTypeValue;
+        // Remove the original field if the casing was different
+        if (userTypeField !== 'userType') {
+          delete processedUser[userTypeField];
         }
 
-        return processedUser;
-      });
-
-      const createUsersPayload = {
-        users: processedUsers,
-      };
-
-      if (currentSite.value && currentSite.value !== 'any') {
-        createUsersPayload.siteId = currentSite.value;
-      } else if (processedUsers.length > 0 && processedUsers[0].orgIds?.districts?.length > 0) {
-        createUsersPayload.siteId = processedUsers[0].orgIds.districts[0];
+        // *** Add check to convert 'caregiver' value to 'parent' ***
+        if (typeof userTypeValue === 'string' && userTypeValue.toLowerCase() === 'caregiver') {
+          processedUser.userType = 'parent';
+        }
       }
 
-      const res = await createUsers(createUsersPayload);
-      logger.capture('Admin: Add Users', { processedUsers });
-      const currentRegisteredUsers = res.data.data;
+      return processedUser;
+    });
 
-      // Update only the newly registered users
-      currentRegisteredUsers.forEach((registeredUser, index) => {
-        const originalIndex = users[index].index;
-        if (originalIndex < rawUserFile.value.length) {
-          // Preserve all existing user data and update with new registration data
-          rawUserFile.value[originalIndex] = {
-            ...rawUserFile.value[originalIndex],
-            email: registeredUser.email,
-            password: registeredUser.password,
-            uid: registeredUser.uid,
-          };
-        }
-      });
+    const createUsersPayload = {
+      users: processedUsers,
+    };
 
-      registeredUsers.value.push(...currentRegisteredUsers);
-
-      toast.add({
-        severity: 'success',
-        summary: 'User Creation Successful',
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
-      convertUsersToCSV();
-    } catch (error) {
-      logger.error('Error Registering Users', { processedUsers: users, error });
-
-      toast.add({
-        severity: 'error',
-        summary: 'Error registering users: ' + error.message,
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
+    if (currentSite.value && currentSite.value !== 'any') {
+      createUsersPayload.siteId = currentSite.value;
+    } else if (processedUsers.length > 0 && processedUsers[0].orgIds?.districts?.length > 0) {
+      createUsersPayload.siteId = processedUsers[0].orgIds.districts[0];
     }
+    createUserPromises.push(createUsers(createUsersPayload));
+  }
+  try {
+    const createUserResults = await Promise.all(createUserPromises);
+
+    // Merging all the users in a flat list
+    for (const result of createUserResults) {
+      const currentRegisteredUsers = result.data.data;
+      registeredUsers.value.push(...currentRegisteredUsers);
+    }
+
+    // Merging the registered users with the raw user file
+    // assuming the order of the registered users is the same as the order of the raw user file
+    // TODO: the response of the create user should come back with an id
+    // that can be mapped to the raw user file
+    (registeredUsers.value || []).forEach((registeredUser, index) => {
+      rawUserFile.value[index] = {
+        ...rawUserFile.value[index],
+        email: registeredUser.email,
+        password: registeredUser.password,
+        uid: registeredUser.uid,
+      };
+    });
+
+    toast.add({
+      severity: 'success',
+      summary: 'User Creation Successful',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    convertUsersToCSV();
+  } catch (error) {
+    logger.error('Error Registering Users', { error });
+    toast.add({
+      severity: 'error',
+      summary: 'Error registering users: ' + error.message,
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
   }
 
   /* We want to clear this flag whether we got an error or not */

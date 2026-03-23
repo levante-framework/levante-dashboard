@@ -6,11 +6,17 @@
           <h2 data-cy="h2-card-admin-title" class="sm:text-lg lg:text-lx m-0 h2-card-admin-title">
             {{ title }}
           </h2>
-          <small class="m-0 ml-1">
-            — Created by <span class="font-bold">{{ props.creatorName }}</span></small
-          >
+          <div class="flex flex-wrap align-items-center gap-2">
+            <small class="m-0 ml-1">
+              — Created by <span class="font-bold">{{ props.creatorName }}</span></small
+            >
+            <SyncStatusBadge :status="displayedSyncStatus" class="status-badge" />
+          </div>
         </div>
-        <div v-if="speedDialItems.length > 0" class="flex justify-content-end w-3">
+        <div
+          v-if="speedDialItems.length > 0 && (isSyncComplete || displayedSyncStatus === 'failed')"
+          class="flex justify-content-end w-3"
+        >
           <PvSpeedDial
             :action-button-props="{
               rounded: true,
@@ -82,6 +88,7 @@
         </div>
       </div>
       <PvTreeTable
+        v-if="isSyncComplete"
         class="mt-3"
         lazy
         row-hover
@@ -104,6 +111,7 @@
           <template #body="{ node }">
             <div v-if="node.data.id" class="flex m-0">
               <router-link
+                v-if="isSyncComplete"
                 :to="{
                   name: 'ProgressReport',
                   params: {
@@ -161,7 +169,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watchEffect } from 'vue';
+import { computed, onMounted, ref, toValue, watchEffect } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
@@ -185,14 +193,23 @@ import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
 import useDsgfOrgQuery from '@/composables/queries/useDsgfOrgQuery';
 import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
 import useDeleteAdministrationMutation from '@/composables/mutations/useDeleteAdministrationMutation';
+import useUpsertAdministrationMutation from '@/composables/mutations/useUpsertAdministrationMutation';
+import { buildRetryAdministrationArgs } from '@/helpers/administrations';
 import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { isLevante, getTooltip } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
-import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
+import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
+import { useAdministrationSyncStatus, type SyncStatus } from '@/composables/useAdministrationSyncStatus';
+import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY } from '@/constants/queryKeys';
+import { useAuthStore } from '@/store/auth';
+import SyncStatusBadge from '@/components/SyncStatusBadge.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
+
+// TODO: Remove this once we have a proper delete option
+const SHOW_DELETE_OPTION = false;
 
 interface Assessment {
   taskId: string;
@@ -231,6 +248,10 @@ interface Props {
   showParams: boolean;
   isSuperAdmin: boolean;
   creatorName: string;
+  syncStatus?: SyncStatus;
+  currentPage?: number;
+  rowsPerPage?: number;
+  cardIndexInPage?: number;
   onDeleteAdministration?: (administrationId: string) => void;
 }
 
@@ -277,9 +298,14 @@ interface ChartOptions {
 
 const router = useRouter();
 const queryClient = useQueryClient();
+const authStore = useAuthStore();
 
 const props = withDefaults(defineProps<Props>(), {
   creatorName: '--',
+  syncStatus: 'complete',
+  currentPage: 1,
+  rowsPerPage: 10,
+  cardIndexInPage: 0,
   onDeleteAdministration: () => {},
   stats: () => ({}),
 });
@@ -290,6 +316,10 @@ const confirm = useConfirm();
 const toast = useToast();
 
 const { mutateAsync: deleteAdministration } = useDeleteAdministrationMutation();
+const {
+  mutate: upsertAdministration,
+  isPending: isRetrying,
+} = useUpsertAdministrationMutation();
 
 const now = computed(() => new Date());
 
@@ -309,11 +339,82 @@ const administrationStatus = computed((): string => {
 
 const administrationStatusBadge = computed((): string => administrationStatus.value.toLowerCase());
 
+const isOnCurrentPage = computed(() => {
+  const { currentPage, rowsPerPage, cardIndexInPage } = props;
+  if (currentPage == null || rowsPerPage == null || cardIndexInPage == null) return false;
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const globalIndex = startIndex + cardIndexInPage;
+  return globalIndex >= startIndex && globalIndex < endIndex;
+});
+
+const administrationIds = computed(() => (props.id ? [props.id] : []));
+const shouldPoll = computed(() => isOnCurrentPage.value && props.syncStatus === 'pending');
+const shouldFetchForRetry = computed(
+  () => isOnCurrentPage.value && (props.syncStatus === 'pending' || props.syncStatus === 'failed'),
+);
+
+const { data: polledAdministrations } = useAdministrationsQuery(administrationIds, {
+  enabled: shouldFetchForRetry,
+  refetchInterval: computed(() => (shouldPoll.value ? 5000 : false)) as never,
+} as never);
+
+const administrationDataRef = computed(() => {
+  const admins = polledAdministrations.value;
+  if (admins?.length) return admins[0];
+  return { syncStatus: props.syncStatus };
+});
+
+const { displayedSyncStatus } = useAdministrationSyncStatus(administrationDataRef, {
+  defaultStatus: props.syncStatus,
+  administrationId: props.id,
+  updateListCacheOnChange: true,
+});
+
+const isSyncComplete = computed(() => displayedSyncStatus.value === 'complete');
+
+const canRetry = computed(
+  () =>
+    displayedSyncStatus.value === 'failed' &&
+    administrationDataRef.value &&
+    typeof administrationDataRef.value === 'object' &&
+    'name' in administrationDataRef.value,
+);
+
+const onRetry = () => {
+  const admin = administrationDataRef.value;
+  if (!canRetry.value || !admin || typeof admin !== 'object' || !props.id) return;
+  const args = buildRetryAdministrationArgs(
+    admin as Record<string, unknown>,
+    toValue(authStore.currentSite) ?? undefined,
+  );
+  upsertAdministration(args, {
+    onSuccess: () => {
+      toast.add({
+        severity: TOAST_SEVERITIES.SUCCESS,
+        summary: 'Success',
+        detail: 'Assignment sync has been retried. Please check back in a few minutes.',
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+      queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_LIST_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_QUERY_KEY] });
+    },
+    onError: (error: Error) => {
+      toast.add({
+        severity: TOAST_SEVERITIES.ERROR,
+        summary: 'Error',
+        detail: error.message,
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+    },
+  });
+};
+
 const speedDialItems = computed((): SpeedDialItem[] => {
   const items: SpeedDialItem[] = [];
 
   // TODO: Change this to admin when edit assignment refactor is complete
-  if (isUpcoming.value && hasRole(ROLES.SUPER_ADMIN)) {
+  if (SHOW_DELETE_OPTION && isSyncComplete.value && isUpcoming.value && hasRole(ROLES.SUPER_ADMIN)) {
     items.push({
       label: 'Delete',
       icon: 'pi pi-trash',
@@ -348,7 +449,7 @@ const speedDialItems = computed((): SpeedDialItem[] => {
       },
     });
   }
-  if (hasRole(ROLES.ADMIN)) {
+  if (hasRole(ROLES.ADMIN) && isSyncComplete.value) {
     items.push({
       label: 'Edit',
       icon: 'pi pi-pencil',
@@ -358,6 +459,13 @@ const speedDialItems = computed((): SpeedDialItem[] => {
           params: { adminId: props.id },
         });
       },
+    });
+  }
+  if (hasRole(ROLES.ADMIN) && displayedSyncStatus.value === 'failed' && canRetry.value) {
+    items.push({
+      label: 'Retry',
+      icon: 'pi pi-sync',
+      command: () => onRetry(),
     });
   }
   return items;

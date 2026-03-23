@@ -188,6 +188,7 @@ import PvMultiSelect from 'primevue/multiselect';
 import PvSelectButton from 'primevue/selectbutton';
 import { useAuthStore } from '@/store/auth';
 import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
+import { useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
 import useAdministrationsStatsQuery from '@/firestore/queries/administrations/useAdministrationsStatsQuery';
 import useOrgQuery from '@/composables/queries/useOrgQuery';
 import useAdministrationAssignmentsQuery from '@/composables/queries/useAdministrationAssignmentsQuery';
@@ -239,6 +240,20 @@ const { data: administrationData, isLoading: isLoadingAdministration } = useAdmi
     enabled: initialized,
     select: (data) => data[0],
   },
+);
+
+const { displayedSyncStatus } = useAdministrationSyncStatus(administrationData, {
+  defaultStatus: undefined,
+});
+
+watch(
+  [isLoadingAdministration, displayedSyncStatus],
+  ([loading, status]) => {
+    if (!loading && (status === 'pending' || status === 'failed')) {
+      router.replace({ name: 'Administrator' });
+    }
+  },
+  { immediate: true },
 );
 
 const { data: adminStats, isLoading: isLoadingAdministrationsStats } = useAdministrationsStatsQuery({
@@ -657,4 +672,5 @@ onMounted(async () => {
   border-top: 1px solid var(--gray-100);
   text-align: center;
 }
+
 </style>
