@@ -13,7 +13,7 @@
 
     <div class="how-to-section">
       <h3>How to Add Users</h3>
-      <div class="text-md text-gray-500 mb-1 line-height-3">Before you begin, please read our full documentation on adding and linking users. Before adding users, you must prepare a user information CSV file. You should use the template provided below.</div>
+      <div class="text-md text-gray-500 mb-1 line-height-3">Before adding users, <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">read our full documentation on adding and linking users</a>. Use the template below to prepare your user information file.</div>
       <div class="download-button-container">
       <PvButton
         class="download-csv-btn"
@@ -72,14 +72,6 @@
 
     <div class="csv-example-image-container">
       <img
-        v-if="!shouldUsePermissions"
-        id="add-users-example-image"
-        :src="LEVANTE_STATIC_ASSETS_URL + '/add_users_example.png'"
-        alt="Add Users CSV Example "
-        class="csv-example-image"
-      />
-      <img
-        v-else
         id="add-users-example-image"
         :src="LEVANTE_STATIC_ASSETS_URL + '/add_users_example_with_permissions.png'"
         alt="Add Users CSV Example "
@@ -283,15 +275,12 @@ const downloadTemplate = () => {
   display: flex;
   justify-content: center;
   overflow-x: auto;
-  position: relative;
-  height: 123px;
 
   .csv-example-image {
     width: auto;
-    max-height: 108px;
+    max-height: 180px;
+    max-width: 90%;
     display: block;
-    position: absolute;
-    left: 0;
   }
 }
 </style>

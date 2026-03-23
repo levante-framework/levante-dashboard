@@ -143,16 +143,17 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
 .csv-example-image-container {
   display: flex;
   justify-content: center;
+  align-items: center;
   overflow-x: auto;
-  position: relative;
-  height: 123px;
+  width: 100%;
 
   .csv-example-image {
     width: auto;
-    max-height: 108px;
+    height: auto;
+    max-width: 100%;
+    max-height: min(220px, 58vh);
     display: block;
-    position: absolute;
-    left: 0;
+    margin-inline: auto;
   }
 }
 </style>
