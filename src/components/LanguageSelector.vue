@@ -59,7 +59,6 @@ async function onLanguageChange(event: LanguageChangeEvent): Promise<void> {
   await getTranslations(event.value);
 
   if (isLevante && surveyStore.survey) {
-    console.log('setting survey locale');
     (surveyStore.survey as any).locale = getParsedLocale(event.value);
     await setupStudentAudio(surveyStore.survey as any, event.value, surveyStore.audioLinkMap, surveyStore);
   }
