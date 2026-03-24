@@ -3,8 +3,6 @@ import _chunk from 'lodash/chunk';
 import _last from 'lodash/last';
 import _mapValues from 'lodash/mapValues';
 import _without from 'lodash/without';
-import { storeToRefs } from 'pinia';
-import { useAuthStore } from '@/store/auth';
 import { AUTH_USER_TYPE } from '@/constants/auth';
 import { convertValues, getAxiosInstance, getBaseDocumentPath, orderByDefault } from './utils';
 import { FIRESTORE_DATABASES } from '@/constants/firebase';
@@ -12,6 +10,7 @@ import { ROLES } from '@/constants/roles';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { logger } from '@/logger';
 import { fetchOrgsBySite } from './orgs';
+import { administrationsRepository } from '@/firebase/repositories/AdministrationsRepository';
 
 export function getTitle(item, isSuperAdmin) {
   if (isSuperAdmin) {
@@ -22,126 +21,72 @@ export function getTitle(item, isSuperAdmin) {
   }
 }
 
-const processBatchStats = async (axiosInstance, statsPaths, batchSize = 5) => {
-  const batchStatsDocs = [];
-  const statsPathChunks = _chunk(statsPaths, batchSize);
-  for (const batch of statsPathChunks) {
-    const { data } = await axiosInstance.post(`${getBaseDocumentPath()}:batchGet`, {
-      documents: batch,
-    });
+// Convert dates to Date objects, handling both timestamp strings and Date objects
+export const convertToDate = (dateValue) => {
+  if (!dateValue) return null;
+  if (dateValue instanceof Date) return dateValue;
 
-    const processedBatch = _without(
-      data.map(({ found }) => {
-        if (found) {
-          return {
-            name: found.name,
-            data: _mapValues(found.fields, (value) => convertValues(value)),
-          };
-        }
-        return undefined;
-      }),
-      undefined,
-    );
-
-    batchStatsDocs.push(...processedBatch);
+  // If it's already a Date object, return it
+  if (dateValue instanceof Date) {
+    return isNaN(dateValue.getTime()) ? null : dateValue;
   }
 
-  return batchStatsDocs;
+  // If it's a Firestore Timestamp object with toDate method
+  if (typeof dateValue === 'object' && typeof dateValue.toDate === 'function') {
+    return dateValue.toDate();
+  }
+  if (typeof dateValue === 'object' && typeof dateValue._seconds === 'number') {
+    const seconds = dateValue._seconds || 0;
+    const nanoseconds = dateValue._nanoseconds || 0;
+    return new Date(seconds * 1000 + nanoseconds / 1000000);
+  }
 };
 
 // TODO: Remove this function. Fields that we want should be passed into the query, not filtered from the whole data of the document on the client side.
 // Netowrk call should be done in the query function, not here.
 const mapAdministrations = async (data) => {
   // First format the administration documents
-  const administrationData = data
-    .map((a) => a.data)
-    .map((a) => {
-      let assignedOrgs = {
-        districts: a.districts,
-        schools: a.schools,
-        classes: a.classes,
-        groups: a.groups,
-        families: a.families,
-      };
+  const administrationData = data.map((a) => {
+    let assignedOrgs = {
+      districts: a.districts,
+      schools: a.schools,
+      classes: a.classes,
+      groups: a.groups,
+      families: a.families,
+    };
 
-      return {
-        id: a.id,
-        name: a.name,
-        publicName: a.publicName,
-        dates: {
-          start: a.dateOpened,
-          end: a.dateClosed,
-          created: a.dateCreated,
-        },
-        assessments: a.assessments,
-        assignedOrgs,
-        // If testData is not defined, default to false when mapping
-        testData: a.testData ?? false,
-        creatorName: a.creatorName,
-      };
-    });
-
-  // Create a list of all the stats document paths we need to get
-  const statsPaths = data
-    // First filter out any missing administration documents
-    .filter((item) => item.name !== undefined)
-    // Then map to the total stats document
-    .map(({ name }) => `${name}/stats/total`);
-
-  const axiosInstance = getAxiosInstance();
-  const batchStatsDocs = await processBatchStats(axiosInstance, statsPaths);
-
-  const administrations = administrationData?.map((administration) => {
-    const thisAdminStats = batchStatsDocs.find((statsDoc) => statsDoc.name.includes(administration.id));
     return {
-      ...administration,
-      stats: { total: thisAdminStats?.data },
+      id: a.id,
+      name: a.name,
+      publicName: a.publicName,
+      dates: {
+        start: convertToDate(a.dateOpened),
+        end: convertToDate(a.dateClosed),
+        created: convertToDate(a.dateCreated),
+      },
+      assessments: a.assessments,
+      assignedOrgs,
+      // If testData is not defined, default to false when mapping
+      testData: a.testData ?? false,
+      creatorName: a.creatorName,
+      stats: a.stats,
+      syncStatus: a.syncStatus ?? 'complete',
     };
   });
 
-  return administrations;
+  return administrationData;
 };
 
 export const administrationPageFetcher = async (selectedDistrictId, fetchTestData = false, orderBy) => {
-  const authStore = useAuthStore();
-  const { roarfirekit } = storeToRefs(authStore);
-
   const siteId =
     selectedDistrictId.value.trim() && selectedDistrictId.value !== 'any' ? selectedDistrictId.value : null;
 
   let orgs = [];
 
-  const administrationIds = await roarfirekit.value.getAdministrations({
+  const administrationData = await administrationsRepository.getAdministrations({
     testData: toValue(fetchTestData),
+    idsOnly: false,
   });
-
-  const axiosInstance = getAxiosInstance();
-  const documents = administrationIds.map((id) => `${getBaseDocumentPath()}/administrations/${id}`);
-
-  let data = [];
-
-  try {
-    data = await axiosInstance.post(`${getBaseDocumentPath()}:batchGet`, { documents });
-  } catch (error) {
-    console.error('Error fetching administration data:', error);
-    return { sortedAdministrations: [], administrations: [] };
-  }
-
-  const administrationData = _without(
-    data.data.map(({ found }) => {
-      if (found) {
-        return {
-          name: found.name,
-          data: {
-            id: _last(found.name.split('/')),
-            ..._mapValues(found.fields, (value) => convertValues(value)),
-          },
-        };
-      }
-      return undefined;
-    }),
-    undefined,
-  );
 
   let administrations = await mapAdministrations(administrationData);
 

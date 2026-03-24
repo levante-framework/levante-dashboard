@@ -14,6 +14,7 @@ import {
   RouteRecordRaw,
   RouterScrollBehavior,
 } from 'vue-router';
+import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 
 function removeQueryParams(to: RouteLocationNormalized) {
   if (Object.keys(to.query).length) return { path: to.path, query: {}, hash: to.hash };
@@ -168,11 +169,11 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
-    path: '/manage-administrators',
-    name: 'ManageAdministrators',
+    path: '/manage-researchers',
+    name: 'ManageResearchers',
     component: () => import('@/pages/ManageAdministrators.vue'),
     meta: {
-      pageTitle: 'Manage Administrators',
+      pageTitle: 'Manage Researchers',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
       requiresNewPermissions: true,
     },
@@ -319,7 +320,6 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   const authStore = useAuthStore();
   const { shouldUsePermissions, userData } = storeToRefs(authStore);
   const { isAuthenticated } = authStore;
-  const allowedUnauthenticatedRoutes = ['AuthEmailLink', 'AuthEmailSent', 'Debug', 'Maintenance', 'SignIn'];
   const inMaintenanceMode = false;
 
   if (inMaintenanceMode && to.name !== 'Maintenance') {

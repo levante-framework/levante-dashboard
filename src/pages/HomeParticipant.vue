@@ -409,7 +409,10 @@ let completeGames = computed(() => {
 });
 
 watch(userAssignmentsData, (newUserAssignmentsData) => {
-  userAssignments.value = sortAssignmentsByDateOpened(newUserAssignmentsData);
+  const completeOnly = (newUserAssignmentsData ?? []).filter(
+    (a) => a && (a.syncStatus === undefined || a.syncStatus === 'complete'),
+  );
+  userAssignments.value = sortAssignmentsByDateOpened(completeOnly);
 });
 
 watch(

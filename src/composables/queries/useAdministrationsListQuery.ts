@@ -1,7 +1,8 @@
 import { computed, Ref, toValue } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
+import { UseQueryReturnType } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
+import { computeQueryOverrides, QueryOptionsWithEnabled } from '@/helpers/computeQueryOverrides';
 import { administrationPageFetcher } from '@/helpers/query/administrations';
 import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
 import { useAuthStore } from '@/store/auth';
@@ -20,8 +21,8 @@ const useAdministrationsListQuery = (
   selectedDistrictId: Ref<string>,
   orderBy: Ref<any>,
   testAdministrationsOnly = false,
-  queryOptions?: UseQueryOptions,
-): UseQueryReturnType => {
+  queryOptions?: QueryOptionsWithEnabled,
+): UseQueryReturnType<any, Error> => {
   const authStore = useAuthStore();
   const { userClaims } = storeToRefs(authStore);
 
@@ -61,8 +62,8 @@ const useFullAdministrationsListQuery = (
   selectedDistrictId: Ref<string>,
   orderBy: Ref<any>,
   testAdministrationsOnly = false,
-  queryOptions?: UseQueryOptions,
-): UseQueryReturnType => {
+  queryOptions?: QueryOptionsWithEnabled,
+): UseQueryReturnType<any, Error> => {
   const authStore = useAuthStore();
   const { userClaims } = storeToRefs(authStore);
 

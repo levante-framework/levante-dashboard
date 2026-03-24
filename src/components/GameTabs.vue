@@ -333,7 +333,7 @@ const getSpecificSurveyProgressClass = computed(() => (loopIndex: number): strin
 
 const { t, locale } = useI18n();
 
-const normalizeTaskId = (taskId: string): string => camelize(taskId.toLowerCase());
+const normalizeTaskId = (taskId: string): string => camelize(taskId);
 
 const normalizedLevanteTaskIds = new Set(LEVANTE_TASK_IDS.map((taskId) => normalizeTaskId(taskId)));
 const normalizedRoarTaskIds = new Set(ROAR_TASK_IDS.map((taskId) => normalizeTaskId(taskId)));
@@ -344,6 +344,7 @@ const isRoarTask = (taskId: string): boolean => normalizedRoarTaskIds.has(normal
 const getTaskName = (taskId: string, taskName: string): string => {
   // Translate Levante task names. The task name is not the same as the taskId.
   const taskIdLowercased = taskId.toLowerCase();
+  const normalizedTaskId = normalizeTaskId(taskId);
 
   if (taskIdLowercased === 'survey') {
     if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
@@ -355,11 +356,11 @@ const getTaskName = (taskId: string, taskName: string): string => {
   }
 
   if (isLevanteTask(taskIdLowercased)) {
-    return t(`gameTabs.${camelize(taskIdLowercased)}Name`);
+    return t(`gameTabs.${normalizedTaskId}Name`);
   }
 
   if (isRoarTask(taskIdLowercased)) {
-    return t(`gameTabs.${camelize(taskIdLowercased)}`);
+    return t(`gameTabs.${normalizedTaskId}`);
   }
 
   return taskName;
@@ -368,6 +369,7 @@ const getTaskName = (taskId: string, taskName: string): string => {
 const getTaskDescription = (taskId: string, taskDescription: string): string => {
   // Translate Levante task descriptions if not in English
   const taskIdLowercased = taskId.toLowerCase();
+  const normalizedTaskId = normalizeTaskId(taskId);
 
   if (taskIdLowercased === 'survey') {
     if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
@@ -379,7 +381,7 @@ const getTaskDescription = (taskId: string, taskDescription: string): string => 
   }
 
   if (isLevanteTask(taskIdLowercased) || isRoarTask(taskIdLowercased)) {
-    return t(`gameTabs.${camelize(taskIdLowercased)}Description`);
+    return t(`gameTabs.${normalizedTaskId}Description`);
   }
 
   return taskDescription;

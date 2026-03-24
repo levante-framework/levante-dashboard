@@ -50,6 +50,18 @@
                   @change="onSortChange($event)"
                 />
               </div>
+
+              <div class="flex flex-column gap-1">
+                <small for="dd-sort" class="text-gray-400">Status</small>
+                <PvSelect
+                  v-model="filterKey"
+                  input-id="dd-filter"
+                  :options="filterOptions"
+                  option-label="label"
+                  data-cy="dropdown-filter-administrations"
+                  @change="onFilterChange($event)"
+                />
+              </div>
             </div>
           </div>
 
@@ -92,22 +104,32 @@
           <PvBlockUI>
             <PvDataView
               :key="dataViewKey"
+              v-model:first="dataViewFirst"
+              :rows-per-page-options="[3, 5, 10, 25]"
+              :rows="pageLimit"
+              :sort-field="sortField"
+              :sort-order="sortOrder"
+              :total-records="filteredAdministrations?.length"
               :value="filteredAdministrations"
+              data-key="id"
               paginator
               paginator-position="both"
-              :total-records="filteredAdministrations?.length"
-              :rows="pageLimit"
-              :rows-per-page-options="[3, 5, 10, 25]"
-              data-key="id"
-              :sort-order="sortOrder"
-              :sort-field="sortField"
             >
+              <template v-if="filteredAdministrations?.length" #paginatorend>
+                <span class="text-sm">
+                  <span class="font-semibold">Total:</span> {{ filteredAdministrations?.length }}
+                </span>
+              </template>
+
               <template #list="slotProps">
                 <div class="mb-2 w-full">
                   <CardAdministration
-                    v-for="item in slotProps.items"
+                    v-for="(item, cardIndexInPage) in slotProps.items"
                     :id="item.id"
                     :key="item.id"
+                    :card-index-in-page="cardIndexInPage"
+                    :current-page="currentPage"
+                    :rows-per-page="pageLimit"
                     :title="getTitle(item, isUserSuperAdmin())"
                     :stats="item.stats"
                     :dates="item.dates"
@@ -117,10 +139,12 @@
                     :show-params="isUserSuperAdmin()"
                     :is-super-admin="isUserSuperAdmin()"
                     :creator-name="item.creatorName"
+                    :sync-status="item.syncStatus"
                     data-cy="h2-card-admin"
                   />
                 </div>
               </template>
+
               <template #empty>
                 <div class="flex flex-column align-items-center justify-content-center py-8">
                   <h1 class="text-xl font-bold mb-4">No Assignments Yet</h1>
@@ -141,7 +165,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import PvAutoComplete from 'primevue/autocomplete';
 import PvBlockUI from 'primevue/blockui';
@@ -155,10 +179,16 @@ import { getTitle } from '@/helpers/query/administrations';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
 import CardAdministration from '@/components/CardAdministration.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import { useLevanteStore } from '@/store/levante';
+import { isCurrent, isPast, isUpcoming } from '@/helpers/assignments';
 
 const initialized = ref(false);
 const pageLimit = ref(10);
 const page = ref(0);
+const dataViewFirst = ref(0);
+const currentPage = computed(() =>
+  pageLimit.value > 0 ? Math.floor(dataViewFirst.value / pageLimit.value) + 1 : 1,
+);
 
 const orderBy = ref(orderByNameASC);
 const searchSuggestions = ref([]);
@@ -169,6 +199,9 @@ const search = ref('');
 const filteredAdministrations = ref([]);
 const fetchTestAdministrations = ref(false);
 
+const levanteStore = useLevanteStore();
+const { assignmentsSelectedFilter, assignmentsSelectedSorting } = storeToRefs(levanteStore);
+const { setAssignmentsSelectedFilter, setAssignmentsSelectedSorting } = levanteStore;
 const authStore = useAuthStore();
 const { currentSite, roarfirekit } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
@@ -247,6 +280,26 @@ watch(
   { immediate: true },
 );
 
+const filterOptions = ref([
+  { label: 'All', value: null },
+  { label: 'Open', value: 'open' },
+  { label: 'Upcoming', value: 'upcoming' },
+  { label: 'Closed', value: 'closed' },
+]);
+
+const getAssignmentsSelectedFilter = () => {
+  if (assignmentsSelectedFilter.value) return assignmentsSelectedFilter.value;
+
+  const defaultLabel = 'All';
+  const defaultOption = filterOptions.value.find((option) => option.label === defaultLabel) || filterOptions.value[0];
+
+  setAssignmentsSelectedFilter(defaultOption);
+
+  return defaultOption;
+};
+
+const filterKey = ref(getAssignmentsSelectedFilter());
+
 // Table sort options
 const sortOptions = ref([
   {
@@ -322,7 +375,19 @@ const sortOptions = ref([
     ],
   },
 ]);
-const sortKey = ref(sortOptions.value[0]);
+
+const getAssignmentsSelectedSorting = () => {
+  if (assignmentsSelectedSorting.value) return assignmentsSelectedSorting.value;
+
+  const defaultLabel = 'Start date (descending)';
+  const defaultOption = sortOptions.value.find((option) => option.label === defaultLabel) || sortOptions.value[0];
+
+  setAssignmentsSelectedSorting(defaultOption);
+
+  return defaultOption;
+};
+
+const sortKey = ref(getAssignmentsSelectedSorting());
 const sortOrder = ref();
 const sortField = ref();
 const dataViewKey = ref(0);
@@ -361,6 +426,28 @@ const autocomplete = () => {
   });
 };
 
+const onFilterChange = (event) => {
+  dataViewKey.value += 1;
+  page.value = 0;
+  dataViewFirst.value = 0;
+  const filterValue = event.value;
+
+  filteredAdministrations.value = administrations.value?.filter((assignment) => {
+    switch (filterValue.value) {
+      case 'open':
+        return isCurrent(assignment) && assignment;
+      case 'upcoming':
+        return isUpcoming(assignment) && assignment;
+      case 'closed':
+        return isPast(assignment) && assignment;
+      default:
+        return assignment;
+    }
+  });
+
+  setAssignmentsSelectedFilter(filterValue);
+};
+
 /**
  * Sort change event handler
  * @param {*} event – The sort event object emitted by PrimeVue
@@ -369,13 +456,19 @@ const autocomplete = () => {
 const onSortChange = (event) => {
   dataViewKey.value += 1;
   page.value = 0;
+  dataViewFirst.value = 0;
   const value = event.value.value;
   const sortValue = event.value;
 
   sortField.value = value[0].field?.fieldPath;
   sortOrder.value = value[0].direction === 'DESCENDING' ? -1 : 1;
   sortKey.value = sortValue;
+
+  setAssignmentsSelectedSorting(sortValue);
 };
+
+onFilterChange({ value: filterKey.value });
+onSortChange({ value: sortKey.value });
 </script>
 
 <style lang="scss">

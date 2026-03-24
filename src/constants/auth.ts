@@ -7,7 +7,7 @@ import { oneMinuteInMs, oneSecondInMs } from './time';
  * @constant {number} AUTH_SESSION_TIMEOUT_COUNTDOWN_DURATION - Session timeout countdown duration (in ms).
  */
 export const AUTH_SESSION_TIMEOUT_IDLE_THRESHOLD: number =
-  parseInt(import.meta.env.VITE_AUTH_SESSION_TIMEOUT_IDLE_THRESHOLD, 10) || 15 * oneMinuteInMs;
+  parseInt(import.meta.env.VITE_AUTH_SESSION_TIMEOUT_IDLE_THRESHOLD, 10) || 60 * oneMinuteInMs;
 export const AUTH_SESSION_TIMEOUT_COUNTDOWN_DURATION: number =
   parseInt(import.meta.env.VITE_AUTH_SESSION_TIMEOUT_COUNTDOWN_DURATION, 10) || 60 * oneSecondInMs;
 
@@ -32,3 +32,16 @@ export const AUTH_USER_TYPE = {
 export const AUTH_SSO_PROVIDERS = {
   GOOGLE: 'google',
 } as const;
+
+/**
+ * Routes that don't require authentication
+ *
+ * @constant {string[]} allowedUnauthenticatedRoutes - Route names that can be accessed without authentication.
+ */
+export const allowedUnauthenticatedRoutes = [
+  'AuthEmailLink',
+  'AuthEmailSent',
+  'Debug',
+  'Maintenance',
+  'SignIn',
+] as const;

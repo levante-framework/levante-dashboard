@@ -28,6 +28,7 @@ const assignmentSelectFields = [
   'readOrgs',
   'sequential',
   'started',
+  'syncStatus',
 ];
 
 export const getAssignmentsRequestBody = ({

@@ -106,8 +106,6 @@ onUnmounted((): void => {
 
 const computedItems = computed((): MenuItem[] => {
   const items: MenuItem[] = [];
-  // TO DO: REMOVE USERS AFTER NAMING 3 TICKET IS COMPLETED
-
   // Groups only has one associated page and therefore is not nested within items
   const groupsAction = rawActions.value.find((action) => action.category === 'Groups');
   if (groupsAction) {
@@ -140,6 +138,16 @@ const computedItems = computed((): MenuItem[] => {
         items: headerItems,
       });
     }
+  }
+
+  const researchersAction = rawActions.value.find((action) => action.category === 'Researchers');
+  if (researchersAction) {
+    items.push({
+      label: researchersAction.title,
+      command: () => {
+        router.push(researchersAction.buttonLink);
+      },
+    });
   }
   return items;
 });

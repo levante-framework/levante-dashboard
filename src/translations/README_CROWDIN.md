@@ -93,6 +93,7 @@ Environment variables:
 Notes:
 
 - Crowdin steps are optional during dev; without `CROWDIN_API_TOKEN` the app uses local CSVs
+- `GameTabs.vue` builds translation keys from task IDs with `camelize(taskId)`. Keep task IDs in their canonical casing in translation keys (e.g., `memoryGameName`) to avoid missing labels in non-English locales.
 
 ---
 
