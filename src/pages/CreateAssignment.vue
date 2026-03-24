@@ -10,10 +10,9 @@
           <div class="admin-page-header m-0">{{ header }}</div>
           <DocsButton href="https://researcher.levante-network.org/dashboard/create-an-assignment" label="Documentation" />
         </div>
-        <div class="text-md text-gray-500 mb-3">{{ description }}</div>
-        <div class="how-to-section mb-4">
-          <h3>How to create or edit an assignment</h3>
-          <p>Placeholder: Add step-by-step instructions for creating assignments (name, dates, groups, tasks, consent, and sequential order).</p>
+        <div v-if="!adminId" class="how-to-section mb-4">
+          <h3>How to create an assignment</h3>
+          <p>An assignment is a collection of tasks. New assignments have a name and date range, are given to certain groups, and contain specified tasks. When an assignment is given to a group, all users within that group receive those tasks. Before getting started, please read the <a href="https://researcher.levante-network.org/dashboard/create-an-assignment" target="_blank" rel="noopener noreferrer">documentation on creating assignments</a>.</p>
         </div>
       </div>
 
@@ -226,7 +225,11 @@ const props = defineProps({
   adminId: { type: String, required: false, default: null },
 });
 
-const header = computed(() => (props.adminId ? 'Edit an assignment' : 'Create Assignment'));
+const header = computed(() => {
+  if (!props.adminId) return 'Create Assignment';
+  const name = state.administrationName?.trim();
+  return name ? `Edit Assignment: ${name}` : 'Edit assignment';
+});
 
 const description = computed(
   () => 'An assignment is a collection of tasks assigned to users who are members of a group. Before getting started, please read the documentation on creating assignments',

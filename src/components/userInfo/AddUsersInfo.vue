@@ -13,7 +13,7 @@
 
     <div class="how-to-section">
       <h3>How to Add Users</h3>
-      <div class="text-md text-gray-500 mb-1 line-height-3">Before adding users, <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">read our full documentation on adding and linking users</a>. Use the template below to prepare your user information file.</div>
+      <div class="text-md text-gray-500 mb-1 line-height-3">Before adding users, read the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">add users documentation</a>. Use the template below to prepare your first user information file.</div>
       <div class="download-button-container">
       <PvButton
         class="download-csv-btn"
@@ -67,8 +67,9 @@
     </PvAccordion>
 
     <p>
-      Below is an example of what your CSV/spreadsheet should look like. Column names must match exactly. Columns with names that do not match exactly, including any additional columns, will not be processed or stored.
-    </p>
+      Below is an example of what your CSV/spreadsheet should look like. Column names must match exactly. Columns with names that do not match exactly, including any additional columns, will not be processed or stored.</p>
+      
+    
 
     <div class="csv-example-image-container">
       <img
@@ -78,6 +79,7 @@
         class="csv-example-image"
       />
     </div>
+    <p>Once you have uploaded a valid file and clicked "Add Users", the platform will automatically download a <code>registered-users.csv</code> file with login information and LEVANTE <code>uid</code>s for each user.</p>
     </div>
   </PvPanel>
 </template>

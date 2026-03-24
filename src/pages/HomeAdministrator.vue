@@ -6,7 +6,7 @@
           <div class="flex flex-row flex-wrap align-items-center justify-content-between mb-3 gap-3">
             <div class="flex flex-1 flex-column gap-2">
               <div class="page-title-row flex align-items-center justify-content-start gap-2 mb-2">
-                <div class="admin-page-header m-0">All Assignments</div>
+                <div class="admin-page-header m-0">View Assignments</div>
                 <DocsButton href="https://researcher.levante-network.org/dashboard/monitor-completion" label="Documentation" />
               </div>
 

@@ -1,5 +1,5 @@
 <template>
-  <PvPanel class="link-users-panel">
+  <PvPanel header="Link Users" class="link-users-panel">
     <template #header>
       <div class="panel-header-content flex align-items-center justify-content-start gap-2">
         <span class="p-panel-title">Link Users</span>
@@ -9,20 +9,19 @@
     <div class="info-message-container">
       <i class="pi pi-exclamation-circle"></i>
       <p>
-        Add links as needed to the registered users csv file obtained from the Add Users step. Establishing links requires the LEVANTE <code>uid</code> assigned to each user in that step.
+        The file you upload to link users must contain a LEVANTE <code>uid</code> for every user.  If any user you are linking has never been assigned a LEVANTE <code>uid</code>ß, go back to the Add Users step.
       </p>
     </div>
 
     <div class="how-to-section">
       <h3>How to Link Users</h3>
-      <p>Before you begin, please read our full documentation on adding and linking users.</p>
-      <p>Before linking users, ensure your registered user information file contains linkage information in the <code>caregiverId</code> and <code>teacherId</code> fields for each child user.</p>
+      <p>Links are indicated by completing the <code>caregiverID</code>c and <code>teacherID</code> fields with the adult’s project <code>id</code> on the corresponding child’s row. Read the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">link users documentation</a> for mmore informaton on how and when to link users.</p>
     </div>
 
 
 
     <p>
-      Below is an example of what your CSV/spreadsheet should look like. Only the required columns will be processed.
+      Below is an example of what your CSV/spreadsheet should look like. Columns with names that do not match exactly, including any additional columns, will not be processed or stored.
     </p>
 
     <div class="csv-example-image-container">
@@ -34,7 +33,7 @@
       />
     </div>
 
-    <p>To link users,  choose your completed registered users file to upload and click "Start Linking".</p>
+    <p>To link users, choose your completed registered users file to upload and click "Start Linking".</p>
   </PvPanel>
 </template>
 
@@ -85,11 +84,6 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
   font-size: 2rem;
 }
 
-.panel-header-content :deep(.docs-button) {
-  font-size: 0.875rem;
-  padding: 0.375rem 0.75rem;
-}
-
 .mb-6 {
   margin-bottom: 1.5rem;
 }
@@ -105,7 +99,6 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
     margin-bottom: 1rem;
     color: var(--primary-color);
     font-size: 1.2rem;
-    font-weight: bold;
   }
 
   .numbered-steps {
@@ -143,17 +136,16 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
 .csv-example-image-container {
   display: flex;
   justify-content: center;
-  align-items: center;
   overflow-x: auto;
-  width: 100%;
+  position: relative;
+  height: 123px;
 
   .csv-example-image {
     width: auto;
-    height: auto;
-    max-width: 100%;
-    max-height: min(220px, 58vh);
+    max-height: 108px;
     display: block;
-    margin-inline: auto;
+    position: absolute;
+    left: 0;
   }
 }
 </style>
