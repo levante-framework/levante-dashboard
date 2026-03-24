@@ -8,7 +8,7 @@
   >
     <template #header>
       <div class="flex flex-column gap-1">
-        <h2 class="m-0 font-bold" data-testid="modalTitle">Add New {{ orgTypeLabel }}</h2>
+        <h2 class="m-0 font-bold" data-testid="modalTitle">Create {{ orgTypeLabel }}</h2>
         <p class="m-0 text-gray-500" data-testid="modalDescription">Use the form below to create a new group.</p>
       </div>
     </template>
@@ -23,7 +23,6 @@
             data-cy="dropdown-org-type"
             input-id="orgType"
             option-label="label"
-            show-clear
           />
           <label for="orgType">Group Type<span class="required-asterisk">*</span></label>
         </PvFloatLabel>
@@ -43,7 +42,6 @@
                   data-cy="dropdown-parent-school"
                   input-id="parentSchool"
                   option-label="name"
-                  show-clear
                 />
                 <label for="parentSchool">School<span class="required-asterisk">*</span></label>
               </PvFloatLabel>
@@ -70,12 +68,12 @@
           @click="handleOnClose"
         ></PvButton>
         <PvButton
-          :disabled="isSubmitBtnDisabled"
-          :label="`Add ${orgTypeLabel}`"
+          :disabled="isSubmitBtnDisabled || isSubmitting"
+          :label="`Create ${orgTypeLabel}`"
           data-testid="submitBtn"
           @click="submit"
         >
-          <div v-if="isSubmitBtnDisabled"><i class="pi pi-spinner pi-spin mr-1"></i> Adding {{ orgTypeLabel }}</div>
+          <div v-if="isSubmitting"><i class="pi pi-spinner pi-spin mr-1"></i> Creating {{ orgTypeLabel }}</div>
         </PvButton>
       </div>
     </template>
@@ -126,6 +124,7 @@ interface SelectedOrg {
 }
 
 interface Props {
+  activeTabOrg?: OrgType;
   isVisible: boolean;
 }
 
@@ -133,7 +132,13 @@ interface Emits {
   (event: 'close'): void;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  activeTabOrg: () => ({
+    label: 'Site',
+    firestoreCollection: FIRESTORE_COLLECTIONS.DISTRICTS,
+    singular: SINGULAR_ORG_TYPES.DISTRICTS,
+  }),
+});
 
 const emit = defineEmits<Emits>();
 
@@ -142,9 +147,10 @@ const authStore = useAuthStore();
 const { hasMinimumRole, userRole } = usePermissions();
 const queryClient = useQueryClient();
 
-const isSubmitBtnDisabled = ref(false);
+const isSubmitBtnDisabled = computed(() => !authStore.currentSite || authStore.currentSite.toLowerCase() === 'any');
+const isSubmitting = ref(false);
 const orgName = ref('');
-const orgType = ref<OrgType | undefined>(undefined);
+const orgType = ref<OrgType | undefined>(props.activeTabOrg);
 
 const allOrgTypes: OrgType[] = [
   { firestoreCollection: FIRESTORE_COLLECTIONS.DISTRICTS, singular: SINGULAR_ORG_TYPES.DISTRICTS, label: 'Site' },
@@ -210,11 +216,11 @@ const v$ = useVuelidate(
   },
 );
 
-const orgTypeLabel = computed(() => (orgType.value ? _capitalize(orgType.value.label) : 'Group'));
+const orgTypeLabel = computed(() => (orgType.value ? _capitalize(orgType.value.label) : props.activeTabOrg?.label));
 const parentOrgRequired = computed(() => orgTypesRequiringParent.includes(orgType.value?.singular || ''));
 const selectedSite = computed(() => authStore.currentSite ?? '');
 
-const { mutate: upsertOrg, isPending: isSubmittingOrg } = useUpsertOrgMutation();
+const { mutate: upsertOrg, isPending: isPendingOrg } = useUpsertOrgMutation();
 
 const { isFetching: isFetchingSchools, data: schools } = _useSchoolsQuery(selectedSite);
 
@@ -225,14 +231,6 @@ const { isRefetching: isCheckingOrgName, refetch: doesOrgNameExist } = useOrgNam
   parentSchool,
 );
 
-// Watch for changes in loading states, with proper undefined handling
-watch(
-  () => [isCheckingOrgName?.value ?? false, isSubmittingOrg?.value ?? false],
-  ([isChecking, isSubmitting]) => {
-    isSubmitBtnDisabled.value = Boolean(isChecking) || Boolean(isSubmitting);
-  },
-);
-
 const handleOnClose = () => {
   resetForm();
   emit('close');
@@ -240,7 +238,7 @@ const handleOnClose = () => {
 
 const resetForm = () => {
   orgName.value = '';
-  orgType.value = undefined;
+  orgType.value = props.activeTabOrg;
   tags.value = [];
   parentSchool.value = undefined;
   v$.value.$reset();
@@ -328,13 +326,29 @@ const parseCreateOrgData = (data: CreateOrgType) => {
   }
 };
 
+// Watch for changes in loading states, with proper undefined handling
+watch(
+  () => [isCheckingOrgName?.value ?? false, isPendingOrg?.value ?? false],
+  ([isChecking, isPending]) => {
+    isSubmitting.value = Boolean(isChecking) || Boolean(isPending);
+  },
+);
+
+watch(
+  () => props.activeTabOrg,
+  (activeTabOrg) => {
+    if (activeTabOrg) orgType.value = activeTabOrg;
+  },
+  { immediate: true },
+);
+
 const submit = async () => {
-  isSubmitBtnDisabled.value = true;
+  isSubmitting.value = true;
 
   const isFormValid = await v$.value.$validate();
 
   if (!isFormValid) {
-    isSubmitBtnDisabled.value = false;
+    isSubmitting.value = false;
 
     return toast.add({
       severity: 'warn',
@@ -357,7 +371,7 @@ const submit = async () => {
 
   if (orgType.value?.singular !== SINGULAR_ORG_TYPES.DISTRICTS && authStore.currentSite === 'any') {
     handleOnClose();
-    isSubmitBtnDisabled.value = false;
+    isSubmitting.value = false;
     return toast.add({
       severity: 'error',
       summary: 'Error',
@@ -378,7 +392,7 @@ const submit = async () => {
       errorMessage += ` ${orgTypeLabel.value} names must be unique within a site.`;
     }
 
-    isSubmitBtnDisabled.value = false;
+    isSubmitting.value = false;
 
     return toast.add({
       severity: 'error',
@@ -393,7 +407,7 @@ const submit = async () => {
   try {
     parsedData = parseCreateOrgData({ ...(data as CreateOrgType), siteId: authStore.currentSite! });
   } catch (error) {
-    isSubmitBtnDisabled.value = false;
+    isSubmitting.value = false;
 
     return toast.add({
       severity: 'error',
@@ -429,8 +443,14 @@ const submit = async () => {
       console.error(`Error creating ${orgTypeLabel.value}:`, error);
     },
     onSettled: () => {
-      isSubmitBtnDisabled.value = false;
+      isSubmitting.value = false;
     },
   });
 };
 </script>
+
+<style lang="scss">
+.p-dialog .p-dialog-footer {
+  padding: 0;
+}
+</style>
