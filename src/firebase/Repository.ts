@@ -1,9 +1,13 @@
-import { FirebaseService } from '@/firebase/Service';
+import levanteFirebaseConfig from '@/config/firebaseLevante';
+import { EmulatorConfig, FirebaseConfig, FirebaseService } from '@/firebase/Service';
 import { httpsCallable, HttpsCallableResult } from 'firebase/functions';
+import firebaseJSON from './../../firebase.json';
 
 export class Repository {
-  protected constructor() {
-    FirebaseService.initialize();
+  protected constructor(config?: FirebaseConfig, emulatorConfig?: EmulatorConfig) {
+    const defaultConfig = levanteFirebaseConfig.admin;
+    const defaultEmulatorConfig = firebaseJSON.emulators;
+    FirebaseService.initialize(config ?? defaultConfig, emulatorConfig ?? defaultEmulatorConfig);
   }
 
   protected async call<TData = unknown, TResponse = unknown>(functionName: string, data?: TData): Promise<TResponse> {
