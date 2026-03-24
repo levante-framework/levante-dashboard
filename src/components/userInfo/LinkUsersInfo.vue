@@ -15,7 +15,7 @@
 
     <div class="how-to-section">
       <h3>How to Link Users</h3>
-      <p>Links are indicated by completing the <code>caregiverID</code>c and <code>teacherID</code> fields with the adult’s project <code>id</code> on the corresponding child’s row. Read the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">link users documentation</a> for mmore informaton on how and when to link users.</p>
+      <div class="text-md text-gray-500 mb-1 line-height-3">Links are indicated by completing the <code>caregiverID</code>c and <code>teacherID</code> fields with the adult’s project <code>id</code> on the corresponding child’s row. Read the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">link users documentation</a> for mmore informaton on how and when to link users.</div>
     </div>
 
 
@@ -104,6 +104,7 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
     margin-bottom: 1rem;
     color: var(--primary-color);
     font-size: 1.2rem;
+    font-weight: bold;
   }
 
   .numbered-steps {

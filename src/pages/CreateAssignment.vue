@@ -12,7 +12,7 @@
         </div>
         <div v-if="!adminId" class="how-to-section mb-4">
           <h3>How to create an assignment</h3>
-          <p>An assignment is a collection of tasks. New assignments have a name and date range, are given to certain groups, and contain specified tasks. When an assignment is given to a group, all users within that group receive those tasks. Before getting started, please read the <a href="https://researcher.levante-network.org/dashboard/create-an-assignment" target="_blank" rel="noopener noreferrer">documentation on creating assignments</a>.</p>
+          <div class="text-md text-gray-500 mb-1 line-height-3">An assignment is a collection of tasks. New assignments have a name and date range, are given to certain groups, and contain specified tasks. When an assignment is given to a group, all users within that group receive those tasks. Before getting started, please read the <a href="https://researcher.levante-network.org/dashboard/create-an-assignment" target="_blank" rel="noopener noreferrer">documentation on creating assignments</a>.</div>
         </div>
       </div>
 
