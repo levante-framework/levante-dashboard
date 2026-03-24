@@ -22,9 +22,9 @@
         </span>
 
         <div v-if="canManageResearchers" class="how-to-section mb-4">
-          <h3>How to manage researchers</h3>
+          <h3>Researcher permissions</h3>
           <div class="text-md text-gray-500 mb-1 line-height-3">
-            Select a specific site above to add or edit researchers. Add researchers to your site and assign roles (site administrator, administrator, or research assistant). Each role has different permissions. For details, see <a href="https://researcher.levante-network.org/dashboard/permissions" target="_blank" rel="noopener noreferrer">researcher roles and permissions</a>.
+            Each kind of researcher account has a different role. Roles determine what actions a researcher can take on the dashboard within a particular site. See <a href="https://researcher.levante-network.org/dashboard/permissions" target="_blank" rel="noopener noreferrer">researcher roles and permissions</a> for a description of each role.
           </div>
         </div>
         <div v-else class="how-to-section mb-4">

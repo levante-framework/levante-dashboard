@@ -9,7 +9,7 @@
     <div class="info-message-container">
       <i class="pi pi-exclamation-circle"></i>
       <p>
-        The file you upload to link users must contain a LEVANTE <code>uid</code> for every user.  If any user you are linking has never been assigned a LEVANTE <code>uid</code>ß, go back to the Add Users step.
+        The file you upload to link users must contain a LEVANTE <code>uid</code> for every user.  If any user you are linking has never been assigned a LEVANTE <code>uid</code>, go back to the Add Users step.
       </p>
     </div>
 
@@ -84,6 +84,11 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
   font-size: 2rem;
 }
 
+.panel-header-content :deep(.docs-button) {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
 .mb-6 {
   margin-bottom: 1.5rem;
 }
@@ -137,15 +142,12 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
   display: flex;
   justify-content: center;
   overflow-x: auto;
-  position: relative;
-  height: 123px;
 
   .csv-example-image {
     width: auto;
-    max-height: 108px;
+    max-height: 180px;
+    max-width: 90%;
     display: block;
-    position: absolute;
-    left: 0;
   }
 }
 </style>
