@@ -3,17 +3,15 @@
     v-if="!hasControls"
     class="flex-1 flex h-6rem flex-row gap-2 border-1 border-round surface-border bg-white-alpha-90 mb-2 hover:surface-hover"
   >
-    <div class="w-11 mt-3 flex flex-row p-0 mb-2">
-      <div>
-        <img
-          class="w-4rem shadow-2 border-round ml-2"
-          :src="variant.task.image || backupImage"
-          :alt="variant.task.name"
-        />
-      </div>
-      <div>
+    <div class="w-full my-2 flex flex-row align-items-center p-0">
+      <img
+        class="w-4rem shadow-2 border-round ml-2"
+        :src="variant.task.image || backupImage"
+        :alt="variant.task.name"
+      />
+      <div class="h-auto m-0 p-0">
         <div class="flex align-items-center flex-row">
-          <span class="font-bold text-lg pl-2">{{ variant.task.name }}</span>
+          <span class="font-bold pl-2">{{ variant.task.name }}</span>
           <PvButton
             class="p-0 surface-hover border-none border-circle hover:text-100 hover:bg-primary ml-2"
             @click="toggle($event)"
@@ -22,16 +20,15 @@
               class="pi pi-info-circle text-primary p-1 border-circle hover:text-100"
             ></i
           ></PvButton>
-          <div class="flex ml-2 gap-2">
-            <div v-if="variant?.variant?.params?.cat">
-              <PvChip class="bg-primary text-white h-2rem" label="CAT" />
-            </div>
+          <div v-if="variant?.variant?.params?.cat" class="flex ml-2 gap-2">
+            <PvTag severity="warn" rounded><div class="font-semibold text-xs">CAT</div></PvTag>
+            <PvTag severity="warn" rounded><div class="font-semibold text-xs">Adaptive</div></PvTag>
           </div>
         </div>
         <div class="pl-2 w-full">
           <p class="m-0">
-            <span class="font-semibold">Variant name:</span>
-            {{ variant.variant.name }}
+            <span class="font-semibold text-sm">Variant name: </span>
+            <span class="text-sm">{{ formattedVariantName }}</span>
           </p>
         </div>
         <PvPopover ref="op" append-to="body" style="width: 40vh">
@@ -70,7 +67,7 @@
         </PvPopover>
       </div>
     </div>
-    <div class="mr-0 pl-0 flex flex-column">
+    <div class="m-auto">
       <PvButton
         v-if="!hasControls"
         class="surface-hover border-1 border-300 border-circle m-0 hover:bg-primary p-0 m-2"
@@ -115,14 +112,15 @@
               class="pi pi-info-circle text-primary p-1 border-circle hover:text-100"
             ></i
           ></PvButton>
-          <div v-if="variant?.variant?.params?.cat" class="flex ml-2">
-            <PvChip class="bg-primary text-white h-2rem" label="CAT" />
+          <div v-if="variant?.variant?.params?.cat" class="flex ml-2 gap-2">
+            <PvTag severity="warn" rounded><div class="font-semibold text-xs">CAT</div></PvTag>
+            <PvTag severity="warn" rounded><div class="font-semibold text-xs">Adaptive</div></PvTag>
           </div>
         </div>
         <div class="flex align-items-center gap-2">
           <p class="m-0 mt-1 ml-2">
             <span class="font-bold">Variant name:</span>
-            {{ variant.variant.name }} <br />
+            {{ formattedVariantName }} <br />
             <span v-if="formattedAssignedConditions">
               <span class="font-bold">Assigned to:</span>
               {{ formattedAssignedConditions }}<br />
@@ -271,14 +269,13 @@ import { ref, computed } from 'vue';
 import _toPairs from 'lodash/toPairs';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
-import PvChip from 'primevue/chip';
 import PvDataTable from 'primevue/datatable';
 import PvDialog from 'primevue/dialog';
 import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import EditVariantDialog from '@/components/EditVariantDialog.vue';
-import { getLanguageInfo } from '@/helpers/languageDiscovery';
 import { getTooltip } from '@/helpers';
+import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
 
 interface Condition {
   field: string;
@@ -339,6 +336,30 @@ const backupImage = '/src/assets/roar-logo.png';
 const showContent = ref<boolean>(false);
 const op = ref<any>(null);
 const visible = ref<boolean>(false);
+
+const isLocaleLike = (value: string): boolean => {
+  return /^[a-z]{2}(?:-[a-z]{2})?$/i.test(value.trim());
+};
+
+const formattedVariantName = computed((): string => {
+  const rawName = props.variant.variant?.name ?? '';
+  if (!rawName) return '';
+
+  let variantLanguage = rawName;
+  if (rawName?.toLowerCase()?.includes('adaptive')) {
+    const parts = rawName?.split(' ');
+    variantLanguage = parts[0]!;
+  }
+
+  const trimmedName = variantLanguage.trim();
+  const exactMatch = languageOptions[trimmedName]?.languageTaskPicker;
+  if (exactMatch) return exactMatch;
+
+  if (!isLocaleLike(trimmedName)) return rawName;
+
+  const matchedLocale = findBestMatchingLocale(trimmedName);
+  return languageOptions[matchedLocale]?.languageTaskPicker ?? rawName;
+});
 
 const formattedAssignedConditions = computed((): string => {
   const conditions = props.variant.variant?.conditions?.assigned?.conditions;
