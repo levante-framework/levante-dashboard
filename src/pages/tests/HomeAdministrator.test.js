@@ -238,7 +238,7 @@ describe('HomeAdministrator', () => {
 
     await nextTick();
     const wrapperText = wrapper.text();
-    expect(wrapperText).toContain('All Assignments');
+    expect(wrapperText).toContain('View Assignments');
     // Check for the first part of the description
     expect(wrapperText).toContain('This page lists all the assignments');
     expect(wrapperText).toContain('administered to your users');
