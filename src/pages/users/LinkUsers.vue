@@ -92,8 +92,7 @@ import PvFileUpload from 'primevue/fileupload';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import PvDivider from 'primevue/divider';
 import PvMessage from 'primevue/message';
-import { validateCsvHeaders } from '@levante-framework/levante-zod';
-import { validateLinkUsersCsvRows } from '@/helpers/validateLinkUsersCsvRows';
+import { validateCsvHeaders, validateLinkUsersCsv } from '@levante-framework/levante-zod';
 import { useLevanteStore } from '@/store/levante';
 import { storeToRefs } from 'pinia';
 import { REGISTERED_USERS_CSV_MARKER } from '@/constants/registeredUsersCsv';
@@ -240,7 +239,7 @@ const onFileUpload = async (event) => {
 
   csvSourceVerified.value = verifyCsvSource(filteredData);
 
-  const validation = validateLinkUsersCsvRows(filteredData);
+  const validation = validateLinkUsersCsv(filteredData);
 
   if (!validation.success) {
     const errorsByRow = new Map();
