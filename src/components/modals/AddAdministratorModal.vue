@@ -9,7 +9,9 @@
     <template #header>
       <div class="flex flex-column gap-1">
         <h2 class="m-0 font-bold" data-testid="modalTitle">{{ modalTitle }}</h2>
+        <DocsButton href="https://researcher.levante-network.org/dashboard/permissions" label="Documentation" />
         <p v-if="isEditMode" class="m-0 pt-2 text-md text-gray-600">Updating roles for <span class="font-bold">{{ administratorName }}</span>.</p>
+
       </div>
     </template>
 
@@ -80,6 +82,7 @@
 </template>
 
 <script lang="ts" setup>
+import DocsButton from '@/components/DocsButton.vue';
 import useCreateAdministratorMutation from '@/composables/mutations/useCreateAdministratorMutation';
 import useCreateUpdateSuperAdminMutation from '@/composables/mutations/useCreateUpdateSuperAdminMutation';
 import useUpdateAdministratorMutation from '@/composables/mutations/useUpdateAdministratorMutation';

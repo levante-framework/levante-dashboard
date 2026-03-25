@@ -16,3 +16,8 @@ export const LEVANTE_BUCKET_SURVEY_AUDIO =
   import.meta.env.VITE_FIREBASE_PROJECT === 'DEV'
     ? 'https://storage.googleapis.com/storage/v1/b/levante-assets-dev/o/'
     : 'https://storage.googleapis.com/storage/v1/b/levante-assets-prod/o/';
+
+export const LEVANTE_TRANSLATIONS =
+  'https://storage.googleapis.com/levante-assets-dev/translations/dashboard-consolidated-flat';
+
+export const LEVANTE_TRANSLATION_LANGUAGES = `${LEVANTE_TRANSLATIONS}/languageoptions.json`;

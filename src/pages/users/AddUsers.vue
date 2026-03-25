@@ -33,7 +33,7 @@
             <div class="flex align-items-center gap-2">
               <i class="pi pi-exclamation-triangle text-yellow-600"></i>
               <span class="text-yellow-800 font-semibold">
-                Multiple sites detected. Users will only be created for the currently selected site<template
+                Multiple sites detected in file. Users will only be created for the currently selected site<template
                   v-if="currentSiteName"
                   >: {{ currentSiteName }}</template
                 >.

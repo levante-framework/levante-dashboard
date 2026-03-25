@@ -1,53 +1,27 @@
 <template>
   <PvPanel header="Link Users" class="link-users-panel">
+    <template #header>
+      <div class="panel-header-content flex align-items-center justify-content-start gap-2">
+        <span class="p-panel-title">Link Users</span>
+        <DocsButton href="https://researcher.levante-network.org/dashboard/add-users" label="Documentation" />
+      </div>
+    </template>
     <div class="info-message-container">
       <i class="pi pi-exclamation-circle"></i>
       <p>
-        Make sure you are editing the downloaded file you got after adding users. This new file contains all of your
-        information and LEVANTE UIDs.
+        The file you upload to link users must contain a LEVANTE <code>uid</code> for every user.  If any user you are linking has never been assigned a LEVANTE <code>uid</code>, go back to the Add Users step.
       </p>
     </div>
 
     <div class="how-to-section">
       <h3>How to Link Users</h3>
-      <ol class="numbered-steps">
-        <li>
-          <span class="step-number">1</span>Fill in CSV with the user linking data from below. Users need to be linked
-          so we can keep track of their relationships, like assigning the proper specific survey sections to caregiver
-          and teacher users.
-        </li>
-        <li><span class="step-number">2</span>Upload the file and click "Start Linking"</li>
-      </ol>
+      <div class="text-md text-gray-500 mb-1 line-height-3">Links are indicated by completing the <code>caregiverID</code>c and <code>teacherID</code> fields with the adult’s project <code>id</code> on the corresponding child’s row. Read the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">link users documentation</a> for mmore informaton on how and when to link users.</div>
     </div>
 
-    <p>
-      The following fields define the columns for your CSV file when linking users. Please refer to the legend below for
-      specific requirements on each field.
-    </p>
-    <ul>
-      <li><b>id</b><span class="field-marker">*</span> - A unique identifier for the user in CSV file.</li>
-      <li><b>userType</b><span class="field-marker">*</span> - The type of user: child, caregiver, teacher.</li>
-      <li>
-        <b>caregiverId</b><span class="field-marker">**</span> - A unique identifier (id) for the child's caregiver.
-      </li>
-      <li>
-        <b>teacherId</b><span class="field-marker">**</span> - A unique identifier (id) for the child's teacher — only
-        required if administering teacher survey.
-      </li>
-      <li>
-        <b>uid</b><span class="field-marker">***</span> - The unique LEVANTE identifier that is returned after user is
-        added to dashboard.
-      </li>
-    </ul>
 
-    <p class="mb-6 legend">
-      <span class="field-marker">*</span> Required for this Step.<br />
-      <span class="field-marker">**</span> Required only for child users. Leave blank for caregiver or teacher users.<br />
-      <span class="field-marker">***</span> Created by the platform during Add Users step.
-    </p>
 
     <p>
-      Below is an example of what your CSV/spreadsheet should look like. Only the required columns will be processed.
+      Below is an example of what your CSV/spreadsheet should look like. Columns with names that do not match exactly, including any additional columns, will not be processed or stored.
     </p>
 
     <div class="csv-example-image-container">
@@ -58,10 +32,13 @@
         class="csv-example-image"
       />
     </div>
+
+    <p>To link users, choose your completed registered users file to upload and click "Start Linking".</p>
   </PvPanel>
 </template>
 
 <script setup>
+import DocsButton from '@/components/DocsButton.vue';
 import PvPanel from 'primevue/panel';
 import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
 </script>
@@ -69,10 +46,10 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
 <style scoped>
 .info-message-container {
   display: flex;
-  background-color: rgb(252, 252, 218);
-  border: 2px solid rgb(228, 206, 7);
+  background-color: rgb(236, 141, 124);
+  border: 2px solid rgb(228, 59, 7);
   border-radius: 0.5rem;
-  color: rgb(199, 180, 7);
+  color: rgb(131, 32, 2);
   margin-bottom: 1rem;
 
   p {
@@ -107,6 +84,11 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
   font-size: 2rem;
 }
 
+.panel-header-content :deep(.docs-button) {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
 .mb-6 {
   margin-bottom: 1.5rem;
 }
@@ -122,6 +104,7 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
     margin-bottom: 1rem;
     color: var(--primary-color);
     font-size: 1.2rem;
+    font-weight: bold;
   }
 
   .numbered-steps {
@@ -160,15 +143,12 @@ import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
   display: flex;
   justify-content: center;
   overflow-x: auto;
-  position: relative;
-  height: 123px;
 
   .csv-example-image {
     width: auto;
-    max-height: 108px;
+    max-height: 180px;
+    max-width: 90%;
     display: block;
-    position: absolute;
-    left: 0;
   }
 }
 </style>
