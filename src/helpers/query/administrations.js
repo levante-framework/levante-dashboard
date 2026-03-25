@@ -1,16 +1,10 @@
 import { toValue } from 'vue';
-import _chunk from 'lodash/chunk';
-import _last from 'lodash/last';
-import _mapValues from 'lodash/mapValues';
-import _without from 'lodash/without';
-import { AUTH_USER_TYPE } from '@/constants/auth';
-import { convertValues, getAxiosInstance, getBaseDocumentPath, orderByDefault } from './utils';
-import { FIRESTORE_DATABASES } from '@/constants/firebase';
+import { orderByDefault } from './utils';
 import { ROLES } from '@/constants/roles';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { logger } from '@/logger';
 import { fetchOrgsBySite } from './orgs';
 import { administrationsRepository } from '@/firebase/repositories/AdministrationsRepository';
+import { usersRepository } from '@/firebase/repositories/UsersRepository';
 
 export function getTitle(item, isSuperAdmin) {
   if (isSuperAdmin) {
@@ -137,59 +131,7 @@ export const getAdministrationsByOrg = (orgId, orgType, administrations) => {
   });
 };
 
-export const fetchAllAdminUsers = async (db = FIRESTORE_DATABASES.ADMIN) => {
-  const axiosInstance = getAxiosInstance(db);
-
-  const requestBody = {
-    structuredQuery: {
-      from: [{ collectionId: FIRESTORE_COLLECTIONS.USERS }],
-      select: {
-        fields: [
-          { fieldPath: 'email' },
-          { fieldPath: 'name' },
-          { fieldPath: 'roles' },
-          { fieldPath: 'adminOrgs' },
-          { fieldPath: 'createdAt' },
-        ],
-      },
-      where: {
-        fieldFilter: {
-          field: { fieldPath: 'userType' },
-          op: 'EQUAL',
-          value: { stringValue: AUTH_USER_TYPE.ADMIN },
-        },
-      },
-    },
-  };
-
-  const response = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
-
-  return response.data
-    .filter((user) => user.document)
-    .map((user) => {
-      const doc = user.document;
-      return {
-        id: doc.name.split('/').pop(),
-        ..._mapValues(doc.fields, (value) => convertValues(value)),
-      };
-    });
-};
-
-export const fetchSuperAdmins = async (db = FIRESTORE_DATABASES.ADMIN) => {
-  try {
-    const admins = await fetchAllAdminUsers(db);
-    return admins.filter((admin) => {
-      const roles = Array.isArray(admin.roles) ? admin.roles : [];
-      return roles.some((r) => r?.role === ROLES.SUPER_ADMIN);
-    });
-  } catch (error) {
-    console.error('fetchSuperAdmins: Error fetching super admins:', error);
-    logger.error(error, { context: { function: 'fetchSuperAdmins' } });
-    throw error;
-  }
-};
-
-export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABASES.ADMIN) => {
+export const fetchAdminsBySite = async (siteId, siteName) => {
   // NOTE:
   // Firestore `ARRAY_CONTAINS` on objects requires an exact match of the entire object.
   // In PROD we have pre-existing admins whose `users.roles[]` entries may not include `siteName` (or may include
@@ -198,7 +140,7 @@ export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABAS
   // To keep this robust across old/new role shapes, we fetch all admin users and filter by `roles` client-side
   // using only `siteId` + `role` (ignoring `siteName`).
   try {
-    const admins = await fetchAllAdminUsers(db);
+    const admins = await usersRepository.fetchAdminUsers();
 
     if (siteId.value === 'any') {
       return admins;

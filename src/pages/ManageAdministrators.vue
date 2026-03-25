@@ -186,6 +186,7 @@ interface AdministratorOrganizations {
 
 interface AdministratorRecord {
   id: string;
+  displayName?: string;
   email?: string;
   name?: AdministratorName;
   roles?: AdministratorRole[];
@@ -500,11 +501,15 @@ async function executeAdministratorRemoval() {
 }
 
 function formatAdministratorName(admin?: AdministratorRecord | null) {
-  if (!admin?.name) {
-    return '';
+  if (admin?.name) {
+    return [admin.name.first, admin.name.middle, admin.name.last].filter(Boolean).join(' ').trim();
   }
 
-  return [admin.name.first, admin.name.middle, admin.name.last].filter(Boolean).join(' ').trim();
+  if (admin?.displayName) {
+    return admin.displayName;
+  }
+
+  return '--';
 }
 
 function getRowClass(data: AdministratorTableRow) {

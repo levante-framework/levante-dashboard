@@ -2,10 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import type { UseMutationReturnType } from '@tanstack/vue-query';
 import { CREATE_ADMINISTRATOR_MUTATION_KEY } from '@/constants/mutationKeys';
 import { ADMINS_QUERY_KEY } from '@/constants/queryKeys';
-import {
-  manageAdministratorsRepository,
-  type CreateAdministratorPayload,
-} from '@/firebase/repositories/ManageAdministratorsRepository';
+import { usersRepository, type CreateAdministratorPayload } from '@/firebase/repositories/UsersRepository';
 import { logger } from '@/logger';
 
 const useCreateAdministratorMutation = (): UseMutationReturnType<
@@ -19,7 +16,7 @@ const useCreateAdministratorMutation = (): UseMutationReturnType<
   return useMutation({
     mutationKey: CREATE_ADMINISTRATOR_MUTATION_KEY,
     mutationFn: async (payload: CreateAdministratorPayload): Promise<unknown> => {
-      return manageAdministratorsRepository.createAdministrator(payload);
+      return usersRepository.createAdministrator(payload);
     },
     onSuccess: (_data, payload): void => {
       queryClient.invalidateQueries({ queryKey: [ADMINS_QUERY_KEY] });
