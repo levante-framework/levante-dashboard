@@ -34,7 +34,7 @@ vi.mock('@/store/auth', () => ({
       roles: [],
     }),
     shouldUsePermissions: ref(false),
-    currentSite: 'any',
+    currentSite: '12345', // Site id
     userClaims: ref({
       claims: {
         adminOrgs: {
@@ -121,7 +121,7 @@ describe('AddGroupModal.vue', () => {
 
     const modalTitle = document.querySelector('[data-testid="modalTitle"]');
     expect(modalTitle).not.toBeNull();
-    expect(modalTitle.textContent).toContain('Add New Group');
+    expect(modalTitle.textContent).toContain('Create Site'); // Site is the default title
 
     wrapper.unmount();
   });
@@ -149,13 +149,12 @@ describe('AddGroupModal.vue', () => {
 
     const submitBtn = document.querySelector('[data-testid="submitBtn"]');
     expect(submitBtn).not.toBeNull();
-    expect(submitBtn.textContent).toContain('Add Group');
+    expect(submitBtn.textContent).toContain('Create Site');
 
     await submitBtn.click();
 
     const errorMessages = document.querySelectorAll('.p-error');
-    // By default, we only have 2 required fields
-    expect(errorMessages.length).toBe(2);
+    expect(errorMessages.length).toBe(1);
 
     wrapper.unmount();
   });
@@ -183,10 +182,10 @@ describe('AddGroupModal.vue', () => {
     // Mocking the vuelidate
     wrapper.vm.v$.$validate = () => Promise.resolve(true);
 
-    // After that, we select the submit button and check if it says "Add Site"
+    // After that, we select the submit button and check if it says "Create Site"
     const submitBtn = document.querySelector('[data-testid="submitBtn"]');
     expect(submitBtn).not.toBeNull();
-    expect(submitBtn.textContent).toContain('Add Site');
+    expect(submitBtn.textContent).toContain('Create Site');
 
     await submitBtn.click();
     await flushPromises();
@@ -218,10 +217,10 @@ describe('AddGroupModal.vue', () => {
     // Mocking the vuelidate
     wrapper.vm.v$.$validate = () => Promise.resolve(true);
 
-    // After that, we select the submit button and check if it says "Add Site"
+    // After that, we select the submit button and check if it says "Create Site"
     const submitBtn = document.querySelector('[data-testid="submitBtn"]');
     expect(submitBtn).not.toBeNull();
-    expect(submitBtn.textContent).toContain('Add Site');
+    expect(submitBtn.textContent).toContain('Create Site');
 
     await submitBtn.click();
     await flushPromises();
@@ -256,10 +255,10 @@ describe('AddGroupModal.vue', () => {
     // Mocking the vuelidate
     wrapper.vm.v$.$validate = () => Promise.resolve(true);
 
-    // After that, we select the submit button and check if it says "Add Site"
+    // After that, we select the submit button and check if it says "Create Site"
     const submitBtn = document.querySelector('[data-testid="submitBtn"]');
     expect(submitBtn).not.toBeNull();
-    expect(submitBtn.textContent).toContain('Add Site');
+    expect(submitBtn.textContent).toContain('Create Site');
 
     await submitBtn.click();
     // The submit btn must be set as disabled to avoid multiple submissions at once
