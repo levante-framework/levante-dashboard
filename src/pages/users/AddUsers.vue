@@ -145,6 +145,7 @@ import { logger } from '@/logger';
 import { storeToRefs } from 'pinia';
 import { validateAddUsersFileUpload } from '@levante-framework/levante-zod';
 import { useLevanteStore } from '@/store/levante';
+import { REGISTERED_USERS_CSV_MARKER } from '@/constants/registeredUsersCsv';
 
 const levanteStore = useLevanteStore();
 const { hasUserConfirmed } = storeToRefs(levanteStore);
@@ -558,7 +559,8 @@ async function submitUsers() {
   const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 50);
   const createUserPromises = [];
 
-  for (const users of chunkedUsersToBeRegistered) {      // Ensure each user has the proper userType field name for the backend
+  for (const users of chunkedUsersToBeRegistered) {
+    // Ensure each user has the proper userType field name for the backend
     const processedUsers = users.map(({ user }) => {
       const processedUser = { ...user };
 
@@ -640,14 +642,14 @@ const csvBlob = ref(null);
 const csvURL = ref(null);
 
 function convertUsersToCSV() {
-  // Get the first user to determine headers
-  const headerObj = toRaw(rawUserFile.value[0]);
+  const allUsers = toRaw(rawUserFile.value).map((row) => ({
+    ...row,
+    [REGISTERED_USERS_CSV_MARKER]: REGISTERED_USERS_CSV_MARKER,
+  }));
 
-  // Convert Objects to CSV String
+  const headerObj = allUsers[0];
+
   const csvHeader = Object.keys(headerObj).join(',') + '\n';
-
-  // Get all users from rawUserFile (which now contains updated data for newly registered users)
-  const allUsers = toRaw(rawUserFile.value);
 
   const csvRows = allUsers
     .map((obj) =>

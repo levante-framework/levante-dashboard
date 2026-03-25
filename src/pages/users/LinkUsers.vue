@@ -5,10 +5,14 @@
 
       <PvDivider class="my-5" />
 
+      <PvMessage v-if="inlineFileError" severity="error" class="mb-3" :closable="false">
+        {{ inlineFileError }}
+      </PvMessage>
+
       <div class="m-0 mb-5 p-3 bg-gray-100 border-1 border-gray-200 border-round">
         <div class="flex align-items-center gap-3">
           <PvFileUpload
-            :choose-label="isFileUploaded && !errorUsers.length ? 'Choose Another CSV File' : 'Choose CSV File'"
+            :choose-label="uploadedFile ? 'Choose Another CSV File' : 'Choose CSV File'"
             :empty-label="'Test'"
             :show-cancel-button="false"
             :show-upload-button="false"
@@ -19,14 +23,18 @@
             name="linkUsersFile[]"
             @uploader="onFileUpload($event)"
           />
-          <span v-if="isFileUploaded" class="text-gray-500">File: {{ uploadedFile?.name }}</span>
+          <span v-if="uploadedFile" class="text-gray-500">File: {{ uploadedFile?.name }}</span>
           <span v-else class="text-gray-500">No file chosen</span>
         </div>
 
-        <div v-if="isFileUploaded && !errorUsers.length">
+        <p v-if="showCsvSourceNote && isFileUploaded" class="csv-source-note m-0 mt-2 mb-0 text-gray-600 text-sm">
+          {{ CSV_SOURCE_NOTE_TEXT }}
+        </p>
+
+        <div v-if="isFileUploaded">
           <PvDataTable
             ref="dataTable"
-            :value="rawUserFile"
+            :value="displayTableRows"
             show-gridlines
             :row-hover="true"
             :resizable-columns="true"
@@ -35,11 +43,24 @@
             :rows="10"
             class="datatable"
           >
+            <PvColumn v-if="showCauseOfErrorColumn" key="cause-of-error" field="error">
+              <template #header>
+                <div class="col-header">
+                  <b>Cause of Error</b>
+                </div>
+              </template>
+              <template #body="{ data, field }">
+                <span v-if="data[field]">{{ data[field] }}</span>
+              </template>
+            </PvColumn>
             <PvColumn v-for="col of allFields" :key="col.field" :field="col.field">
               <template #header>
                 <div class="col-header">
                   <b>{{ col.header }}</b>
                 </div>
+              </template>
+              <template #body="{ data, field }">
+                <span>{{ data[field] }}</span>
               </template>
             </PvColumn>
           </PvDataTable>
@@ -48,34 +69,11 @@
             <PvButton
               :label="activeSubmit ? 'Linking Users' : 'Start Linking'"
               :icon="activeSubmit ? 'pi pi-spin pi-spinner' : 'pi pi-link'"
-              :disabled="activeSubmit || isAllSitesSelected"
+              :disabled="startLinkingDisabled"
               @click="submitUsers"
             />
           </div>
         </div>
-      </div>
-
-      <div v-if="showErrorTable" class="error-container">
-        <div class="error-header">
-          <h3>Rows with Errors</h3>
-        </div>
-        <PvDataTable
-          ref="errorTable"
-          :value="errorUsers"
-          show-gridlines
-          :row-hover="true"
-          :resizable-columns="true"
-          paginator
-          :always-show-paginator="false"
-          :rows="10"
-          class="datatable"
-        >
-          <PvColumn v-for="col of errorUserColumns" :key="col.field" :field="col.field">
-            <template #header>
-              {{ col.header }}
-            </template>
-          </PvColumn>
-        </PvDataTable>
       </div>
     </section>
   </main>
@@ -91,14 +89,16 @@ import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
 import PvFileUpload from 'primevue/fileupload';
-import _forEach from 'lodash/forEach';
-import _startCase from 'lodash/startCase';
-import _isEmpty from 'lodash/isEmpty';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import PvDivider from 'primevue/divider';
-import { validateLinkUsersCsv, validateCsvHeaders } from '@levante-framework/levante-zod';
+import PvMessage from 'primevue/message';
+import { validateCsvHeaders, validateLinkUsersCsv } from '@levante-framework/levante-zod';
 import { useLevanteStore } from '@/store/levante';
 import { storeToRefs } from 'pinia';
+import { REGISTERED_USERS_CSV_MARKER } from '@/constants/registeredUsersCsv';
+
+const CSV_SOURCE_NOTE_TEXT =
+  'Note: this file was not detected as the registered-users export from Add Users (missing watermark column). You can still proceed if id, userType, and uid match that format.';
 
 const levanteStore = useLevanteStore();
 const { hasUserConfirmed } = storeToRefs(levanteStore);
@@ -110,56 +110,106 @@ const toast = useToast();
 const isFileUploaded = ref(false);
 const uploadedFile = ref(null);
 const rawUserFile = ref([]);
-const errorUsers = ref([]);
-const errorUserColumns = ref([]);
+const rowIssuesByIndex = ref({});
 const activeSubmit = ref(false);
-const showErrorTable = ref(false);
-
-// LINKING
-// Required: id, userType, uid
-// Optional: parentId, teacherId
+const inlineFileError = ref(null);
+const csvSourceVerified = ref(true);
 
 const allFields = [
-  {
-    field: 'id',
-    header: 'ID',
-    dataType: 'string',
-  },
-  {
-    field: 'userType',
-    header: 'User Type',
-    dataType: 'string',
-  },
-  {
-    field: 'caregiverId',
-    header: 'Caregiver ID',
-    dataType: 'string',
-  },
-  {
-    field: 'teacherId',
-    header: 'Teacher ID',
-    dataType: 'string',
-  },
-  {
-    field: 'uid',
-    header: 'UID',
-    dataType: 'string',
-  },
+  { field: 'id', header: 'ID', dataType: 'string' },
+  { field: 'userType', header: 'User Type', dataType: 'string' },
+  { field: 'caregiverId', header: 'Caregiver ID', dataType: 'string' },
+  { field: 'teacherId', header: 'Teacher ID', dataType: 'string' },
+  { field: 'uid', header: 'UID', dataType: 'string' },
 ];
+
+const skippedColumnKeysLower = [
+  'id',
+  'usertype',
+  'uid',
+  'caregiverid',
+  'teacherid',
+  'parentid',
+];
+
+function getFieldValue(user, fieldName) {
+  const field = Object.keys(user).find((key) => key.toLowerCase() === fieldName.toLowerCase());
+  return field ? user[field] : undefined;
+}
+
+const showCsvSourceNote = computed(
+  () => rawUserFile.value.length > 0 && !csvSourceVerified.value && !inlineFileError.value,
+);
+
+const showCauseOfErrorColumn = computed(() =>
+  Object.values(rowIssuesByIndex.value).some((msg) => msg != null && String(msg).trim() !== ''),
+);
+
+const displayTableRows = computed(() =>
+  rawUserFile.value.map((user, rowIndex) => ({
+    error: rowIssuesByIndex.value[rowIndex] ?? '',
+    id: previewCell(user, 'id'),
+    userType: previewCell(user, 'usertype'),
+    caregiverId: previewCell(user, 'caregiverid'),
+    teacherId: previewCell(user, 'teacherid'),
+    uid: previewCell(user, 'uid'),
+  })),
+);
+
+const startLinkingDisabled = computed(() => activeSubmit.value || isAllSitesSelected.value);
+
+function previewCell(user, fieldLc) {
+  const v = getFieldValue(user, fieldLc);
+  if (v === undefined || v === null) return '';
+  return String(v);
+}
+
+function appendRowIssue(rowIndex, message) {
+  if (message == null || message === '') return;
+  const prev = rowIssuesByIndex.value[rowIndex];
+  rowIssuesByIndex.value = {
+    ...rowIssuesByIndex.value,
+    [rowIndex]: prev ? `${prev}; ${message}` : message,
+  };
+}
+
+function findRowIndexForId(users, id) {
+  const target = String(id ?? '').trim();
+  if (!target) return -1;
+  return users.findIndex((user) => String(getFieldValue(user, 'id') ?? '').trim() === target);
+}
+
+function verifyCsvSource(users) {
+  const markerKey = REGISTERED_USERS_CSV_MARKER.toLowerCase();
+  return users.every((row) => {
+    const col = Object.keys(row).find((k) => k.toLowerCase() === markerKey);
+    if (!col) return false;
+    return String(row[col]).trim() === REGISTERED_USERS_CSV_MARKER;
+  });
+}
+
+function formatCsvValidationField(field) {
+  if (field === 'usertype') return 'userType';
+  return field;
+}
+
+function resetValidationState() {
+  inlineFileError.value = null;
+  rowIssuesByIndex.value = {};
+  csvSourceVerified.value = true;
+}
 
 const resetUserProgress = () => {
   isFileUploaded.value = false;
   uploadedFile.value = null;
-  showErrorTable.value = false;
-
-  // Reset user confirmation
+  rawUserFile.value = [];
+  resetValidationState();
   setHasUserConfirmed(false);
 };
 
 const onFileUpload = async (event) => {
   resetUserProgress();
 
-  // Read the file
   const file = event.files[event.files.length - 1];
   uploadedFile.value = file;
 
@@ -178,12 +228,7 @@ const onFileUpload = async (event) => {
   });
 
   if (!filteredData || filteredData.length === 0) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Empty File',
-      detail: 'The uploaded file contains no data',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+    inlineFileError.value = 'The uploaded file contains no data.';
     return;
   }
 
@@ -196,56 +241,60 @@ const onFileUpload = async (event) => {
   const headerValidation = validateCsvHeaders(headers, requiredHeaders);
   if (!headerValidation.success) {
     const missingHeaders = headerValidation.errors.map((e) => e.field).join(', ');
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Missing Column',
-      detail: `Missing required column(s): ${missingHeaders}`,
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+    inlineFileError.value = `Missing required column(s): ${missingHeaders}`;
+    rawUserFile.value = [];
     return;
   }
 
+  csvSourceVerified.value = verifyCsvSource(filteredData);
+
   const validation = validateLinkUsersCsv(filteredData);
 
-  const usersWithZodErrors = new Set();
-
   if (!validation.success) {
-    const errorsByUser = new Map();
+    const errorsByRow = new Map();
     validation.errors.forEach((error) => {
       const userIndex = error.row - 1;
-      if (userIndex >= 0 && userIndex < filteredData.length) {
-        const user = filteredData[userIndex];
-        usersWithZodErrors.add(user);
-        if (!errorsByUser.has(user)) {
-          errorsByUser.set(user, []);
-        }
-        const fieldName = error.field === 'usertype' ? 'userType' : error.field;
-        errorsByUser.get(user).push(`${fieldName}: ${error.message}`);
-      }
+      if (userIndex < 0 || userIndex >= filteredData.length) return;
+      if (!errorsByRow.has(userIndex)) errorsByRow.set(userIndex, []);
+      const fieldLabel = formatCsvValidationField(error.field);
+      errorsByRow.get(userIndex).push(`${fieldLabel}: ${error.message}`);
     });
-    errorsByUser.forEach((errors, user) => {
-      addErrorUser(user, errors.join('; '));
+    const sortedIndices = [...errorsByRow.keys()].sort((a, b) => a - b);
+    sortedIndices.forEach((idx) => {
+      appendRowIssue(idx, errorsByRow.get(idx).join('; '));
+    });
+  } else {
+    validateUsers();
+    const linkSummary = getExtendedMissingLinkData(filteredData);
+    linkSummary.summaryRows.forEach((row) => {
+      const idx = findRowIndexForId(filteredData, row.id);
+      if (idx >= 0) appendRowIssue(idx, row.issue);
     });
   }
 
-  validateUsers(usersWithZodErrors);
+  isFileUploaded.value = true;
 
-  if (errorUsers.value.length === 0) {
-    isFileUploaded.value = true;
+  const hasRowIssues = Object.keys(rowIssuesByIndex.value).length > 0;
+  if (hasRowIssues) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Review your file',
+      detail: 'Some rows have issues listed under Cause of Error.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+  } else {
     toast.add({
       severity: 'success',
       summary: 'Success',
-      detail: 'File Successfully Uploaded',
+      detail: 'File successfully uploaded',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
-
-    // Wait for user confirmation before changing the selected site
-    setShouldUserConfirm(true);
   }
+
+  setShouldUserConfirm(true);
 };
 
-const validateUsers = (usersWithZodErrors = new Set()) => {
-  errorUsers.value = [];
+const validateUsers = () => {
   const userMap = new Map(
     toRaw(rawUserFile.value).map((user) => {
       const idField = Object.keys(user).find((key) => key.toLowerCase() === 'id');
@@ -253,9 +302,7 @@ const validateUsers = (usersWithZodErrors = new Set()) => {
     }),
   );
 
-  rawUserFile.value.forEach((user) => {
-    if (usersWithZodErrors.has(user)) return;
-
+  rawUserFile.value.forEach((user, rowIndex) => {
     const missingFields = [];
 
     const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
@@ -312,30 +359,12 @@ const validateUsers = (usersWithZodErrors = new Set()) => {
     }
 
     if (missingFields.length > 0) {
-      addErrorUser(user, `Missing Field(s): ${missingFields.join(', ')}`);
+      appendRowIssue(rowIndex, `Missing Field(s): ${missingFields.join(', ')}`);
     }
   });
-
-  if (errorUsers.value.length > 0) {
-    toast.add({
-      severity: 'error',
-      summary: 'Validation Errors. See below for details.',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  }
 };
 
 const submitUsers = async () => {
-  if (errorUsers.value.length > 0) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Please fix all errors before submitting',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-    return;
-  }
-
   if (!currentSite.value || isAllSitesSelected.value) {
     toast.add({
       severity: 'error',
@@ -347,12 +376,10 @@ const submitUsers = async () => {
   }
 
   activeSubmit.value = true;
-  showErrorTable.value = false;
-  errorUsers.value = [];
-  errorUserColumns.value = [];
 
   try {
-    const normalizedUsers = toRaw(rawUserFile.value).map((user) => {
+    const filteredUsers = toRaw(rawUserFile.value).filter((user) => isUserLinkable(user));
+    const normalizedUsers = filteredUsers.map((user) => {
       const normalizedUser = {};
 
       const idField = Object.keys(user).find((key) => key.toLowerCase() === 'id');
@@ -372,9 +399,10 @@ const submitUsers = async () => {
       if (caregiverIdField && user[caregiverIdField]) normalizedUser.parentId = user[caregiverIdField];
       if (teacherIdField && user[teacherIdField]) normalizedUser.teacherId = user[teacherIdField];
 
+      const markerKey = REGISTERED_USERS_CSV_MARKER.toLowerCase();
       Object.keys(user).forEach((key) => {
         const lowerCaseKey = key.toLowerCase();
-        if (!['id', 'usertype', 'uid', 'caregiverid', 'teacherid', 'parentid'].includes(lowerCaseKey)) {
+        if (!skippedColumnKeysLower.includes(lowerCaseKey) && lowerCaseKey !== markerKey) {
           normalizedUser[key] = user[key];
         }
       });
@@ -403,40 +431,118 @@ const submitUsers = async () => {
   }
 };
 
-function generateColumns(rawJson) {
-  let columns = [];
-  const columnValues = Object.keys(rawJson);
-  _forEach(columnValues, (col) => {
-    let dataType = typeof rawJson[col];
-    if (dataType === 'object') {
-      if (rawJson[col] instanceof Date) dataType = 'date';
-    }
-    columns.push({
-      field: col,
-      header: _startCase(col),
-      dataType: dataType,
-    });
-  });
-  return columns;
+function parseIdList(value) {
+  if (value === null || value === undefined) return [];
+  return String(value)
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => id);
 }
 
-function addErrorUser(user, error) {
-  // If there are no error users yet, generate the
-  //  columns before displaying the table.
-  if (_isEmpty(errorUserColumns.value)) {
-    errorUserColumns.value = generateColumns(user);
-    errorUserColumns.value.unshift({
-      dataType: 'string',
-      field: 'error',
-      header: 'Cause of Error',
-    });
-    showErrorTable.value = true;
-  }
-  // Concat the userObject with the error reason.
-  errorUsers.value.push({
-    ...user,
-    error,
+function getUserTypeValue(user) {
+  const userTypeValue = getFieldValue(user, 'usertype');
+  if (!userTypeValue) return '';
+  return String(userTypeValue).trim().toLowerCase();
+}
+
+function isUserLinkable(user) {
+  const userTypeValue = getUserTypeValue(user);
+  if (userTypeValue !== 'child') return true;
+  const caregiverIds = parseIdList(getFieldValue(user, 'caregiverid'));
+  const teacherIds = parseIdList(getFieldValue(user, 'teacherid'));
+  return caregiverIds.length > 0 || teacherIds.length > 0;
+}
+
+function getExtendedMissingLinkData(users) {
+  const linkedCaregiverIds = new Set();
+  const linkedTeacherIds = new Set();
+  let childRowsWithoutLinks = 0;
+  let childrenWithoutCaregiver = 0;
+  let childrenWithoutTeacher = 0;
+  const summaryRows = [];
+
+  users.forEach((user) => {
+    if (getUserTypeValue(user) !== 'child') return;
+
+    const idVal = String(getFieldValue(user, 'id') ?? '').trim();
+    const caregiverIds = parseIdList(getFieldValue(user, 'caregiverid'));
+    const teacherIds = parseIdList(getFieldValue(user, 'teacherid'));
+
+    if (caregiverIds.length === 0) childrenWithoutCaregiver += 1;
+    if (teacherIds.length === 0) childrenWithoutTeacher += 1;
+
+    if (caregiverIds.length === 0 && teacherIds.length === 0) {
+      childRowsWithoutLinks += 1;
+      summaryRows.push({
+        id: idVal,
+        userType: 'child',
+        issue: 'No caregiver or teacher links (skipped when linking)',
+      });
+    } else {
+      if (caregiverIds.length === 0) {
+        summaryRows.push({
+          id: idVal,
+          userType: 'child',
+          issue: 'No caregiver link',
+        });
+      }
+      if (teacherIds.length === 0) {
+        summaryRows.push({
+          id: idVal,
+          userType: 'child',
+          issue: 'No teacher link',
+        });
+      }
+    }
+
+    caregiverIds.forEach((id) => linkedCaregiverIds.add(id));
+    teacherIds.forEach((id) => linkedTeacherIds.add(id));
   });
+
+  const caregiversWithoutLinks = users.filter((user) => {
+    const userTypeValue = getUserTypeValue(user);
+    if (userTypeValue !== 'caregiver' && userTypeValue !== 'parent') return false;
+    const idValue = String(getFieldValue(user, 'id') ?? '').trim();
+    if (!idValue) return false;
+    return !linkedCaregiverIds.has(idValue);
+  }).length;
+
+  const teachersWithoutLinks = users.filter((user) => {
+    const userTypeValue = getUserTypeValue(user);
+    if (userTypeValue !== 'teacher') return false;
+    const idValue = String(getFieldValue(user, 'id') ?? '').trim();
+    if (!idValue) return false;
+    return !linkedTeacherIds.has(idValue);
+  }).length;
+
+  users.forEach((user) => {
+    const userTypeValue = getUserTypeValue(user);
+    const idValue = String(getFieldValue(user, 'id') ?? '').trim();
+    if (!idValue) return;
+    if ((userTypeValue === 'caregiver' || userTypeValue === 'parent') && !linkedCaregiverIds.has(idValue)) {
+      summaryRows.push({
+        id: idValue,
+        userType: 'caregiver',
+        issue: 'Not referenced by any child row',
+      });
+    }
+    if (userTypeValue === 'teacher' && !linkedTeacherIds.has(idValue)) {
+      summaryRows.push({
+        id: idValue,
+        userType: 'teacher',
+        issue: 'Not referenced by any child row',
+      });
+    }
+  });
+
+  return {
+    childRowsWithoutLinks,
+    childrenWithoutCaregiver,
+    childrenWithoutTeacher,
+    caregiversWithoutLinks,
+    teachersWithoutLinks,
+    summaryRows,
+  };
 }
 
 watch(hasUserConfirmed, (userConfirmed) => {
@@ -449,21 +555,26 @@ watch(hasUserConfirmed, (userConfirmed) => {
   min-height: 33vh;
 }
 
-.datatable {
-  border: 1px solid var(--surface-d);
-  border-radius: 5px;
-  margin-top: 1rem;
+.col-header {
+  display: flex;
+  flex-direction: column;
 }
 
 .submit-container {
-  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 1rem 0 0;
+  align-items: flex-start;
 }
 
-.error-container {
-  margin-top: 2rem;
+.datatable {
+  border: 1px solid var(--surface-d);
+  border-radius: 5px;
+  margin: 1rem 0 0;
 }
 
-.error-header {
-  margin-bottom: 1rem;
+.csv-source-note {
+  font-style: italic;
 }
 </style>
