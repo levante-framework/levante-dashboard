@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <div class="w-full m-0 mt-5">
+    <div v-if="!isSuperAdminVariant" class="w-full m-0 mt-5">
       <div class="flex flex-column gap-1 w-full">
         <PvFloatLabel>
           <PvSelect
@@ -84,7 +84,7 @@ import useCreateAdministratorMutation from '@/composables/mutations/useCreateAdm
 import useCreateUpdateSuperAdminMutation from '@/composables/mutations/useCreateUpdateSuperAdminMutation';
 import useUpdateAdministratorMutation from '@/composables/mutations/useUpdateAdministratorMutation';
 import { usePermissions } from '@/composables/usePermissions';
-import { ROLES } from '@/constants/roles';
+import { ROLES, SUPER_ADMIN_PLATFORM_SCOPE } from '@/constants/roles';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { useAuthStore } from '@/store/auth';
 import { Name } from '@levante-framework/firekit/lib/interfaces';
@@ -130,6 +130,7 @@ interface Emits {
 interface Props {
   data?: AdministratorData | null;
   isVisible?: boolean;
+  variant?: 'researcher' | 'super-admin';
 }
 
 const emit = defineEmits<Emits>();
@@ -137,6 +138,7 @@ const emit = defineEmits<Emits>();
 const props = withDefaults(defineProps<Props>(), {
   data: null,
   isVisible: false,
+  variant: 'researcher',
 });
 
 const authStore = useAuthStore();
@@ -149,12 +151,28 @@ const { mutateAsync: createUpdateSuperAdmin } = useCreateUpdateSuperAdminMutatio
 const { mutateAsync: createAdministrator } = useCreateAdministratorMutation();
 const { mutateAsync: updateAdministrator } = useUpdateAdministratorMutation();
 
+const isSuperAdminVariant = computed(() => props.variant === 'super-admin');
 
 const isEditMode = computed(() => Boolean(props?.data));
 const administratorName = computed(() => [props.data?.name?.first, props.data?.name?.middle, props.data?.name?.last].filter(Boolean).join(' ').trim());
-const modalTitle = computed(() => (isEditMode.value ? 'Update Researcher Roles' : 'Add Researcher'));
-const submitBtnLabel = computed(() => (isEditMode.value ? 'Update Researcher' : 'Add Researcher'));
-const submittingBtnLabel = computed(() => (isEditMode.value ? 'Updating Researcher' : 'Adding Researcher'));
+const modalTitle = computed(() => {
+  if (isSuperAdminVariant.value) {
+    return isEditMode.value ? 'Update Super Admin' : 'Add Super Admin';
+  }
+  return isEditMode.value ? 'Update Researcher Roles' : 'Add Researcher';
+});
+const submitBtnLabel = computed(() => {
+  if (isSuperAdminVariant.value) {
+    return isEditMode.value ? 'Update Super Admin' : 'Add Super Admin';
+  }
+  return isEditMode.value ? 'Update Researcher' : 'Add Researcher';
+});
+const submittingBtnLabel = computed(() => {
+  if (isSuperAdminVariant.value) {
+    return isEditMode.value ? 'Updating Super Admin' : 'Adding Super Admin';
+  }
+  return isEditMode.value ? 'Updating Researcher' : 'Adding Researcher';
+});
 const roleOptions = computed(() => {
   // Always use 'create' permission - the question is "can I assign this role to someone?"
   // The edit button visibility already gates who we can edit (based on their current role)
@@ -227,8 +245,8 @@ const isSubmitDisabled = computed(() => {
 });
 
 watch(
-  () => props.data,
-  (newData) => {
+  () => ({ data: props.data, variant: props.variant }),
+  ({ data: newData, variant }) => {
     if (newData) {
       const newFirstName = newData?.name?.first;
       const newMiddleName = newData?.name?.middle;
@@ -239,14 +257,32 @@ watch(
       lastName.value = newLastName ?? '';
       middleName.value = newMiddleName ?? '';
 
-      const currentSiteRole = newData.roles?.find((roleData) => roleData.siteId === currentSite.value);
-      selectedRole.value = currentSiteRole?.role ?? '';
-      initialRole.value = currentSiteRole?.role ?? '';
+      if (variant === 'super-admin') {
+        const superRole = newData.roles?.find((roleData) => roleData.role === ROLES.SUPER_ADMIN);
+        selectedRole.value = superRole?.role ?? ROLES.SUPER_ADMIN;
+        initialRole.value = superRole?.role ?? ROLES.SUPER_ADMIN;
+      } else {
+        const currentSiteRole = newData.roles?.find((roleData) => roleData.siteId === currentSite.value);
+        selectedRole.value = currentSiteRole?.role ?? '';
+        initialRole.value = currentSiteRole?.role ?? '';
+      }
     } else {
       resetForm();
     }
   },
   { immediate: true },
+);
+
+watch(
+  () => [props.isVisible, props.variant] as const,
+  ([visible, variant]) => {
+    if (visible && variant === 'super-admin') {
+      selectedRole.value = ROLES.SUPER_ADMIN;
+      if (!props.data) {
+        initialRole.value = ROLES.SUPER_ADMIN;
+      }
+    }
+  },
 );
 
 function handleOnClose() {
@@ -299,7 +335,7 @@ async function submit() {
     last: lastName.value,
   };
 
-  const roles: { role: string; siteId: string; siteName: string }[] = [
+  const siteScopedRoles: { role: string; siteId: string; siteName: string }[] = [
     {
       role: selectedRole.value,
       siteId: currentSite.value!,
@@ -308,10 +344,19 @@ async function submit() {
   ];
 
   if (selectedRole.value === ROLES.SUPER_ADMIN) {
+    const superAdminRoles = isSuperAdminVariant.value
+      ? [
+          {
+            role: ROLES.SUPER_ADMIN,
+            siteId: SUPER_ADMIN_PLATFORM_SCOPE.siteId,
+            siteName: SUPER_ADMIN_PLATFORM_SCOPE.siteName,
+          },
+        ]
+      : siteScopedRoles;
     const payload = {
       email: email.value,
       name,
-      roles,
+      roles: superAdminRoles,
       isTestData: isTestData.value,
       ...(props?.data?.id ? { adminUid: props.data.id } : {}),
     };
@@ -349,7 +394,7 @@ async function submit() {
         adminUid: props.data.id,
         email: email.value,
         name,
-        roles,
+        roles: siteScopedRoles,
         isTestData: isTestData.value,
       });
       toast.add({
@@ -379,7 +424,7 @@ async function submit() {
     await createAdministrator({
       email: email.value,
       name,
-      roles,
+      roles: siteScopedRoles,
       isTestData: isTestData.value,
     });
     toast.add({

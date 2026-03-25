@@ -6,6 +6,11 @@ export const ROLES = {
   PARTICIPANT: 'participant',
 } as const;
 
+export const SUPER_ADMIN_PLATFORM_SCOPE = {
+  siteId: 'any',
+  siteName: 'All Sites',
+} as const;
+
 export const PERMISSION_ACTIONS = {
   CREATE: 'create',
   READ: 'read',

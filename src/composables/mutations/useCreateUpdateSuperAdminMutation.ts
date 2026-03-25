@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import type { UseMutationReturnType } from '@tanstack/vue-query';
 import { CREATE_UPDATE_SUPER_ADMIN_MUTATION_KEY } from '@/constants/mutationKeys';
-import { ADMINS_QUERY_KEY } from '@/constants/queryKeys';
+import { ADMINS_QUERY_KEY, SUPER_ADMINS_QUERY_KEY } from '@/constants/queryKeys';
 import {
   manageAdministratorsRepository,
   type CreateUpdateSuperAdminPayload,
@@ -23,6 +23,7 @@ const useCreateUpdateSuperAdminMutation = (): UseMutationReturnType<
     },
     onSuccess: (_data, payload): void => {
       queryClient.invalidateQueries({ queryKey: [ADMINS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [SUPER_ADMINS_QUERY_KEY] });
       logger.capture('Admin: Create or update super admin', { adminUid: payload.adminUid, email: payload.email });
     },
     onError: (error: Error, payload: CreateUpdateSuperAdminPayload): void => {

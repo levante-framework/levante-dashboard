@@ -7,35 +7,87 @@
     </template>
 
     <template v-else>
-      <div class="flex align-items-center gap-2">
-        <div class="flex flex-column flex-1">
-          <h2 class="admin-page-header m-0">Researchers</h2>
-          <span v-if="currentSiteName" class="flex align-items-center gap-1 m-0 mt-1 text-lg text-gray-500">
-            <i class="pi pi-building"></i>{{ currentSiteName }}
-          </span>
+      <PvTabs v-if="isUserSuperAdminComputed" v-model:value="adminPageTab" class="mb-2">
+        <PvTabList>
+          <PvTab value="researchers">Researchers</PvTab>
+          <PvTab value="super-admins">Super admins</PvTab>
+        </PvTabList>
+      </PvTabs>
+
+      <div v-show="!isUserSuperAdminComputed || adminPageTab === 'researchers'">
+        <div class="flex align-items-start gap-3 flex-wrap">
+          <div class="flex flex-column flex-1">
+            <h2 class="admin-page-header m-0">Researchers</h2>
+            <span v-if="currentSiteName && adminPageTab === 'researchers'" class="flex align-items-center gap-1 m-0 mt-1 text-lg text-gray-500">
+              <i class="pi pi-building"></i>{{ currentSiteName }}
+            </span>
+            <small
+              v-if="needsSiteSelectionForAddResearcher"
+              class="block mt-2 text-amber-700 dark:text-amber-400 max-w-xl leading-normal"
+            >
+              Select a specific site (not &quot;All sites&quot;) to add a researcher or use the actions column.
+            </small>
+          </div>
+          <div class="flex flex-column align-items-end gap-1">
+            <PermissionGuard :required-role="ROLES.ADMIN">
+              <PvButton
+                :disabled="isAddResearcherButtonDisabled"
+                @click="isAdministratorModalVisible = true"
+              >
+                <i class="pi pi-plus"></i>Add Researcher
+              </PvButton>
+            </PermissionGuard>
+          </div>
         </div>
-        <PermissionGuard :required-role="ROLES.ADMIN">
-          <PvButton :disabled="isAdminsLoading || isAdminsFetching || isAdminsRefetching || isAllSitesSelected" @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Researcher</PvButton>
-        </PermissionGuard>
+
+        <div class="m-0 mt-5">
+          <RoarDataTable
+            key="administrators-researchers"
+            sortable
+            :allow-filtering="false"
+            :columns="tableColumns"
+            :data="tableData"
+            :loading="isAdminsLoading || isAdminsFetching || isAdminsRefetching"
+            :row-class="getRowClass"
+          />
+        </div>
       </div>
 
-      <div class="m-0 mt-5">
-        <RoarDataTable
-          key="administrators"
-          sortable
-          :allow-filtering="false"
-          :columns="tableColumns"
-          :data="tableData"
-          :loading="isAdminsLoading || isAdminsFetching || isAdminsRefetching"
-          :row-class="getRowClass"
-        />
+      <div v-show="isUserSuperAdminComputed && adminPageTab === 'super-admins'">
+        <div class="flex align-items-center gap-2">
+          <div class="flex flex-column flex-1">
+            <h2 class="admin-page-header m-0">Super admins</h2>
+            <span class="m-0 mt-1 text-lg text-gray-500">Platform-wide access</span>
+          </div>
+          <PermissionGuard :required-role="ROLES.SUPER_ADMIN">
+            <PvButton
+              :disabled="isSuperAdminsLoading || isSuperAdminsFetching || isSuperAdminsRefetching"
+              @click="isAdministratorModalVisible = true"
+            >
+              <i class="pi pi-plus"></i>Add Super Admin
+            </PvButton>
+          </PermissionGuard>
+        </div>
+
+        <div class="m-0 mt-5">
+          <RoarDataTable
+            key="administrators-super-admins"
+            sortable
+            :allow-filtering="false"
+            :columns="tableColumns"
+            :data="tableData"
+            :loading="isSuperAdminsLoading || isSuperAdminsFetching || isSuperAdminsRefetching"
+            :row-class="getRowClass"
+          />
+        </div>
       </div>
 
       <AddAdministratorModal
         :data="administrator"
         :is-visible="isAdministratorModalVisible"
+        :variant="addAdministratorModalVariant"
         @close="closeAdministratorModal"
-        @refetch="adminsRefetch"
+        @refetch="onAdministratorsRefetch"
       />
 
       <PvDialog
@@ -95,10 +147,14 @@ import AddAdministratorModal from '@/components/modals/AddAdministratorModal.vue
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import useAdminsBySiteQuery from '@/composables/queries/useAdminsBySiteQuery';
+import useSuperAdminsQuery from '@/composables/queries/useSuperAdminsQuery';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
+import PvTab from 'primevue/tab';
+import PvTabList from 'primevue/tablist';
+import PvTabs from 'primevue/tabs';
 import PvConfirmDialog from 'primevue/confirmdialog';
 import PvDialog from 'primevue/dialog';
 import PvInputText from 'primevue/inputtext';
@@ -154,6 +210,9 @@ interface AdministratorTableRow extends AdministratorRecord {
 const authStore = useAuthStore();
 const { currentSite, currentSiteName, roarfirekit } = storeToRefs(authStore);
 const { can, permissionsLoaded } = usePermissions();
+
+const isUserSuperAdminComputed = computed(() => authStore.isUserSuperAdmin());
+const adminPageTab = ref<'researchers' | 'super-admins'>('researchers');
 const confirm = useConfirm();
 const toast = useToast();
 
@@ -165,6 +224,12 @@ const isRemovingAdministrator = ref(false);
 
 const isAllSitesSelected = computed(() => currentSite.value === 'any');
 
+const needsSiteSelectionForAddResearcher = computed(
+  () => !currentSite.value || currentSite.value === 'any',
+);
+
+const isSuperAdminsTabActive = computed(() => adminPageTab.value === 'super-admins');
+
 const {
   data: adminsData,
   isLoading: isAdminsLoading,
@@ -173,43 +238,97 @@ const {
   refetch: adminsRefetch,
 } = useAdminsBySiteQuery();
 
+const {
+  data: superAdminsData,
+  isLoading: isSuperAdminsLoading,
+  isFetching: isSuperAdminsFetching,
+  isRefetching: isSuperAdminsRefetching,
+  refetch: superAdminsRefetch,
+} = useSuperAdminsQuery(isSuperAdminsTabActive);
+
 const isPageLoading = computed(() => {
   if (!permissionsLoaded.value) return true;
-  return currentSite.value && isAdminsLoading.value;
+  if (isUserSuperAdminComputed.value && adminPageTab.value === 'super-admins') {
+    return isSuperAdminsLoading.value;
+  }
+  if (!currentSite.value) return false;
+  return isAdminsLoading.value;
 });
+
+const isAddResearcherButtonDisabled = computed(
+  () =>
+    isAdminsLoading.value ||
+    isAdminsFetching.value ||
+    isAdminsRefetching.value ||
+    needsSiteSelectionForAddResearcher.value,
+);
+
+const addAdministratorModalVariant = computed(() =>
+  isUserSuperAdminComputed.value && adminPageTab.value === 'super-admins' ? 'super-admin' : 'researcher',
+);
 
 const currentUserId = computed(() => authStore.getUid());
 
+function hasOnlySuperAdminRoles(admin: AdministratorRecord): boolean {
+  const roles = admin.roles ?? [];
+  if (roles.length === 0) {
+    return false;
+  }
+  return roles.every((r) => r.role === ROLES.SUPER_ADMIN);
+}
+
 const tableData = computed<AdministratorTableRow[]>(() => {
-  const admins = (adminsData?.value as AdministratorRecord[] | undefined) ?? [];
+  const isSuperList =
+    isUserSuperAdminComputed.value && adminPageTab.value === 'super-admins';
+
+  let admins: AdministratorRecord[];
+  if (isSuperList) {
+    admins = (superAdminsData?.value as AdministratorRecord[] | undefined) ?? [];
+  } else {
+    const raw = (adminsData?.value as AdministratorRecord[] | undefined) ?? [];
+    admins = raw.filter((admin) => !hasOnlySuperAdminRoles(admin));
+  }
 
   return admins
     .map((admin) => {
       const baseName = formatAdministratorName(admin) || '--';
-      const targetRole = admin.roles?.find((r) => r.siteId === currentSite.value)?.role as AdminSubResource;
-      const isCurrentUser = admin.id === currentUserId.value
+      const targetRole = isSuperList
+        ? (admin.roles?.find((r) => r.role === ROLES.SUPER_ADMIN)?.role as AdminSubResource)
+        : (admin.roles?.find((r) => r.siteId === currentSite.value)?.role as AdminSubResource);
+      const isCurrentUser = admin.id === currentUserId.value;
       const fullName = isCurrentUser ? `${baseName} (You)` : baseName;
 
       const actions: AdministratorAction[] = [];
 
-      if (!isCurrentUser && !isAllSitesSelected.value && targetRole && can('admins', 'update', targetRole)) {
-        actions.push({
-          name: 'edit',
-          tooltip: 'Edit',
-          icon: 'pi pi-pen-to-square',
-          callback: () => onClickEditBtn(admin),
-        });
+      if (isSuperList) {
+        if (!isCurrentUser && targetRole && can('admins', 'update', targetRole)) {
+          actions.push({
+            name: 'edit',
+            tooltip: 'Edit',
+            icon: 'pi pi-pen-to-square',
+            callback: () => onClickEditBtn(admin),
+          });
+        }
+      } else {
+        if (!isCurrentUser && !isAllSitesSelected.value && targetRole && can('admins', 'update', targetRole)) {
+          actions.push({
+            name: 'edit',
+            tooltip: 'Edit',
+            icon: 'pi pi-pen-to-square',
+            callback: () => onClickEditBtn(admin),
+          });
+        }
+
+        if (!isCurrentUser && !isAllSitesSelected.value && targetRole && can('admins', 'delete', targetRole)) {
+          actions.push({
+            name: 'remove',
+            tooltip: 'Remove',
+            icon: 'pi pi-trash',
+            callback: () => onClickRemoveBtn(admin),
+          });
+        }
       }
 
-      if (!isCurrentUser && !isAllSitesSelected.value && targetRole && can('admins', 'delete', targetRole)) {
-        actions.push({
-          name: 'remove',
-          tooltip: 'Remove',
-          icon: 'pi pi-trash',
-          callback: () => onClickRemoveBtn(admin),
-        });
-      }
-      
       return {
         ...admin,
         fullName,
@@ -258,6 +377,13 @@ const tableColumns = computed(() => {
 });
 
 
+function onAdministratorsRefetch() {
+  void adminsRefetch();
+  if (isUserSuperAdminComputed.value) {
+    void superAdminsRefetch();
+  }
+}
+
 const closeAdministratorModal = () => {
   administrator.value = null;
   isAdministratorModalVisible.value = false;
@@ -291,6 +417,11 @@ const closeRemovalVerificationModal = () => {
   isRemovalVerificationModalVisible.value = false;
   administrator.value = null;
 };
+
+watch(adminPageTab, () => {
+  closeAdministratorModal();
+  closeRemovalVerificationModal();
+});
 
 const onClickRemoveBtn = (admin: AdministratorRecord) => {
   administrator.value = admin;
@@ -342,7 +473,7 @@ async function executeAdministratorRemoval() {
     await roarfirekit
       .value!.removeAdministratorFromSite(administrator.value.id, siteId);
 
-    adminsRefetch();
+    onAdministratorsRefetch();
 
     toast.add({
       severity: 'success',

@@ -137,19 +137,10 @@ export const getAdministrationsByOrg = (orgId, orgType, administrations) => {
   });
 };
 
-export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABASES.ADMIN) => {
+export const fetchAllAdminUsers = async (db = FIRESTORE_DATABASES.ADMIN) => {
   const axiosInstance = getAxiosInstance(db);
 
-  let requestBody;
-
-  // NOTE:
-  // Firestore `ARRAY_CONTAINS` on objects requires an exact match of the entire object.
-  // In PROD we have pre-existing admins whose `users.roles[]` entries may not include `siteName` (or may include
-  // a different/empty `siteName`), which makes exact-match queries brittle and can hide admins for a selected site.
-  //
-  // To keep this robust across old/new role shapes, we fetch all admin users and filter by `roles` client-side
-  // using only `siteId` + `role` (ignoring `siteName`).
-  requestBody = {
+  const requestBody = {
     structuredQuery: {
       from: [{ collectionId: FIRESTORE_COLLECTIONS.USERS }],
       select: {
@@ -171,19 +162,43 @@ export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABAS
     },
   };
 
+  const response = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
+
+  return response.data
+    .filter((user) => user.document)
+    .map((user) => {
+      const doc = user.document;
+      return {
+        id: doc.name.split('/').pop(),
+        ..._mapValues(doc.fields, (value) => convertValues(value)),
+      };
+    });
+};
+
+export const fetchSuperAdmins = async (db = FIRESTORE_DATABASES.ADMIN) => {
   try {
-    const response = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
+    const admins = await fetchAllAdminUsers(db);
+    return admins.filter((admin) => {
+      const roles = Array.isArray(admin.roles) ? admin.roles : [];
+      return roles.some((r) => r?.role === ROLES.SUPER_ADMIN);
+    });
+  } catch (error) {
+    console.error('fetchSuperAdmins: Error fetching super admins:', error);
+    logger.error(error, { context: { function: 'fetchSuperAdmins' } });
+    throw error;
+  }
+};
 
-    const admins = response.data
-      .filter((user) => user.document)
-      .map((user) => {
-        const doc = user.document;
-
-        return {
-          id: doc.name.split('/').pop(),
-          ..._mapValues(doc.fields, (value) => convertValues(value)),
-        };
-      });
+export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABASES.ADMIN) => {
+  // NOTE:
+  // Firestore `ARRAY_CONTAINS` on objects requires an exact match of the entire object.
+  // In PROD we have pre-existing admins whose `users.roles[]` entries may not include `siteName` (or may include
+  // a different/empty `siteName`), which makes exact-match queries brittle and can hide admins for a selected site.
+  //
+  // To keep this robust across old/new role shapes, we fetch all admin users and filter by `roles` client-side
+  // using only `siteId` + `role` (ignoring `siteName`).
+  try {
+    const admins = await fetchAllAdminUsers(db);
 
     if (siteId.value === 'any') {
       return admins;
@@ -200,7 +215,6 @@ export const fetchAdminsBySite = async (siteId, siteName, db = FIRESTORE_DATABAS
         const rRole = r?.role;
         if (!rSiteId || !rRole) return false;
 
-        // Site-scoped roles: show admins assigned to the selected site regardless of siteName shape.
         return rSiteId === selectedSiteId && allowedSiteRoles.has(rRole);
       });
     });
