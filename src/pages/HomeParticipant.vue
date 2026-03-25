@@ -243,7 +243,7 @@ const {
 // Computed didn't react to selected admin changes, so using a ref instead.
 let hasSurvey = ref(false);
 watch(selectedAssignment, (newAdmin, oldAdmin) => {
-  hasSurvey.value = newAdmin?.assessments.some((task) => task.taskId === 'survey');
+  hasSurvey.value = newAdmin?.assessments.some((task) => task.taskId.toLowerCase().includes('survey'));
   // Reset survey store when switching between different administrations
   if (newAdmin?.id !== oldAdmin?.id && oldAdmin?.id) {
     surveyStore.reset();
@@ -523,7 +523,7 @@ watch(
       return;
     }
 
-    const isAssessment = selectedAssignment.value.assessments.some((task) => task.taskId === 'survey');
+    const isAssessment = selectedAssignment.value.assessments.some((task) => task.taskId.toLowerCase().includes('survey'));
     if (!isLoaded || !isAssessment || surveyStore.survey) return;
 
     const surveyResponseDoc = (surveyResponsesData.value || []).find(

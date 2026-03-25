@@ -35,6 +35,12 @@
         <template #value>
           <i class="pi pi-question-circle"></i>
         </template>
+        <template #option="slotProps">
+          <div class="flex align-items-center gap-2">
+            <i v-if="slotProps.option.icon" :class="slotProps.option.icon" />
+            <span>{{ slotProps.option.label }}</span>
+          </div>
+        </template>
       </PvSelect>
       <button ref="feedbackButton" style="display: none">Give me feedback</button>
 
@@ -74,6 +80,7 @@ interface Props {
 interface DropdownOption {
   label: string;
   value: string;
+  icon?: string;
 }
 
 interface DropdownChangeEvent {
@@ -99,7 +106,7 @@ const userInitial = computed(() => {
 });
 
 const helpOptions: DropdownOption[] = [
-  { label: 'Researcher Documentation', value: 'researcherDocumentation' },
+  { label: 'Docs', value: 'researcherDocumentation', icon: 'pi pi-book' },
   { label: 'Report an Issue', value: 'reportAnIssue' },
 ];
 
@@ -110,9 +117,9 @@ const profileOptions: DropdownOption[] = [
 
 const handleHelpChange = (e: DropdownChangeEvent): void => {
   if (e.value === 'researcherDocumentation') {
-    window.open('https://researcher.levante-network.org/', '_blank');
+    window.open('https://researcher.levante-network.org/dashboard', '_blank');
   } else if (e.value === 'reportAnIssue') {
-    window.open('https://levante-support.freshdesk.com', '_blank');
+    window.open('https://levante-support.freshdesk.com/support/tickets/new', '_blank');
   }
 };
 

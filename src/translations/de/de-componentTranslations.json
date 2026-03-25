@@ -130,7 +130,9 @@
       "taskNotYetAvailable": "Noch nicht verfügbar",
       "paDescription": "Den Klang in den Wörtern identifizieren.",
       "sreDescription": "Lies die Sätze so schnell wie möglich und entscheide, ob sie wahr oder falsch sind.",
-      "swrDescription": "Die Wörter werden schnell auf dem Bildschirm erscheinen. Entscheide, ob sie echt oder erfunden sind."
+      "swrDescription": "Die Wörter werden schnell auf dem Bildschirm erscheinen. Entscheide, ob sie echt oder erfunden sind.",
+      "childSurveyName": "Gedanken & Gefühle",
+      "childSurveyDescription": "Hier geht es um Fragen zu deiner Schulzeit."
     },
     "navbar": {
       "greeting": "Hallo",

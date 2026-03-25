@@ -7,16 +7,32 @@
     </template>
 
     <template v-else>
-      <div class="flex align-items-center gap-2">
-        <div class="flex flex-column flex-1">
-          <h2 class="admin-page-header m-0">Researchers</h2>
-          <span v-if="currentSiteName" class="flex align-items-center gap-1 m-0 mt-1 text-lg text-gray-500">
-            <i class="pi pi-building"></i>{{ currentSiteName }}
-          </span>
+      <div class="flex flex-column gap-2">
+        <div class="page-title-row flex align-items-center justify-content-between gap-2 flex-wrap">
+          <div class="flex align-items-center gap-2">
+            <h2 class="admin-page-header m-0">Researchers</h2>
+            <DocsButton href="https://researcher.levante-network.org/dashboard/administrator-log-in" label="Documentation" />
+          </div>
+          <PermissionGuard :required-role="ROLES.ADMIN">
+            <PvButton :disabled="isAdminsLoading || isAdminsFetching || isAdminsRefetching || isAllSitesSelected" @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Researcher</PvButton>
+          </PermissionGuard>
         </div>
-        <PermissionGuard :required-role="ROLES.ADMIN">
-          <PvButton :disabled="isAdminsLoading || isAdminsFetching || isAdminsRefetching || isAllSitesSelected" @click="isAdministratorModalVisible = true"><i class="pi pi-plus"></i>Add Researcher</PvButton>
-        </PermissionGuard>
+        <span v-if="currentSiteName" class="flex align-items-center gap-1 m-0 text-lg text-gray-500">
+          <i class="pi pi-building"></i>{{ currentSiteName }}
+        </span>
+
+        <div v-if="canManageResearchers" class="how-to-section mb-4">
+          <h3>Researcher permissions</h3>
+          <div class="text-md text-gray-500 mb-1 line-height-3">
+            Each kind of researcher account has a different role. Roles determine what actions a researcher can take on the dashboard within a particular site. See <a href="https://researcher.levante-network.org/dashboard/permissions" target="_blank" rel="noopener noreferrer">researcher roles and permissions</a> for a description of each role.
+          </div>
+        </div>
+        <div v-else class="how-to-section mb-4">
+          <h3>View researchers</h3>
+          <div class="text-md text-gray-500 mb-1 line-height-3">
+            See other research administrators in your site. For details on administrator roles, see <a href="https://researcher.levante-network.org/dashboard/permissions" target="_blank" rel="noopener noreferrer">researcher roles and permissions</a>.
+          </div>
+        </div>
       </div>
 
       <div class="m-0 mt-5">
@@ -92,6 +108,7 @@
 import { usePermissions } from '@/composables/usePermissions';
 import { AdminSubResource } from '@levante-framework/permissions-core';
 import AddAdministratorModal from '@/components/modals/AddAdministratorModal.vue';
+import DocsButton from '@/components/DocsButton.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import useAdminsBySiteQuery from '@/composables/queries/useAdminsBySiteQuery';
@@ -152,8 +169,13 @@ interface AdministratorTableRow extends AdministratorRecord {
 }
 
 const authStore = useAuthStore();
-const { currentSite, currentSiteName, roarfirekit } = storeToRefs(authStore);
-const { can, permissionsLoaded } = usePermissions();
+const { currentSite, currentSiteName, roarfirekit, shouldUsePermissions } = storeToRefs(authStore);
+const { can, hasRole, permissionsLoaded } = usePermissions();
+
+const canManageResearchers = computed(() => {
+  if (!shouldUsePermissions.value) return true;
+  return hasRole(ROLES.ADMIN);
+});
 const confirm = useConfirm();
 const toast = useToast();
 
@@ -380,3 +402,25 @@ function getRowClass(data: AdministratorTableRow) {
   return data.isCurrentUser ? 'current-user-row' : '';
 }
 </script>
+
+<style lang="scss" scoped>
+.page-title-row :deep(.docs-button) {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.how-to-section {
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin: 2rem 0;
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+}
+</style>
