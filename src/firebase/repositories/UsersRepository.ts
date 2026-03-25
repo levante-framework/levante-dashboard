@@ -33,15 +33,12 @@ export interface CreateUpdateSuperAdminPayload {
   isTestData?: boolean;
 }
 
-export interface CreateAdministratorPayload {
+export interface CreateUpdateAdministratorPayload {
   email: string;
   name: CreateUpdateSuperAdminNamePayload;
   roles: CreateUpdateSuperAdminRolePayload[];
+  adminUid?: string;
   isTestData?: boolean;
-}
-
-export interface UpdateAdministratorPayload extends CreateAdministratorPayload {
-  adminUid: string;
 }
 
 const ADMIN_ROLES = new Set<string>([
@@ -118,12 +115,11 @@ class UsersRepository extends Repository {
     return this.call<CreateUpdateSuperAdminPayload, unknown>('createUpdateSuperAdmin', payload);
   }
 
-  async createAdministrator(payload: CreateAdministratorPayload): Promise<unknown> {
-    return this.call<CreateAdministratorPayload, unknown>('createAdministrator', payload);
-  }
-
-  async updateAdministrator(payload: UpdateAdministratorPayload): Promise<unknown> {
-    return this.call<UpdateAdministratorPayload, unknown>('updateAdministrator', payload);
+  async createUpdateAdministrator(payload: CreateUpdateAdministratorPayload): Promise<unknown> {
+    if (payload.adminUid) {
+      return this.call<CreateUpdateAdministratorPayload, unknown>('updateAdministrator', payload);
+    }
+    return this.call<CreateUpdateAdministratorPayload, unknown>('createAdministrator', payload);
   }
 }
 

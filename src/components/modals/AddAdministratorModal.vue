@@ -83,9 +83,8 @@
 
 <script lang="ts" setup>
 import DocsButton from '@/components/DocsButton.vue';
-import useCreateAdministratorMutation from '@/composables/mutations/useCreateAdministratorMutation';
+import useCreateUpdateAdministratorMutation from '@/composables/mutations/useCreateUpdateAdministratorMutation';
 import useCreateUpdateSuperAdminMutation from '@/composables/mutations/useCreateUpdateSuperAdminMutation';
-import useUpdateAdministratorMutation from '@/composables/mutations/useUpdateAdministratorMutation';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES, SUPER_ADMIN_PLATFORM_SCOPE } from '@/constants/roles';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
@@ -146,13 +145,11 @@ const props = withDefaults(defineProps<Props>(), {
 
 const authStore = useAuthStore();
 const { currentSite, currentSiteName } = storeToRefs(authStore);
-const { isUserSuperAdmin } = authStore;
-const { can } = usePermissions();
+const { can, canGlobal } = usePermissions();
 const toast = useToast();
 
 const { mutateAsync: createUpdateSuperAdmin } = useCreateUpdateSuperAdminMutation();
-const { mutateAsync: createAdministrator } = useCreateAdministratorMutation();
-const { mutateAsync: updateAdministrator } = useUpdateAdministratorMutation();
+const { mutateAsync: createUpdateAdministrator } = useCreateUpdateAdministratorMutation();
 
 const isSuperAdminVariant = computed(() => props.variant === 'super-admin');
 
@@ -177,27 +174,22 @@ const submittingBtnLabel = computed(() => {
   return isEditMode.value ? 'Updating Researcher' : 'Adding Researcher';
 });
 const roleOptions = computed(() => {
-  // Always use 'create' permission - the question is "can I assign this role to someone?"
-  // The edit button visibility already gates who we can edit (based on their current role)
   const action = 'create';
+
+  const canAssignRole = (role: AdminSubResource) =>
+    can('admins', action, role) || canGlobal('admins', action, role);
 
   return Object.values(ROLES)
     .map((role) => {
       switch (role) {
         case ROLES.SUPER_ADMIN:
-          return isUserSuperAdmin() ? { value: role, label: 'Super Admin' } : null;
+          return null;
         case ROLES.SITE_ADMIN:
-          return can('admins', action, role as AdminSubResource)
-            ? { value: role, label: 'Site Admin' }
-            : null;
+          return canAssignRole(role as AdminSubResource) ? { value: role, label: 'Site Admin' } : null;
         case ROLES.ADMIN:
-          return can('admins', action, role as AdminSubResource)
-            ? { value: role, label: 'Admin' }
-            : null;
+          return canAssignRole(role as AdminSubResource) ? { value: role, label: 'Admin' } : null;
         case ROLES.RESEARCH_ASSISTANT:
-          return can('admins', action, role as AdminSubResource)
-            ? { value: role, label: 'Research Assistant' }
-            : null;
+          return canAssignRole(role as AdminSubResource) ? { value: role, label: 'Research Assistant' } : null;
         default:
           return null;
       }
@@ -391,49 +383,22 @@ async function submit() {
     return;
   }
 
-  if (props?.data?.id) {
-    try {
-      await updateAdministrator({
-        adminUid: props.data.id,
-        email: email.value,
-        name,
-        roles: siteScopedRoles,
-        isTestData: isTestData.value,
-      });
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: 'Researcher account updated successfully',
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
-      emit('refetch');
-      handleOnClose();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unexpected error';
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: message,
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
-      console.error('Error updating researcher', error);
-    } finally {
-      isSubmitting.value = false;
-    }
-    return;
-  }
+  const researcherPayload = {
+    email: email.value,
+    name,
+    roles: siteScopedRoles,
+    isTestData: isTestData.value,
+    ...(props?.data?.id ? { adminUid: props.data.id } : {}),
+  };
 
   try {
-    await createAdministrator({
-      email: email.value,
-      name,
-      roles: siteScopedRoles,
-      isTestData: isTestData.value,
-    });
+    await createUpdateAdministrator(researcherPayload);
     toast.add({
       severity: 'success',
       summary: 'Success',
-      detail: 'Researcher account created successfully',
+      detail: props?.data?.id
+        ? 'Researcher account updated successfully'
+        : 'Researcher account created successfully',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     emit('refetch');
@@ -446,7 +411,7 @@ async function submit() {
       detail: message,
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
-    console.error('Error creating researcher', error);
+    console.error('Error creating or updating researcher', error);
   } finally {
     isSubmitting.value = false;
   }

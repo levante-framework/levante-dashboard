@@ -2,7 +2,7 @@
   <div class="p-5">
     <template v-if="isPageLoading">
       <div class="flex justify-center items-center h-96">
-        <LevanteSpinner :size="120" />
+        <LevanteSpinner :size="120" fullscreen/>
       </div>
     </template>
 
@@ -30,12 +30,6 @@
             >
               <i class="pi pi-building"></i>{{ currentSiteName }}
             </span>
-            <small
-              v-if="needsSiteSelectionForAddResearcher"
-              class="block mt-2 text-amber-700 dark:text-amber-400 max-w-xl leading-normal"
-            >
-              Select a specific site (not &quot;All sites&quot;) to add a researcher or use the actions column.
-            </small>
           </div>
           <div class="flex flex-column align-items-end gap-1">
             <PermissionGuard :required-role="ROLES.ADMIN">
@@ -72,7 +66,15 @@
         </div>
 
         <div class="m-0 mt-5">
+          <div
+            v-if="needsSiteSelectionForAddResearcher"
+            class="flex align-items-center justify-content-center border-1 border-round surface-border surface-ground p-6 text-center text-amber-700 dark:text-amber-400 leading-normal min-h-[12rem]"
+            role="status"
+          >
+            Select a specific site (not &quot;All sites&quot;) to add a researcher or use the actions column.
+          </div>
           <RoarDataTable
+            v-else
             key="administrators-researchers"
             sortable
             :allow-filtering="false"
