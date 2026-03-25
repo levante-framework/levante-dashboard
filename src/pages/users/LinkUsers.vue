@@ -123,6 +123,15 @@ const allFields = [
   { field: 'uid', header: 'UID', dataType: 'string' },
 ];
 
+const skippedColumnKeysLower = [
+  'id',
+  'usertype',
+  'uid',
+  'caregiverid',
+  'teacherid',
+  'parentid',
+];
+
 function getFieldValue(user, fieldName) {
   const field = Object.keys(user).find((key) => key.toLowerCase() === fieldName.toLowerCase());
   return field ? user[field] : undefined;
@@ -393,10 +402,7 @@ const submitUsers = async () => {
       const markerKey = REGISTERED_USERS_CSV_MARKER.toLowerCase();
       Object.keys(user).forEach((key) => {
         const lowerCaseKey = key.toLowerCase();
-        if (
-          !['id', 'usertype', 'uid', 'caregiverid', 'teacherid', 'parentid'].includes(lowerCaseKey) &&
-          lowerCaseKey !== markerKey
-        ) {
+        if (!skippedColumnKeysLower.includes(lowerCaseKey) && lowerCaseKey !== markerKey) {
           normalizedUser[key] = user[key];
         }
       });
