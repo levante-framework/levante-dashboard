@@ -104,7 +104,6 @@ import PvFloatLabel from 'primevue/floatlabel';
 import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
-import useOrgNameExistsQuery from '@/composables/queries/useOrgNameExistsQuery';
 import useUpsertOrgMutation from '@/composables/mutations/useUpsertOrgMutation';
 import useVuelidate from '@vuelidate/core';
 import { usePermissions } from '@/composables/usePermissions';
@@ -218,16 +217,9 @@ const { mutate: upsertOrg, isPending: isSubmittingOrg } = useUpsertOrgMutation()
 
 const { isFetching: isFetchingSchools, data: schools } = _useSchoolsQuery(selectedSite);
 
-const { isRefetching: isCheckingOrgName, refetch: doesOrgNameExist } = useOrgNameExistsQuery(
-  orgName,
-  orgType,
-  parentDistrict,
-  parentSchool,
-);
-
 // Watch for changes in loading states, with proper undefined handling
 watch(
-  () => [isCheckingOrgName?.value ?? false, isSubmittingOrg?.value ?? false],
+  () => [isSubmittingOrg?.value ?? false],
   ([isChecking, isSubmitting]) => {
     isSubmitBtnDisabled.value = Boolean(isChecking) || Boolean(isSubmitting);
   },
@@ -362,28 +354,6 @@ const submit = async () => {
       severity: 'error',
       summary: 'Error',
       detail: 'Please select a specific site to add a group',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  }
-
-  const { data: orgNameExists } = await doesOrgNameExist();
-
-  if (orgNameExists) {
-    const errorTitle = `${orgTypeLabel.value} Creation Error`;
-    let errorMessage = `${orgTypeLabel.value} with name ${orgName.value} already exists.`;
-
-    if (orgType.value?.singular === SINGULAR_ORG_TYPES.DISTRICTS) {
-      errorMessage += ` ${orgTypeLabel.value} names must be unique.`;
-    } else {
-      errorMessage += ` ${orgTypeLabel.value} names must be unique within a site.`;
-    }
-
-    isSubmitBtnDisabled.value = false;
-
-    return toast.add({
-      severity: 'error',
-      summary: errorTitle,
-      detail: errorMessage,
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   }
