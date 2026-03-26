@@ -41,6 +41,9 @@
                   <b>{{ col.header }}</b>
                 </div>
               </template>
+              <template #body="{ data }">
+                <span>{{ formatPreviewCell(data, col.field) }}</span>
+              </template>
             </PvColumn>
           </PvDataTable>
 
@@ -117,7 +120,17 @@ const showErrorTable = ref(false);
 
 // LINKING
 // Required: id, userType, uid
-// Optional: parentId, teacherId
+// Optional: parentId, teacherId, email, groups
+
+function formatPreviewCell(data, field) {
+  const key = Object.keys(data).find((k) => k.toLowerCase() === field.toLowerCase());
+  if (key === undefined) return '';
+  const val = data[key];
+  if (val === null || val === undefined) return '';
+  if (Array.isArray(val)) return val.join(', ');
+  if (typeof val === 'object') return JSON.stringify(val);
+  return String(val);
+}
 
 const allFields = [
   {
@@ -128,6 +141,16 @@ const allFields = [
   {
     field: 'userType',
     header: 'userType',
+    dataType: 'string',
+  },
+  {
+    field: 'email',
+    header: 'email',
+    dataType: 'string',
+  },
+  {
+    field: 'groups',
+    header: 'groups',
     dataType: 'string',
   },
   {
