@@ -4,6 +4,7 @@ import _invert from 'lodash/invert';
 import _toPairs from 'lodash/toPairs';
 import * as Papa from 'papaparse';
 import { TooltipOptions } from 'primevue/tooltip';
+import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
 
 export const isLevante: boolean = import.meta.env.VITE_LEVANTE === 'TRUE';
 export const isEmulator: boolean = (import.meta.env.VITE_EMULATOR as string) === 'TRUE';
@@ -314,4 +315,24 @@ export const getTooltip = (value: string, options?: TooltipOptions): TooltipOpti
   } as TooltipOptions;
 
   return { ...defaultOptions, ...options, value };
+};
+
+export const formattedVariantName = (variantName: string): string => {
+  const rawName = variantName ?? '';
+
+  let variantLanguage = rawName;
+  if (rawName?.toLowerCase()?.includes('adaptive')) {
+    const parts = rawName?.split(' ');
+    variantLanguage = parts[0]!;
+  }
+
+  const trimmedName = variantLanguage.trim();
+  const exactMatch = languageOptions[trimmedName]?.languageTaskPicker;
+  if (exactMatch) return exactMatch;
+
+  const localeRegex = /^[a-z]{2}(?:-[a-z]{2})?$/i;
+  if (!localeRegex.test(trimmedName)) return rawName;
+
+  const matchedLocale = findBestMatchingLocale(trimmedName);
+  return languageOptions[matchedLocale]?.languageTaskPicker ?? rawName;
 };
