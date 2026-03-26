@@ -122,27 +122,27 @@ const showErrorTable = ref(false);
 const allFields = [
   {
     field: 'id',
-    header: 'ID',
+    header: 'id',
     dataType: 'string',
   },
   {
     field: 'userType',
-    header: 'User Type',
+    header: 'userType',
     dataType: 'string',
   },
   {
     field: 'caregiverId',
-    header: 'Caregiver ID',
+    header: 'caregiverId',
     dataType: 'string',
   },
   {
     field: 'teacherId',
-    header: 'Teacher ID',
+    header: 'teacherId',
     dataType: 'string',
   },
   {
     field: 'uid',
-    header: 'UID',
+    header: 'uid',
     dataType: 'string',
   },
 ];

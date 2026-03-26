@@ -172,32 +172,32 @@ const dataTable = ref();
 const allFields = [
   {
     field: 'userType',
-    header: 'User Type',
+    header: 'userType',
     dataType: 'string',
   },
   {
     field: 'month',
-    header: 'Month',
+    header: 'month',
     dataType: 'number',
   },
   {
     field: 'year',
-    header: 'Year',
+    header: 'year',
     dataType: 'number',
   },
   {
-    field: 'cohort',
-    header: 'Cohort',
-    dataType: 'string',
-  },
-  {
     field: 'school',
-    header: 'School',
+    header: 'school',
     dataType: 'string',
   },
   {
     field: 'class',
-    header: 'Class',
+    header: 'class',
+    dataType: 'string',
+  },
+  {
+    field: 'cohort',
+    header: 'cohort',
     dataType: 'string',
   },
 ];
