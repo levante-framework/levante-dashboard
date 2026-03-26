@@ -5,6 +5,11 @@
 
       <PvDivider class="my-5" />
 
+      <div v-if="lastLinkedFileName" class="link-success-message mb-4 p-3 border-round">
+        Linking successful with file <code>{{ lastLinkedFileName }}</code
+        >. Click below to upload another file.
+      </div>
+
       <div class="m-0 mb-5 p-3 bg-gray-100 border-1 border-gray-200 border-round">
         <div class="flex align-items-center gap-3">
           <PvFileUpload
@@ -114,6 +119,7 @@ const errorUsers = ref([]);
 const errorUserColumns = ref([]);
 const activeSubmit = ref(false);
 const showErrorTable = ref(false);
+const lastLinkedFileName = ref('');
 
 // LINKING
 // Required: id, userType, uid
@@ -151,6 +157,7 @@ const resetUserProgress = () => {
   isFileUploaded.value = false;
   uploadedFile.value = null;
   showErrorTable.value = false;
+  lastLinkedFileName.value = '';
 
   // Reset user confirmation
   setHasUserConfirmed(false);
@@ -383,6 +390,7 @@ const submitUsers = async () => {
     });
 
     await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: currentSite.value });
+    lastLinkedFileName.value = uploadedFile.value?.name ?? '';
     isFileUploaded.value = false;
 
     toast.add({
@@ -465,5 +473,11 @@ watch(hasUserConfirmed, (userConfirmed) => {
 
 .error-header {
   margin-bottom: 1rem;
+}
+
+.link-success-message {
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
 }
 </style>
