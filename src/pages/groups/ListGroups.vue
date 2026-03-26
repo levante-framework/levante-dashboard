@@ -83,6 +83,7 @@
               :data="filteredTableData"
               sortable
               :loading="isTableLoading"
+              :allow-export="false"
               :allow-filtering="false"
               @selected-org-id="showCode"
               @export-org-users="(orgId) => exportOrgUsers(orgId)"
@@ -227,8 +228,6 @@ import { ROLES } from '@/constants/roles';
 import { normalizeToLowercase } from '@/helpers';
 import _useDistrictsQuery from '@/composables/queries/_useDistrictsQuery';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
-import { usePermissions } from '@/composables/usePermissions';
-
 const router = useRouter();
 const initialized = ref(false);
 const selectedDistrict = ref(undefined);
@@ -266,7 +265,6 @@ const selectedOrgName = ref('');
 const authStore = useAuthStore();
 const { currentSite, roarfirekit, shouldUsePermissions, userClaims } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
-const { hasMinimumRole } = usePermissions();
 
 const claimsLoaded = computed(() => !!userClaims.value?.claims);
 const selectedSite = computed(() => (shouldUsePermissions.value ? currentSite.value : selectedDistrict.value));
@@ -323,7 +321,7 @@ const {
   data: administrationsData,
   isLoading: isLoadingAdministrations,
   isFetching: isFetchingAdministrations,
-} = useFullAdministrationsListQuery(orderBy, false, {
+} = useFullAdministrationsListQuery(selectedSite, orderBy, false, {
   enabled: claimsLoaded,
 });
 
@@ -472,7 +470,7 @@ const tableColumns = computed(() => {
     sort: false,
   });
 
-  if (hasMinimumRole(ROLES.SITE_ADMIN)) {
+  if (isUserSuperAdmin()) {
     columns.push({
       header: 'Edit',
       button: true,
