@@ -58,7 +58,7 @@
         </div>
       </div>
 
-      <div v-if="showErrorTable" class="error-container">
+      <div v-if="showErrorTable && errorUsers.length" class="error-container">
         <div class="error-header">
           <h3>Rows with Errors</h3>
         </div>
@@ -184,8 +184,9 @@ const resetUserProgress = () => {
   isFileUploaded.value = false;
   uploadedFile.value = null;
   showErrorTable.value = false;
+  errorUsers.value = [];
+  errorUserColumns.value = [];
 
-  // Reset user confirmation
   setHasUserConfirmed(false);
 };
 
@@ -360,6 +361,7 @@ const validateUsers = (usersWithZodErrors = new Set()) => {
 
 const submitUsers = async () => {
   if (errorUsers.value.length > 0) {
+    showErrorTable.value = true;
     toast.add({
       severity: 'error',
       summary: 'Error',
@@ -417,6 +419,9 @@ const submitUsers = async () => {
 
     await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: currentSite.value });
     isFileUploaded.value = false;
+    showErrorTable.value = false;
+    errorUsers.value = [];
+    errorUserColumns.value = [];
 
     toast.add({
       severity: 'success',
@@ -454,8 +459,6 @@ function generateColumns(rawJson) {
 }
 
 function addErrorUser(user, error) {
-  // If there are no error users yet, generate the
-  //  columns before displaying the table.
   if (_isEmpty(errorUserColumns.value)) {
     errorUserColumns.value = generateColumns(user);
     errorUserColumns.value.unshift({
@@ -463,7 +466,6 @@ function addErrorUser(user, error) {
       field: 'error',
       header: 'Cause of Error',
     });
-    showErrorTable.value = true;
   }
   // Concat the userObject with the error reason.
   errorUsers.value.push({
