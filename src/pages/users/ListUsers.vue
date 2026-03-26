@@ -175,6 +175,7 @@ import PvInputText from 'primevue/inputtext';
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
 import { singularizeFirestoreCollection } from '@/helpers';
+import { normalizeUserTypeForDisplay } from '@/helpers/userType';
 import { exportCsv } from '@/helpers/query/utils';
 import { useAuthStore } from '@/store/auth';
 import useOrgUsersQuery from '@/composables/queries/useOrgUsersQuery';
@@ -258,7 +259,7 @@ const transformedUsers = computed(() => {
   if (!users.value) return [];
   return users.value.map((user) => ({
     ...user,
-    userType: user.userType === 'student' ? 'child' : user.userType === 'parent' ? 'caregiver' : user.userType,
+    userType: normalizeUserTypeForDisplay(user.userType),
   }));
 });
 

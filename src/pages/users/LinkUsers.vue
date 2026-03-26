@@ -89,6 +89,7 @@
 <script setup>
 import { ref, toRaw, watch, computed } from 'vue';
 import { csvFileToJson } from '@/helpers';
+import { normalizeUserTypeForBackend } from '@/helpers/userType';
 import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/store/auth';
 import LinkUsersInfo from '@/components/userInfo/LinkUsersInfo.vue';
@@ -370,7 +371,8 @@ const submitUsers = async () => {
       if (idField) normalizedUser.id = user[idField];
       if (userTypeField) {
         const userTypeValue = user[userTypeField];
-        normalizedUser.userType = userTypeValue.toLowerCase() === 'caregiver' ? 'parent' : userTypeValue;
+        normalizedUser.userType =
+          typeof userTypeValue === 'string' ? normalizeUserTypeForBackend(userTypeValue.toLowerCase()) : userTypeValue;
       }
       if (uidField) normalizedUser.uid = user[uidField];
 
