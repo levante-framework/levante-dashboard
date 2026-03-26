@@ -336,3 +336,7 @@ export const formattedVariantName = (variantName: string): string => {
   const matchedLocale = findBestMatchingLocale(trimmedName);
   return languageOptions[matchedLocale]?.languageTaskPicker ?? rawName;
 };
+// Accept Date, Map, and others...
+export const isObject = (obj: unknown): boolean => obj !== null && typeof obj === 'object' && !Array.isArray(obj);
+// This one just accept plain objects
+export const isPlainObject = (obj: unknown): boolean => Object.prototype.toString.call(obj) === '[object Object]';
