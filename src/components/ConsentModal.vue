@@ -67,7 +67,7 @@ onMounted((): void => {
     : i18n.t('consentModal.assentTitle');
 
   confirm.require({
-    group: 'templating',
+    group: 'consent',
     header: i18n.t('consentModal.header', props.consentType.toUpperCase()),
     icon: 'pi pi-question-circle',
     acceptLabel: i18n.t('consentModal.acceptButton', 'Accept'),

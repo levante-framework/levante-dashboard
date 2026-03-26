@@ -19,7 +19,7 @@
       </template>
     </PvSelect>
 
-    <PvConfirmDialog />
+    <PvConfirmDialog group="site-selector" />
   </div>
 </template>
 
@@ -118,6 +118,7 @@ const handleSiteChange = (e: DropdownChangeEvent): void => {
   }
 
   confirm.require({
+    group: 'site-selector',
     header: 'Change site?',
     message: 'Changing sites will discard the current progress. Continue?',
     acceptLabel: 'Continue',

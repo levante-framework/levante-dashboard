@@ -97,7 +97,7 @@
       </PvButton>
     </PvPanel>
 
-    <PvConfirmDialog :draggable="false" />
+    <PvConfirmDialog group="group-picker" :draggable="false" />
   </div>
 </template>
 
@@ -255,6 +255,7 @@ const removeSelectedOrg = (orgHeader: string, selectedOrg: OrgItem) => {
 
 const onClickClearSelectionBtn = () => {
   confirm.require({
+    group: 'group-picker',
     header: 'Clear selection?',
     message: 'Do you really want to remove all the selected groups?',
     acceptLabel: 'Continue',
@@ -335,6 +336,7 @@ const confirmParentSiteSelection = (nextDistricts: OrgItem[], previousDistricts:
   if (!hasRelatedChild) return;
 
   confirm.require({
+    group: 'group-picker',
     header: 'Change to site selection?',
     message: 'Selecting a site will clear its selected schools, classes, and cohorts. Do you want to continue?',
     acceptLabel: 'Continue',
@@ -368,6 +370,7 @@ const confirmParentSchoolSelection = (nextSchools: OrgItem[], previousSchools: O
   if (!hasRelatedChild) return;
 
   confirm.require({
+    group: 'group-picker',
     header: 'Change to school selection?',
     message: 'Selecting a school will clear its selected classes. Do you want to continue?',
     acceptLabel: 'Continue',
