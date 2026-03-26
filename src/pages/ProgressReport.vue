@@ -374,10 +374,16 @@ const appendTaskProgressColumns = (row, progress = {}) => {
   orderedTaskIds.value.forEach(addTaskValue);
 };
 
+const normalizeFrontendUserType = (userType = '') => {
+  if (userType === 'student') return 'child';
+  if (userType === 'parent') return 'caregiver';
+  return userType;
+};
+
 const buildProgressExportRow = (user, progress = {}) => {
   const tableRow = {
     Username: _get(user, 'username') ?? '',
-    'User Type': _startCase(_get(user, 'userType') ?? ''),
+    'User Type': _startCase(normalizeFrontendUserType(_get(user, 'userType') ?? '')),
   };
 
   if (props.orgType === 'district') {
@@ -403,7 +409,7 @@ const computedProgressData = computed(() => {
     const currRow = {
       user: {
         username: user?.username || assignment?.userData?.username || '',
-        userType: user.userType === 'parent' ? 'caregiver' : user.userType,
+        userType: normalizeFrontendUserType(user.userType),
         userId: user.userId,
         grade: user.studentData?.grade,
         assessmentPid: user.assessmentPid,
