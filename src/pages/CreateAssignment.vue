@@ -244,11 +244,6 @@ const header = computed(() => {
   return name ? `Edit Assignment: ${name}` : 'Edit assignment';
 });
 
-const description = computed(
-  () =>
-    'An assignment is a collection of tasks assigned to users who are members of a group. Before getting started, please read the documentation on creating assignments',
-);
-
 const submitLabel = computed(() => (props.adminId ? 'Update Assignment' : 'Create Assignment'));
 
 const creatorName = computed(() => {
