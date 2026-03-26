@@ -120,7 +120,7 @@ const showErrorTable = ref(false);
 
 // LINKING
 // Required: id, userType, uid
-// Optional: parentId, teacherId, email, groups
+// Optional: caregiverId, teacherId, school, class, cohort, email
 
 function formatPreviewCell(data, field) {
   const key = Object.keys(data).find((k) => k.toLowerCase() === field.toLowerCase());
@@ -144,16 +144,6 @@ const allFields = [
     dataType: 'string',
   },
   {
-    field: 'email',
-    header: 'email',
-    dataType: 'string',
-  },
-  {
-    field: 'groups',
-    header: 'groups',
-    dataType: 'string',
-  },
-  {
     field: 'caregiverId',
     header: 'caregiverId',
     dataType: 'string',
@@ -164,8 +154,28 @@ const allFields = [
     dataType: 'string',
   },
   {
+    field: 'school',
+    header: 'school',
+    dataType: 'string',
+  },
+  {
+    field: 'class',
+    header: 'class',
+    dataType: 'string',
+  },
+  {
+    field: 'cohort',
+    header: 'cohort',
+    dataType: 'string',
+  },
+  {
     field: 'uid',
     header: 'uid',
+    dataType: 'string',
+  },
+  {
+    field: 'email',
+    header: 'email',
     dataType: 'string',
   },
 ];
