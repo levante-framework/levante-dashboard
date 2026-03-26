@@ -42,10 +42,11 @@
             </div>
 
             <PvListbox
+              v-if="header.value !== FIRESTORE_COLLECTIONS.CLASSES || !!selectedSchool"
               v-model="selectedOrgs[activeHeader]"
               checkmark
               class="mt-3"
-              :filter="header.value !== FIRESTORE_COLLECTIONS.CLASSES || !!selectedSchool"
+              filter
               multiple
               option-disabled="disabled"
               option-label="name"
