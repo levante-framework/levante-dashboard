@@ -101,8 +101,6 @@ class UsersRepository extends Repository {
         users = users.filter((u) => documentHasSuperAdminRole(u));
       }
 
-      console.log('mark://', {users});
-
       return users;
     } catch (error) {
       console.error('fetchAdminUsers: Error fetching admin users from Firestore:', error);

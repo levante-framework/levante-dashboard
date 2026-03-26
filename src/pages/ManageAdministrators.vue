@@ -2,7 +2,7 @@
   <div class="p-5">
     <template v-if="isPageLoading">
       <div class="flex justify-center items-center h-96">
-        <LevanteSpinner :size="120" fullscreen/>
+        <LevanteSpinner fullscreen/>
       </div>
     </template>
 
