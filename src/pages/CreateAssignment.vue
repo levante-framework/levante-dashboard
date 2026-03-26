@@ -213,7 +213,7 @@ import DocsButton from '@/components/DocsButton.vue';
 import GroupPicker from '@/components/GroupPicker.vue';
 import { APP_ROUTES } from '@/constants/routes';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
-import { isLevante, normalizeToLowercase } from '@/helpers';
+import { isLevante, isPlainObject, normalizeToLowercase } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
 import useAssignmentExistsQuery from '@/composables/queries/useAssignmentExistsQuery';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
@@ -421,10 +421,12 @@ const checkForRequiredOrgs = (orgs) => {
 // | Form submission
 // +------------------------------------------------------------------------------------------------------------------+
 const removeNull = (obj) => {
+  if (!isPlainObject(obj)) return {};
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== null));
 };
 
 const removeUndefined = (obj) => {
+  if (!isPlainObject(obj)) return {};
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined));
 };
 
