@@ -99,7 +99,7 @@
         </template>
       </PvDialog>
 
-      <PvConfirmDialog :draggable="false" />
+      <PvConfirmDialog group="manage-administrators" :draggable="false" />
     </template>
   </div>
 </template>
@@ -318,6 +318,7 @@ const onClickRemoveBtn = (admin: AdministratorRecord) => {
   administrator.value = admin;
 
   confirm.require({
+    group: 'manage-administrators',
     message: 'You are about to remove this researcher from the site. Are you sure you want to do this?',
     header: 'Remove Researcher from Site',
     icon: 'pi pi-exclamation-triangle',
