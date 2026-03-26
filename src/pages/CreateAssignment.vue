@@ -8,11 +8,24 @@
       <div class="flex flex-column mb-5">
         <div class="page-title-row flex align-items-center justify-content-start gap-2 mb-2">
           <div class="admin-page-header m-0">{{ header }}</div>
-          <DocsButton href="https://researcher.levante-network.org/dashboard/create-an-assignment" label="Documentation" />
+          <DocsButton
+            href="https://researcher.levante-network.org/dashboard/create-an-assignment"
+            label="Documentation"
+          />
         </div>
         <div v-if="!adminId" class="how-to-section mb-4">
           <h3>How to create an assignment</h3>
-          <div class="text-md text-gray-500 mb-1 line-height-3">An assignment is a collection of tasks. New assignments have a name and date range, are given to certain groups, and contain specified tasks. When an assignment is given to a group, all users within that group receive those tasks. Before getting started, please read the <a href="https://researcher.levante-network.org/dashboard/create-an-assignment" target="_blank" rel="noopener noreferrer">documentation on creating assignments</a>.</div>
+          <div class="text-md text-gray-500 mb-1 line-height-3">
+            An assignment is a collection of tasks. New assignments have a name and date range, are given to certain
+            groups, and contain specified tasks. When an assignment is given to a group, all users within that group
+            receive those tasks. Before getting started, please read the
+            <a
+              href="https://researcher.levante-network.org/dashboard/create-an-assignment"
+              target="_blank"
+              rel="noopener noreferrer"
+              >documentation on creating assignments</a
+            >.
+          </div>
         </div>
       </div>
 
@@ -200,7 +213,7 @@ import DocsButton from '@/components/DocsButton.vue';
 import GroupPicker from '@/components/GroupPicker.vue';
 import { APP_ROUTES } from '@/constants/routes';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
-import { isLevante, normalizeToLowercase } from '@/helpers';
+import { isLevante, isPlainObject, normalizeToLowercase } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
 import useAssignmentExistsQuery from '@/composables/queries/useAssignmentExistsQuery';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
@@ -230,10 +243,6 @@ const header = computed(() => {
   const name = state.administrationName?.trim();
   return name ? `Edit Assignment: ${name}` : 'Edit assignment';
 });
-
-const description = computed(
-  () => 'An assignment is a collection of tasks assigned to users who are members of a group. Before getting started, please read the documentation on creating assignments',
-);
 
 const submitLabel = computed(() => (props.adminId ? 'Update Assignment' : 'Create Assignment'));
 
@@ -412,10 +421,12 @@ const checkForRequiredOrgs = (orgs) => {
 // | Form submission
 // +------------------------------------------------------------------------------------------------------------------+
 const removeNull = (obj) => {
+  if (!isPlainObject(obj)) return {};
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== null));
 };
 
 const removeUndefined = (obj) => {
+  if (!isPlainObject(obj)) return {};
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined));
 };
 
