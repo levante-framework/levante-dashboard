@@ -119,8 +119,8 @@ const activeSubmit = ref(false);
 const showErrorTable = ref(false);
 
 // LINKING
-// Required: id, userType, uid
-// Optional: caregiverId, teacherId, school, class, cohort, email
+// Required columns: id, userType, uid, caregiverId, teacherId
+// Optional columns: school, class, cohort, email
 
 function formatPreviewCell(data, field) {
   const key = Object.keys(data).find((k) => k.toLowerCase() === field.toLowerCase());
@@ -190,6 +190,32 @@ const resetUserProgress = () => {
   setHasUserConfirmed(false);
 };
 
+const hasAnyLinkingData = (users) =>
+  users.some((user) => {
+    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
+    const userType = userTypeField && user[userTypeField] ? String(user[userTypeField]).trim().toLowerCase() : '';
+    if (userType !== 'child') return false;
+
+    const caregiverIdField = Object.keys(user).find((key) => key.toLowerCase() === 'caregiverid');
+    const teacherIdField = Object.keys(user).find((key) => key.toLowerCase() === 'teacherid');
+
+    const hasCaregiverId =
+      caregiverIdField &&
+      String(user[caregiverIdField] ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .some((id) => id !== '');
+
+    const hasTeacherId =
+      teacherIdField &&
+      String(user[teacherIdField] ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .some((id) => id !== '');
+
+    return hasCaregiverId || hasTeacherId;
+  });
+
 const onFileUpload = async (event) => {
   resetUserProgress();
 
@@ -225,7 +251,7 @@ const onFileUpload = async (event) => {
 
   const firstRow = toRaw(rawUserFile.value[0]);
   const headers = Object.keys(firstRow);
-  const requiredHeaders = ['id', 'usertype', 'uid'];
+  const requiredHeaders = ['id', 'usertype', 'uid', 'caregiverid', 'teacherid'];
 
   const headerValidation = validateCsvHeaders(headers, requiredHeaders);
   if (!headerValidation.success) {
@@ -234,6 +260,16 @@ const onFileUpload = async (event) => {
       severity: 'error',
       summary: 'Error: Missing Column',
       detail: `Missing required column(s): ${missingHeaders}`,
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    return;
+  }
+
+  if (!hasAnyLinkingData(filteredData)) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error: Missing Linking Data',
+      detail: 'At least one child row must include caregiverId or teacherId to link users.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     return;
