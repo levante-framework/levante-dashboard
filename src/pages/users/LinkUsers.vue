@@ -41,6 +41,9 @@
                   <b>{{ col.header }}</b>
                 </div>
               </template>
+              <template #body="{ data }">
+                <span>{{ formatPreviewCell(data, col.field) }}</span>
+              </template>
             </PvColumn>
           </PvDataTable>
 
@@ -55,7 +58,7 @@
         </div>
       </div>
 
-      <div v-if="showErrorTable" class="error-container">
+      <div v-if="showErrorTable && errorUsers.length" class="error-container">
         <div class="error-header">
           <h3>Rows with Errors</h3>
         </div>
@@ -116,33 +119,63 @@ const activeSubmit = ref(false);
 const showErrorTable = ref(false);
 
 // LINKING
-// Required: id, userType, uid
-// Optional: parentId, teacherId
+// Required columns: id, userType, uid, caregiverId, teacherId
+// Optional columns: school, class, cohort, email
+
+function formatPreviewCell(data, field) {
+  const key = Object.keys(data).find((k) => k.toLowerCase() === field.toLowerCase());
+  if (key === undefined) return '';
+  const val = data[key];
+  if (val === null || val === undefined) return '';
+  if (Array.isArray(val)) return val.join(', ');
+  if (typeof val === 'object') return JSON.stringify(val);
+  return String(val);
+}
 
 const allFields = [
   {
     field: 'id',
-    header: 'ID',
+    header: 'id',
     dataType: 'string',
   },
   {
     field: 'userType',
-    header: 'User Type',
+    header: 'userType',
     dataType: 'string',
   },
   {
     field: 'caregiverId',
-    header: 'Caregiver ID',
+    header: 'caregiverId',
     dataType: 'string',
   },
   {
     field: 'teacherId',
-    header: 'Teacher ID',
+    header: 'teacherId',
+    dataType: 'string',
+  },
+  {
+    field: 'school',
+    header: 'school',
+    dataType: 'string',
+  },
+  {
+    field: 'class',
+    header: 'class',
+    dataType: 'string',
+  },
+  {
+    field: 'cohort',
+    header: 'cohort',
     dataType: 'string',
   },
   {
     field: 'uid',
-    header: 'UID',
+    header: 'uid',
+    dataType: 'string',
+  },
+  {
+    field: 'email',
+    header: 'email',
     dataType: 'string',
   },
 ];
@@ -151,10 +184,37 @@ const resetUserProgress = () => {
   isFileUploaded.value = false;
   uploadedFile.value = null;
   showErrorTable.value = false;
+  errorUsers.value = [];
+  errorUserColumns.value = [];
 
-  // Reset user confirmation
   setHasUserConfirmed(false);
 };
+
+const hasAnyLinkingData = (users) =>
+  users.some((user) => {
+    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
+    const userType = userTypeField && user[userTypeField] ? String(user[userTypeField]).trim().toLowerCase() : '';
+    if (userType !== 'child') return false;
+
+    const caregiverIdField = Object.keys(user).find((key) => key.toLowerCase() === 'caregiverid');
+    const teacherIdField = Object.keys(user).find((key) => key.toLowerCase() === 'teacherid');
+
+    const hasCaregiverId =
+      caregiverIdField &&
+      String(user[caregiverIdField] ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .some((id) => id !== '');
+
+    const hasTeacherId =
+      teacherIdField &&
+      String(user[teacherIdField] ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .some((id) => id !== '');
+
+    return hasCaregiverId || hasTeacherId;
+  });
 
 const onFileUpload = async (event) => {
   resetUserProgress();
@@ -191,7 +251,7 @@ const onFileUpload = async (event) => {
 
   const firstRow = toRaw(rawUserFile.value[0]);
   const headers = Object.keys(firstRow);
-  const requiredHeaders = ['id', 'usertype', 'uid'];
+  const requiredHeaders = ['id', 'usertype', 'uid', 'caregiverid', 'teacherid'];
 
   const headerValidation = validateCsvHeaders(headers, requiredHeaders);
   if (!headerValidation.success) {
@@ -200,6 +260,16 @@ const onFileUpload = async (event) => {
       severity: 'error',
       summary: 'Error: Missing Column',
       detail: `Missing required column(s): ${missingHeaders}`,
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    return;
+  }
+
+  if (!hasAnyLinkingData(filteredData)) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error: Missing Linking Data',
+      detail: 'At least one child row must include caregiverId or teacherId to link users.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     return;
@@ -327,6 +397,7 @@ const validateUsers = (usersWithZodErrors = new Set()) => {
 
 const submitUsers = async () => {
   if (errorUsers.value.length > 0) {
+    showErrorTable.value = true;
     toast.add({
       severity: 'error',
       summary: 'Error',
@@ -384,6 +455,9 @@ const submitUsers = async () => {
 
     await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: currentSite.value });
     isFileUploaded.value = false;
+    showErrorTable.value = false;
+    errorUsers.value = [];
+    errorUserColumns.value = [];
 
     toast.add({
       severity: 'success',
@@ -421,8 +495,6 @@ function generateColumns(rawJson) {
 }
 
 function addErrorUser(user, error) {
-  // If there are no error users yet, generate the
-  //  columns before displaying the table.
   if (_isEmpty(errorUserColumns.value)) {
     errorUserColumns.value = generateColumns(user);
     errorUserColumns.value.unshift({
@@ -430,7 +502,6 @@ function addErrorUser(user, error) {
       field: 'error',
       header: 'Cause of Error',
     });
-    showErrorTable.value = true;
   }
   // Concat the userObject with the error reason.
   errorUsers.value.push({
