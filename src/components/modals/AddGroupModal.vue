@@ -126,6 +126,7 @@ interface SelectedOrg {
 interface Props {
   activeTabOrg?: OrgType;
   isVisible: boolean;
+  preSelectedSchool?: SelectedOrg;
 }
 
 interface Emits {
@@ -138,6 +139,7 @@ const props = withDefaults(defineProps<Props>(), {
     firestoreCollection: FIRESTORE_COLLECTIONS.DISTRICTS,
     singular: SINGULAR_ORG_TYPES.DISTRICTS,
   }),
+  preSelectedSchool: undefined,
 });
 
 const emit = defineEmits<Emits>();
@@ -147,10 +149,16 @@ const authStore = useAuthStore();
 const { hasMinimumRole, userRole } = usePermissions();
 const queryClient = useQueryClient();
 
+const isDistrictTabActive = computed(() => props?.activeTabOrg?.singular === SINGULAR_ORG_TYPES.DISTRICTS);
+const isUserSuperAdmin = computed(() => userRole.value === ROLES.SUPER_ADMIN);
 const isSubmitBtnDisabled = computed(() => !authStore.currentSite || authStore.currentSite.toLowerCase() === 'any');
 const isSubmitting = ref(false);
 const orgName = ref('');
-const orgType = ref<OrgType | undefined>(props.activeTabOrg);
+const orgType = ref<OrgType | undefined>();
+const orgTypeLabel = computed(() => {
+  if (!orgType.value || (isDistrictTabActive.value && !isUserSuperAdmin.value)) return 'Group';
+  return _capitalize(orgType.value.label);
+});
 
 const allOrgTypes: OrgType[] = [
   { firestoreCollection: FIRESTORE_COLLECTIONS.DISTRICTS, singular: SINGULAR_ORG_TYPES.DISTRICTS, label: 'Site' },
@@ -216,7 +224,6 @@ const v$ = useVuelidate(
   },
 );
 
-const orgTypeLabel = computed(() => (orgType.value ? _capitalize(orgType.value.label) : props.activeTabOrg?.label));
 const parentOrgRequired = computed(() => orgTypesRequiringParent.includes(orgType.value?.singular || ''));
 const selectedSite = computed(() => authStore.currentSite ?? '');
 
@@ -238,7 +245,7 @@ const handleOnClose = () => {
 
 const resetForm = () => {
   orgName.value = '';
-  orgType.value = props.activeTabOrg;
+  orgType.value = isDistrictTabActive.value && !isUserSuperAdmin.value ? undefined : props.activeTabOrg;
   tags.value = [];
   parentSchool.value = undefined;
   v$.value.$reset();
@@ -335,9 +342,24 @@ watch(
 );
 
 watch(
-  () => props.activeTabOrg,
-  (activeTabOrg) => {
-    if (activeTabOrg) orgType.value = activeTabOrg;
+  () => ({
+    activeTabOrg: props.activeTabOrg,
+    preSelectedSchool: props.preSelectedSchool,
+    isDistrictTabActive: isDistrictTabActive.value,
+    isUserSuperAdmin: isUserSuperAdmin.value,
+  }),
+  ({ activeTabOrg, preSelectedSchool, isDistrictTabActive, isUserSuperAdmin }) => {
+    if (activeTabOrg) {
+      if (isDistrictTabActive && !isUserSuperAdmin) {
+        orgType.value = undefined;
+      } else {
+        orgType.value = activeTabOrg;
+      }
+    }
+
+    if (preSelectedSchool) {
+      parentSchool.value = preSelectedSchool;
+    }
   },
   { immediate: true },
 );
