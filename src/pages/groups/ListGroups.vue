@@ -62,7 +62,7 @@
               <div v-if="orgType.id === 'classes'" class="col-12 md:col-6 lg:col-3 xl:col-3 mt-3">
                 <PvFloatLabel>
                   <PvSelect
-                    v-model="selectedSchool"
+                    v-model="selectedSchoolId"
                     input-id="school"
                     :options="schoolsData"
                     option-label="name"
@@ -177,6 +177,7 @@
   <AddGroupModal
     :active-tab-org="activeTabOrg"
     :isVisible="isAddGroupModalVisible"
+    :pre-selected-school="selectedSchool"
     @close="isAddGroupModalVisible = false"
   />
 
@@ -236,6 +237,7 @@ import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 const router = useRouter();
 const initialized = ref(false);
 const selectedDistrict = ref(undefined);
+const selectedSchoolId = ref(undefined);
 const selectedSchool = ref(undefined);
 const orderBy = ref(orderByDefault);
 let activationCode = ref(null);
@@ -340,17 +342,20 @@ watch(districtsData, (newDistrictsData) => {
 
 const { data: schoolsData, isLoading: isLoadingSchools } = _useSchoolsQuery(selectedSite);
 
-watch(schoolsData, (newSchoolsData) => {
+watch([selectedSchoolId, schoolsData], ([newSelectedSchoolId, newSchoolsData]) => {
   if (newSchoolsData && !isUserSuperAdmin()) {
-    selectedSchool.value = _get(_head(newSchoolsData), 'id');
+    selectedSchoolId.value = _get(_head(newSchoolsData), 'id');
   }
+
+  const school = newSchoolsData?.find((s) => s.id === newSelectedSchoolId);
+  selectedSchool.value = school;
 });
 
 const {
   isLoading,
   isFetching,
   data: orgData,
-} = useOrgsTableQuery(activeOrgType, selectedSite, selectedSchool, orderBy, {
+} = useOrgsTableQuery(activeOrgType, selectedSite, selectedSchoolId, orderBy, {
   enabled: claimsLoaded,
 });
 
@@ -682,7 +687,7 @@ onUnmounted(() => {
 });
 
 const tableKey = ref(0);
-watch([selectedSite, selectedSchool], () => {
+watch([selectedSite, selectedSchoolId], () => {
   tableKey.value += 1;
 });
 
