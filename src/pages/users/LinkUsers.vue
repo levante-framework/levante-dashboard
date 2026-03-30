@@ -5,10 +5,10 @@
 
       <PvDivider class="my-5" />
 
-      <div v-if="lastLinkedFileName" class="link-success-message mb-4 p-3 border-round">
-        Linking successful with file <code>{{ lastLinkedFileName }}</code
-        >. Click below to upload another file.
-      </div>
+      <PvMessage v-if="lastLinkedFileName" severity="success" closable class="mb-4">
+        Linking successful with file <code>{{ lastLinkedFileName }}</code>.
+        Click below to upload another file.
+      </PvMessage>
 
       <div class="m-0 mb-5 p-3 bg-gray-100 border-1 border-gray-200 border-round">
         <div class="flex align-items-center gap-3">
@@ -96,6 +96,7 @@ import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
 import PvFileUpload from 'primevue/fileupload';
+import PvMessage from 'primevue/message';
 import _forEach from 'lodash/forEach';
 import _startCase from 'lodash/startCase';
 import _isEmpty from 'lodash/isEmpty';
@@ -392,13 +393,6 @@ const submitUsers = async () => {
     await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: currentSite.value });
     lastLinkedFileName.value = uploadedFile.value?.name ?? '';
     isFileUploaded.value = false;
-
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Users linked successfully',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
   } catch (error) {
     toast.add({
       severity: 'error',
