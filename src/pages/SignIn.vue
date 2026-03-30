@@ -39,6 +39,14 @@
               <span>{{ $t('authSignIn.continueWithGoogle') }}*</span>
             </PvButton>
           </div>
+          <small
+            v-if="googleSignInErrorKey"
+            class="p-error block mt-2 text-center w-full px-2"
+            role="alert"
+            data-cy="google-sign-in-error"
+          >
+            {{ $t(googleSignInErrorKey) }}
+          </small>
           <small class="mt-3 text-center text-color-secondary">*{{ $t('pageSignIn.adminInfoPrompt') }}</small>
         </section>
         <!-- <section class="signin-option-container signin-option-providers">
@@ -130,6 +138,7 @@ import { useAssignmentsStore } from '@/store/assignments';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 
 const incorrect = ref(false);
+const googleSignInErrorKey = ref('');
 const authStore = useAuthStore();
 const assignmentsStore = useAssignmentsStore();
 const router = useRouter();
@@ -154,10 +163,16 @@ const toggleAdminSignIn = () => {
   adminSignIn.value = !adminSignIn.value;
 };
 
+function isMissingUserClaimsError(error) {
+  const msg = typeof error?.message === 'string' ? error.message : '';
+  return msg.toLowerCase().includes('user claims document does not exist');
+}
+
 const authWithGoogle = () => {
   if (isMobileBrowser()) {
     authStore.signInWithGoogleRedirect();
   } else {
+    googleSignInErrorKey.value = '';
     authStore
       .signInWithGooglePopup()
       .then(async () => {
@@ -176,15 +191,19 @@ const authWithGoogle = () => {
         }
       })
       .catch((e) => {
-        const errorCode = e.code;
+        const errorCode = e?.code;
         if (errorCode === 'auth/email-already-in-use') {
-          // User tried to register with an email that is already linked to a firebase account.
           openWarningModal();
           spinner.value = false;
-        } else {
-          console.log('caught error', e);
-          spinner.value = false;
+          return;
         }
+        if (isMissingUserClaimsError(e)) {
+          googleSignInErrorKey.value = 'pageSignIn.googleSignInUserNotFound';
+        } else {
+          googleSignInErrorKey.value = 'pageSignIn.googleSignInGenericError';
+        }
+        console.error('Google sign-in error', e);
+        spinner.value = false;
       });
 
     spinner.value = true;
@@ -198,6 +217,7 @@ const authWithEmail = async (state) => {
   // turn it into our internal auth email
   spinner.value = true;
   incorrect.value = false;
+  googleSignInErrorKey.value = '';
   let creds = toRaw(state);
   if (creds.useLink && !creds.usePassword) {
     authStore.initiateLoginWithEmailLink({ email: creds.email }).then(() => {
