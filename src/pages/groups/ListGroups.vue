@@ -63,7 +63,7 @@
               <div v-if="orgType.id === 'classes'" class="col-12 md:col-6 lg:col-3 xl:col-3 mt-3">
                 <PvFloatLabel>
                   <PvSelect
-                    v-model="selectedSchool"
+                    v-model="selectedSchoolId"
                     input-id="school"
                     :options="schoolsData"
                     option-label="name"
@@ -175,7 +175,12 @@
     </template>
   </RoarModal>
 
-  <AddGroupModal :isVisible="isAddGroupModalVisible" @close="isAddGroupModalVisible = false" />
+  <AddGroupModal
+    :active-tab-org="activeTabOrg"
+    :isVisible="isAddGroupModalVisible"
+    :pre-selected-school="selectedSchool"
+    @close="isAddGroupModalVisible = false"
+  />
 
   <GroupAssignmentsModal
     :is-visible="isAssignmentsModalVisible"
@@ -228,10 +233,13 @@ import { normalizeToLowercase } from '@/helpers';
 import _useDistrictsQuery from '@/composables/queries/_useDistrictsQuery';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
 import { usePermissions } from '@/composables/usePermissions';
+import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 
 const router = useRouter();
 const initialized = ref(false);
 const selectedDistrict = ref(undefined);
+const selectedSchoolId = ref(undefined);
 const selectedSchool = ref(undefined);
 const orderBy = ref(orderByDefault);
 let activationCode = ref(null);
@@ -292,6 +300,35 @@ const activeOrgType = computed({
   },
 });
 
+const activeTabOrg = computed(() => {
+  switch (activeOrgType.value) {
+    case ORG_TYPES.SCHOOLS:
+      return {
+        label: 'School',
+        firestoreCollection: FIRESTORE_COLLECTIONS.SCHOOLS,
+        singular: SINGULAR_ORG_TYPES.SCHOOLS,
+      };
+    case ORG_TYPES.CLASSES:
+      return {
+        label: 'Class',
+        firestoreCollection: FIRESTORE_COLLECTIONS.CLASSES,
+        singular: SINGULAR_ORG_TYPES.CLASSES,
+      };
+    case ORG_TYPES.GROUPS:
+      return {
+        label: 'Cohort',
+        firestoreCollection: FIRESTORE_COLLECTIONS.GROUPS,
+        singular: SINGULAR_ORG_TYPES.GROUPS,
+      };
+    default:
+      return {
+        label: 'Site',
+        firestoreCollection: FIRESTORE_COLLECTIONS.DISTRICTS,
+        singular: SINGULAR_ORG_TYPES.DISTRICTS,
+      };
+  }
+});
+
 const { data: districtsData, isLoading: isLoadingDistricts } = _useDistrictsQuery({
   enabled: !shouldUsePermissions.value,
 });
@@ -304,17 +341,20 @@ watch(districtsData, (newDistrictsData) => {
 
 const { data: schoolsData, isLoading: isLoadingSchools } = _useSchoolsQuery(selectedSite);
 
-watch(schoolsData, (newSchoolsData) => {
+watch([selectedSchoolId, schoolsData], ([newSelectedSchoolId, newSchoolsData]) => {
   if (newSchoolsData && !isUserSuperAdmin()) {
-    selectedSchool.value = _get(_head(newSchoolsData), 'id');
+    selectedSchoolId.value = _get(_head(newSchoolsData), 'id');
   }
+
+  const school = newSchoolsData?.find((s) => s.id === newSelectedSchoolId);
+  selectedSchool.value = school;
 });
 
 const {
   isLoading,
   isFetching,
   data: orgData,
-} = useOrgsTableQuery(activeOrgType, selectedSite, selectedSchool, orderBy, {
+} = useOrgsTableQuery(activeOrgType, selectedSite, selectedSchoolId, orderBy, {
   enabled: claimsLoaded,
 });
 
@@ -646,7 +686,7 @@ onUnmounted(() => {
 });
 
 const tableKey = ref(0);
-watch([selectedSite, selectedSchool], () => {
+watch([selectedSite, selectedSchoolId], () => {
   tableKey.value += 1;
 });
 

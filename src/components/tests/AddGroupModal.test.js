@@ -12,13 +12,12 @@ import PvSelect from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
 
-// Mock useAuthStore
-const mockFirebaseUser = ref({
-  adminFirebaseUser: {
-    uid: 'test-user-id',
-    email: 'test@example.com',
+const { mockUseUpsertOrgMutation, mockOrgNameExistsState } = vi.hoisted(() => ({
+  mockUseUpsertOrgMutation: vi.fn(),
+  mockOrgNameExistsState: {
+    value: false,
   },
-});
+}));
 
 vi.mock('@/store/auth', () => ({
   useAuthStore: vi.fn(() => ({
@@ -28,13 +27,17 @@ vi.mock('@/store/auth', () => ({
       restConfig: true,
     }),
     isAuthenticated: () => true,
-    isUserSuperAdmin: vi.fn(() => true),
-    firebaseUser: mockFirebaseUser,
+    firebaseUser: ref({
+      adminFirebaseUser: {
+        uid: 'test-user-id',
+        email: 'test@example.com',
+      },
+    }),
     userData: ref({
       roles: [],
     }),
     shouldUsePermissions: ref(false),
-    currentSite: 'any',
+    currentSite: '12345', // Site id
     userClaims: ref({
       claims: {
         adminOrgs: {
@@ -47,36 +50,35 @@ vi.mock('@/store/auth', () => ({
       },
     }),
     sites: [],
+    currentSiteName: 'Test Site',
   })),
 }));
 
-const mockUseUpsertOrgMutation = vi.fn();
-let mockOrgNameExists = false;
+vi.mock('@/composables/usePermissions', () => ({
+  usePermissions: () => ({
+    userRole: ref('super_admin'),
+    hasMinimumRole: vi.fn(() => true),
+  }),
+}));
 
 vi.mock('@/composables/mutations/useUpsertOrgMutation', () => ({
   default: vi.fn(() => ({
     mutate: mockUseUpsertOrgMutation,
-    isPending: false,
+    isPending: ref(false),
     error: null,
   })),
 }));
 
 vi.mock('@/composables/queries/useOrgNameExistsQuery', () => ({
   default: vi.fn(() => ({
+    isRefetching: ref(false),
     refetch: vi.fn().mockResolvedValue({
-      data: mockOrgNameExists,
+      data: mockOrgNameExistsState.value,
     }),
   })),
 }));
 
-vi.mock('@/composables/queries/useDistrictsListQuery', () => ({
-  default: vi.fn(() => ({
-    data: ref([]),
-    isLoading: ref(false),
-  })),
-}));
-
-vi.mock('@/composables/queries/useDistrictSchoolsQuery', () => ({
+vi.mock('@/composables/queries/_useSchoolsQuery', () => ({
   default: vi.fn(() => ({
     data: ref([]),
     isFetching: ref(false),
@@ -108,7 +110,8 @@ const mountOptions = {
 };
 
 beforeEach(() => {
-  mockOrgNameExists = false;
+  mockOrgNameExistsState.value = false;
+  mockUseUpsertOrgMutation.mockClear();
   setActivePinia(createPinia());
 });
 
@@ -121,7 +124,7 @@ describe('AddGroupModal.vue', () => {
 
     const modalTitle = document.querySelector('[data-testid="modalTitle"]');
     expect(modalTitle).not.toBeNull();
-    expect(modalTitle.textContent).toContain('Add New Group');
+    expect(modalTitle.textContent).toContain('Create Site');
 
     wrapper.unmount();
   });
@@ -149,19 +152,18 @@ describe('AddGroupModal.vue', () => {
 
     const submitBtn = document.querySelector('[data-testid="submitBtn"]');
     expect(submitBtn).not.toBeNull();
-    expect(submitBtn.textContent).toContain('Add Group');
+    expect(submitBtn.textContent).toContain('Create Site');
 
     await submitBtn.click();
 
     const errorMessages = document.querySelectorAll('.p-error');
-    // By default, we only have 2 required fields
-    expect(errorMessages.length).toBe(2);
+    expect(errorMessages.length).toBe(1);
 
     wrapper.unmount();
   });
 
   it('should NOT allow users to create a 2 or more groups with the same name', async () => {
-    mockOrgNameExists = true;
+    mockOrgNameExistsState.value = true;
 
     const wrapper = mount(AddGroupModal, mountOptions);
     await nextTick();
@@ -183,10 +185,10 @@ describe('AddGroupModal.vue', () => {
     // Mocking the vuelidate
     wrapper.vm.v$.$validate = () => Promise.resolve(true);
 
-    // After that, we select the submit button and check if it says "Add Site"
+    // After that, we select the submit button and check if it says "Create Site"
     const submitBtn = document.querySelector('[data-testid="submitBtn"]');
     expect(submitBtn).not.toBeNull();
-    expect(submitBtn.textContent).toContain('Add Site');
+    expect(submitBtn.textContent).toContain('Create Site');
 
     await submitBtn.click();
     await flushPromises();
@@ -218,10 +220,10 @@ describe('AddGroupModal.vue', () => {
     // Mocking the vuelidate
     wrapper.vm.v$.$validate = () => Promise.resolve(true);
 
-    // After that, we select the submit button and check if it says "Add Site"
+    // After that, we select the submit button and check if it says "Create Site"
     const submitBtn = document.querySelector('[data-testid="submitBtn"]');
     expect(submitBtn).not.toBeNull();
-    expect(submitBtn.textContent).toContain('Add Site');
+    expect(submitBtn.textContent).toContain('Create Site');
 
     await submitBtn.click();
     await flushPromises();
@@ -256,10 +258,10 @@ describe('AddGroupModal.vue', () => {
     // Mocking the vuelidate
     wrapper.vm.v$.$validate = () => Promise.resolve(true);
 
-    // After that, we select the submit button and check if it says "Add Site"
+    // After that, we select the submit button and check if it says "Create Site"
     const submitBtn = document.querySelector('[data-testid="submitBtn"]');
     expect(submitBtn).not.toBeNull();
-    expect(submitBtn.textContent).toContain('Add Site');
+    expect(submitBtn.textContent).toContain('Create Site');
 
     await submitBtn.click();
     // The submit btn must be set as disabled to avoid multiple submissions at once
