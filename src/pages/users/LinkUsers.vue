@@ -468,10 +468,4 @@ watch(hasUserConfirmed, (userConfirmed) => {
 .error-header {
   margin-bottom: 1rem;
 }
-
-.link-success-message {
-  background-color: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
-}
 </style>
