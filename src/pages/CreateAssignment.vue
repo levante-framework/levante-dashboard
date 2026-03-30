@@ -219,6 +219,7 @@ import useAssignmentExistsQuery from '@/composables/queries/useAssignmentExistsQ
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { useLevanteStore } from '@/store/levante';
+import { logger } from '@/logger';
 
 const initialized = ref(false);
 const isFormPopulated = ref(false);
@@ -292,7 +293,10 @@ watch(
   [existingData, isLoadingExistingData, errorExistingData],
   ([newExistingData, newIsLoadingExistingData, newErrorExistingData]) => {
     if (!newIsLoadingExistingData && !newExistingData) {
-      console.error('Failed to fetch administration', props.adminId, newErrorExistingData);
+      logger.error('Failed to fetch administration by id', {
+        assignmentId: props.adminId,
+        error: newErrorExistingData,
+      });
 
       toast.add({
         severity: TOAST_SEVERITIES.ERROR,
