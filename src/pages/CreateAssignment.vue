@@ -277,38 +277,60 @@ const { data: allVariants } = useTaskVariantsQuery(true, {
 // +------------------------------------------------------------------------------------------------------------------+
 // Fetch the data of the currently being edited administration, incl. its assigned assessments.
 const fetchAdminitrations = computed(() => initialized.value && !!props.adminId);
-const { data: existingAdministrationData } = useAdministrationsQuery([props.adminId], {
+const {
+  data: existingData,
+  isLoading: isLoadingExistingData,
+  error: errorExistingData,
+} = useAdministrationsQuery([props.adminId], {
   enabled: fetchAdminitrations,
   select: (data) => data[0],
   staleTime: 0,
   gcTime: 0,
 });
 
-const existingAssessments = computed(() => existingAdministrationData?.value?.assessments ?? []);
+watch(
+  [existingData, isLoadingExistingData, errorExistingData],
+  ([newExistingData, newIsLoadingExistingData, newErrorExistingData]) => {
+    if (!newIsLoadingExistingData && !newExistingData) {
+      console.error('Failed to fetch administration', props.adminId, newErrorExistingData);
+
+      toast.add({
+        severity: TOAST_SEVERITIES.ERROR,
+        summary: 'Failed to fetch assignment',
+        detail: "We could not fetch this assignment's data. Please try again later",
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+
+      router.go(-1);
+    }
+  },
+);
+
+const existingAssessments = computed(() => existingData?.value?.assessments ?? []);
 
 // Fetch the districts assigned to the administration.
-const districtIds = computed(() => existingAdministrationData?.value?.minimalOrgs?.districts ?? []);
+const districtIds = computed(() => existingData?.value?.minimalOrgs?.districts ?? []);
 
 const { data: existingDistrictsData } = useDistrictsQuery(districtIds, {
   enabled: initialized,
 });
 
 // Fetch the schools assigned to the administration.
-const schoolIds = computed(() => existingAdministrationData.value?.minimalOrgs?.schools ?? []);
+const schoolIds = computed(() => existingData.value?.minimalOrgs?.schools ?? []);
 
 const { data: existingSchoolsData } = useSchoolsQuery(schoolIds, {
   enabled: initialized,
 });
 
 // Fetch the classes assigned to the administration.
-const classIds = computed(() => existingAdministrationData.value?.minimalOrgs?.classes ?? []);
+const classIds = computed(() => existingData.value?.minimalOrgs?.classes ?? []);
 
 const { data: existingClassesData } = useClassesQuery(classIds, {
   enabled: initialized,
 });
 
 // Fetch the groups assigned to the administration.
-const groupIds = computed(() => existingAdministrationData.value?.minimalOrgs?.groups ?? []);
+const groupIds = computed(() => existingData.value?.minimalOrgs?.groups ?? []);
 
 const { data: existingGroupData } = useGroupsQuery(groupIds, {
   enabled: initialized,
@@ -457,7 +479,7 @@ const scrollToError = (elementId) => {
 };
 
 const hasAssignmentChanges = () => {
-  const original = existingAdministrationData.value;
+  const original = existingData.value;
   const current = state;
 
   // If no original data exists (new assignment), there are always changes
@@ -843,7 +865,7 @@ watch(hasUserConfirmed, (userConfirmed) => {
   if (userConfirmed) resetUserProgress();
 });
 
-watch([existingAdministrationData, allVariants], ([adminInfo, allVariantInfo]) => {
+watch([existingData, allVariants], ([adminInfo, allVariantInfo]) => {
   if (adminInfo && !_isEmpty(allVariantInfo)) {
     state.administrationName = adminInfo.name;
     state.administrationPublicName = adminInfo.name;
