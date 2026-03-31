@@ -16,6 +16,7 @@
             "
             :show-cancel-button="false"
             :show-upload-button="false"
+            :disabled="isAllSitesSelected"
             auto
             accept=".csv"
             custom-upload
@@ -25,7 +26,9 @@
             @uploader="onFileUpload($event)"
           />
           <span v-if="isFileUploaded" class="text-gray-500">File: {{ uploadedFile?.name }}</span>
-          <span v-else class="text-gray-500">No file chosen</span>
+          <span v-else class="text-gray-500">
+            {{ isAllSitesSelected ? 'Select a site to add users' : 'No file chosen' }}
+          </span>
         </div>
 
         <div v-if="isFileUploaded && !errorMissingColumns && !errorUsers.length">
