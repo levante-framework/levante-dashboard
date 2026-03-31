@@ -191,7 +191,7 @@ import { storeToRefs } from 'pinia';
 import _get from 'lodash/get';
 import _find from 'lodash/find';
 import _findIndex from 'lodash/findIndex';
-import { camelize, getAgeData } from '@bdelab/roar-utils';
+import { getAgeData } from '@bdelab/roar-utils';
 import PvTabPanel from 'primevue/tabpanel';
 import PvTabs from 'primevue/tabs';
 import PvTabList from 'primevue/tablist';
@@ -333,18 +333,17 @@ const getSpecificSurveyProgressClass = computed(() => (loopIndex: number): strin
 
 const { t, locale } = useI18n();
 
-const normalizeTaskId = (taskId: string): string => camelize(taskId);
+const toCamelCase = (taskId: string): string => taskId.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+const normalizedLevanteTaskIds = new Set(LEVANTE_TASK_IDS.map((taskId) => toCamelCase(taskId)));
+const normalizedRoarTaskIds = new Set(ROAR_TASK_IDS.map((taskId) => toCamelCase(taskId)));
 
-const normalizedLevanteTaskIds = new Set(LEVANTE_TASK_IDS.map((taskId) => normalizeTaskId(taskId)));
-const normalizedRoarTaskIds = new Set(ROAR_TASK_IDS.map((taskId) => normalizeTaskId(taskId)));
-
-const isLevanteTask = (taskId: string): boolean => normalizedLevanteTaskIds.has(normalizeTaskId(taskId));
-const isRoarTask = (taskId: string): boolean => normalizedRoarTaskIds.has(normalizeTaskId(taskId));
+const isLevanteTask = (taskId: string): boolean => normalizedLevanteTaskIds.has(toCamelCase(taskId));
+const isRoarTask = (taskId: string): boolean => normalizedRoarTaskIds.has(toCamelCase(taskId));
 
 const getTaskName = (taskId: string, taskName: string): string => {
   // Translate Levante task names. The task name is not the same as the taskId.
   const taskIdLowercased = taskId.toLowerCase();
-  const normalizedTaskId = normalizeTaskId(taskId);
+  const normalizedTaskId = toCamelCase(taskIdLowercased);
 
   if (taskIdLowercased.includes('survey')) {
     if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
@@ -369,7 +368,7 @@ const getTaskName = (taskId: string, taskName: string): string => {
 const getTaskDescription = (taskId: string, taskDescription: string): string => {
   // Translate Levante task descriptions if not in English
   const taskIdLowercased = taskId.toLowerCase();
-  const normalizedTaskId = normalizeTaskId(taskId);
+  const normalizedTaskId = toCamelCase(taskIdLowercased);
 
   if (taskIdLowercased.includes('survey')) {
     if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
@@ -391,7 +390,7 @@ const getRoutePath = (taskId: string, variantURL?: string, taskURL?: string): st
   // do not navigate if the task is external
   if (variantURL || taskURL) return '/';
 
-  const lowerCasedAndCamelizedTaskId = camelize(taskId.toLowerCase());
+  const lowerCasedAndCamelizedTaskId = toCamelCase(taskId.toLowerCase());
 
   if (lowerCasedAndCamelizedTaskId === 'teacherSurvey' || lowerCasedAndCamelizedTaskId === 'caregiverSurvey') {
     return '/survey';
