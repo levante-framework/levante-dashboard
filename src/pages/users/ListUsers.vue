@@ -183,6 +183,7 @@ import AppSpinner from '@/components/AppSpinner.vue';
 import EditUsersForm from '@/components/EditUsersForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
+import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 
 const props = defineProps({
   orgType: {
@@ -308,10 +309,10 @@ const csvExportColumns = computed(() => columns.value.filter((column) => !column
 const exportRowsToCsv = (rows, filename) => {
   if (!rows.length) {
     toast.add({
-      severity: 'warn',
+      severity: TOAST_SEVERITIES.WARN,
       summary: 'No users to export',
       detail: 'There are no users available for this export.',
-      life: 3000,
+      life: TOAST_DEFAULT_LIFE_DURATION,
     });
     return;
   }
