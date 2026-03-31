@@ -4,6 +4,17 @@
       <LinkUsersInfo />
 
       <PvDivider class="my-5" />
+      <PvMessage v-if="validationErrors.length" severity="error" class="mt-3 mb-3">
+        <p class="m-0 mb-2">
+          There are errors in the file you tried to upload, <code>{{ uploadedFile?.name || 'selected file' }}</code>. Please fix the listed errors and
+          try again.
+        </p>
+        <ul class="m-0 pl-3">
+          <li v-for="(error, index) in validationErrors" :key="`${index}-${error}`">
+            <span v-html="error"></span>
+          </li>
+        </ul>
+      </PvMessage>
 
       <div class="m-0 mb-5 p-3 bg-gray-100 border-1 border-gray-200 border-round">
         <div class="flex align-items-center gap-3">
@@ -12,6 +23,7 @@
             :empty-label="'Test'"
             :show-cancel-button="false"
             :show-upload-button="false"
+            :disabled="isAllSitesSelected"
             auto
             accept=".csv"
             custom-upload
@@ -20,8 +32,11 @@
             @uploader="onFileUpload($event)"
           />
           <span v-if="isFileUploaded" class="text-gray-500">File: {{ uploadedFile?.name }}</span>
-          <span v-else class="text-gray-500">No file chosen</span>
+          <span v-else class="text-gray-500">
+            {{ isAllSitesSelected ? 'Select a site to link users' : 'No file chosen' }}
+          </span>
         </div>
+
 
         <div v-if="isFileUploaded && !errorUsers.length">
           <PvDataTable
@@ -94,6 +109,7 @@ import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
 import PvFileUpload from 'primevue/fileupload';
+import PvMessage from 'primevue/message';
 import _forEach from 'lodash/forEach';
 import _startCase from 'lodash/startCase';
 import _isEmpty from 'lodash/isEmpty';
@@ -117,6 +133,7 @@ const errorUsers = ref([]);
 const errorUserColumns = ref([]);
 const activeSubmit = ref(false);
 const showErrorTable = ref(false);
+const validationErrors = ref([]);
 
 // LINKING
 // Required columns: id, userType, uid, caregiverId, teacherId
@@ -186,6 +203,7 @@ const resetUserProgress = () => {
   showErrorTable.value = false;
   errorUsers.value = [];
   errorUserColumns.value = [];
+  validationErrors.value = [];
 
   setHasUserConfirmed(false);
 };
@@ -238,12 +256,7 @@ const onFileUpload = async (event) => {
   });
 
   if (!filteredData || filteredData.length === 0) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Empty File',
-      detail: 'The uploaded file contains no data',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+    validationErrors.value = ['The uploaded file contains no data'];
     return;
   }
 
@@ -254,26 +267,22 @@ const onFileUpload = async (event) => {
   const requiredHeaders = ['id', 'usertype', 'uid', 'caregiverid', 'teacherid'];
 
   const headerValidation = validateCsvHeaders(headers, requiredHeaders);
+  const currentValidationErrors = [];
+
   if (!headerValidation.success) {
     const missingHeaders = headerValidation.errors.map((e) => e.field).join(', ');
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Missing Column',
-      detail: `Missing required column(s): ${missingHeaders}`,
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-    return;
+    currentValidationErrors.push(`Missing required column(s): <code>${missingHeaders}</code>`);
   }
 
   if (!hasAnyLinkingData(filteredData)) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Missing Linking Data',
-      detail: 'At least one child row must include caregiverId or teacherId to link users.',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+    currentValidationErrors.push('At least one child row must include a <code>caregiverId</code> and/or a <code>teacherId</code> to link users.');
+  }
+
+  if (currentValidationErrors.length) {
+    validationErrors.value = currentValidationErrors;
     return;
   }
+  validationErrors.value = [];
 
   const validation = validateLinkUsersCsv(filteredData);
 
