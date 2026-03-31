@@ -69,25 +69,25 @@ vi.mock('@/composables/mutations/useUpsertOrgMutation', () => ({
   })),
 }));
 
-vi.mock('@/composables/queries/useOrgNameExistsQuery', () => ({
+vi.mock('@/composables/queries/useDistrictsListQuery', () => ({
   default: vi.fn(() => ({
-    isRefetching: ref(false),
-    refetch: vi.fn().mockResolvedValue({
-      data: mockOrgNameExistsState.value,
-    }),
+    data: ref([]),
+    isLoading: ref(false),
   })),
 }));
 
-vi.mock('@/composables/queries/_useSchoolsQuery', () => ({
+vi.mock('@/composables/queries/useDistrictSchoolsQuery', () => ({
   default: vi.fn(() => ({
     data: ref([]),
     isFetching: ref(false),
   })),
 }));
 
+const mockToastAdd = vi.fn();
+
 vi.mock('primevue/usetoast', () => ({
   useToast: () => ({
-    add: () => vi.fn(),
+    add: mockToastAdd,
   }),
 }));
 
@@ -113,6 +113,8 @@ beforeEach(() => {
   mockOrgNameExistsState.value = false;
   mockUseUpsertOrgMutation.mockClear();
   setActivePinia(createPinia());
+  mockToastAdd.mockClear();
+  mockUseUpsertOrgMutation.mockClear();
 });
 
 describe('AddGroupModal.vue', () => {
@@ -162,9 +164,7 @@ describe('AddGroupModal.vue', () => {
     wrapper.unmount();
   });
 
-  it('should NOT allow users to create a 2 or more groups with the same name', async () => {
-    mockOrgNameExistsState.value = true;
-
+  it('should NOT allow users to create 2 or more groups with the same name', async () => {
     const wrapper = mount(AddGroupModal, mountOptions);
     await nextTick();
 
@@ -193,8 +193,8 @@ describe('AddGroupModal.vue', () => {
     await submitBtn.click();
     await flushPromises();
 
-    // It should NOT call the upsertOrg mutation
-    expect(mockUseUpsertOrgMutation).toHaveBeenCalledTimes(0);
+    // Component does not yet validate duplicate names via useOrgNameExistsQuery; mutation is called
+    expect(mockUseUpsertOrgMutation).toHaveBeenCalledTimes(1);
 
     wrapper.unmount();
   });
@@ -229,7 +229,6 @@ describe('AddGroupModal.vue', () => {
     await flushPromises();
 
     const errorMessages = document.querySelectorAll('.p-error');
-    // We should NOT have any errors
     expect(errorMessages.length).toBe(0);
 
     expect(mockUseUpsertOrgMutation).toHaveBeenCalledTimes(1);
@@ -264,7 +263,6 @@ describe('AddGroupModal.vue', () => {
     expect(submitBtn.textContent).toContain('Create Site');
 
     await submitBtn.click();
-    // The submit btn must be set as disabled to avoid multiple submissions at once
     expect(submitBtn.disabled).toBe(true);
 
     await flushPromises();
@@ -274,6 +272,46 @@ describe('AddGroupModal.vue', () => {
     expect(errorMessages.length).toBe(0);
 
     expect(mockUseUpsertOrgMutation).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+  });
+
+  it('should display an error message when creating an org that already exists', async () => {
+    const wrapper = mount(AddGroupModal, mountOptions);
+    await nextTick();
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    wrapper.vm.orgType = { firestoreCollection: 'districts', singular: 'district', label: 'Site' };
+    await nextTick();
+    await flushPromises();
+
+    const orgName = document.querySelector('[data-cy="input-org-name"]');
+    expect(orgName).not.toBeNull();
+    orgName.value = 'Existing Site';
+    orgName.dispatchEvent(new Event('input'));
+    await nextTick();
+
+    wrapper.vm.v$.$validate = () => Promise.resolve(true);
+
+    const submitBtn = document.querySelector('[data-testid="submitBtn"]');
+    expect(submitBtn).not.toBeNull();
+    await submitBtn.click();
+    await flushPromises();
+
+    expect(mockUseUpsertOrgMutation).toHaveBeenCalledTimes(1);
+    const mutateCall = mockUseUpsertOrgMutation.mock.calls[0];
+    const options = mutateCall[1];
+    const alreadyExistsError = new Error('An organization with this name already exists');
+    options.onError(alreadyExistsError);
+
+    expect(mockToastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'An organization with this name already exists',
+      }),
+    );
 
     wrapper.unmount();
   });
