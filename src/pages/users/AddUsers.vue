@@ -577,7 +577,7 @@ async function submitUsers() {
         }
 
         if (typeof userTypeValue === 'string') {
-          processedUser.userType = normalizeUserTypeForBackend(userTypeValue.toLowerCase());
+          processedUser.userType = normalizeUserTypeForBackend(userTypeValue);
         }
       }
 
