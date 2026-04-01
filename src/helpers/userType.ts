@@ -5,7 +5,7 @@ export function normalizeUserTypeForDisplay(userType = ''): string {
 }
 
 export function normalizeUserTypeForBackend(userType = ''): string {
-  if (userType === 'caregiver') return 'parent';
-  if (userType === 'child') return 'student';
+  if (userType.toLowerCase() === 'caregiver') return 'parent';
+  if (userType.toLowerCase() === 'child') return 'student';
   return userType;
 }
