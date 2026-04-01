@@ -21,14 +21,13 @@
             ></i
           ></PvButton>
           <div v-if="variant?.variant?.params?.cat" class="flex ml-2 gap-2">
-            <PvTag severity="warn" rounded><div class="font-semibold text-xs">CAT</div></PvTag>
             <PvTag severity="warn" rounded><div class="font-semibold text-xs">Adaptive</div></PvTag>
           </div>
         </div>
         <div class="pl-2 w-full">
           <p class="m-0">
             <span class="font-semibold text-sm">Variant name: </span>
-            <span class="text-sm">{{ formattedVariantName }}</span>
+            <span class="text-sm">{{ formattedVariantName(variant.variant.name) }}</span>
           </p>
         </div>
         <PvPopover ref="op" append-to="body" style="width: 40vh">
@@ -274,8 +273,7 @@ import PvDialog from 'primevue/dialog';
 import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import EditVariantDialog from '@/components/EditVariantDialog.vue';
-import { getTooltip } from '@/helpers';
-import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
+import { formattedVariantName, getTooltip } from '@/helpers';
 
 interface Condition {
   field: string;
@@ -336,30 +334,6 @@ const backupImage = '/src/assets/roar-logo.png';
 const showContent = ref<boolean>(false);
 const op = ref<any>(null);
 const visible = ref<boolean>(false);
-
-const isLocaleLike = (value: string): boolean => {
-  return /^[a-z]{2}(?:-[a-z]{2})?$/i.test(value.trim());
-};
-
-const formattedVariantName = computed((): string => {
-  const rawName = props.variant.variant?.name ?? '';
-  if (!rawName) return '';
-
-  let variantLanguage = rawName;
-  if (rawName?.toLowerCase()?.includes('adaptive')) {
-    const parts = rawName?.split(' ');
-    variantLanguage = parts[0]!;
-  }
-
-  const trimmedName = variantLanguage.trim();
-  const exactMatch = languageOptions[trimmedName]?.languageTaskPicker;
-  if (exactMatch) return exactMatch;
-
-  if (!isLocaleLike(trimmedName)) return rawName;
-
-  const matchedLocale = findBestMatchingLocale(trimmedName);
-  return languageOptions[matchedLocale]?.languageTaskPicker ?? rawName;
-});
 
 const formattedAssignedConditions = computed((): string => {
   const conditions = props.variant.variant?.conditions?.assigned?.conditions;

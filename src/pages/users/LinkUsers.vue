@@ -16,6 +16,24 @@
         </ul>
       </PvMessage>
 
+      <PvMessage
+        v-if="linkingAttemptError"
+        severity="error"
+        closable
+        class="mt-3 mb-3"
+        @close="linkingAttemptError = ''"
+      >
+        <p class="m-0 mb-2">
+          Linking was attempted but did not complete for <code>{{ uploadedFile?.name || 'your file' }}</code>.
+        </p>
+        <p class="m-0">Error: {{ linkingAttemptError }}</p>
+      </PvMessage>
+
+      <PvMessage v-if="lastLinkedFileName" severity="success" closable class="mb-4">
+        Linking successful with file <code>{{ lastLinkedFileName }}</code>.
+        Click below to upload another file.
+      </PvMessage>
+
       <div class="m-0 mb-5 p-3 bg-gray-100 border-1 border-gray-200 border-round">
         <div class="flex align-items-center gap-3">
           <PvFileUpload
@@ -134,6 +152,8 @@ const errorUserColumns = ref([]);
 const activeSubmit = ref(false);
 const showErrorTable = ref(false);
 const validationErrors = ref([]);
+const lastLinkedFileName = ref('');
+const linkingAttemptError = ref('');
 
 // LINKING
 // Required columns: id, userType, uid, caregiverId, teacherId
@@ -204,6 +224,8 @@ const resetUserProgress = () => {
   errorUsers.value = [];
   errorUserColumns.value = [];
   validationErrors.value = [];
+  lastLinkedFileName.value = '';
+  linkingAttemptError.value = '';
 
   setHasUserConfirmed(false);
 };
@@ -430,6 +452,7 @@ const submitUsers = async () => {
   showErrorTable.value = false;
   errorUsers.value = [];
   errorUserColumns.value = [];
+  linkingAttemptError.value = '';
 
   try {
     const normalizedUsers = toRaw(rawUserFile.value).map((user) => {
@@ -463,24 +486,17 @@ const submitUsers = async () => {
     });
 
     await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: currentSite.value });
+    lastLinkedFileName.value = uploadedFile.value?.name ?? '';
     isFileUploaded.value = false;
     showErrorTable.value = false;
     errorUsers.value = [];
     errorUserColumns.value = [];
-
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Users linked successfully',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+    validationErrors.value = [];
+    linkingAttemptError.value = '';
   } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: `Failed to link users: ${error.message}. Please try again.`,
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+    linkingAttemptError.value = error?.message
+      ? `${error.message}. Please try again.`
+      : 'Something went wrong. Please try again.';
   } finally {
     activeSubmit.value = false;
   }
