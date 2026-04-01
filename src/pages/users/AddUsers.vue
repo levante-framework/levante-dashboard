@@ -328,6 +328,25 @@ function generateColumns(rawJson) {
   return columns;
 }
 
+async function runWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function runner() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex++;
+      results[currentIndex] = await worker(items[currentIndex], currentIndex);
+    }
+  }
+
+  const runnerCount = Math.min(limit, items.length);
+  const runners = Array.from({ length: runnerCount }, () => runner());
+
+  await Promise.all(runners);
+
+  return results;
+}
+
 async function submitUsers() {
   // Check if there are any errors before proceeding
   if (errorUsers.value.length > 0) {
@@ -556,47 +575,48 @@ async function submitUsers() {
   }
   // Chunk and run: Not a transactional operation so partial success is possible
   // TODO: Add some retry operations to handle partial successes
-  const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 50);
-  const createUserPromises = [];
+  const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 25);
+  const concurrencyLimit = 2;
 
-  for (const users of chunkedUsersToBeRegistered) {      // Ensure each user has the proper userType field name for the backend
-    const processedUsers = users.map(({ user }) => {
-      const processedUser = { ...user };
+  try {
+    const createUserResults = await runWithConcurrency(chunkedUsersToBeRegistered, concurrencyLimit, async (users) => {
+      // Ensure each user has the proper userType field name for the backend
+      const processedUsers = users.map(({ user }) => {
+        const processedUser = { ...user };
 
-      // Find the userType field (case-insensitive)
-      const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
+        // Find the userType field (case-insensitive)
+        const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
 
-      // Ensure the key is exactly 'userType' and handle potential casing issues
-      if (userTypeField) {
-        const userTypeValue = user[userTypeField];
-        // Set the key to 'userType' regardless of original casing
-        processedUser.userType = userTypeValue;
-        // Remove the original field if the casing was different
-        if (userTypeField !== 'userType') {
-          delete processedUser[userTypeField];
+        // Ensure the key is exactly 'userType' and handle potential casing issues
+        if (userTypeField) {
+          const userTypeValue = user[userTypeField];
+          // Set the key to 'userType' regardless of original casing
+          processedUser.userType = userTypeValue;
+          // Remove the original field if the casing was different
+          if (userTypeField !== 'userType') {
+            delete processedUser[userTypeField];
+          }
+
+          if (typeof userTypeValue === 'string') {
+            processedUser.userType = normalizeUserTypeForBackend(userTypeValue);
+          }
         }
 
-        if (typeof userTypeValue === 'string') {
-          processedUser.userType = normalizeUserTypeForBackend(userTypeValue);
-        }
+        return processedUser;
+      });
+
+      const createUsersPayload = {
+        users: processedUsers,
+      };
+
+      if (currentSite.value && currentSite.value !== 'any') {
+        createUsersPayload.siteId = currentSite.value;
+      } else if (processedUsers.length > 0 && processedUsers[0].orgIds?.districts?.length > 0) {
+        createUsersPayload.siteId = processedUsers[0].orgIds.districts[0];
       }
 
-      return processedUser;
+      return await createUsers(createUsersPayload);
     });
-
-    const createUsersPayload = {
-      users: processedUsers,
-    };
-
-    if (currentSite.value && currentSite.value !== 'any') {
-      createUsersPayload.siteId = currentSite.value;
-    } else if (processedUsers.length > 0 && processedUsers[0].orgIds?.districts?.length > 0) {
-      createUsersPayload.siteId = processedUsers[0].orgIds.districts[0];
-    }
-    createUserPromises.push(createUsers(createUsersPayload));
-  }
-  try {
-    const createUserResults = await Promise.all(createUserPromises);
 
     // Merging all the users in a flat list
     for (const result of createUserResults) {
