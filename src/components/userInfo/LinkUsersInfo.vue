@@ -15,11 +15,7 @@
 
     <div class="how-to-section">
       <h3>How to Link Users</h3>
-<<<<<<< HEAD
-      <div class="text-md text-gray-500 mb-1 line-height-3">Links are indicated by completing the <code>caregiverID</code> and <code>teacherID</code> fields with the adult’s project <code>id</code> on the corresponding child’s row. Read the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">link users documentation</a> for mmore informaton on how and when to link users.</div>
-=======
       <div class="text-md text-gray-500 mb-1 line-height-3">Links are indicated by completing the <code>caregiverID</code> and <code>teacherID</code> fields with the adult’s project <code>id</code> on the corresponding child’s row. Read the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">link users documentation</a> for more information on how and when to link users.</div>
->>>>>>> origin/main
     </div>
 
 
