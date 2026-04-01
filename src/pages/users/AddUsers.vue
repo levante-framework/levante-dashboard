@@ -123,6 +123,7 @@
 <script setup>
 import { ref, toRaw, watch, nextTick, computed } from 'vue';
 import { csvFileToJson, normalizeToLowercase } from '@/helpers';
+import { normalizeUserTypeForBackend } from '@/helpers/userType';
 import _cloneDeep from 'lodash/cloneDeep';
 import _forEach from 'lodash/forEach';
 import _capitalize from 'lodash/capitalize';
@@ -575,9 +576,8 @@ async function submitUsers() {
           delete processedUser[userTypeField];
         }
 
-        // *** Add check to convert 'caregiver' value to 'parent' ***
-        if (typeof userTypeValue === 'string' && userTypeValue.toLowerCase() === 'caregiver') {
-          processedUser.userType = 'parent';
+        if (typeof userTypeValue === 'string') {
+          processedUser.userType = normalizeUserTypeForBackend(userTypeValue);
         }
       }
 
