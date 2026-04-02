@@ -1,0 +1,127 @@
+name: Deploy Hotfix to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      released_ref:
+        description: 'Existing released branch or tag to deploy from (for example: v1.2.3 or release/v1.2.x)'
+        required: true
+        type: string
+      release_tag:
+        description: 'Existing release tag to update notes for (optional, for example: v1.2.3)'
+        required: false
+        type: string
+      release_notes:
+        description: 'Hotfix notes to append to an existing GitHub release (optional)'
+        required: false
+        type: string
+      update_release_notes:
+        description: 'Append notes to existing GitHub release'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build_deploy_hotfix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.LEVANTE_BOT_APP_ID }}
+          private_key: ${{ secrets.LEVANTE_BOT_APP_PRIVATE_KEY }}
+
+      - name: Checkout released ref
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.generate_token.outputs.token }}
+          ref: ${{ github.event.inputs.released_ref }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Read version from package.json
+        id: version
+        run: |
+          APP_VERSION=$(node -p "require('./package.json').version")
+          echo "app_version=${APP_VERSION}" >> $GITHUB_OUTPUT
+          echo "ref_name=${{ github.event.inputs.released_ref }}" >> $GITHUB_OUTPUT
+
+      - name: Build for production
+        env:
+          NODE_OPTIONS: '--max_old_space_size=8192'
+        run: npm run build:prod
+
+      - name: Create Sentry release
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          sourcemaps: ./dist/assets
+          version: hotfix-${{ steps.version.outputs.app_version }}-${{ github.sha }}
+          finalize: false
+
+      - name: Deploy to Firebase Production
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ steps.generate_token.outputs.token }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD_ADMIN }}
+          channelId: live
+          projectId: hs-levante-admin-prod
+          target: production
+
+      - name: Finalize Sentry release
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          version: hotfix-${{ steps.version.outputs.app_version }}-${{ github.sha }}
+          finalize: true
+
+      - name: Append notes to existing GitHub release
+        if: ${{ github.event.inputs.update_release_notes == 'true' && github.event.inputs.release_tag != '' }}
+        uses: actions/github-script@v7
+        env:
+          RELEASE_NOTES_INPUT: ${{ github.event.inputs.release_notes }}
+        with:
+          github-token: ${{ steps.generate_token.outputs.token }}
+          script: |
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+            const tag = '${{ github.event.inputs.release_tag }}'
+            const now = new Date().toISOString()
+            const header = `\n\n## Hotfix Deployment\n- Deployed from: \`${{ github.event.inputs.released_ref }}\`\n- Commit: \`${context.sha}\`\n- Deployed by: \`${context.actor}\`\n- Timestamp: \`${now}\`\n`
+            const extra = process.env.RELEASE_NOTES_INPUT ? `\n### Hotfix Notes\n${process.env.RELEASE_NOTES_INPUT}\n` : ''
+
+            const release = await github.rest.repos.getReleaseByTag({
+              owner,
+              repo,
+              tag,
+            })
+
+            const existingBody = release.data.body || ''
+            const updatedBody = `${existingBody}${header}${extra}`
+
+            await github.rest.repos.updateRelease({
+              owner,
+              repo,
+              release_id: release.data.id,
+              body: updatedBody,
+            })
