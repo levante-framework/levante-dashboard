@@ -6,7 +6,39 @@ import firebaseJSON from '../firebase.json';
 
 const emulatorConfig = import.meta.env.VITE_EMULATOR ? firebaseJSON.emulators : undefined;
 
-const roarConfig = levanteFirebaseConfig;
+interface FirekitProjectConfig {
+  apiKey: string;
+  appId: string;
+  authDomain?: string;
+  messagingSenderId: string;
+  projectId: string;
+  storageBucket: string;
+}
+
+interface FirekitConfig {
+  app?: FirekitProjectConfig;
+  admin?: FirekitProjectConfig;
+}
+
+const normalizeProjectConfig = (config?: FirekitProjectConfig): FirekitProjectConfig | undefined => {
+  if (!config?.projectId) return config;
+
+  const normalizedAuthDomain = config.authDomain?.trim() || `${config.projectId}.firebaseapp.com`;
+  return { ...config, authDomain: normalizedAuthDomain };
+};
+
+const normalizeRoarConfig = (config: FirekitConfig): FirekitConfig => {
+  const normalizedAppConfig = normalizeProjectConfig(config.app);
+  const normalizedAdminConfig = normalizeProjectConfig(config.admin ?? normalizedAppConfig);
+
+  return {
+    ...config,
+    app: normalizedAppConfig,
+    admin: normalizedAdminConfig,
+  };
+};
+
+const roarConfig = normalizeRoarConfig(levanteFirebaseConfig as FirekitConfig);
 
 export async function initNewFirekit(): Promise<RoarFirekit> {
   const firekit = new RoarFirekit({
