@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/vue';
 import { useAuthStore } from '@/store/auth';
 import { SIGN_OUT_MUTATION_KEY } from '@/constants/mutationKeys';
 import { APP_ROUTES } from '@/constants/routes';
+import { useLevanteStore } from '@/store/levante';
 import { useSurveyStore } from '@/store/survey';
 import { useAssignmentsStore } from '@/store/assignments';
 
@@ -16,6 +17,7 @@ import { useAssignmentsStore } from '@/store/assignments';
 const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown> => {
   const assignmentsStore = useAssignmentsStore();
   const authStore = useAuthStore();
+  const levanteStore = useLevanteStore();
   const surveyStore = useSurveyStore();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -34,6 +36,7 @@ const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown>
       assignmentsStore.$reset();
       authStore.$reset();
       assignmentsStore.$reset();
+      levanteStore.$reset();
       surveyStore.reset();
       sessionStorage.removeItem('authStore');
       sessionStorage.removeItem('assignmentsStore');
