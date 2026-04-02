@@ -1,18 +1,19 @@
 export const LEVANTE_TASK_IDS = [
-  'intro',
-  'heartsAndFlowers',
+  'adultReasoning',
+  'childSurvey',
   'egmaMath',
+  'heartsAndFlowers',
+  'intro',
   'matrixReasoning',
+  'mefs',
   'memoryGame',
   'mentalRotation',
+  'roarInference',
   'sameDifferentSelection',
+  'survey',
   'theoryOfMind',
   'trog',
-  'survey',
-  'mefs',
-  'roarInference',
   'vocab',
-  'childSurvey',
 ] as const;
 
 export const ROAR_TASK_IDS = ['pa', 'swr', 'sre'] as const;
