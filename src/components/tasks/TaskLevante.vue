@@ -105,7 +105,7 @@ async function startTask(selectedAdmin) {
 
     const trialContainer = taskId === 'child-survey' ? 'surveyResponses' : 'runs';
 
-    const appKit = await authStore.roarfirekit.startAssessment(selectedAdmin.value.id, taskId, version);
+    const appKit = await authStore.roarfirekit.startAssessment(selectedAdmin.value.id, taskId, version, trialContainer);
 
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
