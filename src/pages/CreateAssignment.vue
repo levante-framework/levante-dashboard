@@ -301,7 +301,7 @@ watch(
       toast.add({
         severity: TOAST_SEVERITIES.ERROR,
         summary: 'Failed to fetch assignment',
-        detail: "We could not fetch this assignment's data. Please try again later",
+        detail: 'We could not fetch this assignment\'s data. Please try again later',
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
 

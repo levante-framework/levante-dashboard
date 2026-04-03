@@ -41,6 +41,13 @@ export interface CreateUpdateAdministratorPayload {
   isTestData?: boolean;
 }
 
+const CREATE_USERS_CALLABLE_TIMEOUT_MS = 540_000;
+
+export interface CreateUsersPayload {
+  users: Record<string, unknown>[];
+  siteId?: string;
+}
+
 const ADMIN_ROLES = new Set<string>([
   ROLES.SUPER_ADMIN,
   ROLES.SITE_ADMIN,
@@ -118,6 +125,14 @@ class UsersRepository extends Repository {
       return this.call<CreateUpdateAdministratorPayload, unknown>('updateAdministrator', payload);
     }
     return this.call<CreateUpdateAdministratorPayload, unknown>('createAdministrator', payload);
+  }
+
+  async createUsers(payload: CreateUsersPayload): Promise<unknown> {
+    return this.callWithTimeout<CreateUsersPayload, unknown>(
+      'createUsers',
+      payload,
+      CREATE_USERS_CALLABLE_TIMEOUT_MS,
+    );
   }
 }
 

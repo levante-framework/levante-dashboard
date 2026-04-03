@@ -1,5 +1,24 @@
 <template>
   <main class="container main">
+    <PvDialog
+      v-model:visible="showBulkCreateUsersModal"
+      modal
+      header="Creating users"
+      :closable="false"
+      :close-on-escape="false"
+      :draggable="false"
+      :style="{ width: 'min(32rem, 90vw)' }"
+      data-cy="dialog-bulk-create-users"
+    >
+      <div class="flex flex-column align-items-center gap-3 py-4">
+        <AppSpinner />
+        <p class="m-0 text-center text-gray-700 line-height-3">
+          This step runs on the server and can take several minutes for large files. Please keep this tab open until it
+          finishes.
+        </p>
+      </div>
+    </PvDialog>
+
     <section class="main-body">
       <!--Upload file section-->
       <AddUsersInfo />
@@ -133,11 +152,14 @@ import _chunk from 'lodash/chunk';
 import { useToast } from 'primevue/usetoast';
 import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
 import { useAuthStore } from '@/store/auth';
+import { usersRepository } from '@/firebase/repositories/UsersRepository';
+import AppSpinner from '@/components/AppSpinner.vue';
 import { pluralizeFirestoreCollection } from '@/helpers';
 import { fetchOrgByName } from '@/helpers/query/orgs';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
+import PvDialog from 'primevue/dialog';
 import PvDivider from 'primevue/divider';
 import PvFileUpload from 'primevue/fileupload';
 import { useRouter } from 'vue-router';
@@ -152,7 +174,6 @@ const { hasUserConfirmed } = storeToRefs(levanteStore);
 const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const authStore = useAuthStore();
 const { currentSite, currentSiteName } = storeToRefs(authStore);
-const { createUsers } = authStore;
 const toast = useToast();
 
 const isAllSitesSelected = computed(() => currentSite.value === 'any');
@@ -162,6 +183,7 @@ const uploadedFile = ref(null);
 const rawUserFile = ref({});
 const registeredUsers = ref([]);
 const hasMultipleSites = ref(false);
+const showBulkCreateUsersModal = ref(false);
 
 // Primary Table & Dropdown refs
 const dataTable = ref();
@@ -326,6 +348,14 @@ function generateColumns(rawJson) {
     });
   });
   return columns;
+}
+
+function getRegisteredUsersFromCreateResult(result) {
+  if (result == null || typeof result !== 'object') return [];
+  const payload = result.data !== undefined ? result.data : result;
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object' && Array.isArray(payload.data)) return payload.data;
+  return [];
 }
 
 async function runWithConcurrency(items, limit, worker) {
@@ -578,6 +608,7 @@ async function submitUsers() {
   const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 25);
   const concurrencyLimit = 2;
 
+  showBulkCreateUsersModal.value = true;
   try {
     const createUserResults = await runWithConcurrency(chunkedUsersToBeRegistered, concurrencyLimit, async (users) => {
       // Ensure each user has the proper userType field name for the backend
@@ -615,13 +646,11 @@ async function submitUsers() {
         createUsersPayload.siteId = processedUsers[0].orgIds.districts[0];
       }
 
-      return await createUsers(createUsersPayload);
+      return await usersRepository.createUsers(createUsersPayload);
     });
 
-    // Merging all the users in a flat list
     for (const result of createUserResults) {
-      const currentRegisteredUsers = result.data.data;
-      registeredUsers.value.push(...currentRegisteredUsers);
+      registeredUsers.value.push(...getRegisteredUsersFromCreateResult(result));
     }
 
     // Merging the registered users with the raw user file
@@ -650,10 +679,10 @@ async function submitUsers() {
       summary: 'Error registering users: ' + error.message,
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
+  } finally {
+    showBulkCreateUsersModal.value = false;
+    activeSubmit.value = false;
   }
-
-  /* We want to clear this flag whether we got an error or not */
-  activeSubmit.value = false;
 }
 
 const csvBlob = ref(null);
