@@ -4,6 +4,30 @@
       <LinkUsersInfo />
 
       <PvDivider class="my-5" />
+      <PvMessage v-if="validationErrors.length" severity="error" class="mt-3 mb-3">
+        <p class="m-0 mb-2">
+          There are errors in the file you tried to upload, <code>{{ uploadedFile?.name || 'selected file' }}</code>. Please fix the listed errors and
+          try again.
+        </p>
+        <ul class="m-0 pl-3">
+          <li v-for="(error, index) in validationErrors" :key="`${index}-${error}`">
+            <span v-html="error"></span>
+          </li>
+        </ul>
+      </PvMessage>
+
+      <PvMessage
+        v-if="linkingAttemptError"
+        severity="error"
+        closable
+        class="mt-3 mb-3"
+        @close="linkingAttemptError = ''"
+      >
+        <p class="m-0 mb-2">
+          Linking was attempted but did not complete for <code>{{ uploadedFile?.name || 'your file' }}</code>.
+        </p>
+        <p class="m-0">Error: {{ linkingAttemptError }}</p>
+      </PvMessage>
 
       <PvMessage v-if="lastLinkedFileName" severity="success" closable class="mb-4">
         Linking successful with file <code>{{ lastLinkedFileName }}</code>.
@@ -17,6 +41,7 @@
             :empty-label="'Test'"
             :show-cancel-button="false"
             :show-upload-button="false"
+            :disabled="isAllSitesSelected"
             auto
             accept=".csv"
             custom-upload
@@ -25,8 +50,11 @@
             @uploader="onFileUpload($event)"
           />
           <span v-if="isFileUploaded" class="text-gray-500">File: {{ uploadedFile?.name }}</span>
-          <span v-else class="text-gray-500">No file chosen</span>
+          <span v-else class="text-gray-500">
+            {{ isAllSitesSelected ? 'Select a site to link users' : 'No file chosen' }}
+          </span>
         </div>
+
 
         <div v-if="isFileUploaded && !errorUsers.length">
           <PvDataTable
@@ -46,6 +74,9 @@
                   <b>{{ col.header }}</b>
                 </div>
               </template>
+              <template #body="{ data }">
+                <span>{{ formatPreviewCell(data, col.field) }}</span>
+              </template>
             </PvColumn>
           </PvDataTable>
 
@@ -60,7 +91,7 @@
         </div>
       </div>
 
-      <div v-if="showErrorTable" class="error-container">
+      <div v-if="showErrorTable && errorUsers.length" class="error-container">
         <div class="error-header">
           <h3>Rows with Errors</h3>
         </div>
@@ -121,36 +152,68 @@ const errorUsers = ref([]);
 const errorUserColumns = ref([]);
 const activeSubmit = ref(false);
 const showErrorTable = ref(false);
+const validationErrors = ref([]);
 const lastLinkedFileName = ref('');
+const linkingAttemptError = ref('');
 
 // LINKING
-// Required: id, userType, uid
-// Optional: parentId, teacherId
+// Required columns: id, userType, uid, caregiverId, teacherId
+// Optional columns: school, class, cohort, email
+
+function formatPreviewCell(data, field) {
+  const key = Object.keys(data).find((k) => k.toLowerCase() === field.toLowerCase());
+  if (key === undefined) return '';
+  const val = data[key];
+  if (val === null || val === undefined) return '';
+  if (Array.isArray(val)) return val.join(', ');
+  if (typeof val === 'object') return JSON.stringify(val);
+  return String(val);
+}
 
 const allFields = [
   {
     field: 'id',
-    header: 'ID',
+    header: 'id',
     dataType: 'string',
   },
   {
     field: 'userType',
-    header: 'User Type',
+    header: 'userType',
     dataType: 'string',
   },
   {
     field: 'caregiverId',
-    header: 'Caregiver ID',
+    header: 'caregiverId',
     dataType: 'string',
   },
   {
     field: 'teacherId',
-    header: 'Teacher ID',
+    header: 'teacherId',
+    dataType: 'string',
+  },
+  {
+    field: 'school',
+    header: 'school',
+    dataType: 'string',
+  },
+  {
+    field: 'class',
+    header: 'class',
+    dataType: 'string',
+  },
+  {
+    field: 'cohort',
+    header: 'cohort',
     dataType: 'string',
   },
   {
     field: 'uid',
-    header: 'UID',
+    header: 'uid',
+    dataType: 'string',
+  },
+  {
+    field: 'email',
+    header: 'email',
     dataType: 'string',
   },
 ];
@@ -159,11 +222,40 @@ const resetUserProgress = () => {
   isFileUploaded.value = false;
   uploadedFile.value = null;
   showErrorTable.value = false;
+  errorUsers.value = [];
+  errorUserColumns.value = [];
+  validationErrors.value = [];
   lastLinkedFileName.value = '';
+  linkingAttemptError.value = '';
 
-  // Reset user confirmation
   setHasUserConfirmed(false);
 };
+
+const hasAnyLinkingData = (users) =>
+  users.some((user) => {
+    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
+    const userType = userTypeField && user[userTypeField] ? String(user[userTypeField]).trim().toLowerCase() : '';
+    if (userType !== 'child') return false;
+
+    const caregiverIdField = Object.keys(user).find((key) => key.toLowerCase() === 'caregiverid');
+    const teacherIdField = Object.keys(user).find((key) => key.toLowerCase() === 'teacherid');
+
+    const hasCaregiverId =
+      caregiverIdField &&
+      String(user[caregiverIdField] ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .some((id) => id !== '');
+
+    const hasTeacherId =
+      teacherIdField &&
+      String(user[teacherIdField] ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .some((id) => id !== '');
+
+    return hasCaregiverId || hasTeacherId;
+  });
 
 const onFileUpload = async (event) => {
   resetUserProgress();
@@ -187,12 +279,7 @@ const onFileUpload = async (event) => {
   });
 
   if (!filteredData || filteredData.length === 0) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Empty File',
-      detail: 'The uploaded file contains no data',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+    validationErrors.value = ['The uploaded file contains no data'];
     return;
   }
 
@@ -200,19 +287,25 @@ const onFileUpload = async (event) => {
 
   const firstRow = toRaw(rawUserFile.value[0]);
   const headers = Object.keys(firstRow);
-  const requiredHeaders = ['id', 'usertype', 'uid'];
+  const requiredHeaders = ['id', 'usertype', 'uid', 'caregiverid', 'teacherid'];
 
   const headerValidation = validateCsvHeaders(headers, requiredHeaders);
+  const currentValidationErrors = [];
+
   if (!headerValidation.success) {
     const missingHeaders = headerValidation.errors.map((e) => e.field).join(', ');
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Missing Column',
-      detail: `Missing required column(s): ${missingHeaders}`,
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+    currentValidationErrors.push(`Missing required column(s): <code>${missingHeaders}</code>`);
+  }
+
+  if (!hasAnyLinkingData(filteredData)) {
+    currentValidationErrors.push('At least one child row must include a <code>caregiverId</code> and/or a <code>teacherId</code> to link users.');
+  }
+
+  if (currentValidationErrors.length) {
+    validationErrors.value = currentValidationErrors;
     return;
   }
+  validationErrors.value = [];
 
   const validation = validateLinkUsersCsv(filteredData);
 
@@ -336,6 +429,7 @@ const validateUsers = (usersWithZodErrors = new Set()) => {
 
 const submitUsers = async () => {
   if (errorUsers.value.length > 0) {
+    showErrorTable.value = true;
     toast.add({
       severity: 'error',
       summary: 'Error',
@@ -359,6 +453,7 @@ const submitUsers = async () => {
   showErrorTable.value = false;
   errorUsers.value = [];
   errorUserColumns.value = [];
+  linkingAttemptError.value = '';
 
   try {
     const normalizedUsers = toRaw(rawUserFile.value).map((user) => {
@@ -395,13 +490,15 @@ const submitUsers = async () => {
     await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: currentSite.value });
     lastLinkedFileName.value = uploadedFile.value?.name ?? '';
     isFileUploaded.value = false;
+    showErrorTable.value = false;
+    errorUsers.value = [];
+    errorUserColumns.value = [];
+    validationErrors.value = [];
+    linkingAttemptError.value = '';
   } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: `Failed to link users: ${error.message}. Please try again.`,
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+    linkingAttemptError.value = error?.message
+      ? `${error.message}. Please try again.`
+      : 'Something went wrong. Please try again.';
   } finally {
     activeSubmit.value = false;
   }
@@ -425,8 +522,6 @@ function generateColumns(rawJson) {
 }
 
 function addErrorUser(user, error) {
-  // If there are no error users yet, generate the
-  //  columns before displaying the table.
   if (_isEmpty(errorUserColumns.value)) {
     errorUserColumns.value = generateColumns(user);
     errorUserColumns.value.unshift({
@@ -434,7 +529,6 @@ function addErrorUser(user, error) {
       field: 'error',
       header: 'Cause of Error',
     });
-    showErrorTable.value = true;
   }
   // Concat the userObject with the error reason.
   errorUsers.value.push({
