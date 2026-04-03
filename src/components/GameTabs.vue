@@ -208,6 +208,7 @@ import { useAssignmentsStore } from '@/store/assignments';
 import { ASSIGNMENT_STATUSES } from '@/constants';
 import { getAssignmentStatus } from '@/helpers/assignments';
 import { LEVANTE_TASK_IDS, ROAR_TASK_IDS } from '@/constants/coreTasks';
+import { logger } from '@/logger';
 
 interface TaskData {
   name: string;
@@ -390,17 +391,14 @@ const getRoutePath = (taskId: string, variantURL?: string, taskURL?: string): st
   // do not navigate if the task is external
   if (variantURL || taskURL) return '/';
 
-  const lowerCasedAndCamelizedTaskId = toCamelCase(taskId.toLowerCase());
+  const camelizedTaskId = toCamelCase(taskId.toLowerCase());
 
-  if (
-    lowerCasedAndCamelizedTaskId === 'teacherSurvey' ||
-    lowerCasedAndCamelizedTaskId === 'caregiverSurvey' ||
-    lowerCasedAndCamelizedTaskId === 'survey'
-  ) {
+  if (camelizedTaskId === 'teacherSurvey' || camelizedTaskId === 'caregiverSurvey' || camelizedTaskId === 'survey') {
     return '/survey';
-  } else if (LEVANTE_TASK_IDS.some((taskId) => taskId === lowerCasedAndCamelizedTaskId)) {
+  } else if (normalizedLevanteTaskIds.has(camelizedTaskId)) {
     return '/game/core-tasks/' + taskId;
   } else {
+    logger.capture(`Task ${camelizedTaskId} is not a core task`, { taskId });
     return '/game/' + taskId;
   }
 };
