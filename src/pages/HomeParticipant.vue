@@ -117,7 +117,11 @@ import { fetchAudioLinks } from '@/helpers/survey';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useQueryClient, useQuery } from '@tanstack/vue-query';
-import { initializeSurvey, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
+import {
+  bootstrapSurveyInstance,
+  setupSurveyEventHandlers,
+  setupStudentAudio,
+} from '@/helpers/surveyInitialization';
 import { useSurveyStore } from '@/store/survey';
 import { fetchDocsById } from '@/helpers/query/utils';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
@@ -501,7 +505,6 @@ function createSurveyInstance(surveyDataToStartAt) {
   const surveyInstance = new Model(
     typeof structuredClone === 'function' ? structuredClone(surveyJson) : JSON.parse(JSON.stringify(surveyJson)),
   );
-  surveyInstance.locale = locale.value;
   return surveyInstance;
 }
 
@@ -611,15 +614,14 @@ watch(
     const surveyInstance = createSurveyInstance(surveyDataToStartAt);
     setupMarkdownConverter(surveyInstance);
 
-    await initializeSurvey({
+    bootstrapSurveyInstance({
       surveyInstance,
       userType: userType.value,
       specificSurveyData: specificSurveyData.value,
       userData: userData.value,
       surveyStore,
-      locale: locale.value,
-      audioLinkMap: surveyStore.audioLinkMap,
       generalSurveyData: surveyData.value.general,
+      locale: locale.value,
     });
 
     setupSurveyEventHandlers({
@@ -637,6 +639,15 @@ watch(
     });
 
     surveyStore.setSurvey(surveyInstance);
+
+    if (userType.value === 'student') {
+      await setupStudentAudio(
+        surveyInstance,
+        locale.value,
+        surveyStore.audioLinkMap,
+        surveyStore,
+      );
+    }
   },
   { immediate: true },
 );
