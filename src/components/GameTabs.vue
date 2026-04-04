@@ -392,7 +392,11 @@ const getRoutePath = (taskId: string, variantURL?: string, taskURL?: string): st
 
   const lowerCasedAndCamelizedTaskId = toCamelCase(taskId.toLowerCase());
 
-  if (lowerCasedAndCamelizedTaskId === 'teacherSurvey' || lowerCasedAndCamelizedTaskId === 'caregiverSurvey') {
+  if (
+    lowerCasedAndCamelizedTaskId === 'teacherSurvey' ||
+    lowerCasedAndCamelizedTaskId === 'caregiverSurvey' ||
+    lowerCasedAndCamelizedTaskId === 'survey'
+  ) {
     return '/survey';
   } else if (LEVANTE_TASK_IDS.some((taskId) => taskId === lowerCasedAndCamelizedTaskId)) {
     return '/game/core-tasks/' + taskId;
@@ -551,7 +555,12 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   box-sizing: border-box;
   transition: box-shadow 0.2s ease-in-out;
 
-  // Reset button defaults
+  // Reset native <button> when .game-btn is used on `<button>` (e.g. completed task)
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  appearance: none;
+
   &[disabled] {
     cursor: not-allowed;
   }
