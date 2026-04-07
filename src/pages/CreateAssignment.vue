@@ -30,6 +30,7 @@
       </div>
 
       <PvDivider />
+
       <div class="text-sm text-gray-500 mt-3 mr-3 required"><span class="required-asterisk">*</span> Required</div>
       <div class="bg-gray-100 rounded p-5">
         <div class="formgrid grid mt-5">
@@ -301,7 +302,7 @@ watch(
       toast.add({
         severity: TOAST_SEVERITIES.ERROR,
         summary: 'Failed to fetch assignment',
-        detail: 'We could not fetch this assignment\'s data. Please try again later',
+        detail: "We could not fetch this assignment's data. Please try again later",
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
 
