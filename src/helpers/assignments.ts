@@ -30,6 +30,6 @@ export const sortAssignmentsByDateOpened = (assignments: AdministrationType[]) =
   return [...assignments].sort((a, b) => {
     const aTime = new Date(a.dateOpened).getTime() || 0;
     const bTime = new Date(b.dateOpened).getTime() || 0;
-    return bTime - aTime;
+    return aTime - bTime;
   });
 };
