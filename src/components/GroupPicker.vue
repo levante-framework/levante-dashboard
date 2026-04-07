@@ -241,7 +241,7 @@ watch(
     const shouldHideOptions = activeHeader === FIRESTORE_COLLECTIONS.CLASSES && !selectedSchool;
     orgOptions.value = shouldHideOptions ? [] : orgs;
   },
-  { deep: true },
+  { deep: true, immediate: true },
 );
 
 const removeSelectedOrg = (orgHeader: string, selectedOrg: OrgItem) => {
