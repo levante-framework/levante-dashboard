@@ -120,6 +120,7 @@
 <script setup>
 import { ref, toRaw, watch, computed } from 'vue';
 import { csvFileToJson } from '@/helpers';
+import { normalizeUserTypeForBackend } from '@/helpers/userType';
 import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/store/auth';
 import LinkUsersInfo from '@/components/userInfo/LinkUsersInfo.vue';
@@ -465,10 +466,8 @@ const submitUsers = async () => {
       if (idField) normalizedUser.id = user[idField];
       if (userTypeField) {
         const userTypeValue = user[userTypeField];
-        // Link users: send CSV userType as-is (trimmed). Do not use normalizeUserTypeForBackend —
-        // the linkUsers Cloud Function expects child rows as "child", not "student".
         normalizedUser.userType =
-          typeof userTypeValue === 'string' ? userTypeValue.trim() : userTypeValue;
+          typeof userTypeValue === 'string' ? normalizeUserTypeForBackend(userTypeValue.toLowerCase()) : userTypeValue;
       }
       if (uidField) normalizedUser.uid = user[uidField];
 
