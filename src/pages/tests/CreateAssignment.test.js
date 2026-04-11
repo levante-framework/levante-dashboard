@@ -303,4 +303,54 @@ describe('Create Assignment Page', () => {
     expect(errorMessages.length).toBe(0);
     expect(mockUpsertAdministration).toHaveBeenCalledTimes(1);
   });
+
+  it('should sanitize mixed org selections before submit', async () => {
+    const wrapper = mount(CreateAssignment, {
+      global: {
+        plugins: [VueQuery.VueQueryPlugin, PrimeVue],
+        stubs: { GroupPicker: true },
+      },
+    });
+
+    wrapper.vm.state.administrationName = 'Sanitize Assignment';
+    wrapper.vm.state.dateStarted = '2025-05-30';
+    wrapper.vm.state.dateClosed = '2025-05-31';
+    wrapper.vm.state.districts = [{ id: 'district-a', name: 'District A' }, null, 'district-a', ''];
+    wrapper.vm.state.schools = [];
+    wrapper.vm.state.classes = [];
+    wrapper.vm.state.groups = [{ id: 'group-1', name: 'Group 1' }, 'group-1', null, { name: 'Missing Id' }, '  '];
+    wrapper.vm.state.sequential = true;
+    wrapper.vm.state.legal = {
+      consent: null,
+      assent: null,
+      amount: '',
+      expectedTime: '',
+    };
+
+    wrapper.vm.variants = [
+      {
+        id: 'YXXjBbBuaacSaEV4NGiW',
+        variant: {
+          id: 'YXXjBbBuaacSaEV4NGiW',
+          name: 'en',
+          params: { taskName: 'intro' },
+          conditions: {},
+        },
+        task: {
+          id: 'intro',
+          name: 'Instructions',
+        },
+      },
+    ];
+
+    await wrapper.vm.submit();
+    await wrapper.vm.$nextTick();
+
+    expect(mockUpsertAdministration).toHaveBeenCalledTimes(1);
+    const [payload] = mockUpsertAdministration.mock.calls[0];
+    expect(payload.orgs.districts).toEqual(['district-a']);
+    expect(payload.orgs.groups).toEqual(['group-1']);
+    expect(payload.orgs.groups).not.toContain(null);
+    expect(payload.orgs.groups).not.toContain(undefined);
+  });
 });
