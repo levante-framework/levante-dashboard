@@ -42,6 +42,7 @@ export const allowedUnauthenticatedRoutes = [
   'AuthEmailLink',
   'AuthEmailSent',
   'Debug',
+  'Kiosk',
   'Maintenance',
   'SignIn',
 ] as const;

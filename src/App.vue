@@ -44,6 +44,7 @@ import { NAVBAR_BLACKLIST } from './constants';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 import { useI18n } from 'vue-i18n';
+import { KIOSK_MODE_ENABLED } from '@/constants/kiosk';
 
 const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>
@@ -69,7 +70,7 @@ async function recoverFromProfileFetchFailure(error) {
   }
   authStore.$reset();
   await authStore.initFirekit();
-  await router.replace({ name: 'SignIn' });
+  await router.replace({ name: KIOSK_MODE_ENABLED ? 'Kiosk' : 'SignIn' });
 }
 
 const loadSessionTimeoutHandler = computed(() => {

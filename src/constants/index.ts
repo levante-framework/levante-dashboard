@@ -4,4 +4,4 @@ export const ASSIGNMENT_STATUSES = {
   UPCOMING: 'upcoming',
 };
 
-export const NAVBAR_BLACKLIST = ['Maintenance', 'PA', 'PlayApp', 'Register', 'SignIn', 'SRE', 'SWR'] as const;
+export const NAVBAR_BLACKLIST = ['Kiosk', 'Maintenance', 'PA', 'PlayApp', 'Register', 'SignIn', 'SRE', 'SWR'] as const;

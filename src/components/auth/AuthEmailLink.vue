@@ -4,7 +4,10 @@
     <i class="pi pi-exclamation-circle text-6xl text-red-500 center"></i>
     <p class="text-xl font-semibold text-center">There was a problem with the email sign-in link. Please try again.</p>
     <div class="center">
-      <PvButton label="Back to sign in" @click="router.push({ name: 'SignIn' })" />
+      <PvButton
+        label="Back to sign in"
+        @click="router.push({ name: KIOSK_MODE_ENABLED ? 'Kiosk' : 'SignIn' })"
+      />
     </div>
   </div>
 </template>
@@ -18,6 +21,7 @@ import { useAuthStore } from '@/store/auth';
 import { fetchDocById } from '@/helpers/query/utils';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { logger } from '@/logger';
+import { KIOSK_MODE_ENABLED } from '@/constants/kiosk';
 
 const router = useRouter();
 const authStore = useAuthStore();

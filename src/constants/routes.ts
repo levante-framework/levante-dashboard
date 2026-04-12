@@ -8,6 +8,7 @@
  */
 export const APP_ROUTES = {
   HOME: '/',
+  KIOSK: '/kiosk',
   SIGN_IN: '/signin',
   SSO: '/sso',
   PROGRESS_REPORT: '/administration/:administrationId/:orgType/:orgId',

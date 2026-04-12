@@ -1,4 +1,5 @@
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
+import { KIOSK_MODE_ENABLED } from '@/constants/kiosk';
 import { ROLES } from '@/constants/roles';
 import { APP_ROUTES } from '@/constants/routes';
 import { logger } from '@/logger';
@@ -99,6 +100,15 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/pages/SignIn.vue'),
     meta: {
       pageTitle: { translationKey: 'signIn' },
+      allowedRoles: ['*'],
+    },
+  },
+  {
+    path: APP_ROUTES.KIOSK,
+    name: 'Kiosk',
+    component: () => import('@/pages/KioskMode.vue'),
+    meta: {
+      pageTitle: 'Kiosk',
       allowedRoles: ['*'],
     },
   },
@@ -311,6 +321,7 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   const { shouldUsePermissions, userData } = storeToRefs(authStore);
   const { isAuthenticated } = authStore;
   const inMaintenanceMode = false;
+  const kioskModeEnabled = KIOSK_MODE_ENABLED;
 
   if (inMaintenanceMode && to.name !== 'Maintenance') {
     return next({ name: 'Maintenance' });
@@ -319,8 +330,12 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   }
 
   // Check if user is signed in. If not, go to signin
+  if (kioskModeEnabled && to.name === 'SignIn') {
+    return next({ name: 'Kiosk' });
+  }
+
   if (!to.path.includes('__/auth/handler') && !isAuthenticated() && !allowedUnauthenticatedRoutes.includes(to.name)) {
-    return next({ name: 'SignIn' });
+    return next({ name: kioskModeEnabled ? 'Kiosk' : 'SignIn' });
   }
 
   // @TODO

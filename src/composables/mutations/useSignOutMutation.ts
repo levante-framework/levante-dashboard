@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import * as Sentry from '@sentry/vue';
 import { useAuthStore } from '@/store/auth';
 import { SIGN_OUT_MUTATION_KEY } from '@/constants/mutationKeys';
+import { KIOSK_MODE_ENABLED } from '@/constants/kiosk';
 import { APP_ROUTES } from '@/constants/routes';
 import { useSurveyStore } from '@/store/survey';
 import { useAssignmentsStore } from '@/store/assignments';
@@ -46,7 +47,7 @@ const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown>
       await authStore.initFirekit();
 
       // Redirect to sign-in page.
-      router.push({ path: APP_ROUTES.SIGN_IN });
+      router.push({ path: KIOSK_MODE_ENABLED ? APP_ROUTES.KIOSK : APP_ROUTES.SIGN_IN });
     },
     onError: (err: Error): void => {
       Sentry.captureException(err);
