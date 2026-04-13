@@ -297,6 +297,8 @@ watch(
 
 function getVariantLanguage(variantName: string): string {
   if (!variantName) return '';
+  // Remove the following line after fixing core-tasks
+  if (variantName === 'es') return 'es-CO';
   if (variantName.length <= 5) return variantName;
   const parts = variantName?.split(' ');
   return parts[0] ?? '';
