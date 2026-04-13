@@ -457,6 +457,20 @@ const removeUndefined = (obj) => {
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined));
 };
 
+const normalizeSelectedOrgIds = (orgs) => {
+  if (!Array.isArray(orgs)) return [];
+
+  const ids = orgs
+    .map((org) => {
+      if (typeof org === 'string') return org.trim();
+      if (org && typeof org === 'object' && typeof org.id === 'string') return org.id.trim();
+      return '';
+    })
+    .filter((id) => id.length > 0);
+
+  return [...new Set(ids)];
+};
+
 const scrollToError = (elementId) => {
   // Add a small delay to ensure the DOM is updated
   setTimeout(() => {
@@ -526,9 +540,7 @@ const hasAssignmentChanges = () => {
 
   // Compare orgs - extract IDs and sort for comparison
   const getOrgIds = (orgs) => {
-    return toRaw(orgs)
-      .map((org) => org.id)
-      .sort();
+    return normalizeSelectedOrgIds(toRaw(orgs)).sort();
   };
 
   const originalOrgs = original.minimalOrgs ?? {};
@@ -631,10 +643,10 @@ const submit = async () => {
 
   // Then check groups
   const orgs = {
-    districts: toRaw(state.districts).map((org) => org.id),
-    schools: toRaw(state.schools).map((org) => org.id),
-    classes: toRaw(state.classes).map((org) => org.id),
-    groups: toRaw(state.groups).map((org) => org.id),
+    districts: normalizeSelectedOrgIds(toRaw(state.districts)),
+    schools: normalizeSelectedOrgIds(toRaw(state.schools)),
+    classes: normalizeSelectedOrgIds(toRaw(state.classes)),
+    groups: normalizeSelectedOrgIds(toRaw(state.groups)),
   };
 
   console.log('Checking required orgs...', orgs);
