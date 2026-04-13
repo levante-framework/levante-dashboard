@@ -1,5 +1,24 @@
 <template>
   <main class="container main">
+    <PvDialog
+      v-model:visible="showBulkCreateUsersModal"
+      modal
+      header="Creating users"
+      :closable="false"
+      :close-on-escape="false"
+      :draggable="false"
+      :style="{ width: 'min(32rem, 90vw)' }"
+      data-cy="dialog-bulk-create-users"
+    >
+      <div class="flex flex-column align-items-center gap-3 py-4">
+        <AppSpinner />
+        <p class="m-0 text-center text-gray-700 line-height-3">
+          This step runs on the server and can take several minutes for large files. Please keep this tab open until it
+          finishes.
+        </p>
+      </div>
+    </PvDialog>
+
     <section class="main-body">
       <!--Upload file section-->
       <AddUsersInfo />
@@ -16,6 +35,7 @@
             "
             :show-cancel-button="false"
             :show-upload-button="false"
+            :disabled="isAllSitesSelected"
             auto
             accept=".csv"
             custom-upload
@@ -25,7 +45,9 @@
             @uploader="onFileUpload($event)"
           />
           <span v-if="isFileUploaded" class="text-gray-500">File: {{ uploadedFile?.name }}</span>
-          <span v-else class="text-gray-500">No file chosen</span>
+          <span v-else class="text-gray-500">
+            {{ isAllSitesSelected ? 'Select a site to add users' : 'No file chosen' }}
+          </span>
         </div>
 
         <div v-if="isFileUploaded && !errorMissingColumns && !errorUsers.length">
@@ -33,7 +55,7 @@
             <div class="flex align-items-center gap-2">
               <i class="pi pi-exclamation-triangle text-yellow-600"></i>
               <span class="text-yellow-800 font-semibold">
-                Multiple sites detected. Users will only be created for the currently selected site<template
+                Multiple sites detected in file. Users will only be created for the currently selected site<template
                   v-if="currentSiteName"
                   >: {{ currentSiteName }}</template
                 >.
@@ -123,6 +145,7 @@
 <script setup>
 import { ref, toRaw, watch, nextTick, computed } from 'vue';
 import { csvFileToJson, normalizeToLowercase } from '@/helpers';
+import { normalizeUserTypeForBackend } from '@/helpers/userType';
 import _cloneDeep from 'lodash/cloneDeep';
 import _forEach from 'lodash/forEach';
 import _capitalize from 'lodash/capitalize';
@@ -132,11 +155,14 @@ import _chunk from 'lodash/chunk';
 import { useToast } from 'primevue/usetoast';
 import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
 import { useAuthStore } from '@/store/auth';
+import { usersRepository } from '@/firebase/repositories/UsersRepository';
+import AppSpinner from '@/components/AppSpinner.vue';
 import { pluralizeFirestoreCollection } from '@/helpers';
 import { fetchOrgByName } from '@/helpers/query/orgs';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
+import PvDialog from 'primevue/dialog';
 import PvDivider from 'primevue/divider';
 import PvFileUpload from 'primevue/fileupload';
 import { useRouter } from 'vue-router';
@@ -151,7 +177,6 @@ const { hasUserConfirmed } = storeToRefs(levanteStore);
 const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const authStore = useAuthStore();
 const { currentSite, currentSiteName } = storeToRefs(authStore);
-const { createUsers } = authStore;
 const toast = useToast();
 
 const isAllSitesSelected = computed(() => currentSite.value === 'any');
@@ -161,6 +186,7 @@ const uploadedFile = ref(null);
 const rawUserFile = ref({});
 const registeredUsers = ref([]);
 const hasMultipleSites = ref(false);
+const showBulkCreateUsersModal = ref(false);
 
 // Primary Table & Dropdown refs
 const dataTable = ref();
@@ -172,32 +198,32 @@ const dataTable = ref();
 const allFields = [
   {
     field: 'userType',
-    header: 'User Type',
+    header: 'userType',
     dataType: 'string',
   },
   {
     field: 'month',
-    header: 'Month',
+    header: 'month',
     dataType: 'number',
   },
   {
     field: 'year',
-    header: 'Year',
+    header: 'year',
     dataType: 'number',
   },
   {
-    field: 'cohort',
-    header: 'Cohort',
-    dataType: 'string',
-  },
-  {
     field: 'school',
-    header: 'School',
+    header: 'school',
     dataType: 'string',
   },
   {
     field: 'class',
-    header: 'Class',
+    header: 'class',
+    dataType: 'string',
+  },
+  {
+    field: 'cohort',
+    header: 'cohort',
     dataType: 'string',
   },
 ];
@@ -325,6 +351,33 @@ function generateColumns(rawJson) {
     });
   });
   return columns;
+}
+
+function getRegisteredUsersFromCreateResult(result) {
+  if (result == null || typeof result !== 'object') return [];
+  const payload = result.data !== undefined ? result.data : result;
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object' && Array.isArray(payload.data)) return payload.data;
+  return [];
+}
+
+async function runWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function runner() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex++;
+      results[currentIndex] = await worker(items[currentIndex], currentIndex);
+    }
+  }
+
+  const runnerCount = Math.min(limit, items.length);
+  const runners = Array.from({ length: runnerCount }, () => runner());
+
+  await Promise.all(runners);
+
+  return results;
 }
 
 async function submitUsers() {
@@ -555,53 +608,52 @@ async function submitUsers() {
   }
   // Chunk and run: Not a transactional operation so partial success is possible
   // TODO: Add some retry operations to handle partial successes
-  const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 50);
-  const createUserPromises = [];
+  const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 25);
+  const concurrencyLimit = 2;
 
-  for (const users of chunkedUsersToBeRegistered) {      // Ensure each user has the proper userType field name for the backend
-    const processedUsers = users.map(({ user }) => {
-      const processedUser = { ...user };
+  showBulkCreateUsersModal.value = true;
+  try {
+    const createUserResults = await runWithConcurrency(chunkedUsersToBeRegistered, concurrencyLimit, async (users) => {
+      // Ensure each user has the proper userType field name for the backend
+      const processedUsers = users.map(({ user }) => {
+        const processedUser = { ...user };
 
-      // Find the userType field (case-insensitive)
-      const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
+        // Find the userType field (case-insensitive)
+        const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
 
-      // Ensure the key is exactly 'userType' and handle potential casing issues
-      if (userTypeField) {
-        const userTypeValue = user[userTypeField];
-        // Set the key to 'userType' regardless of original casing
-        processedUser.userType = userTypeValue;
-        // Remove the original field if the casing was different
-        if (userTypeField !== 'userType') {
-          delete processedUser[userTypeField];
+        // Ensure the key is exactly 'userType' and handle potential casing issues
+        if (userTypeField) {
+          const userTypeValue = user[userTypeField];
+          // Set the key to 'userType' regardless of original casing
+          processedUser.userType = userTypeValue;
+          // Remove the original field if the casing was different
+          if (userTypeField !== 'userType') {
+            delete processedUser[userTypeField];
+          }
+
+          if (typeof userTypeValue === 'string') {
+            processedUser.userType = normalizeUserTypeForBackend(userTypeValue);
+          }
         }
 
-        // *** Add check to convert 'caregiver' value to 'parent' ***
-        if (typeof userTypeValue === 'string' && userTypeValue.toLowerCase() === 'caregiver') {
-          processedUser.userType = 'parent';
-        }
+        return processedUser;
+      });
+
+      const createUsersPayload = {
+        users: processedUsers,
+      };
+
+      if (currentSite.value && currentSite.value !== 'any') {
+        createUsersPayload.siteId = currentSite.value;
+      } else if (processedUsers.length > 0 && processedUsers[0].orgIds?.districts?.length > 0) {
+        createUsersPayload.siteId = processedUsers[0].orgIds.districts[0];
       }
 
-      return processedUser;
+      return await usersRepository.createUsers(createUsersPayload);
     });
 
-    const createUsersPayload = {
-      users: processedUsers,
-    };
-
-    if (currentSite.value && currentSite.value !== 'any') {
-      createUsersPayload.siteId = currentSite.value;
-    } else if (processedUsers.length > 0 && processedUsers[0].orgIds?.districts?.length > 0) {
-      createUsersPayload.siteId = processedUsers[0].orgIds.districts[0];
-    }
-    createUserPromises.push(createUsers(createUsersPayload));
-  }
-  try {
-    const createUserResults = await Promise.all(createUserPromises);
-
-    // Merging all the users in a flat list
     for (const result of createUserResults) {
-      const currentRegisteredUsers = result.data.data;
-      registeredUsers.value.push(...currentRegisteredUsers);
+      registeredUsers.value.push(...getRegisteredUsersFromCreateResult(result));
     }
 
     // Merging the registered users with the raw user file
@@ -630,10 +682,10 @@ async function submitUsers() {
       summary: 'Error registering users: ' + error.message,
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
+  } finally {
+    showBulkCreateUsersModal.value = false;
+    activeSubmit.value = false;
   }
-
-  /* We want to clear this flag whether we got an error or not */
-  activeSubmit.value = false;
 }
 
 const csvBlob = ref(null);

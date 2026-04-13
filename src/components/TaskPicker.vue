@@ -173,6 +173,7 @@ import VariantCard from './VariantCard.vue';
 import _cloneDeep from 'lodash/cloneDeep';
 import PvIconField from 'primevue/iconfield';
 import PvInputIcon from 'primevue/inputicon';
+import { formattedVariantName } from '@/helpers';
 
 // Import types from VariantCard
 type VariantObject = InstanceType<typeof VariantCard>['$props']['variant'];
@@ -272,7 +273,7 @@ const groupedTasks: Record<string, string[]> = {
   Reasoning: ['Pattern Matching'],
   'Spatial Cognition': ['Shape Rotation'],
   'Social Cognition': ['Stories'],
-  Attitudes: ['Survey'],
+  Attitudes: ['Teacher Survey', 'Caregiver Survey', 'Child Survey'],
 };
 
 const namedOnly = ref<boolean>(true);
@@ -301,7 +302,14 @@ const groupedTaskSections = computed((): TaskSection[] => {
 
   Object.entries(props.allVariants).forEach(([taskKey, variants]) => {
     const allVariants = variants ?? [];
-    const filteredVariants = namedOnly.value ? _filter(allVariants, (variant) => variant.variant.name) : allVariants;
+    const filteredVariants = (
+      namedOnly.value ? _filter(allVariants, (variant) => variant.variant.name) : allVariants
+    ) as VariantObject[];
+    const orderedVariants = filteredVariants.slice().sort((variantA, variantB) => {
+      const variantNameA = formattedVariantName(variantA?.variant?.name?.trim() ?? '');
+      const variantNameB = formattedVariantName(variantB?.variant?.name?.trim() ?? '');
+      return variantNameA.localeCompare(variantNameB, undefined, { sensitivity: 'base' });
+    });
     const taskLabel = allVariants?.[0]?.task?.name || filteredVariants?.[0]?.task?.name || taskKey;
     const sectionLabel = resolveSectionLabel(taskLabel, taskKey);
 
@@ -312,7 +320,7 @@ const groupedTaskSections = computed((): TaskSection[] => {
     sectionMap.get(sectionLabel)?.push({
       key: taskKey,
       label: taskLabel,
-      variants: filteredVariants,
+      variants: orderedVariants,
       totalVariantCount: allVariants.length,
     });
   });
@@ -417,7 +425,13 @@ const searchCards = (term: string): void => {
       return false;
     });
 
-    nextResults.push(...matchingVariants);
+    const orderedVariants = matchingVariants.slice().sort((variantA, variantB) => {
+      const variantNameA = formattedVariantName(variantA?.variant?.name?.trim() ?? '');
+      const variantNameB = formattedVariantName(variantB?.variant?.name?.trim() ?? '');
+      return variantNameA.localeCompare(variantNameB, undefined, { sensitivity: 'base' });
+    });
+
+    nextResults.push(...orderedVariants);
   });
 
   searchResults.value = nextResults;
@@ -516,7 +530,7 @@ const selectCard = (variant: VariantObject): void => {
       return; // Don't add the card if task is already selected
     }
 
-    const defaultedVariant = addChildDefaultCondition(variant);
+    const defaultedVariant = addUserDefaultCondition(variant);
     selectedVariants.value.push(defaultedVariant);
   } else {
     debounceToast();
@@ -544,15 +558,27 @@ const moveCardDown = (variant: VariantObject): void => {
 };
 
 // Default all tasks to child only, unless it is the survey (for LEVANTE).
-function addChildDefaultCondition(variant: VariantObject): VariantObject {
-  if (variant.task.id === 'survey') return variant;
-
+function addUserDefaultCondition(variant: VariantObject): VariantObject {
   const defaultedVariant = _cloneDeep(variant);
   defaultedVariant.variant['conditions'] = {};
-  defaultedVariant.variant['conditions']['assigned'] = {
-    op: 'AND',
-    conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }],
-  };
+
+  if (variant.task.id === 'teacher-survey') {
+    defaultedVariant.variant['conditions']['assigned'] = {
+      op: 'AND',
+      conditions: [{ field: 'userType', op: 'EQUAL', value: 'teacher' }],
+    };
+  } else if (variant.task.id === 'caregiver-survey' || variant.task.id === 'adult-reasoning') {
+    defaultedVariant.variant['conditions']['assigned'] = {
+      op: 'AND',
+      conditions: [{ field: 'userType', op: 'EQUAL', value: 'parent' }],
+    };
+  } else {
+    defaultedVariant.variant['conditions']['assigned'] = {
+      op: 'AND',
+      conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }],
+    };
+  }
+
   return defaultedVariant;
 }
 </script>

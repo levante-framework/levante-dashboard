@@ -117,7 +117,11 @@ import { fetchAudioLinks } from '@/helpers/survey';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useQueryClient, useQuery } from '@tanstack/vue-query';
-import { initializeSurvey, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
+import {
+  bootstrapSurveyInstance,
+  setupSurveyEventHandlers,
+  setupStudentAudio,
+} from '@/helpers/surveyInitialization';
 import { useSurveyStore } from '@/store/survey';
 import { fetchDocsById } from '@/helpers/query/utils';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
@@ -243,7 +247,7 @@ const {
 // Computed didn't react to selected admin changes, so using a ref instead.
 let hasSurvey = ref(false);
 watch(selectedAssignment, (newAdmin, oldAdmin) => {
-  hasSurvey.value = newAdmin?.assessments.some((task) => task.taskId === 'survey');
+  hasSurvey.value = newAdmin?.assessments.some((task) => task.taskId.toLowerCase().includes('survey'));
   // Reset survey store when switching between different administrations
   if (newAdmin?.id !== oldAdmin?.id && oldAdmin?.id) {
     surveyStore.reset();
@@ -501,7 +505,6 @@ function createSurveyInstance(surveyDataToStartAt) {
   const surveyInstance = new Model(
     typeof structuredClone === 'function' ? structuredClone(surveyJson) : JSON.parse(JSON.stringify(surveyJson)),
   );
-  surveyInstance.locale = locale.value;
   return surveyInstance;
 }
 
@@ -523,7 +526,7 @@ watch(
       return;
     }
 
-    const isAssessment = selectedAssignment.value.assessments.some((task) => task.taskId === 'survey');
+    const isAssessment = selectedAssignment.value.assessments.some((task) => task.taskId.toLowerCase().includes('survey'));
     if (!isLoaded || !isAssessment || surveyStore.survey) return;
 
     const surveyResponseDoc = (surveyResponsesData.value || []).find(
@@ -611,15 +614,14 @@ watch(
     const surveyInstance = createSurveyInstance(surveyDataToStartAt);
     setupMarkdownConverter(surveyInstance);
 
-    await initializeSurvey({
+    bootstrapSurveyInstance({
       surveyInstance,
       userType: userType.value,
       specificSurveyData: specificSurveyData.value,
       userData: userData.value,
       surveyStore,
-      locale: locale.value,
-      audioLinkMap: surveyStore.audioLinkMap,
       generalSurveyData: surveyData.value.general,
+      locale: locale.value,
     });
 
     setupSurveyEventHandlers({
@@ -637,6 +639,15 @@ watch(
     });
 
     surveyStore.setSurvey(surveyInstance);
+
+    if (userType.value === 'student') {
+      await setupStudentAudio(
+        surveyInstance,
+        locale.value,
+        surveyStore.audioLinkMap,
+        surveyStore,
+      );
+    }
   },
   { immediate: true },
 );

@@ -44,7 +44,7 @@
       </button>
     </div>
   </div>
-  <PvConfirmDialog />
+  <PvConfirmDialog group="link-accounts" />
 </template>
 <script setup>
 import { ref, onMounted, computed } from 'vue';
@@ -143,6 +143,7 @@ const canDeletePassword = computed(() => {
 });
 const deletePassword = async () => {
   confirm.require({
+    group: 'link-accounts',
     message: 'Once deleted, you will need to use an SSO option to access your account!',
     header: 'Delete Password',
     icon: 'pi pi-exclamation-triangle',

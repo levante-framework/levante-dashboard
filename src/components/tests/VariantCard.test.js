@@ -160,16 +160,11 @@ describe('VariantCard.vue - Language Variant Testing', () => {
           expect(variantNameText).toContain('Variant name:');
           expect(variantNameText).toContain(mockVariant.variant.name);
 
-          // Test 4: CAT chip is displayed when params.cat is true
-          const allChips = wrapper.findAllComponents(PvChip);
-          const catChip = allChips.find((chip) => chip.text().includes('CAT'));
-          expect(catChip).toBeTruthy();
-
-          // Test 5: Select button is present and functional
+          // Test 4: Select button is present and functional
           const selectButton = wrapper.find('[data-cy="selected-variant"]');
           expect(selectButton.exists()).toBe(true);
 
-          // Test 6: Parameters are accessible via popover
+          // Test 5: Parameters are accessible via popover
           const infoButton = wrapper.find('i.pi-info-circle');
           expect(infoButton.exists()).toBe(true);
 

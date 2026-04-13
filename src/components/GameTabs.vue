@@ -77,7 +77,7 @@
                   </p>
                 </div>
 
-                <div v-if="game.taskId === 'survey'" class="mt-4 mb-4">
+                <div v-if="game.taskId === 'teacher-survey' || game.taskId === 'caregiver-survey'" class="mt-4 mb-4">
                   <div class="flex align-items-center mb-2">
                     <span class="mr-2 w-4"
                       ><b>{{ $t('gameTabs.surveyProgressGeneral') }} </b> -
@@ -191,7 +191,7 @@ import { storeToRefs } from 'pinia';
 import _get from 'lodash/get';
 import _find from 'lodash/find';
 import _findIndex from 'lodash/findIndex';
-import { camelize, getAgeData } from '@bdelab/roar-utils';
+import { getAgeData } from '@bdelab/roar-utils';
 import PvTabPanel from 'primevue/tabpanel';
 import PvTabs from 'primevue/tabs';
 import PvTabList from 'primevue/tablist';
@@ -208,6 +208,7 @@ import { useAssignmentsStore } from '@/store/assignments';
 import { ASSIGNMENT_STATUSES } from '@/constants';
 import { getAssignmentStatus } from '@/helpers/assignments';
 import { LEVANTE_TASK_IDS, ROAR_TASK_IDS } from '@/constants/coreTasks';
+import { logger } from '@/logger';
 
 interface TaskData {
   name: string;
@@ -333,20 +334,19 @@ const getSpecificSurveyProgressClass = computed(() => (loopIndex: number): strin
 
 const { t, locale } = useI18n();
 
-const normalizeTaskId = (taskId: string): string => camelize(taskId);
+const toCamelCase = (taskId: string): string => taskId.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+const normalizedLevanteTaskIds = new Set(LEVANTE_TASK_IDS.map((taskId) => toCamelCase(taskId)));
+const normalizedRoarTaskIds = new Set(ROAR_TASK_IDS.map((taskId) => toCamelCase(taskId)));
 
-const normalizedLevanteTaskIds = new Set(LEVANTE_TASK_IDS.map((taskId) => normalizeTaskId(taskId)));
-const normalizedRoarTaskIds = new Set(ROAR_TASK_IDS.map((taskId) => normalizeTaskId(taskId)));
-
-const isLevanteTask = (taskId: string): boolean => normalizedLevanteTaskIds.has(normalizeTaskId(taskId));
-const isRoarTask = (taskId: string): boolean => normalizedRoarTaskIds.has(normalizeTaskId(taskId));
+const isLevanteTask = (taskId: string): boolean => normalizedLevanteTaskIds.has(toCamelCase(taskId));
+const isRoarTask = (taskId: string): boolean => normalizedRoarTaskIds.has(toCamelCase(taskId));
 
 const getTaskName = (taskId: string, taskName: string): string => {
   // Translate Levante task names. The task name is not the same as the taskId.
   const taskIdLowercased = taskId.toLowerCase();
-  const normalizedTaskId = normalizeTaskId(taskId);
+  const normalizedTaskId = toCamelCase(taskIdLowercased);
 
-  if (taskIdLowercased === 'survey') {
+  if (taskIdLowercased.includes('survey')) {
     if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
       return t(`gameTabs.surveyName${_capitalize(props.userData.userType)}Part1`);
     } else {
@@ -369,9 +369,9 @@ const getTaskName = (taskId: string, taskName: string): string => {
 const getTaskDescription = (taskId: string, taskDescription: string): string => {
   // Translate Levante task descriptions if not in English
   const taskIdLowercased = taskId.toLowerCase();
-  const normalizedTaskId = normalizeTaskId(taskId);
+  const normalizedTaskId = toCamelCase(taskIdLowercased);
 
-  if (taskIdLowercased === 'survey') {
+  if (taskIdLowercased.includes('survey')) {
     if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
       return t(`gameTabs.surveyDescription${_capitalize(props.userData.userType)}Part1`);
     } else {
@@ -391,13 +391,14 @@ const getRoutePath = (taskId: string, variantURL?: string, taskURL?: string): st
   // do not navigate if the task is external
   if (variantURL || taskURL) return '/';
 
-  const lowerCasedAndCamelizedTaskId = camelize(taskId.toLowerCase());
+  const camelizedTaskId = toCamelCase(taskId.toLowerCase());
 
-  if (lowerCasedAndCamelizedTaskId === 'survey') {
+  if (camelizedTaskId === 'teacherSurvey' || camelizedTaskId === 'caregiverSurvey' || camelizedTaskId === 'survey') {
     return '/survey';
-  } else if (LEVANTE_TASK_IDS.some((taskId) => taskId === lowerCasedAndCamelizedTaskId)) {
+  } else if (normalizedLevanteTaskIds.has(camelizedTaskId)) {
     return '/game/core-tasks/' + taskId;
   } else {
+    logger.capture(`Task ${camelizedTaskId} is not a core task`, { taskId });
     return '/game/' + taskId;
   }
 };
@@ -464,7 +465,7 @@ const returnVideoOptions = (videoURL: string): VideoOptions => {
 };
 
 const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: string): boolean => {
-  if (taskId === 'survey') {
+  if (taskId === 'teacher-survey' || taskId === 'caregiver-survey') {
     if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
       if (!surveyStore.isGeneralSurveyComplete) {
         return false;
@@ -552,7 +553,12 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   box-sizing: border-box;
   transition: box-shadow 0.2s ease-in-out;
 
-  // Reset button defaults
+  // Reset native <button> when .game-btn is used on `<button>` (e.g. completed task)
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  appearance: none;
+
   &[disabled] {
     cursor: not-allowed;
   }

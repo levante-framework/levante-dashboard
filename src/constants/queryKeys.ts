@@ -3,6 +3,7 @@ export const ADMINISTRATIONS_LIST_QUERY_KEY: string = 'administrations-list';
 export const ADMINISTRATIONS_QUERY_KEY: string = 'administrations';
 export const ADMINISTRATIONS_STATS_QUERY_KEY: string = 'administrations-stats';
 export const ADMINS_QUERY_KEY = 'admins';
+export const SUPER_ADMINS_QUERY_KEY = 'super-admins';
 export const CLASSES_QUERY_KEY: string = 'classes';
 export const DISTRICT_SCHOOLS_QUERY_KEY: string = 'district-schools';
 export const DISTRICTS_LIST_QUERY_KEY: string = 'districts-list';
