@@ -36,7 +36,7 @@
             <i class="pi pi-times" />
           </PvButton>
         </div>
-        <div v-if="selectedLanguage">
+        <div v-if="selectedLanguage || isUserSuperAdmin()">
           <div v-if="searchTerm.length > 0">
             <div v-if="isSearching">
               <span>Searching...</span>
@@ -187,6 +187,7 @@ import { useToast } from 'primevue/usetoast';
 import { computed, nextTick, ref, watch } from 'vue';
 import { VueDraggableNext } from 'vue-draggable-next';
 import VariantCard from './VariantCard.vue';
+import { useAuthStore } from '@/store/auth';
 
 type VariantObject = InstanceType<typeof VariantCard>['$props']['variant'];
 
@@ -250,6 +251,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 const toast = useToast();
+const authStore = useAuthStore();
+const { isUserSuperAdmin } = authStore;
 
 const languages = computed(() =>
   Object.entries(languageOptions).map(([key, options]) => ({
