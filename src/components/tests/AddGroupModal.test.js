@@ -23,6 +23,7 @@ vi.mock('@/store/auth', () => ({
   useAuthStore: vi.fn(() => ({
     getUserId: vi.fn(() => 'test-user-id'),
     $subscribe: vi.fn(),
+    isUserSuperAdmin: vi.fn(() => true),
     roarfirekit: ref({
       restConfig: true,
     }),

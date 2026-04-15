@@ -154,11 +154,11 @@ const isSubmitBtnDisabled = ref(false);
 
 watch(
   () => authStore.currentSite,
-  (newCurrentSite) => {
-    if (!newCurrentSite || newCurrentSite.toLowerCase() === 'any') {
-      isSubmitBtnDisabled.value = true;
-    } else {
+  () => {
+    if (authStore.isUserSuperAdmin() || authStore.currentSite !== 'any') {
       isSubmitBtnDisabled.value = false;
+    } else {
+      isSubmitBtnDisabled.value = true;
     }
   },
   { immediate: true },
