@@ -9,7 +9,17 @@
 
         <div class="how-to-section mb-4">
           <h3>How to plan your groups</h3>
-          <div class="text-md text-gray-500 mb-1 line-height-3">Groups must be created before users can be added. What kind of group(s) you need depends on your study design. Read the <a href="https://researcher.levante-network.org/dashboard/create-a-group" target="_blank" rel="noopener noreferrer">documentation on creating groups</a> for guidance on creating and naming groups.</div>
+          <div class="text-md text-gray-500 mb-1 line-height-3">
+            Groups must be created before users can be added. What kind of group(s) you need depends on your study
+            design. Read the
+            <a
+              href="https://researcher.levante-network.org/dashboard/create-a-group"
+              target="_blank"
+              rel="noopener noreferrer"
+              >documentation on creating groups</a
+            >
+            for guidance on creating and naming groups.
+          </div>
         </div>
         <div class="flex flex-column align-items-start mb-2 md:flex-row w-full justify-content-between">
           <div class="flex align-items-center gap-3 mb-4 md:mb-0">
@@ -19,6 +29,7 @@
                 class="bg-primary text-white border-none p-2 ml-auto"
                 data-testid="add-group-btn"
                 data-cy="add-group-btn"
+                :disabled="currentSite === 'any' && activeIndex != 0"
                 @click="isAddGroupModalVisible = true"
                 >Create Group</PvButton
               >
@@ -270,7 +281,6 @@ const isAddGroupModalVisible = ref(false);
 const isAssignmentsModalVisible = ref(false);
 const selectedOrgId = ref('');
 const selectedOrgName = ref('');
-
 
 const authStore = useAuthStore();
 const { currentSite, roarfirekit, shouldUsePermissions, userClaims } = storeToRefs(authStore);
