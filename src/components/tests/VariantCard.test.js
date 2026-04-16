@@ -27,6 +27,12 @@ vi.mock('@/components/EditVariantDialog.vue', () => ({
   },
 }));
 
+vi.mock('@/store/auth', () => ({
+  useAuthStore: vi.fn(() => ({
+    isUserSuperAdmin: vi.fn(() => true),
+  })),
+}));
+
 const mockLanguages = [
   // Primary (full locales)
   {

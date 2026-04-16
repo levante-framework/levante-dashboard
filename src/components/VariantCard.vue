@@ -13,6 +13,7 @@
         <div class="flex align-items-center flex-row">
           <span class="font-bold">{{ variant.task.name }}</span>
           <PvButton
+            v-if="isUserSuperAdmin()"
             class="ml-2 p-0 surface-hover border-none border-circle hover:text-100 hover:bg-primary"
             @click="toggle($event)"
             ><i
@@ -276,6 +277,7 @@ import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import EditVariantDialog from '@/components/EditVariantDialog.vue';
 import { formattedVariantName, getTooltip } from '@/helpers';
+import { useAuthStore } from '@/store/auth';
 
 interface Condition {
   field: string;
@@ -331,6 +333,8 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<Emits>();
+const authStore = useAuthStore();
+const { isUserSuperAdmin } = authStore;
 
 const backupImage = '/src/assets/roar-logo.png';
 const showContent = ref<boolean>(false);
