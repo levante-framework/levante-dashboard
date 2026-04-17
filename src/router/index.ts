@@ -285,6 +285,15 @@ const routes: Array<RouteRecordRaw> = [
       allowedRoles: [],
     },
   },
+  {
+    path: '/welcome',
+    name: 'Welcome',
+    component: () => import('@/pages/Welcome.vue'),
+    meta: {
+      pageTitle: { translationKey: 'home' },
+      allowedRoles: ['*'],
+    },
+  },
 ];
 
 const scrollBehavior: RouterScrollBehavior = (to, from, savedPosition) => {
