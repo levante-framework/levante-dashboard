@@ -7,7 +7,7 @@
 
     <div class="w-full px-5 mb-5">
       <div class="info">
-        <i class="pi pi-exclamation-circle"></i>
+        <i class="pi pi-exclamation-circle" />
         <div class="mr-auto">
           <div>
             First things first, let's read the quick documentation to get a better overview of the Levante Platform.
@@ -24,7 +24,7 @@
 
     <div v-if="!isSiteSelected" class="w-full px-5 mb-5 -mt-4">
       <div class="info info--site-not-selected">
-        <i class="pi pi-exclamation-circle"></i>
+        <i class="pi pi-exclamation-circle" />
         <div class="mr-auto">
           <div class="font-medium">Select a site to see stats</div>
         </div>
@@ -68,16 +68,16 @@
             </div>
 
             <div :class="`assignment-icon-wrapper assignment-icon-wrapper--${key}`">
-              <i v-if="key === 'open'" class="pi pi-play"></i>
-              <i v-if="key === 'upcoming'" class="pi pi-clock"></i>
-              <i v-if="key === 'past'" class="pi pi-briefcase"></i>
+              <i v-if="key === 'open'" class="pi pi-play" />
+              <i v-if="key === 'upcoming'" class="pi pi-clock" />
+              <i v-if="key === 'past'" class="pi pi-briefcase" />
             </div>
           </div>
 
           <div v-if="value.numOf" class="assignment-card-footer">
             <a href="#" class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline">
               <span>View all</span>
-              <i class="pi pi-arrow-right text-xs"></i>
+              <i class="pi pi-arrow-right text-xs" />
             </a>
           </div>
         </div>
@@ -106,8 +106,8 @@
               <a href="#" class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline">
                 <span v-if="Object.keys(schools).length">View all</span>
                 <span v-else>Create</span>
-                <i v-if="Object.keys(schools).length" class="pi pi-arrow-right text-xs"></i>
-                <i v-else class="pi pi-plus text-xs"></i>
+                <i v-if="Object.keys(schools).length" class="pi pi-arrow-right text-xs" />
+                <i v-else class="pi pi-plus text-xs" />
               </a>
             </div>
           </div>
@@ -120,7 +120,7 @@
                     <div class="flex flex-column font-normal">
                       {{ value?.name }}
                     </div>
-                    <PvBadge :value="isSiteSelected ? Object.keys(value?.users).length : '-'" class="badge" />
+                    <PvBadge :value="isSiteSelected ? getSumOfUsers(Object.values(value?.users)) : '-'" class="badge" />
                   </div>
                 </PvAccordionHeader>
                 <PvAccordionContent>
@@ -131,7 +131,7 @@
                       class="flex justify-content-between align-items-center gap-3 w-full"
                     >
                       <span class="text-sm">{{ user?.label }}</span>
-                      <div class="divider"></div>
+                      <div class="divider" />
                       <PvBadge :value="isSiteSelected ? user.numOf : '-'" class="badge" />
                     </div>
                   </div>
@@ -158,8 +158,8 @@
               <a href="#" class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline">
                 <span v-if="Object.keys(classes).length">View all</span>
                 <span v-else>Create</span>
-                <i v-if="Object.keys(classes).length" class="pi pi-arrow-right text-xs"></i>
-                <i v-else class="pi pi-plus text-xs"></i>
+                <i v-if="Object.keys(classes).length" class="pi pi-arrow-right text-xs" />
+                <i v-else class="pi pi-plus text-xs" />
               </a>
             </div>
           </div>
@@ -175,7 +175,7 @@
                       }}</span>
                       {{ value?.name }}
                     </div>
-                    <PvBadge :value="isSiteSelected ? Object.keys(value?.users).length : '-'" class="badge" />
+                    <PvBadge :value="isSiteSelected ? getSumOfUsers(Object.values(value?.users)) : '-'" class="badge" />
                   </div>
                 </PvAccordionHeader>
                 <PvAccordionContent>
@@ -186,7 +186,7 @@
                       class="flex justify-content-between align-items-center gap-3 w-full"
                     >
                       <span class="text-sm">{{ user?.label }}</span>
-                      <div class="divider"></div>
+                      <div class="divider" />
                       <PvBadge :value="isSiteSelected ? user.numOf : '-'" class="badge" />
                     </div>
                   </div>
@@ -213,8 +213,8 @@
               <a href="#" class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline">
                 <span v-if="Object.keys(cohorts).length">View all</span>
                 <span v-else>Create</span>
-                <i v-if="Object.keys(cohorts).length" class="pi pi-arrow-right text-xs"></i>
-                <i v-else class="pi pi-plus text-xs"></i>
+                <i v-if="Object.keys(cohorts).length" class="pi pi-arrow-right text-xs" />
+                <i v-else class="pi pi-plus text-xs" />
               </a>
             </div>
           </div>
@@ -227,7 +227,7 @@
                     <div class="flex flex-column font-normal">
                       {{ value?.name }}
                     </div>
-                    <PvBadge :value="isSiteSelected ? Object.keys(value?.users).length : '-'" class="badge" />
+                    <PvBadge :value="isSiteSelected ? getSumOfUsers(Object.values(value?.users)) : '-'" class="badge" />
                   </div>
                 </PvAccordionHeader>
                 <PvAccordionContent>
@@ -238,7 +238,7 @@
                       class="flex justify-content-between align-items-center gap-3 w-full"
                     >
                       <span class="text-sm">{{ user?.label }}</span>
-                      <div class="divider"></div>
+                      <div class="divider" />
                       <PvBadge :value="isSiteSelected ? user.numOf : '-'" class="badge" />
                     </div>
                   </div>
@@ -380,6 +380,8 @@ const numOfGroups = computed(() => {
   const numOfCohorts = Object.keys(cohorts.value).length;
   return numOfSchools + numOfClasses + numOfCohorts;
 });
+
+const getSumOfUsers = (users: Array<any> = []): number => users.reduce((total, user) => total + user.numOf, 0);
 </script>
 
 <style scoped lang="scss">
