@@ -59,7 +59,7 @@
         </div>
       </div>
 
-      <div class="flex gap-2 mt-3">
+      <div class="flex gap-4 mt-3">
         <div v-for="[key, value] in Object.entries(assignments)" :key="key" class="assignment-card">
           <div class="flex justify-content-between">
             <div>
