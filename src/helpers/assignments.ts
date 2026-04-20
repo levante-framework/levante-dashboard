@@ -1,22 +1,24 @@
 import { ASSIGNMENT_STATUSES } from '@/constants';
+import { convertToDate } from '@/helpers';
 import { AdministrationType } from '@levante-framework/levante-zod';
-import { convertToDate } from '.';
 
 export const isCurrent = (assignment: AdministrationType) => {
   const now = new Date();
-  const opened = convertToDate(assignment.dateOpened);
-  const closed = convertToDate(assignment.dateClosed);
-  return opened <= now && closed >= now;
+  const open = convertToDate(assignment?.dateOpened);
+  const closed = convertToDate(assignment?.dateClosed);
+  return open && open <= now && closed! >= now;
 };
 
 export const isPast = (assignment: AdministrationType) => {
   const now = new Date();
-  return convertToDate(assignment.dateClosed) < now;
+  const closed = convertToDate(assignment?.dateClosed);
+  return closed && closed < now;
 };
 
 export const isUpcoming = (assignment: AdministrationType) => {
   const now = new Date();
-  return convertToDate(assignment.dateOpened) > now;
+  const open = convertToDate(assignment?.dateOpened);
+  return open && open > now;
 };
 
 export const getAssignmentStatus = (assignment: AdministrationType) => {

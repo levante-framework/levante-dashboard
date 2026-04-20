@@ -311,22 +311,35 @@ export const isObject = (obj: unknown): boolean => obj !== null && typeof obj ==
 export const isPlainObject = (obj: unknown): boolean => Object.prototype.toString.call(obj) === '[object Object]';
 
 // Convert dates to Date objects, handling both timestamp strings and Date objects
-export const convertToDate = (dateValue: any) => {
+export const convertToDate = (dateValue?: unknown): Date | null => {
   if (!dateValue) return null;
 
-  // If it's already a Date object, return it
+  // Already a Date
   if (dateValue instanceof Date) {
     return isNaN(dateValue.getTime()) ? null : dateValue;
   }
 
-  // If it's a Firestore Timestamp object with toDate method
-  if (typeof dateValue === 'object' && typeof dateValue.toDate === 'function') {
-    return dateValue.toDate();
+  // Firestore Timestamp (preferred way)
+  if (
+    typeof dateValue === 'object' &&
+    dateValue !== null &&
+    'toDate' in dateValue &&
+    typeof (dateValue as any).toDate === 'function'
+  ) {
+    return (dateValue as any).toDate();
   }
 
-  if (typeof dateValue === 'object' && typeof dateValue._seconds === 'number') {
-    const seconds = dateValue._seconds || 0;
-    const nanoseconds = dateValue._nanoseconds || 0;
-    return new Date(seconds * 1000 + nanoseconds / 1000000);
+  // Firestore raw format fallback
+  if (typeof dateValue === 'object' && dateValue !== null && '_seconds' in dateValue) {
+    const { _seconds = 0, _nanoseconds = 0 } = dateValue as any;
+    return new Date(_seconds * 1000 + _nanoseconds / 1_000_000);
   }
+
+  // String or number fallback
+  if (typeof dateValue === 'string' || typeof dateValue === 'number') {
+    const parsed = new Date(dateValue);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  return null;
 };
