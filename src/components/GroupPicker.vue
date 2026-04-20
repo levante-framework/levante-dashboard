@@ -42,6 +42,7 @@
             </div>
 
             <PvListbox
+              v-if="header.value !== FIRESTORE_COLLECTIONS.CLASSES || !!selectedSchool"
               v-model="selectedOrgs[activeHeader]"
               checkmark
               class="mt-3"
@@ -97,7 +98,7 @@
       </PvButton>
     </PvPanel>
 
-    <PvConfirmDialog :draggable="false" />
+    <PvConfirmDialog group="group-picker" :draggable="false" />
   </div>
 </template>
 
@@ -208,13 +209,13 @@ const isChildOfSelectedOrg = (
 ): boolean => {
   switch (activeHeader) {
     case FIRESTORE_COLLECTIONS.SCHOOLS:
-      return districtIds.includes(org?.districtId);
+      return districtIds.includes(org?.districtId ?? '');
 
     case FIRESTORE_COLLECTIONS.GROUPS:
-      return districtIds.includes(org?.parentOrgId);
+      return districtIds.includes(org?.parentOrgId ?? '');
 
     case FIRESTORE_COLLECTIONS.CLASSES:
-      return districtIds.includes(org?.districtId) || schoolIds.includes(org?.schoolId);
+      return districtIds.includes(org?.districtId ?? '') || schoolIds.includes(org?.schoolId ?? '');
 
     default:
       return false;
@@ -240,7 +241,7 @@ watch(
     const shouldHideOptions = activeHeader === FIRESTORE_COLLECTIONS.CLASSES && !selectedSchool;
     orgOptions.value = shouldHideOptions ? [] : orgs;
   },
-  { deep: true },
+  { deep: true, immediate: true },
 );
 
 const removeSelectedOrg = (orgHeader: string, selectedOrg: OrgItem) => {
@@ -255,6 +256,7 @@ const removeSelectedOrg = (orgHeader: string, selectedOrg: OrgItem) => {
 
 const onClickClearSelectionBtn = () => {
   confirm.require({
+    group: 'group-picker',
     header: 'Clear selection?',
     message: 'Do you really want to remove all the selected groups?',
     acceptLabel: 'Continue',
@@ -325,6 +327,11 @@ const clearSchoolSelectedChildren = () => {
   selectedSchool.value = undefined;
 };
 
+const getLastSelectedClassSchoolId = (classes: OrgItem[] = []): string | undefined => {
+  const lastSelectedClass = classes.at(-1);
+  return lastSelectedClass?.schoolId;
+};
+
 const confirmParentSiteSelection = (nextDistricts: OrgItem[], previousDistricts: OrgItem[]) => {
   if (isSelectionSyncing.value || !hasDistrictChildrenSelected()) return;
 
@@ -335,6 +342,7 @@ const confirmParentSiteSelection = (nextDistricts: OrgItem[], previousDistricts:
   if (!hasRelatedChild) return;
 
   confirm.require({
+    group: 'group-picker',
     header: 'Change to site selection?',
     message: 'Selecting a site will clear its selected schools, classes, and cohorts. Do you want to continue?',
     acceptLabel: 'Continue',
@@ -368,6 +376,7 @@ const confirmParentSchoolSelection = (nextSchools: OrgItem[], previousSchools: O
   if (!hasRelatedChild) return;
 
   confirm.require({
+    group: 'group-picker',
     header: 'Change to school selection?',
     message: 'Selecting a school will clear its selected classes. Do you want to continue?',
     acceptLabel: 'Continue',
@@ -447,6 +456,18 @@ watch(
     confirmParentSchoolSelection(nextSchools, previousSchools);
   },
   { deep: true },
+);
+
+watch(
+  () => selectedOrgs[FIRESTORE_COLLECTIONS.CLASSES],
+  (nextClasses = []) => {
+    // When classes are already selected (e.g. editing an assignment), default the
+    // school dropdown to the school of the last selected class.
+    if (selectedSchool.value || !nextClasses.length) return;
+    const lastSelectedClassSchoolId = getLastSelectedClassSchoolId(nextClasses);
+    if (lastSelectedClassSchoolId) selectedSchool.value = lastSelectedClassSchoolId;
+  },
+  { deep: true, immediate: true },
 );
 
 watch(selectedOrgs, (newSelectedOrgs) => {

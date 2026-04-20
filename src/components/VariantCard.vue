@@ -9,11 +9,12 @@
         :src="variant.task.image || backupImage"
         :alt="variant.task.name"
       />
-      <div class="h-auto m-0 p-0">
+      <div class="h-auto m-0 p-0 pl-2">
         <div class="flex align-items-center flex-row">
-          <span class="font-bold pl-2">{{ variant.task.name }}</span>
+          <span class="font-bold">{{ variant.task.name }}</span>
           <PvButton
-            class="p-0 surface-hover border-none border-circle hover:text-100 hover:bg-primary ml-2"
+            v-if="isUserSuperAdmin()"
+            class="ml-2 p-0 surface-hover border-none border-circle hover:text-100 hover:bg-primary"
             @click="toggle($event)"
             ><i
               v-tooltip.top="getTooltip('View parameters')"
@@ -21,14 +22,13 @@
             ></i
           ></PvButton>
           <div v-if="variant?.variant?.params?.cat" class="flex ml-2 gap-2">
-            <PvTag severity="warn" rounded><div class="font-semibold text-xs">CAT</div></PvTag>
             <PvTag severity="warn" rounded><div class="font-semibold text-xs">Adaptive</div></PvTag>
           </div>
         </div>
-        <div class="pl-2 w-full">
+        <div class="w-full">
           <p class="m-0">
             <span class="font-semibold text-sm">Variant name: </span>
-            <span class="text-sm">{{ formattedVariantName }}</span>
+            <span class="text-sm">{{ formattedVariantName(variant.variant.name) }}</span>
           </p>
         </div>
         <PvPopover ref="op" append-to="body" style="width: 40vh">
@@ -100,12 +100,13 @@
       <div>
         <img class="w-4rem shadow-2 border-round" :src="variant.task.image || backupImage" :alt="variant.task.name" />
       </div>
-      <div>
+
+      <div class="pl-2">
         <!-- repeated code -->
         <div class="flex align-items-center flex-row">
-          <span class="font-bold" style="margin-left: 0.625rem">{{ variant.task.name }}</span>
+          <span class="font-bold">{{ variant.task.name }}</span>
           <PvButton
-            class="p-0 surface-hover border-none border-circle hover:text-100 hover:bg-primary"
+            class="ml-2 p-0 surface-hover border-none border-circle hover:text-100 hover:bg-primary"
             @click="toggle($event)"
             ><i
               v-tooltip.top="getTooltip('View parameters')"
@@ -113,18 +114,19 @@
             ></i
           ></PvButton>
           <div v-if="variant?.variant?.params?.cat" class="flex ml-2 gap-2">
-            <PvTag severity="warn" rounded><div class="font-semibold text-xs">CAT</div></PvTag>
             <PvTag severity="warn" rounded><div class="font-semibold text-xs">Adaptive</div></PvTag>
           </div>
         </div>
-        <div class="flex align-items-center gap-2">
-          <p class="m-0 mt-1 ml-2">
-            <span class="font-bold">Variant name:</span>
-            {{ formattedVariantName }} <br />
-            <span v-if="formattedAssignedConditions">
-              <span class="font-bold">Assigned to:</span>
-              {{ formattedAssignedConditions }}<br />
-            </span>
+
+        <div class="flex-col align-items-center gap-2">
+          <p class="m-0">
+            <span class="font-semibold text-sm">Variant name: </span>
+            <span class="text-sm">{{ formattedVariantName(variant.variant.name) }}</span>
+          </p>
+
+          <p v-if="formattedAssignedConditions" class="m-0">
+            <span class="font-semibold text-sm">Assigned to: </span>
+            <span class="text-sm">{{ formattedAssignedConditions }}</span>
           </p>
         </div>
       </div>
@@ -274,8 +276,8 @@ import PvDialog from 'primevue/dialog';
 import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import EditVariantDialog from '@/components/EditVariantDialog.vue';
-import { getTooltip } from '@/helpers';
-import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
+import { formattedVariantName, getTooltip } from '@/helpers';
+import { useAuthStore } from '@/store/auth';
 
 interface Condition {
   field: string;
@@ -331,35 +333,13 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<Emits>();
+const authStore = useAuthStore();
+const { isUserSuperAdmin } = authStore;
 
 const backupImage = '/src/assets/roar-logo.png';
 const showContent = ref<boolean>(false);
 const op = ref<any>(null);
 const visible = ref<boolean>(false);
-
-const isLocaleLike = (value: string): boolean => {
-  return /^[a-z]{2}(?:-[a-z]{2})?$/i.test(value.trim());
-};
-
-const formattedVariantName = computed((): string => {
-  const rawName = props.variant.variant?.name ?? '';
-  if (!rawName) return '';
-
-  let variantLanguage = rawName;
-  if (rawName?.toLowerCase()?.includes('adaptive')) {
-    const parts = rawName?.split(' ');
-    variantLanguage = parts[0]!;
-  }
-
-  const trimmedName = variantLanguage.trim();
-  const exactMatch = languageOptions[trimmedName]?.languageTaskPicker;
-  if (exactMatch) return exactMatch;
-
-  if (!isLocaleLike(trimmedName)) return rawName;
-
-  const matchedLocale = findBestMatchingLocale(trimmedName);
-  return languageOptions[matchedLocale]?.languageTaskPicker ?? rawName;
-});
 
 const formattedAssignedConditions = computed((): string => {
   const conditions = props.variant.variant?.conditions?.assigned?.conditions;

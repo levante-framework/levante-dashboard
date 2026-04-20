@@ -27,6 +27,12 @@ vi.mock('@/components/EditVariantDialog.vue', () => ({
   },
 }));
 
+vi.mock('@/store/auth', () => ({
+  useAuthStore: vi.fn(() => ({
+    isUserSuperAdmin: vi.fn(() => true),
+  })),
+}));
+
 const mockLanguages = [
   // Primary (full locales)
   {
@@ -160,14 +166,11 @@ describe('VariantCard.vue - Language Variant Testing', () => {
           expect(variantNameText).toContain('Variant name:');
           expect(variantNameText).toContain(mockVariant.variant.name);
 
-          // Test 4: CAT label is displayed when params.cat is true
-          expect(wrapper.text()).toContain('CAT');
-
-          // Test 5: Select button is present and functional
+          // Test 4: Select button is present and functional
           const selectButton = wrapper.find('[data-cy="selected-variant"]');
           expect(selectButton.exists()).toBe(true);
 
-          // Test 6: Parameters are accessible via popover
+          // Test 5: Parameters are accessible via popover
           const infoButton = wrapper.find('i.pi-info-circle');
           expect(infoButton.exists()).toBe(true);
 

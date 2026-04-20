@@ -8,7 +8,7 @@
   >
     <template #header>
       <div class="flex flex-column gap-1">
-        <h2 class="m-0 font-bold" data-testid="modalTitle">Add New {{ orgTypeLabel }}</h2>
+        <h2 class="m-0 font-bold" data-testid="modalTitle">Create {{ orgTypeLabel }}</h2>
         <p class="m-0 text-gray-500" data-testid="modalDescription">Use the form below to create a new group.</p>
       </div>
     </template>
@@ -23,7 +23,6 @@
             data-cy="dropdown-org-type"
             input-id="orgType"
             option-label="label"
-            show-clear
           />
           <label for="orgType">Group Type<span class="required-asterisk">*</span></label>
         </PvFloatLabel>
@@ -38,12 +37,11 @@
                 <PvSelect
                   v-model="parentSchool"
                   :loading="isFetchingSchools"
-                  :options="(schools as SelectedOrg[]) ?? []"
+                  :options="schools ?? []"
                   class="w-full"
                   data-cy="dropdown-parent-school"
                   input-id="parentSchool"
                   option-label="name"
-                  show-clear
                 />
                 <label for="parentSchool">School<span class="required-asterisk">*</span></label>
               </PvFloatLabel>
@@ -70,12 +68,12 @@
           @click="handleOnClose"
         ></PvButton>
         <PvButton
-          :disabled="isSubmitBtnDisabled"
-          :label="`Add ${orgTypeLabel}`"
+          :disabled="isSubmitBtnDisabled || isSubmitting"
+          :label="`Create ${orgTypeLabel}`"
           data-testid="submitBtn"
           @click="submit"
         >
-          <div v-if="isSubmitBtnDisabled"><i class="pi pi-spinner pi-spin mr-1"></i> Adding {{ orgTypeLabel }}</div>
+          <div v-if="isSubmitting"><i class="pi pi-spinner pi-spin mr-1"></i> Creating {{ orgTypeLabel }}</div>
         </PvButton>
       </div>
     </template>
@@ -104,7 +102,6 @@ import PvFloatLabel from 'primevue/floatlabel';
 import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
-import useOrgNameExistsQuery from '@/composables/queries/useOrgNameExistsQuery';
 import useUpsertOrgMutation from '@/composables/mutations/useUpsertOrgMutation';
 import useVuelidate from '@vuelidate/core';
 import { usePermissions } from '@/composables/usePermissions';
@@ -126,14 +123,23 @@ interface SelectedOrg {
 }
 
 interface Props {
+  activeTabOrg?: OrgType;
   isVisible: boolean;
+  preSelectedSchool?: SelectedOrg;
 }
 
 interface Emits {
   (event: 'close'): void;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  activeTabOrg: () => ({
+    label: 'Site',
+    firestoreCollection: FIRESTORE_COLLECTIONS.DISTRICTS,
+    singular: SINGULAR_ORG_TYPES.DISTRICTS,
+  }),
+  preSelectedSchool: undefined,
+});
 
 const emit = defineEmits<Emits>();
 
@@ -142,9 +148,29 @@ const authStore = useAuthStore();
 const { hasMinimumRole, userRole } = usePermissions();
 const queryClient = useQueryClient();
 
+const isDistrictTabActive = computed(() => props?.activeTabOrg?.singular === SINGULAR_ORG_TYPES.DISTRICTS);
+const isUserSuperAdmin = computed(() => userRole.value === ROLES.SUPER_ADMIN);
 const isSubmitBtnDisabled = ref(false);
+
+watch(
+  () => authStore.currentSite,
+  () => {
+    if (authStore.isUserSuperAdmin() || authStore.currentSite !== 'any') {
+      isSubmitBtnDisabled.value = false;
+    } else {
+      isSubmitBtnDisabled.value = true;
+    }
+  },
+  { immediate: true },
+);
+
+const isSubmitting = ref(false);
 const orgName = ref('');
-const orgType = ref<OrgType | undefined>(undefined);
+const orgType = ref<OrgType | undefined>();
+const orgTypeLabel = computed(() => {
+  if (!orgType.value || (isDistrictTabActive.value && !isUserSuperAdmin.value)) return 'Group';
+  return _capitalize(orgType.value.label);
+});
 
 const allOrgTypes: OrgType[] = [
   { firestoreCollection: FIRESTORE_COLLECTIONS.DISTRICTS, singular: SINGULAR_ORG_TYPES.DISTRICTS, label: 'Site' },
@@ -152,6 +178,8 @@ const allOrgTypes: OrgType[] = [
   { firestoreCollection: FIRESTORE_COLLECTIONS.CLASSES, singular: SINGULAR_ORG_TYPES.CLASSES, label: 'Class' },
   { firestoreCollection: FIRESTORE_COLLECTIONS.GROUPS, singular: SINGULAR_ORG_TYPES.GROUPS, label: 'Cohort' },
 ];
+
+const isAllSitesSelected = computed(() => authStore.currentSite === 'any');
 
 const orgTypes = computed(() => {
   if (!authStore.shouldUsePermissions) {
@@ -162,14 +190,16 @@ const orgTypes = computed(() => {
     return [];
   }
 
+  if (isAllSitesSelected.value) {
+    return allOrgTypes.filter((orgType) => orgType.singular === SINGULAR_ORG_TYPES.DISTRICTS);
+  }
+
   return allOrgTypes.filter((orgType) =>
     orgType.singular === SINGULAR_ORG_TYPES.DISTRICTS
       ? hasMinimumRole(ROLES.SUPER_ADMIN)
       : hasMinimumRole(ROLES.SITE_ADMIN),
   );
 });
-
-const isAllSitesSelected = computed(() => authStore.currentSite === 'any');
 
 const parentDistrict = computed<SelectedOrg | undefined>(() => {
   if (!authStore.currentSite || !authStore.currentSiteName || isAllSitesSelected.value) {
@@ -210,26 +240,19 @@ const v$ = useVuelidate(
   },
 );
 
-const orgTypeLabel = computed(() => (orgType.value ? _capitalize(orgType.value.label) : 'Group'));
 const parentOrgRequired = computed(() => orgTypesRequiringParent.includes(orgType.value?.singular || ''));
 const selectedSite = computed(() => authStore.currentSite ?? '');
 
-const { mutate: upsertOrg, isPending: isSubmittingOrg } = useUpsertOrgMutation();
+const { mutate: upsertOrg, isPending: isPendingOrg } = useUpsertOrgMutation();
 
 const { isFetching: isFetchingSchools, data: schools } = _useSchoolsQuery(selectedSite);
 
-const { isRefetching: isCheckingOrgName, refetch: doesOrgNameExist } = useOrgNameExistsQuery(
-  orgName,
-  orgType,
-  parentDistrict,
-  parentSchool,
-);
-
 // Watch for changes in loading states, with proper undefined handling
 watch(
-  () => [isCheckingOrgName?.value ?? false, isSubmittingOrg?.value ?? false],
-  ([isChecking, isSubmitting]) => {
-    isSubmitBtnDisabled.value = Boolean(isChecking) || Boolean(isSubmitting);
+  () => [isPendingOrg?.value ?? false],
+  ([isPending]) => {
+    isSubmitBtnDisabled.value = Boolean(isPending);
+    isSubmitting.value = Boolean(isPending);
   },
 );
 
@@ -240,7 +263,7 @@ const handleOnClose = () => {
 
 const resetForm = () => {
   orgName.value = '';
-  orgType.value = undefined;
+  orgType.value = isDistrictTabActive.value && !isUserSuperAdmin.value ? undefined : props.activeTabOrg;
   tags.value = [];
   parentSchool.value = undefined;
   v$.value.$reset();
@@ -328,13 +351,36 @@ const parseCreateOrgData = (data: CreateOrgType) => {
   }
 };
 
+watch(
+  () => ({
+    activeTabOrg: props.activeTabOrg,
+    preSelectedSchool: props.preSelectedSchool,
+    isDistrictTabActive: isDistrictTabActive.value,
+    isUserSuperAdmin: isUserSuperAdmin.value,
+  }),
+  ({ activeTabOrg, preSelectedSchool, isDistrictTabActive, isUserSuperAdmin }) => {
+    if (activeTabOrg) {
+      if (isDistrictTabActive && !isUserSuperAdmin) {
+        orgType.value = undefined;
+      } else {
+        orgType.value = activeTabOrg;
+      }
+    }
+
+    if (preSelectedSchool) {
+      parentSchool.value = preSelectedSchool;
+    }
+  },
+  { immediate: true },
+);
+
 const submit = async () => {
-  isSubmitBtnDisabled.value = true;
+  isSubmitting.value = true;
 
   const isFormValid = await v$.value.$validate();
 
   if (!isFormValid) {
-    isSubmitBtnDisabled.value = false;
+    isSubmitting.value = false;
 
     return toast.add({
       severity: 'warn',
@@ -357,33 +403,11 @@ const submit = async () => {
 
   if (orgType.value?.singular !== SINGULAR_ORG_TYPES.DISTRICTS && authStore.currentSite === 'any') {
     handleOnClose();
-    isSubmitBtnDisabled.value = false;
+    isSubmitting.value = false;
     return toast.add({
       severity: 'error',
       summary: 'Error',
       detail: 'Please select a specific site to add a group',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  }
-
-  const { data: orgNameExists } = await doesOrgNameExist();
-
-  if (orgNameExists) {
-    const errorTitle = `${orgTypeLabel.value} Creation Error`;
-    let errorMessage = `${orgTypeLabel.value} with name ${orgName.value} already exists.`;
-
-    if (orgType.value?.singular === SINGULAR_ORG_TYPES.DISTRICTS) {
-      errorMessage += ` ${orgTypeLabel.value} names must be unique.`;
-    } else {
-      errorMessage += ` ${orgTypeLabel.value} names must be unique within a site.`;
-    }
-
-    isSubmitBtnDisabled.value = false;
-
-    return toast.add({
-      severity: 'error',
-      summary: errorTitle,
-      detail: errorMessage,
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   }
@@ -393,7 +417,7 @@ const submit = async () => {
   try {
     parsedData = parseCreateOrgData({ ...(data as CreateOrgType), siteId: authStore.currentSite! });
   } catch (error) {
-    isSubmitBtnDisabled.value = false;
+    isSubmitting.value = false;
 
     return toast.add({
       severity: 'error',
@@ -429,8 +453,14 @@ const submit = async () => {
       console.error(`Error creating ${orgTypeLabel.value}:`, error);
     },
     onSettled: () => {
-      isSubmitBtnDisabled.value = false;
+      isSubmitting.value = false;
     },
   });
 };
 </script>
+
+<style lang="scss">
+.p-dialog .p-dialog-footer {
+  padding: 0;
+}
+</style>

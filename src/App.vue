@@ -32,7 +32,7 @@
 
 <script setup>
 import { computed, onBeforeMount, onMounted, ref, defineAsyncComponent } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
 import { useAuthStore } from '@/store/auth';
@@ -56,6 +56,21 @@ const showDevtools = ref(false);
 const authStore = useAuthStore();
 const { t } = useI18n();
 const route = useRoute();
+const router = useRouter();
+
+async function recoverFromProfileFetchFailure(error) {
+  console.error('Error fetching user claims or user data', error);
+  try {
+    if (authStore.isFirekitInit()) {
+      await authStore.signOut();
+    }
+  } catch (signOutError) {
+    console.error('Error signing out after profile fetch failure', signOutError);
+  }
+  authStore.$reset();
+  await authStore.initFirekit();
+  await router.replace({ name: 'SignIn' });
+}
 
 const loadSessionTimeoutHandler = computed(() => {
   if (!authStore.isAuthenticated()) return false;
@@ -88,15 +103,22 @@ onBeforeMount(async () => {
     // @TODO: Refactor this callback as we should ideally use the useUserClaimsQuery and useUserDataQuery composables.
     // @NOTE: Whilst the rest of the application relies on the user's ROAR UID, this callback requires the user's ID
     // in order for SSO to work and cannot currently be changed without significant refactoring.
-    if (authStore.getUserId()) {
-      const userClaims = await fetchDocById('userClaims', authStore.getUserId());
+    const uid = authStore.getUserId();
+    if (!uid) {
+      return;
+    }
+    try {
+      const [userClaims, userData] = await Promise.all([
+        fetchDocById('userClaims', uid),
+        fetchDocById('users', uid),
+      ]);
       authStore.setUserClaims(userClaims);
-    }
-
-    if (authStore.getUserId()) {
-      const userData = await fetchDocById('users', authStore.getUserId());
       authStore.setUserData(userData);
+    } catch (error) {
+      await recoverFromProfileFetchFailure(error);
     }
+  }).catch((error) => {
+    console.error('Error initializing auth store', error);
   });
 
   isAuthStoreReady.value = true;

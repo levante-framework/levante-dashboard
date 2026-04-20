@@ -15,7 +15,8 @@
         <div class="sidebar__panel__main">
           <div v-if="selectedStatusCurrent" class="assignment-group assignment-group--current --active">
             <small class="assignment-group__title"
-              >{{ t('participantSidebar.statusCurrent') }} <span class="ml-auto font-medium">{{ numOfCurrentAssignments }}</span></small
+              >{{ t('participantSidebar.statusCurrent') }}
+              <span class="ml-auto font-medium">{{ numOfCurrentAssignments }}</span></small
             >
             <ul v-if="currentAssignments.length > 0" class="assignment-group__list">
               <AssignmentCard
@@ -32,7 +33,8 @@
 
           <div v-if="selectedStatusUpcoming" class="assignment-group assignment-group--upcoming --active">
             <small class="assignment-group__title"
-              >{{ t('participantSidebar.statusUpcoming') }} <span class="ml-auto font-medium">{{ numOfUpcomingAssignments }}</span></small
+              >{{ t('participantSidebar.statusUpcoming') }}
+              <span class="ml-auto font-medium">{{ numOfUpcomingAssignments }}</span></small
             >
             <ul v-if="upcomingAssignments.length > 0" class="assignment-group__list">
               <AssignmentCard
@@ -49,7 +51,8 @@
 
           <div v-if="selectedStatusPast" class="assignment-group assignment-group--past --active">
             <small class="assignment-group__title"
-              >{{ t('participantSidebar.statusPast') }} <span class="ml-auto font-medium">{{ numOfPastAssignments }}</span></small
+              >{{ t('participantSidebar.statusPast') }}
+              <span class="ml-auto font-medium">{{ numOfPastAssignments }}</span></small
             >
             <ul v-if="pastAssignments.length > 0" class="assignment-group__list">
               <AssignmentCard
@@ -123,15 +126,21 @@ assignmentsStore.setSelectedStatus(selectedStatus.value);
 const showSideBarPanel = ref(false);
 
 const currentAssignments = computed(() =>
-  userAssignments.value.filter((assignment) => isCurrent(assignment) && assignment?.completed === false),
+  userAssignments.value.filter(
+    (assignment: AdministrationType) => isCurrent(assignment) && assignment?.completed === false,
+  ),
 );
 
 const pastAssignments = computed(() =>
-  userAssignments.value.filter((assignment) => isPast(assignment) || assignment?.completed === true),
+  userAssignments.value.filter(
+    (assignment: AdministrationType) => isPast(assignment) || assignment?.completed === true,
+  ),
 );
 
 const upcomingAssignments = computed(() =>
-  userAssignments.value.filter((assignment) => isUpcoming(assignment) && assignment?.completed === false),
+  userAssignments.value.filter(
+    (assignment: AdministrationType) => isUpcoming(assignment) && assignment?.completed === false,
+  ),
 );
 
 const numOfCurrentAssignments = computed(() => {

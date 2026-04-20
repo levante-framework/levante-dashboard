@@ -5,7 +5,6 @@ interface GetAdministrationsParams {
   testData: boolean;
 }
 
-// Replace the following interface with zod schema
 interface Administration {
   id: string;
 }

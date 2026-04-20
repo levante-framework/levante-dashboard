@@ -9,7 +9,17 @@
 
         <div class="how-to-section mb-4">
           <h3>How to plan your groups</h3>
-          <div class="text-md text-gray-500 mb-1 line-height-3">Groups must be created before users can be added. What kind of group(s) you need depends on your study design. Read the <a href="https://researcher.levante-network.org/dashboard/create-a-group" target="_blank" rel="noopener noreferrer">documentation on creating groups</a> for guidance on creating and naming groups.</div>
+          <div class="text-md text-gray-500 mb-1 line-height-3">
+            Groups must be created before users can be added. What kind of group(s) you need depends on your study
+            design. Read the
+            <a
+              href="https://researcher.levante-network.org/dashboard/create-a-group"
+              target="_blank"
+              rel="noopener noreferrer"
+              >documentation on creating groups</a
+            >
+            for guidance on creating and naming groups.
+          </div>
         </div>
         <div class="flex flex-column align-items-start mb-2 md:flex-row w-full justify-content-between">
           <div class="flex align-items-center gap-3 mb-4 md:mb-0">
@@ -19,6 +29,7 @@
                 class="bg-primary text-white border-none p-2 ml-auto"
                 data-testid="add-group-btn"
                 data-cy="add-group-btn"
+                :disabled="currentSite === 'any' && activeIndex != 0"
                 @click="isAddGroupModalVisible = true"
                 >Create Group</PvButton
               >
@@ -63,7 +74,7 @@
               <div v-if="orgType.id === 'classes'" class="col-12 md:col-6 lg:col-3 xl:col-3 mt-3">
                 <PvFloatLabel>
                   <PvSelect
-                    v-model="selectedSchool"
+                    v-model="selectedSchoolId"
                     input-id="school"
                     :options="schoolsData"
                     option-label="name"
@@ -83,6 +94,7 @@
               :data="filteredTableData"
               sortable
               :loading="isTableLoading"
+              :allow-export="false"
               :allow-filtering="false"
               @selected-org-id="showCode"
               @export-org-users="(orgId) => exportOrgUsers(orgId)"
@@ -175,7 +187,12 @@
     </template>
   </RoarModal>
 
-  <AddGroupModal :isVisible="isAddGroupModalVisible" @close="isAddGroupModalVisible = false" />
+  <AddGroupModal
+    :active-tab-org="activeTabOrg"
+    :isVisible="isAddGroupModalVisible"
+    :pre-selected-school="selectedSchool"
+    @close="isAddGroupModalVisible = false"
+  />
 
   <GroupAssignmentsModal
     :is-visible="isAssignmentsModalVisible"
@@ -228,10 +245,13 @@ import { normalizeToLowercase } from '@/helpers';
 import _useDistrictsQuery from '@/composables/queries/_useDistrictsQuery';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
 import { usePermissions } from '@/composables/usePermissions';
+import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 
 const router = useRouter();
 const initialized = ref(false);
 const selectedDistrict = ref(undefined);
+const selectedSchoolId = ref(undefined);
 const selectedSchool = ref(undefined);
 const orderBy = ref(orderByDefault);
 let activationCode = ref(null);
@@ -262,11 +282,9 @@ const isAssignmentsModalVisible = ref(false);
 const selectedOrgId = ref('');
 const selectedOrgName = ref('');
 
-
 const authStore = useAuthStore();
 const { currentSite, roarfirekit, shouldUsePermissions, userClaims } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
-const { hasMinimumRole } = usePermissions();
 
 const claimsLoaded = computed(() => !!userClaims.value?.claims);
 const selectedSite = computed(() => (shouldUsePermissions.value ? currentSite.value : selectedDistrict.value));
@@ -292,6 +310,35 @@ const activeOrgType = computed({
   },
 });
 
+const activeTabOrg = computed(() => {
+  switch (activeOrgType.value) {
+    case ORG_TYPES.SCHOOLS:
+      return {
+        label: 'School',
+        firestoreCollection: FIRESTORE_COLLECTIONS.SCHOOLS,
+        singular: SINGULAR_ORG_TYPES.SCHOOLS,
+      };
+    case ORG_TYPES.CLASSES:
+      return {
+        label: 'Class',
+        firestoreCollection: FIRESTORE_COLLECTIONS.CLASSES,
+        singular: SINGULAR_ORG_TYPES.CLASSES,
+      };
+    case ORG_TYPES.GROUPS:
+      return {
+        label: 'Cohort',
+        firestoreCollection: FIRESTORE_COLLECTIONS.GROUPS,
+        singular: SINGULAR_ORG_TYPES.GROUPS,
+      };
+    default:
+      return {
+        label: 'Site',
+        firestoreCollection: FIRESTORE_COLLECTIONS.DISTRICTS,
+        singular: SINGULAR_ORG_TYPES.DISTRICTS,
+      };
+  }
+});
+
 const { data: districtsData, isLoading: isLoadingDistricts } = _useDistrictsQuery({
   enabled: !shouldUsePermissions.value,
 });
@@ -304,17 +351,20 @@ watch(districtsData, (newDistrictsData) => {
 
 const { data: schoolsData, isLoading: isLoadingSchools } = _useSchoolsQuery(selectedSite);
 
-watch(schoolsData, (newSchoolsData) => {
+watch([selectedSchoolId, schoolsData], ([newSelectedSchoolId, newSchoolsData]) => {
   if (newSchoolsData && !isUserSuperAdmin()) {
-    selectedSchool.value = _get(_head(newSchoolsData), 'id');
+    selectedSchoolId.value = _get(_head(newSchoolsData), 'id');
   }
+
+  const school = newSchoolsData?.find((s) => s.id === newSelectedSchoolId);
+  selectedSchool.value = school;
 });
 
 const {
   isLoading,
   isFetching,
   data: orgData,
-} = useOrgsTableQuery(activeOrgType, selectedSite, selectedSchool, orderBy, {
+} = useOrgsTableQuery(activeOrgType, selectedSite, selectedSchoolId, orderBy, {
   enabled: claimsLoaded,
 });
 
@@ -323,7 +373,7 @@ const {
   data: administrationsData,
   isLoading: isLoadingAdministrations,
   isFetching: isFetchingAdministrations,
-} = useFullAdministrationsListQuery(orderBy, false, {
+} = useFullAdministrationsListQuery(selectedSite, orderBy, false, {
   enabled: claimsLoaded,
 });
 
@@ -472,7 +522,7 @@ const tableColumns = computed(() => {
     sort: false,
   });
 
-  if (hasMinimumRole(ROLES.SITE_ADMIN)) {
+  if (isUserSuperAdmin()) {
     columns.push({
       header: 'Edit',
       button: true,
@@ -646,7 +696,7 @@ onUnmounted(() => {
 });
 
 const tableKey = ref(0);
-watch([selectedSite, selectedSchool], () => {
+watch([selectedSite, selectedSchoolId], () => {
   tableKey.value += 1;
 });
 

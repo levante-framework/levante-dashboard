@@ -195,6 +195,7 @@ import useAdministrationAssignmentsQuery from '@/composables/queries/useAdminist
 import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
 import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
 import { exportCsv } from '@/helpers/query/utils';
+import { normalizeUserTypeForDisplay } from '@/helpers/userType';
 import { taskDisplayNames } from '@/helpers/reports';
 import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
 import { isLevante, getTooltip, normalizeToLowercase } from '@/helpers';
@@ -377,7 +378,7 @@ const appendTaskProgressColumns = (row, progress = {}) => {
 const buildProgressExportRow = (user, progress = {}) => {
   const tableRow = {
     Username: _get(user, 'username') ?? '',
-    'User Type': _startCase(_get(user, 'userType') ?? ''),
+    'User Type': _startCase(normalizeUserTypeForDisplay(_get(user, 'userType') ?? '')),
   };
 
   if (props.orgType === 'district') {
@@ -403,7 +404,7 @@ const computedProgressData = computed(() => {
     const currRow = {
       user: {
         username: user?.username || assignment?.userData?.username || '',
-        userType: user.userType === 'parent' ? 'caregiver' : user.userType,
+        userType: normalizeUserTypeForDisplay(user.userType),
         userId: user.userId,
         grade: user.studentData?.grade,
         assessmentPid: user.assessmentPid,

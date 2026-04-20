@@ -4,6 +4,36 @@
       <LinkUsersInfo />
 
       <PvDivider class="my-5" />
+      <PvMessage v-if="validationErrors.length" severity="error" class="mt-3 mb-3">
+        <p class="m-0 mb-2">
+          There are errors in the file you tried to upload, <code>{{ uploadedFile?.name || 'selected file' }}</code
+          >. Please fix the listed errors and try again.
+        </p>
+        <ul class="m-0 pl-3">
+          <li v-for="(error, index) in validationErrors" :key="`${index}-${error}`">
+            <span v-html="error"></span>
+          </li>
+        </ul>
+      </PvMessage>
+
+      <PvMessage
+        v-if="linkingAttemptError"
+        severity="error"
+        closable
+        class="mt-3 mb-3"
+        @close="linkingAttemptError = ''"
+      >
+        <p class="m-0 mb-2">
+          Linking was attempted but did not complete for <code>{{ uploadedFile?.name || 'your file' }}</code
+          >.
+        </p>
+        <p class="m-0">Error: {{ linkingAttemptError }}</p>
+      </PvMessage>
+
+      <PvMessage v-if="lastLinkedFileName" severity="success" closable class="mb-4">
+        Linking successful with file <code>{{ lastLinkedFileName }}</code
+        >. Click below to upload another file.
+      </PvMessage>
 
       <PvMessage v-if="inlineFileError" severity="error" class="mb-3" :closable="false">
         {{ inlineFileError }}
@@ -16,6 +46,7 @@
             :empty-label="'Test'"
             :show-cancel-button="false"
             :show-upload-button="false"
+            :disabled="isAllSitesSelected"
             auto
             accept=".csv"
             custom-upload
@@ -123,14 +154,7 @@ const allFields = [
   { field: 'uid', header: 'UID', dataType: 'string' },
 ];
 
-const skippedColumnKeysLower = [
-  'id',
-  'usertype',
-  'uid',
-  'caregiverid',
-  'teacherid',
-  'parentid',
-];
+const skippedColumnKeysLower = ['id', 'usertype', 'uid', 'caregiverid', 'teacherid', 'parentid'];
 
 function getFieldValue(user, fieldName) {
   const field = Object.keys(user).find((key) => key.toLowerCase() === fieldName.toLowerCase());
@@ -207,6 +231,32 @@ const resetUserProgress = () => {
   setHasUserConfirmed(false);
 };
 
+const hasAnyLinkingData = (users) =>
+  users.some((user) => {
+    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
+    const userType = userTypeField && user[userTypeField] ? String(user[userTypeField]).trim().toLowerCase() : '';
+    if (userType !== 'child') return false;
+
+    const caregiverIdField = Object.keys(user).find((key) => key.toLowerCase() === 'caregiverid');
+    const teacherIdField = Object.keys(user).find((key) => key.toLowerCase() === 'teacherid');
+
+    const hasCaregiverId =
+      caregiverIdField &&
+      String(user[caregiverIdField] ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .some((id) => id !== '');
+
+    const hasTeacherId =
+      teacherIdField &&
+      String(user[teacherIdField] ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .some((id) => id !== '');
+
+    return hasCaregiverId || hasTeacherId;
+  });
+
 const onFileUpload = async (event) => {
   resetUserProgress();
 
@@ -236,15 +286,18 @@ const onFileUpload = async (event) => {
 
   const firstRow = toRaw(rawUserFile.value[0]);
   const headers = Object.keys(firstRow);
-  const requiredHeaders = ['id', 'usertype', 'uid'];
+  const requiredHeaders = ['id', 'usertype', 'uid', 'caregiverid', 'teacherid'];
 
   const headerValidation = validateCsvHeaders(headers, requiredHeaders);
+  const currentValidationErrors = [];
+
   if (!headerValidation.success) {
     const missingHeaders = headerValidation.errors.map((e) => e.field).join(', ');
     inlineFileError.value = `Missing required column(s): ${missingHeaders}`;
     rawUserFile.value = [];
     return;
   }
+  validationErrors.value = [];
 
   csvSourceVerified.value = verifyCsvSource(filteredData);
 
@@ -389,7 +442,9 @@ const submitUsers = async () => {
       if (idField) normalizedUser.id = user[idField];
       if (userTypeField) {
         const userTypeValue = user[userTypeField];
-        normalizedUser.userType = userTypeValue.toLowerCase() === 'caregiver' ? 'parent' : userTypeValue;
+        // Link users: send CSV userType as-is (trimmed). Do not use normalizeUserTypeForBackend —
+        // the linkUsers Cloud Function expects child rows as "child", not "student".
+        normalizedUser.userType = typeof userTypeValue === 'string' ? userTypeValue.trim() : userTypeValue;
       }
       if (uidField) normalizedUser.uid = user[uidField];
 
@@ -411,21 +466,17 @@ const submitUsers = async () => {
     });
 
     await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: currentSite.value });
+    lastLinkedFileName.value = uploadedFile.value?.name ?? '';
     isFileUploaded.value = false;
-
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Users linked successfully',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+    showErrorTable.value = false;
+    errorUsers.value = [];
+    errorUserColumns.value = [];
+    validationErrors.value = [];
+    linkingAttemptError.value = '';
   } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: `Failed to link users: ${error.message}. Please try again.`,
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+    linkingAttemptError.value = error?.message
+      ? `${error.message}. Please try again.`
+      : 'Something went wrong. Please try again.';
   } finally {
     activeSubmit.value = false;
   }
