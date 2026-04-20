@@ -11,7 +11,7 @@
         </p>
         <ul class="m-0 pl-3">
           <li v-for="(error, index) in validationErrors" :key="`${index}-${error}`">
-            <span v-html="error"></span>
+            <span>{{ error }}</span>
           </li>
         </ul>
       </PvMessage>
@@ -123,6 +123,7 @@ import PvFileUpload from 'primevue/fileupload';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import PvDivider from 'primevue/divider';
 import PvMessage from 'primevue/message';
+import { normalizeUserTypeForBackend } from '@/helpers/userType';
 import { validateCsvHeaders, validateLinkUsersCsv } from '@levante-framework/levante-zod';
 import { useLevanteStore } from '@/store/levante';
 import { storeToRefs } from 'pinia';
@@ -145,6 +146,9 @@ const rowIssuesByIndex = ref({});
 const activeSubmit = ref(false);
 const inlineFileError = ref(null);
 const csvSourceVerified = ref(true);
+const validationErrors = ref([]);
+const linkingAttemptError = ref('');
+const lastLinkedFileName = ref('');
 
 const allFields = [
   { field: 'id', header: 'ID', dataType: 'string' },
@@ -219,6 +223,8 @@ function formatCsvValidationField(field) {
 
 function resetValidationState() {
   inlineFileError.value = null;
+  validationErrors.value = [];
+  linkingAttemptError.value = '';
   rowIssuesByIndex.value = {};
   csvSourceVerified.value = true;
 }
@@ -289,7 +295,6 @@ const onFileUpload = async (event) => {
   const requiredHeaders = ['id', 'usertype', 'uid', 'caregiverid', 'teacherid'];
 
   const headerValidation = validateCsvHeaders(headers, requiredHeaders);
-  const currentValidationErrors = [];
 
   if (!headerValidation.success) {
     const missingHeaders = headerValidation.errors.map((e) => e.field).join(', ');
@@ -297,6 +302,13 @@ const onFileUpload = async (event) => {
     rawUserFile.value = [];
     return;
   }
+
+  if (!hasAnyLinkingData(filteredData)) {
+    inlineFileError.value = 'At least one child row must include caregiverId or teacherId to link users.';
+    rawUserFile.value = [];
+    return;
+  }
+
   validationErrors.value = [];
 
   csvSourceVerified.value = verifyCsvSource(filteredData);
@@ -442,9 +454,8 @@ const submitUsers = async () => {
       if (idField) normalizedUser.id = user[idField];
       if (userTypeField) {
         const userTypeValue = user[userTypeField];
-        // Link users: send CSV userType as-is (trimmed). Do not use normalizeUserTypeForBackend —
-        // the linkUsers Cloud Function expects child rows as "child", not "student".
-        normalizedUser.userType = typeof userTypeValue === 'string' ? userTypeValue.trim() : userTypeValue;
+        normalizedUser.userType =
+          typeof userTypeValue === 'string' ? normalizeUserTypeForBackend(userTypeValue.toLowerCase()) : userTypeValue;
       }
       if (uidField) normalizedUser.uid = user[uidField];
 
@@ -468,9 +479,6 @@ const submitUsers = async () => {
     await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: currentSite.value });
     lastLinkedFileName.value = uploadedFile.value?.name ?? '';
     isFileUploaded.value = false;
-    showErrorTable.value = false;
-    errorUsers.value = [];
-    errorUserColumns.value = [];
     validationErrors.value = [];
     linkingAttemptError.value = '';
   } catch (error) {
