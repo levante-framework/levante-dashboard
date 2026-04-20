@@ -1,22 +1,23 @@
-import { Repository } from '@/firebase/Repository';
-import { FirebaseService } from '@/firebase/Service';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { ROLES } from '@/constants/roles';
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  type DocumentData,
-  type QueryDocumentSnapshot,
-  Timestamp,
-} from 'firebase/firestore';
+import { Repository } from '@/firebase/Repository';
+import { FirebaseService } from '@/firebase/Service';
 import { logger } from '@/logger';
 import type {
   GetAdministrationOrgProgressApiResponse,
   GetAdministrationOrgProgressPayload,
   GetAdministrationOrgProgressResult,
 } from '@/types/administrationOrgProgress';
+import {
+  collection,
+  getDocs,
+  query,
+  Timestamp,
+  where,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+} from 'firebase/firestore';
+import { Ref } from 'vue';
 
 export interface CreateUpdateSuperAdminNamePayload {
   first: string;
@@ -53,12 +54,7 @@ export interface CreateUsersPayload {
   siteId?: string;
 }
 
-const ADMIN_ROLES = new Set<string>([
-  ROLES.SUPER_ADMIN,
-  ROLES.SITE_ADMIN,
-  ROLES.ADMIN,
-  ROLES.RESEARCH_ASSISTANT,
-]);
+const ADMIN_ROLES = new Set<string>([ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN, ROLES.ADMIN, ROLES.RESEARCH_ASSISTANT]);
 
 function roleEntryHasAdminRole(entry: unknown): boolean {
   if (!entry || typeof entry !== 'object' || !('role' in entry)) {
@@ -133,20 +129,32 @@ class UsersRepository extends Repository {
   }
 
   async createUsers(payload: CreateUsersPayload): Promise<unknown> {
-    return this.callWithTimeout<CreateUsersPayload, unknown>(
-      'createUsers',
-      payload,
-      CREATE_USERS_CALLABLE_TIMEOUT_MS,
-    );
+    return this.callWithTimeout<CreateUsersPayload, unknown>('createUsers', payload, CREATE_USERS_CALLABLE_TIMEOUT_MS);
+  }
+
+  async getUsersBySiteId(siteIdRef: Ref<string | null>): Promise<Array<unknown>> {
+    if (!siteIdRef.value?.length || siteIdRef.value === 'any') return [];
+
+    try {
+      const usersRef = collection(FirebaseService.db, FIRESTORE_COLLECTIONS.USERS);
+      const usersQuery = query(usersRef, where('districts.all', 'array-contains', siteIdRef.value));
+      const snapshot = await getDocs(usersQuery);
+      const docs = snapshot.docs.map((doc) => doc.data());
+      return docs;
+    } catch (error) {
+      console.error('getUsersBySiteId: Error fetching admin users from Firestore:', error);
+      logger.error(error, { context: { function: 'getUsersBySiteId' } });
+      throw error;
+    }
   }
 
   async getAdministrationOrgProgress(
     payload: GetAdministrationOrgProgressPayload,
   ): Promise<GetAdministrationOrgProgressResult> {
-    const response = await this.call<
-      GetAdministrationOrgProgressPayload,
-      GetAdministrationOrgProgressApiResponse
-    >('getAdministrationOrgProgress', payload);
+    const response = await this.call<GetAdministrationOrgProgressPayload, GetAdministrationOrgProgressApiResponse>(
+      'getAdministrationOrgProgress',
+      payload,
+    );
 
     if (response?.status !== 'ok' || response.data == null) {
       throw new Error('getAdministrationOrgProgress: invalid response from server');

@@ -1,8 +1,10 @@
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { Repository } from '@/firebase/Repository';
 import { FirebaseService } from '@/firebase/Service';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
-import { doc, getDoc, type DocumentData } from 'firebase/firestore';
 import { logger } from '@/logger';
+import { collection, getDocs, query, where } from '@firebase/firestore';
+import { doc, getDoc, type DocumentData } from 'firebase/firestore';
+import { Ref } from 'vue';
 
 interface GetAdministrationsParams {
   idsOnly: boolean;
@@ -53,10 +55,7 @@ class AdministrationsRepository extends Repository {
     }
   }
 
-  async fetchOrgBySingularRouteType(
-    orgType: string,
-    orgId: string,
-  ): Promise<(DocumentData & { id: string }) | null> {
+  async fetchOrgBySingularRouteType(orgType: string, orgId: string): Promise<(DocumentData & { id: string }) | null> {
     const collectionId = ORG_COLLECTION_BY_ROUTE_TYPE[orgType];
     if (!collectionId) {
       throw new Error(`Unsupported org type for Firestore fetch: ${orgType}`);
@@ -71,6 +70,22 @@ class AdministrationsRepository extends Repository {
     } catch (error) {
       console.error('fetchOrgBySingularRouteType: Error fetching org from Firestore:', error);
       logger.error(error, { context: { function: 'fetchOrgBySingularRouteType', orgType, orgId } });
+      throw error;
+    }
+  }
+
+  async getAssignmentsBySiteId(siteIdRef: Ref<string | null>): Promise<Array<unknown>> {
+    if (!siteIdRef.value?.length || siteIdRef.value === 'any') return [];
+
+    try {
+      const assignmentsRef = collection(FirebaseService.db, FIRESTORE_COLLECTIONS.ADMINISTRATIONS);
+      const assignmentsQuery = query(assignmentsRef, where('siteId', '==', siteIdRef.value));
+      const snapshot = await getDocs(assignmentsQuery);
+      const docs = snapshot.docs.map((doc) => doc.data());
+      return docs;
+    } catch (error) {
+      console.error('getAssignmentsBySiteId: Error fetching assignments from Firestore:', error);
+      logger.error(error, { context: { function: 'getAssignmentsBySiteId' } });
       throw error;
     }
   }
