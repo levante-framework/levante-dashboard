@@ -12,6 +12,11 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { logger } from '@/logger';
+import type {
+  GetAdministrationOrgProgressApiResponse,
+  GetAdministrationOrgProgressPayload,
+  GetAdministrationOrgProgressResult,
+} from '@/types/administrationOrgProgress';
 
 export interface CreateUpdateSuperAdminNamePayload {
   first: string;
@@ -133,6 +138,21 @@ class UsersRepository extends Repository {
       payload,
       CREATE_USERS_CALLABLE_TIMEOUT_MS,
     );
+  }
+
+  async getAdministrationOrgProgress(
+    payload: GetAdministrationOrgProgressPayload,
+  ): Promise<GetAdministrationOrgProgressResult> {
+    const response = await this.call<
+      GetAdministrationOrgProgressPayload,
+      GetAdministrationOrgProgressApiResponse
+    >('getAdministrationOrgProgress', payload);
+
+    if (response?.status !== 'ok' || response.data == null) {
+      throw new Error('getAdministrationOrgProgress: invalid response from server');
+    }
+
+    return response.data;
   }
 }
 
