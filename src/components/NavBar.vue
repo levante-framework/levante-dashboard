@@ -113,6 +113,13 @@ onUnmounted((): void => {
 
 const computedItems = computed((): MenuItem[] => {
   const items: MenuItem[] = [];
+  items.push({
+    label: 'Home',
+    command: () => {
+      router.push({ name: 'Home' });
+    },
+  });
+
   // Groups only has one associated page and therefore is not nested within items
   const groupsAction = rawActions.value.find((action) => action.category === 'Groups');
   if (groupsAction) {
