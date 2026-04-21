@@ -131,6 +131,15 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
+    path: '/view-assignments',
+    name: 'ViewAssignments',
+    component: () => import('@/pages/ViewAssignments.vue'),
+    meta: {
+      pageTitle: 'View Assignments',
+      allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
+    },
+  },
+  {
     path: '/create-assignment',
     name: 'CreateAssignment',
     component: () => import('@/pages/CreateAssignment.vue'),
@@ -283,15 +292,6 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       pageTitle: 'Down for Maintenance',
       allowedRoles: [],
-    },
-  },
-  {
-    path: '/welcome',
-    name: 'Welcome',
-    component: () => import('@/pages/Welcome.vue'),
-    meta: {
-      pageTitle: { translationKey: 'home' },
-      allowedRoles: ['*'],
     },
   },
 ];
