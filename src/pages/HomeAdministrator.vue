@@ -7,7 +7,10 @@
             <div class="flex flex-1 flex-column gap-2">
               <div class="page-title-row flex align-items-center justify-content-start gap-2 mb-2">
                 <div class="admin-page-header m-0">View Assignments</div>
-                <DocsButton href="https://researcher.levante-network.org/dashboard/monitor-completion" label="Documentation" />
+                <DocsButton
+                  href="https://researcher.levante-network.org/dashboard/monitor-completion"
+                  label="Documentation"
+                />
               </div>
 
               <div class="text-md text-gray-500 mb-1 line-height-3">
@@ -65,8 +68,6 @@
               </div>
             </div>
           </div>
-
-  
 
           <div
             v-if="search.length > 0"
@@ -189,9 +190,7 @@ const initialized = ref(false);
 const pageLimit = ref(10);
 const page = ref(0);
 const dataViewFirst = ref(0);
-const currentPage = computed(() =>
-  pageLimit.value > 0 ? Math.floor(dataViewFirst.value / pageLimit.value) + 1 : 1,
-);
+const currentPage = computed(() => (pageLimit.value > 0 ? Math.floor(dataViewFirst.value / pageLimit.value) + 1 : 1));
 
 const orderBy = ref(orderByNameASC);
 const searchSuggestions = ref([]);
@@ -221,6 +220,7 @@ unsubscribeInitializer = authStore.$subscribe(async (mutation, state) => {
 
 onMounted(() => {
   if (roarfirekit.value.restConfig) init();
+  history.replaceState({}, '');
 });
 
 /**
@@ -291,10 +291,11 @@ const filterOptions = ref([
 ]);
 
 const getAssignmentsSelectedFilter = () => {
-  if (assignmentsSelectedFilter.value) return assignmentsSelectedFilter.value;
+  let defaultValue = null;
 
-  const defaultLabel = 'All';
-  const defaultOption = filterOptions.value.find((option) => option.label === defaultLabel) || filterOptions.value[0];
+  if (typeof history.state?.status === 'string') defaultValue = history.state?.status;
+  else if (assignmentsSelectedFilter.value) defaultValue = assignmentsSelectedFilter.value.value;
+  const defaultOption = filterOptions.value.find((option) => option.value === defaultValue) || filterOptions.value[0];
 
   setAssignmentsSelectedFilter(defaultOption);
 
