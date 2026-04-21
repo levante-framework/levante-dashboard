@@ -6,15 +6,31 @@
   <main v-else class="container main">
     <section class="main-body">
       <div class="flex flex-column mb-5">
-        <div class="flex justify-content-between mb-2">
-          <div class="flex align-items-center gap-3">
-            <div class="admin-page-header">{{ header }}</div>
+        <div class="page-title-row flex align-items-center justify-content-start gap-2 mb-2">
+          <div class="admin-page-header m-0">{{ header }}</div>
+          <DocsButton
+            href="https://researcher.levante-network.org/dashboard/create-an-assignment"
+            label="Documentation"
+          />
+        </div>
+        <div v-if="!adminId" class="how-to-section mb-4">
+          <h3>How to create an assignment</h3>
+          <div class="text-md text-gray-500 mb-1 line-height-3">
+            An assignment is a collection of tasks. New assignments have a name and date range, are given to certain
+            groups, and contain specified tasks. When an assignment is given to a group, all users within that group
+            receive those tasks. Before getting started, please read the
+            <a
+              href="https://researcher.levante-network.org/dashboard/create-an-assignment"
+              target="_blank"
+              rel="noopener noreferrer"
+              >documentation on creating assignments</a
+            >.
           </div>
         </div>
-        <div class="text-md text-gray-500">{{ description }}</div>
       </div>
 
       <PvDivider />
+
       <div class="text-sm text-gray-500 mt-3 mr-3 required"><span class="required-asterisk">*</span> Required</div>
       <div class="bg-gray-100 rounded p-5">
         <div class="formgrid grid mt-5">
@@ -194,15 +210,17 @@ import useTaskVariantsQuery from '@/composables/queries/useTaskVariantsQuery';
 import useUpsertAdministrationMutation from '@/composables/mutations/useUpsertAdministrationMutation';
 import TaskPicker from '@/components/TaskPicker.vue';
 import ConsentPicker from '@/components/ConsentPicker.vue';
+import DocsButton from '@/components/DocsButton.vue';
 import GroupPicker from '@/components/GroupPicker.vue';
 import { APP_ROUTES } from '@/constants/routes';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
-import { isLevante, normalizeToLowercase } from '@/helpers';
+import { isLevante, isPlainObject, normalizeToLowercase } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
 import useAssignmentExistsQuery from '@/composables/queries/useAssignmentExistsQuery';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { useLevanteStore } from '@/store/levante';
+import { logger } from '@/logger';
 
 const initialized = ref(false);
 const isFormPopulated = ref(false);
@@ -222,11 +240,11 @@ const props = defineProps({
   adminId: { type: String, required: false, default: null },
 });
 
-const header = computed(() => (props.adminId ? 'Edit an assignment' : 'Create Assignment'));
-
-const description = computed(
-  () => 'An assignment is a collection of tasks assigned to users who are members of a group',
-);
+const header = computed(() => {
+  if (!props.adminId) return 'Create Assignment';
+  const name = state.administrationName?.trim();
+  return name ? `Edit Assignment: ${name}` : 'Edit assignment';
+});
 
 const submitLabel = computed(() => (props.adminId ? 'Update Assignment' : 'Create Assignment'));
 
@@ -261,38 +279,63 @@ const { data: allVariants } = useTaskVariantsQuery(true, {
 // +------------------------------------------------------------------------------------------------------------------+
 // Fetch the data of the currently being edited administration, incl. its assigned assessments.
 const fetchAdminitrations = computed(() => initialized.value && !!props.adminId);
-const { data: existingAdministrationData } = useAdministrationsQuery([props.adminId], {
+const {
+  data: existingData,
+  isLoading: isLoadingExistingData,
+  error: errorExistingData,
+} = useAdministrationsQuery([props.adminId], {
   enabled: fetchAdminitrations,
   select: (data) => data[0],
   staleTime: 0,
   gcTime: 0,
 });
 
-const existingAssessments = computed(() => existingAdministrationData?.value?.assessments ?? []);
+watch(
+  [existingData, isLoadingExistingData, errorExistingData],
+  ([newExistingData, newIsLoadingExistingData, newErrorExistingData]) => {
+    if (!newIsLoadingExistingData && !newExistingData) {
+      logger.error('Failed to fetch administration by id', {
+        assignmentId: props.adminId,
+        error: newErrorExistingData,
+      });
+
+      toast.add({
+        severity: TOAST_SEVERITIES.ERROR,
+        summary: 'Failed to fetch assignment',
+        detail: "We could not fetch this assignment's data. Please try again later",
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+
+      router.go(-1);
+    }
+  },
+);
+
+const existingAssessments = computed(() => existingData?.value?.assessments ?? []);
 
 // Fetch the districts assigned to the administration.
-const districtIds = computed(() => existingAdministrationData?.value?.minimalOrgs?.districts ?? []);
+const districtIds = computed(() => existingData?.value?.minimalOrgs?.districts ?? []);
 
 const { data: existingDistrictsData } = useDistrictsQuery(districtIds, {
   enabled: initialized,
 });
 
 // Fetch the schools assigned to the administration.
-const schoolIds = computed(() => existingAdministrationData.value?.minimalOrgs?.schools ?? []);
+const schoolIds = computed(() => existingData.value?.minimalOrgs?.schools ?? []);
 
 const { data: existingSchoolsData } = useSchoolsQuery(schoolIds, {
   enabled: initialized,
 });
 
 // Fetch the classes assigned to the administration.
-const classIds = computed(() => existingAdministrationData.value?.minimalOrgs?.classes ?? []);
+const classIds = computed(() => existingData.value?.minimalOrgs?.classes ?? []);
 
 const { data: existingClassesData } = useClassesQuery(classIds, {
   enabled: initialized,
 });
 
 // Fetch the groups assigned to the administration.
-const groupIds = computed(() => existingAdministrationData.value?.minimalOrgs?.groups ?? []);
+const groupIds = computed(() => existingData.value?.minimalOrgs?.groups ?? []);
 
 const { data: existingGroupData } = useGroupsQuery(groupIds, {
   enabled: initialized,
@@ -405,10 +448,12 @@ const checkForRequiredOrgs = (orgs) => {
 // | Form submission
 // +------------------------------------------------------------------------------------------------------------------+
 const removeNull = (obj) => {
+  if (!isPlainObject(obj)) return {};
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== null));
 };
 
 const removeUndefined = (obj) => {
+  if (!isPlainObject(obj)) return {};
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined));
 };
 
@@ -439,7 +484,7 @@ const scrollToError = (elementId) => {
 };
 
 const hasAssignmentChanges = () => {
-  const original = existingAdministrationData.value;
+  const original = existingData.value;
   const current = state;
 
   // If no original data exists (new assignment), there are always changes
@@ -825,7 +870,7 @@ watch(hasUserConfirmed, (userConfirmed) => {
   if (userConfirmed) resetUserProgress();
 });
 
-watch([existingAdministrationData, allVariants], ([adminInfo, allVariantInfo]) => {
+watch([existingData, allVariants], ([adminInfo, allVariantInfo]) => {
   if (adminInfo && !_isEmpty(allVariantInfo)) {
     state.administrationName = adminInfo.name;
     state.administrationPublicName = adminInfo.name;
@@ -858,6 +903,28 @@ watch([existingAdministrationData, allVariants], ([adminInfo, allVariantInfo]) =
   }
 });
 </script>
+
+<style lang="scss" scoped>
+.page-title-row :deep(.docs-button) {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.how-to-section {
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin: 2rem 0;
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+}
+</style>
 
 <style lang="scss">
 .required {

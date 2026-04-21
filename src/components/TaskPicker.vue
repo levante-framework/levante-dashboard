@@ -6,11 +6,20 @@
       </div>
     </template>
     <div class="w-full flex flex-column lg:flex-row gap-3">
-      <div v-if="tasksPaneOpen" class="w-full lg:w-6">
-        <div class="flex flex-row mb-2">
+      <div class="w-full lg:w-6">
+        <PvSelect
+          v-model="selectedLanguage"
+          :options="languages"
+          option-label="name"
+          placeholder="Select language"
+          showClear
+          class="languages-dropdown"
+        />
+
+        <div class="flex flex-row gap-2 my-2">
           <div class="flex flex-column flex-grow-1 p-input-icon-left">
             <PvIconField class="w-full">
-              <PvInputIcon class="pi pi-search"></PvInputIcon>
+              <PvInputIcon class="pi pi-search" />
               <PvInputText
                 v-model="searchTerm"
                 class="w-full"
@@ -21,93 +30,96 @@
           </div>
           <PvButton
             v-if="searchTerm"
-            class="bg-primary text-white border-none border-round pl-3 pr-3 hover:bg-red-900 ml-2"
+            class="bg-primary text-white border-none border-round pl-3 pr-3 hover:bg-red-900"
             @click="clearSearch"
           >
             <i class="pi pi-times" />
           </PvButton>
         </div>
-        <div v-if="searchTerm.length > 0">
-          <div v-if="isSearching">
-            <span>Searching...</span>
-          </div>
-          <div v-else-if="_isEmpty(searchResults)">
-            <span>No search results for {{ searchTerm }}</span>
-          </div>
-          <PvScrollPanel class="task-picker-scroll-panel" style="height: 32rem; width: 100%; overflow-y: auto">
-            <!-- Draggable Zone 3 -->
-            <VueDraggableNext
-              v-model="searchResults"
-              :reorderable-columns="true"
-              :group="{ name: 'variants', pull: 'clone', put: false }"
-              :sort="false"
-              :move="handleCardMove"
-            >
-              <transition-group>
-                <div
-                  v-for="element in searchResults"
-                  :id="element.id"
-                  :key="element.id"
-                  :data-task-id="element.task.id"
-                  style="cursor: grab"
-                >
-                  <VariantCard :variant="element" @select="selectCard" />
-                </div>
-              </transition-group>
-            </VueDraggableNext>
-          </PvScrollPanel>
-        </div>
-        <div v-else>
-          <PvScrollPanel class="task-picker-scroll-panel" style="height: 32rem; width: 100%; overflow-y: auto">
-            <div v-if="_isEmpty(groupedTaskSections)">No tasks available.</div>
-            <div v-else class="flex flex-column gap-4 pr-1">
-              <div
-                v-for="section in groupedTaskSections"
-                :key="section.label"
-                class="task-section flex flex-column gap-3"
-              >
-                <div class="task-section-title text-lg font-semibold text-900 underline">{{ section.label }}</div>
-                <div
-                  v-for="task in section.tasks"
-                  :key="task.key"
-                  class="task-section-group flex flex-column gap-2 border-round surface-border surface-card p-3"
-                >
-                  <div class="task-section-task-name font-semibold text-base text-800">{{ task.label }}</div>
-                  <div v-if="!task.variants.length" class="task-section-empty text-sm text-600">
-                    <template v-if="task.totalVariantCount === 0"> No variants to show. </template>
-                    <template v-else>
-                      No variants to show. Make sure 'Show only named variants' is unchecked to view all.
-                      <span v-if="namedOnly" class="text-link ml-1" @click="namedOnly = false">View all</span>
-                    </template>
-                  </div>
-                  <VueDraggableNext
-                    v-else
-                    :list="task.variants"
-                    :reorderable-columns="true"
-                    :group="{ name: 'variants', pull: 'clone', put: false }"
-                    :sort="false"
-                    :move="handleCardMove"
-                  >
-                    <transition-group>
-                      <div
-                        v-for="element in task.variants"
-                        :id="element.id"
-                        :key="element.id"
-                        :data-task-id="element.task.id"
-                        style="cursor: grab"
-                      >
-                        <VariantCard :variant="element" :update-variant="updateVariant" @select="selectCard" />
-                      </div>
-                    </transition-group>
-                  </VueDraggableNext>
-                </div>
-              </div>
+        <div v-if="selectedLanguage || isUserSuperAdmin()">
+          <div v-if="searchTerm.length > 0">
+            <div v-if="isSearching">
+              <span>Searching...</span>
             </div>
-          </PvScrollPanel>
+            <div v-else-if="!searchMatchesAll.length">
+              <span>No search results for {{ searchTerm }}</span>
+            </div>
+            <div v-else-if="!availableSearchResults.length">
+              <span>All search results are already selected.</span>
+            </div>
+            <PvScrollPanel v-else class="task-picker-scroll-panel task-picker-scroll-panel--fixed">
+              <VueDraggableNext
+                v-model="availableSearchResults"
+                :reorderable-columns="true"
+                :group="{ name: 'variants', pull: 'clone', put: false }"
+                :sort="false"
+                :move="handleCardMove"
+              >
+                <transition-group>
+                  <div
+                    v-for="element in availableSearchResults"
+                    :id="element.id"
+                    :key="element.id"
+                    :data-task-id="getTaskId(element.task)"
+                    class="cursor-grab"
+                  >
+                    <VariantCard :variant="element" :update-variant="bindUpdateVariant" @select="selectCard" />
+                  </div>
+                </transition-group>
+              </VueDraggableNext>
+            </PvScrollPanel>
+          </div>
+          <div v-else>
+            <PvScrollPanel class="task-picker-scroll-panel task-picker-scroll-panel--fixed">
+              <div v-if="!groupedTaskSections.length">No tasks available.</div>
+
+              <PvAccordion v-else>
+                <PvAccordionPanel v-for="section in groupedTaskSections" :key="section.label" :value="section.label">
+                  <PvAccordionHeader>{{ section.label }}</PvAccordionHeader>
+                  <PvAccordionContent>
+                    <div class="flex flex-column gap-2">
+                      <div
+                        v-for="task in section.tasks"
+                        :key="task.key"
+                        class="task-section-group flex flex-column gap-2 border-round surface-border surface-card p-3"
+                      >
+                        <div class="task-section-task-name font-semibold text-base text-800">{{ task.label }}</div>
+                        <div v-if="!task.variants.length" class="task-section-empty text-sm text-600">
+                          No variants to show.
+                        </div>
+                        <VueDraggableNext
+                          v-else
+                          :list="task.variants"
+                          :reorderable-columns="true"
+                          :group="{ name: 'variants', pull: 'clone', put: false }"
+                          :sort="false"
+                          :move="handleCardMove"
+                        >
+                          <transition-group>
+                            <div
+                              v-for="element in task.variants"
+                              :id="element.id"
+                              :key="element.id"
+                              :data-task-id="getTaskId(element.task)"
+                              class="cursor-grab"
+                            >
+                              <VariantCard
+                                :variant="element"
+                                :update-variant="bindUpdateVariant"
+                                @select="selectCard"
+                              />
+                            </div>
+                          </transition-group>
+                        </VueDraggableNext>
+                      </div>
+                    </div>
+                  </PvAccordionContent>
+                </PvAccordionPanel>
+              </PvAccordion>
+            </PvScrollPanel>
+          </div>
         </div>
-      </div>
-      <div v-else class="w-1 bg-gray-400">
-        <i class="pi pi-angle-double-right" />
+        <small v-else>Select a language to display the task list</small>
       </div>
       <div class="divider"></div>
       <div class="w-full lg:w-6" data-cy="panel-droppable-zone">
@@ -116,7 +128,6 @@
         </div>
 
         <div ref="selectedTasksScrollPanelRef" class="task-picker-scroll-panel">
-          <!-- Draggable Zone 2 -->
           <VueDraggableNext
             v-model="selectedVariants"
             :move="handleCardMove"
@@ -135,13 +146,13 @@
                 v-for="element in selectedVariants"
                 :id="element.id"
                 :key="element.id"
-                :data-task-id="element.task.id"
-                style="cursor: grab"
+                :data-task-id="getTaskId(element.task)"
+                class="cursor-grab"
               >
                 <VariantCard
                   :variant="element"
                   has-controls
-                  :update-variant="updateVariant"
+                  :update-variant="bindUpdateVariant"
                   :pre-existing-assessment-info="preExistingAssessmentInfo"
                   @remove="removeCard"
                   @move-up="moveCardUp"
@@ -155,74 +166,40 @@
     </div>
   </PvPanel>
 </template>
+
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
-import _filter from 'lodash/filter';
-import _findIndex from 'lodash/findIndex';
+import { formattedVariantName } from '@/helpers';
+import { languageOptions } from '@/translations/i18n';
+import _cloneDeep from 'lodash/cloneDeep';
 import _debounce from 'lodash/debounce';
-import _toLower from 'lodash/toLower';
-import _isEmpty from 'lodash/isEmpty';
-import _union from 'lodash/union';
-import { VueDraggableNext } from 'vue-draggable-next';
-import { useToast } from 'primevue/usetoast';
+import PvAccordion from 'primevue/accordion';
+import PvAccordionContent from 'primevue/accordioncontent';
+import PvAccordionHeader from 'primevue/accordionheader';
+import PvAccordionPanel from 'primevue/accordionpanel';
 import PvButton from 'primevue/button';
+import PvIconField from 'primevue/iconfield';
+import PvInputIcon from 'primevue/inputicon';
 import PvInputText from 'primevue/inputtext';
 import PvPanel from 'primevue/panel';
 import PvScrollPanel from 'primevue/scrollpanel';
+import PvSelect from 'primevue/select';
+import { useToast } from 'primevue/usetoast';
+import { computed, nextTick, ref, watch } from 'vue';
+import { VueDraggableNext } from 'vue-draggable-next';
 import VariantCard from './VariantCard.vue';
-import _cloneDeep from 'lodash/cloneDeep';
-import PvIconField from 'primevue/iconfield';
-import PvInputIcon from 'primevue/inputicon';
+import { useAuthStore } from '@/store/auth';
 
-// Import types from VariantCard
 type VariantObject = InstanceType<typeof VariantCard>['$props']['variant'];
 
-interface TaskData {
-  id: string;
-  name: string;
-}
-
-interface VariantCondition {
-  field: string;
-  op: string;
-  value: any;
-}
-
-interface VariantConditions {
-  assigned?: {
-    op: string;
-    conditions: VariantCondition[];
-  };
-  optional?:
-    | boolean
-    | {
-        op: string;
-        conditions: VariantCondition[];
-      };
-}
-
-interface VariantData {
-  name: string;
-  params?: Record<string, any>;
-  conditions?: VariantConditions;
-  [key: string]: any;
-}
-
-interface Variant {
-  id: string;
-  task: TaskData;
-  variant: VariantData;
-}
-
-interface PreExistingAssessmentInfo {
+interface PreExistingAssessmentRecord {
   variantId: string;
-  conditions: VariantConditions;
+  conditions: VariantObject['variant']['conditions'];
 }
 
 interface Props {
   allVariants: Record<string, VariantObject[]>;
   inputVariants?: VariantObject[];
-  preExistingAssessmentInfo?: any[];
+  preExistingAssessmentInfo?: PreExistingAssessmentRecord[];
 }
 
 interface Emits {
@@ -236,27 +213,19 @@ interface DragEvent {
   dragged: HTMLElement;
 }
 
-const toast = useToast();
+interface TaskWithVariants {
+  key: string;
+  label: string;
+  variants: VariantObject[];
+  totalVariantCount: number;
+}
 
-const props = withDefaults(defineProps<Props>(), {
-  inputVariants: () => [],
-  preExistingAssessmentInfo: () => [],
-});
+interface TaskSection {
+  label: string;
+  tasks: TaskWithVariants[];
+}
 
-const emit = defineEmits<Emits>();
-
-const selectedVariants = ref<VariantObject[]>([]);
-const selectedTasksScrollPanelRef = ref<HTMLElement | null>(null);
-
-watch(
-  () => selectedVariants.value.length,
-  async () => {
-    await nextTick();
-    const selectedTasksScrollPanel = selectedTasksScrollPanelRef.value;
-    if (!selectedTasksScrollPanel) return;
-    selectedTasksScrollPanel.scrollTop = selectedTasksScrollPanel.scrollHeight;
-  },
-);
+const getTaskId = (task: VariantObject['task']): string => (task as unknown as { id: string }).id;
 
 const groupedTasks: Record<string, string[]> = {
   Introduction: ['Instructions'],
@@ -272,22 +241,68 @@ const groupedTasks: Record<string, string[]> = {
   Reasoning: ['Pattern Matching'],
   'Spatial Cognition': ['Shape Rotation'],
   'Social Cognition': ['Stories'],
-  Attitudes: ['Survey'],
+  Surveys: ['Child Survey', 'Caregiver Survey', 'Teacher Survey'],
 };
 
-const namedOnly = ref<boolean>(true);
+const props = withDefaults(defineProps<Props>(), {
+  inputVariants: () => [],
+  preExistingAssessmentInfo: () => [],
+});
 
-interface TaskWithVariants {
-  key: string;
-  label: string;
-  variants: VariantObject[];
-  totalVariantCount: number;
-}
+const emit = defineEmits<Emits>();
+const toast = useToast();
+const authStore = useAuthStore();
+const { isUserSuperAdmin } = authStore;
 
-interface TaskSection {
-  label: string;
-  tasks: TaskWithVariants[];
-}
+const languages = computed(() =>
+  Object.entries(languageOptions).map(([key, options]) => ({
+    name: options.languageMenu,
+    value: key,
+  })),
+);
+
+const availableSearchResults = ref<VariantObject[]>([]);
+const isSearching = ref(false);
+const searchMatchesAll = ref<VariantObject[]>([]);
+const searchTerm = ref('');
+const selectedLanguage = ref<{ name: string; value: string } | null>(null);
+const selectedTasksScrollPanelRef = ref<HTMLElement | null>(null);
+const selectedVariants = ref<VariantObject[]>([]);
+
+const selectedVariantIdSet = computed(() => new Set(selectedVariants.value.map((v) => v.id)));
+
+const rebuildAvailableSearchResults = (): void => {
+  availableSearchResults.value = searchMatchesAll.value.filter(
+    (variant) => !selectedVariantIdSet.value.has(variant.id),
+  );
+};
+
+const getVariantLanguage = (variantName: string): string => {
+  if (!variantName) return '';
+  // TODO: Remove the following line after fixing core-tasks
+  if (variantName === 'es') return 'es-CO';
+  if (variantName.length <= 5) return variantName;
+  const parts = variantName.split(' ');
+  return parts[0] ?? '';
+};
+
+const variantsByLanguage = (variants: VariantObject[] = []): VariantObject[] => {
+  if (!selectedLanguage.value) return variants;
+
+  const selectedLang = selectedLanguage.value.value.toLowerCase();
+
+  return variants.filter((variant) => {
+    const variantName = variant.variant?.name?.toLowerCase();
+    if (!variantName) return false;
+    if (variantName === 'all languages') return true;
+
+    const variantLanguage = getVariantLanguage(variantName);
+    const exactLangMatch = variantLanguage === selectedLang;
+    const langPrefixMatch = selectedLang.includes(variantLanguage);
+
+    return exactLangMatch || langPrefixMatch;
+  });
+};
 
 const groupedTaskSections = computed((): TaskSection[] => {
   const sectionMap = new Map<string, TaskWithVariants[]>();
@@ -301,7 +316,14 @@ const groupedTaskSections = computed((): TaskSection[] => {
 
   Object.entries(props.allVariants).forEach(([taskKey, variants]) => {
     const allVariants = variants ?? [];
-    const filteredVariants = namedOnly.value ? _filter(allVariants, (variant) => variant.variant.name) : allVariants;
+    const namedVariants = allVariants.filter((variant) => variant.variant.name) as VariantObject[];
+    const filteredVariants = variantsByLanguage(namedVariants);
+    const orderedVariants = filteredVariants.slice().sort((variantA, variantB) => {
+      const variantNameA = formattedVariantName(variantA?.variant?.name?.trim() ?? '');
+      const variantNameB = formattedVariantName(variantB?.variant?.name?.trim() ?? '');
+      return variantNameA.localeCompare(variantNameB, undefined, { sensitivity: 'base' });
+    });
+    const visibleVariants = orderedVariants.filter((variant) => !selectedVariantIdSet.value.has(variant.id));
     const taskLabel = allVariants?.[0]?.task?.name || filteredVariants?.[0]?.task?.name || taskKey;
     const sectionLabel = resolveSectionLabel(taskLabel, taskKey);
 
@@ -312,7 +334,7 @@ const groupedTaskSections = computed((): TaskSection[] => {
     sectionMap.get(sectionLabel)?.push({
       key: taskKey,
       label: taskLabel,
-      variants: filteredVariants,
+      variants: visibleVariants,
       totalVariantCount: allVariants.length,
     });
   });
@@ -321,10 +343,10 @@ const groupedTaskSections = computed((): TaskSection[] => {
 
   Object.keys(groupedTasks).forEach((label) => {
     const tasks = sectionMap.get(label);
-    if (!tasks || !tasks.length) return;
+    if (!tasks?.length) return;
 
     const orderedTasks = tasks.sort((taskA, taskB) => {
-      const desiredOrder = groupedTasks[label];
+      const desiredOrder = groupedTasks[label as keyof typeof groupedTasks] ?? [];
       const indexA = desiredOrder.indexOf(taskA.label);
       const indexB = desiredOrder.indexOf(taskB.label);
       if (indexA !== indexB) {
@@ -348,100 +370,43 @@ const groupedTaskSections = computed((): TaskSection[] => {
   return sections;
 });
 
-watch(
-  () => props.inputVariants,
-  (newVariants) => {
-    if (!newVariants) return;
-    // @TODO: Fix this as it's not working as expected. When updating the data set in the parent component, the data is
-    // added twice to the selectedVariants array, despite the _union call.
-    selectedVariants.value = _cloneDeep(newVariants ?? []);
-
-    // Update the conditions for the variants that were pre-existing
-    selectedVariants.value = selectedVariants.value.map((variant) => {
-      const preExistingInfo = props.preExistingAssessmentInfo.find((info) => info?.variantId === variant?.id);
-
-      if (preExistingInfo) {
-        return {
-          ...variant,
-          variant: {
-            ...variant?.variant,
-            conditions: preExistingInfo.conditions,
-          },
-        };
-      }
-      return variant;
-    });
-  },
-  { deep: true, immediate: true },
-);
-
-const updateVariant = (variantId: string, conditions: any): void => {
-  const updatedVariants = selectedVariants.value.map((variant) => {
-    if (variant.id === variantId) {
-      return {
-        ...variant,
-        variant: { ...variant.variant, conditions: conditions },
-      };
-    } else {
-      return variant;
-    }
-  });
-
-  selectedVariants.value = updatedVariants;
-  return;
+const compareVariantNames = (variantA: VariantObject, variantB: VariantObject): number => {
+  const variantNameA = formattedVariantName(variantA?.variant?.name?.trim() ?? '');
+  const variantNameB = formattedVariantName(variantB?.variant?.name?.trim() ?? '');
+  return variantNameA.localeCompare(variantNameB, undefined, { sensitivity: 'base' });
 };
-
-// Pane handlers
-const tasksPaneOpen = ref<boolean>(true);
-
-// Search handlers
-const searchTerm = ref<string>('');
-const searchResults = ref<VariantObject[]>([]);
-const isSearching = ref<boolean>(false);
 
 const searchCards = (term: string): void => {
   isSearching.value = true;
   const nextResults: VariantObject[] = [];
-  const normalizedTerm = _toLower(term);
+  const normalizedTerm = term.toLowerCase();
 
   Object.values(props.allVariants).forEach((variants) => {
     const variantList = variants ?? [];
-    const matchingVariants = _filter(variantList, (variant) => {
-      if (
-        _toLower(variant?.task?.name ?? '').includes(normalizedTerm) ||
-        _toLower(variant?.variant?.name ?? '').includes(normalizedTerm)
-      ) {
-        return true;
-      }
-
-      return false;
+    const matchingVariants = variantList.filter(({ task, variant }) => {
+      const taskName = (task?.name ?? '').toLowerCase();
+      const variantName = (variant?.name ?? '').toLowerCase();
+      return taskName.includes(normalizedTerm) || variantName.includes(normalizedTerm);
     });
 
-    nextResults.push(...matchingVariants);
+    const filteredVariants = variantsByLanguage(matchingVariants as VariantObject[]);
+    const orderedVariants = filteredVariants.slice().sort(compareVariantNames);
+    nextResults.push(...orderedVariants);
   });
 
-  searchResults.value = nextResults;
+  searchMatchesAll.value = nextResults;
+  rebuildAvailableSearchResults();
   isSearching.value = false;
 };
 
-function clearSearch(): void {
+const clearSearch = (): void => {
   searchTerm.value = '';
-  searchResults.value = [];
-}
+  searchMatchesAll.value = [];
+  availableSearchResults.value = [];
+};
 
 const debounceSearch = _debounce(searchCards, 250);
 
-watch(searchTerm, (term: string) => {
-  if (term.length > 0) {
-    isSearching.value = true;
-    debounceSearch(term);
-  } else {
-    searchResults.value = [];
-    isSearching.value = false;
-  }
-});
-
-// Handle card move events
 const debounceToast = _debounce(
   () => {
     toast.add({
@@ -455,16 +420,19 @@ const debounceToast = _debounce(
   { leading: true },
 );
 
+const updateVariant = (variantId: string, conditions: VariantObject['variant']['conditions']): void => {
+  selectedVariants.value = selectedVariants.value.map((variant) =>
+    variant.id === variantId ? { ...variant, variant: { ...variant.variant, conditions } } : variant,
+  );
+};
+
+const bindUpdateVariant = updateVariant as unknown as (variant: VariantObject) => void;
+
 const handleCardAdd = (card: DragEvent): void => {
-  // Check if the current task is already selected.
-  const taskIds = selectedVariants.value.map((variant) => variant.task.id);
-
-  // If the task is already selected, remove the added card and show warning
-  const taskId = card.item.dataset.taskId;
-  if (taskId && taskIds.includes(taskId)) {
-    // Remove the last added card (which is the duplicate)
+  const taskIds = selectedVariants.value.map((variant) => getTaskId(variant.task));
+  const droppedTaskId = card.item.dataset.taskId;
+  if (droppedTaskId && taskIds.includes(droppedTaskId)) {
     selectedVariants.value.pop();
-
     toast.add({
       severity: 'warn',
       summary: 'Task Selected',
@@ -475,108 +443,145 @@ const handleCardAdd = (card: DragEvent): void => {
 };
 
 const handleCardMove = (card: DragEvent): boolean => {
-  // Check if this variant card is already in the list
   const cardVariantId = card.dragged.id;
-  const index = _findIndex(selectedVariants.value, (element) => element.id === cardVariantId);
+  const index = selectedVariants.value.findIndex((element) => element.id === cardVariantId);
   if (index !== -1 && card.from !== card.to) {
     debounceToast();
     return false;
-  } else return true;
+  }
+  return true;
 };
 
-watch(
-  selectedVariants,
-  (newSelectedVariants) => {
-    emit('variants-changed', newSelectedVariants || selectedVariants.value);
-  },
-  { deep: true, immediate: true },
-);
-
-// Card event handlers
 const removeCard = (variant: VariantObject): void => {
   selectedVariants.value = selectedVariants.value.filter((selectedVariant) => selectedVariant.id !== variant.id);
 };
 
-const selectCard = (variant: VariantObject): void => {
-  // Check if this variant is already in the list
-  const cardVariantId = variant.id;
-  const index = _findIndex(selectedVariants.value, (element) => element.id === cardVariantId);
+const addUserDefaultCondition = (variant: VariantObject): VariantObject => {
+  const defaultedVariant = _cloneDeep(variant);
+  const id = getTaskId(variant.task);
+  const conditions: Record<string, unknown> = {};
 
-  // Check if the taskId is already selected
-  const selectedTasks = selectedVariants.value.map((selectedVariant) => selectedVariant.task.id);
+  if (id === 'teacher-survey') {
+    conditions.assigned = {
+      op: 'AND',
+      conditions: [{ field: 'userType', op: 'EQUAL', value: 'teacher' }],
+    };
+  } else if (id === 'caregiver-survey' || id === 'adult-reasoning') {
+    conditions.assigned = {
+      op: 'AND',
+      conditions: [{ field: 'userType', op: 'EQUAL', value: 'parent' }],
+    };
+  } else {
+    conditions.assigned = {
+      op: 'AND',
+      conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }],
+    };
+  }
+
+  defaultedVariant.variant.conditions = conditions as VariantObject['variant']['conditions'];
+  return defaultedVariant;
+};
+
+const selectCard = (variant: VariantObject): void => {
+  const index = selectedVariants.value.findIndex((element) => element.id === variant.id);
+  const selectedTaskIds = selectedVariants.value.map((selectedVariant) => getTaskId(selectedVariant.task));
 
   if (index === -1) {
-    if (selectedTasks.includes(variant.task.id)) {
+    if (selectedTaskIds.includes(getTaskId(variant.task))) {
       toast.add({
         severity: 'warn',
         summary: 'Task Selected',
         detail: 'There is a task with that Task ID already selected.',
         life: 3000,
       });
-      return; // Don't add the card if task is already selected
+      return;
     }
-
-    const defaultedVariant = addChildDefaultCondition(variant);
-    selectedVariants.value.push(defaultedVariant);
-  } else {
-    debounceToast();
+    selectedVariants.value.push(addUserDefaultCondition(variant));
+    return;
   }
+  debounceToast();
 };
 
 const moveCardUp = (variant: VariantObject): void => {
-  const index = _findIndex(selectedVariants.value, (currentVariant) => currentVariant.id === variant.id);
+  const index = selectedVariants.value.findIndex((currentVariant) => currentVariant.id === variant.id);
   if (index <= 0) return;
   const item = selectedVariants.value[index];
-  if (item) {
-    selectedVariants.value.splice(index, 1);
-    selectedVariants.value.splice(index - 1, 0, item);
-  }
+  if (!item) return;
+  selectedVariants.value.splice(index, 1);
+  selectedVariants.value.splice(index - 1, 0, item);
 };
 
 const moveCardDown = (variant: VariantObject): void => {
-  const index = _findIndex(selectedVariants.value, (currentVariant) => currentVariant.id === variant.id);
+  const index = selectedVariants.value.findIndex((currentVariant) => currentVariant.id === variant.id);
   if (index === -1 || index >= selectedVariants.value.length - 1) return;
   const item = selectedVariants.value[index];
-  if (item) {
-    selectedVariants.value.splice(index, 1);
-    selectedVariants.value.splice(index + 1, 0, item);
-  }
+  if (!item) return;
+  selectedVariants.value.splice(index, 1);
+  selectedVariants.value.splice(index + 1, 0, item);
 };
 
-// Default all tasks to child only, unless it is the survey (for LEVANTE).
-function addChildDefaultCondition(variant: VariantObject): VariantObject {
-  if (variant.task.id === 'survey') return variant;
+watch(
+  () => props.inputVariants,
+  (newVariants) => {
+    if (!newVariants) return;
+    selectedVariants.value = _cloneDeep(newVariants).map((variant) => {
+      const preExistingInfo = props.preExistingAssessmentInfo.find((info) => info?.variantId === variant?.id);
+      if (!preExistingInfo) return variant;
+      return {
+        ...variant,
+        variant: {
+          ...variant?.variant,
+          conditions: preExistingInfo.conditions,
+        },
+      };
+    }) as VariantObject[];
+  },
+  { deep: true, immediate: true },
+);
 
-  const defaultedVariant = _cloneDeep(variant);
-  defaultedVariant.variant['conditions'] = {};
-  defaultedVariant.variant['conditions']['assigned'] = {
-    op: 'AND',
-    conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }],
-  };
-  return defaultedVariant;
-}
+watch(
+  () => selectedVariants.value.length,
+  async () => {
+    await nextTick();
+    const panel = selectedTasksScrollPanelRef.value;
+    if (!panel) return;
+    panel.scrollTop = panel.scrollHeight;
+  },
+);
+
+watch(
+  () => selectedLanguage.value,
+  () => {
+    if (searchTerm.value.trim().length) {
+      searchCards(searchTerm.value);
+    }
+  },
+);
+
+watch(searchTerm, (term: string) => {
+  if (term.length > 0) {
+    isSearching.value = true;
+    debounceSearch(term);
+  } else {
+    searchMatchesAll.value = [];
+    availableSearchResults.value = [];
+    isSearching.value = false;
+  }
+});
+
+watch(
+  selectedVariants,
+  (newSelectedVariants) => {
+    emit('variants-changed', newSelectedVariants);
+    if (searchMatchesAll.value.length) {
+      rebuildAvailableSearchResults();
+    }
+  },
+  { deep: true, immediate: true },
+);
 </script>
+
 <style lang="scss">
-.task-tab {
-  height: 100%;
-  overflow: auto;
-}
-
-.variant-selector {
-  width: 50%;
-}
-
-.selected-container {
-  width: 100%;
-  border: 1px solid var(--surface-d);
-}
-
-.text-link {
-  cursor: pointer;
-  color: var(--text-color-secondary);
-  font-weight: bold;
-  text-decoration: underline;
-}
 .task-section-group {
   border: 1px solid var(--surface-d);
   background-color: var(--surface-card);
@@ -609,5 +614,16 @@ function addChildDefaultCondition(variant: VariantObject): VariantObject {
   .p-scrollpanel-bar {
     opacity: 1;
   }
+}
+.task-picker-scroll-panel--fixed {
+  height: 32rem;
+  width: 100%;
+}
+.languages-dropdown {
+  width: auto;
+  min-width: 50%;
+}
+.cursor-grab {
+  cursor: grab;
 }
 </style>

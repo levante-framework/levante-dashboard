@@ -1,6 +1,6 @@
 <template>
   <Head>
-    <title>Levante - {{ pageTitle }}</title>
+    <title>{{ pageTitle }}</title>
     <meta name="description" content="The LEVANTE Platform" />
 
     <!-- Social -->
@@ -32,17 +32,18 @@
 
 <script setup>
 import { computed, onBeforeMount, onMounted, ref, defineAsyncComponent } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
 import { useAuthStore } from '@/store/auth';
 import { fetchDocById } from '@/helpers/query/utils';
-import { i18n } from '@/translations/i18n';
+import { i18n, getTranslations, getLanguages } from '@/translations/i18n';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import NavBar from '@/components/NavBar.vue';
 import { NAVBAR_BLACKLIST } from './constants';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
+import { useI18n } from 'vue-i18n';
 
 const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>
@@ -53,7 +54,23 @@ const isAuthStoreReady = ref(false);
 const showDevtools = ref(false);
 
 const authStore = useAuthStore();
+const { t } = useI18n();
 const route = useRoute();
+const router = useRouter();
+
+async function recoverFromProfileFetchFailure(error) {
+  console.error('Error fetching user claims or user data', error);
+  try {
+    if (authStore.isFirekitInit()) {
+      await authStore.signOut();
+    }
+  } catch (signOutError) {
+    console.error('Error signing out after profile fetch failure', signOutError);
+  }
+  authStore.$reset();
+  await authStore.initFirekit();
+  await router.replace({ name: 'SignIn' });
+}
 
 const loadSessionTimeoutHandler = computed(() => {
   if (!authStore.isAuthenticated()) return false;
@@ -65,38 +82,43 @@ const loadSessionTimeoutHandler = computed(() => {
 usePageEventTracking();
 
 const pageTitle = computed(() => {
-  const locale = i18n.global.locale.value;
-  const fallbackLocale = i18n.global.fallbackLocale.value;
-  const titles = route.meta?.pageTitle;
+  const prefix = 'Levante';
+  const title = route.meta?.pageTitle;
 
-  if (typeof titles === 'object' && titles !== null) {
-    const localeTitle = titles[locale];
-    const fallbackTitle = titles[fallbackLocale];
-    if (typeof localeTitle === 'string') return localeTitle;
-    if (typeof fallbackTitle === 'string') return fallbackTitle;
-  }
-  if (typeof titles === 'string') {
-    return titles;
-  }
-  return 'Levante';
+  if (!title) return prefix;
+
+  if (typeof title === 'string') return `${prefix} — ${title}`;
+
+  const key = title.translationKey;
+  return key && i18n.global.te(key) ? `${prefix} — ${t(key)}` : prefix;
 });
 
 onBeforeMount(async () => {
+  await getLanguages();
+  await getTranslations();
+
   await authStore.initFirekit();
 
   await authStore.initStateFromRedirect().then(async () => {
     // @TODO: Refactor this callback as we should ideally use the useUserClaimsQuery and useUserDataQuery composables.
     // @NOTE: Whilst the rest of the application relies on the user's ROAR UID, this callback requires the user's ID
     // in order for SSO to work and cannot currently be changed without significant refactoring.
-    if (authStore.getUserId()) {
-      const userClaims = await fetchDocById('userClaims', authStore.getUserId());
+    const uid = authStore.getUserId();
+    if (!uid) {
+      return;
+    }
+    try {
+      const [userClaims, userData] = await Promise.all([
+        fetchDocById('userClaims', uid),
+        fetchDocById('users', uid),
+      ]);
       authStore.setUserClaims(userClaims);
-    }
-
-    if (authStore.getUserId()) {
-      const userData = await fetchDocById('users', authStore.getUserId());
       authStore.setUserData(userData);
+    } catch (error) {
+      await recoverFromProfileFetchFailure(error);
     }
+  }).catch((error) => {
+    console.error('Error initializing auth store', error);
   });
 
   isAuthStoreReady.value = true;
