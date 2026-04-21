@@ -256,34 +256,6 @@ const { isLoading: isLoadingAdministrations, data: administrations } = useAdmini
   },
 );
 
-/**
- * Administration data watcher
- *
- * Watches the administrations data, and once data is available, generates search tokens and sets the filtered
- * administrations based on the search value.
- *
- * @returns {void}
- */
-watch(
-  administrations,
-  (updatedAdministrationsData) => {
-    if (!updatedAdministrationsData) return;
-
-    // Generate auto-complete search tokens based on the data.
-    generateAutoCompleteSearchTokens();
-
-    // Set the filtered administrations based on the search value.
-    if (!search.value) {
-      filteredAdministrations.value = updatedAdministrationsData;
-    } else {
-      filteredAdministrations.value = updatedAdministrationsData?.filter((item) =>
-        item.name.toLowerCase().includes(search.value.toLowerCase()),
-      );
-    }
-  },
-  { immediate: true },
-);
-
 const filterOptions = ref([
   { label: 'All', value: null },
   { label: 'Open', value: 'open' },
@@ -472,8 +444,36 @@ const onSortChange = (event) => {
   setAssignmentsSelectedSorting(sortValue);
 };
 
-onFilterChange({ value: filterKey.value });
-onSortChange({ value: sortKey.value });
+/**
+ * Administration data watcher
+ *
+ * Watches the administrations data, and once data is available, generates search tokens and sets the filtered
+ * administrations based on the search value.
+ *
+ * @returns {void}
+ */
+watch(
+  administrations,
+  (updatedAdministrationsData) => {
+    if (!updatedAdministrationsData) return;
+
+    // Generate auto-complete search tokens based on the data.
+    generateAutoCompleteSearchTokens();
+
+    // Set the filtered administrations based on the search value.
+    if (!search.value) {
+      filteredAdministrations.value = updatedAdministrationsData;
+    } else {
+      filteredAdministrations.value = updatedAdministrationsData?.filter((item) =>
+        item.name.toLowerCase().includes(search.value.toLowerCase()),
+      );
+    }
+
+    onFilterChange({ value: filterKey.value });
+    onSortChange({ value: sortKey.value });
+  },
+  { immediate: true },
+);
 </script>
 
 <style lang="scss" scoped>
