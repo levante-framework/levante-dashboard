@@ -84,7 +84,7 @@
               <RouterLink
                 v-if="value.numOf"
                 :to="{
-                  name: 'Home',
+                  name: 'ViewAssignments',
                   state: { status: key },
                 }"
                 class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline"
@@ -92,6 +92,7 @@
                 <span>View {{ key }}</span>
                 <i class="pi pi-arrow-right text-xs" />
               </RouterLink>
+
               <div
                 v-else
                 class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline opacity-50 select-none"
