@@ -75,25 +75,28 @@
             <div :class="`assignment-icon-wrapper assignment-icon-wrapper--${key}`">
               <i v-if="key === 'open'" class="pi pi-play" />
               <i v-if="key === 'upcoming'" class="pi pi-clock" />
-              <i v-if="key === 'past'" class="pi pi-briefcase" />
+              <i v-if="key === 'closed'" class="pi pi-briefcase" />
             </div>
           </div>
 
           <div v-if="isSiteSelected">
             <div class="assignment-card-footer">
-              <a
+              <RouterLink
                 v-if="value.numOf"
-                href="#"
+                :to="{
+                  name: 'Home',
+                  state: { status: key },
+                }"
                 class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline"
               >
-                <span>View all</span>
+                <span>View {{ key }}</span>
                 <i class="pi pi-arrow-right text-xs" />
-              </a>
+              </RouterLink>
               <div
                 v-else
                 class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline opacity-50 select-none"
               >
-                <span>View all</span>
+                <span>View {{ key }}</span>
                 <i class="pi pi-arrow-right text-xs" />
               </div>
             </div>
@@ -123,12 +126,18 @@
             </div>
 
             <div v-if="isSiteSelected">
-              <a href="#" class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline">
+              <RouterLink
+                :to="{
+                  name: 'ListGroups',
+                  state: { tab: 'schools' },
+                }"
+                class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline"
+              >
                 <span v-if="Object.keys(schools).length">View schools</span>
                 <span v-else>Create</span>
                 <i v-if="Object.keys(schools).length" class="pi pi-arrow-right text-xs" />
                 <i v-else class="pi pi-plus text-xs" />
-              </a>
+              </RouterLink>
             </div>
           </div>
 
@@ -136,9 +145,9 @@
             <div v-if="schools.length">
               <div v-for="school in schools" :key="school?.id" class="group-item">
                 <div>{{ school?.name }}</div>
-                <a :href="`/list-users/schools/${school?.id}/${school?.name}`" class="group-item-link">
+                <RouterLink :to="`/list-users/schools/${school?.id}/${school?.name}`" class="group-item-link">
                   <i class="pi pi-users" />
-                </a>
+                </RouterLink>
               </div>
             </div>
 
@@ -160,62 +169,32 @@
             </div>
 
             <div v-if="isSiteSelected">
-              <a href="#" class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline">
+              <RouterLink
+                :to="{
+                  name: 'ListGroups',
+                  state: { tab: 'classes' },
+                }"
+                class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline"
+              >
                 <span v-if="Object.keys(classes).length">View classes</span>
                 <span v-else>Create</span>
 
                 <i v-if="Object.keys(classes).length" class="pi pi-arrow-right text-xs" />
                 <i v-else class="pi pi-plus text-xs" />
-              </a>
+              </RouterLink>
             </div>
           </div>
 
           <div v-if="isSiteSelected">
-            <!-- <PvAccordion v-if="Object.entries(classes).length" multiple>
-              <PvAccordionPanel v-for="[key, value] in Object.entries(classes)" :key="key" :value="key">
-                <PvAccordionHeader>
-                  <div class="flex align-items-center gap-2">
-                    <div class="flex flex-column font-normal">
-                      <span v-if="value?.parentName?.length" class="font-semibold text-xs">{{
-                        value?.parentName
-                      }}</span>
-                      {{ value?.name }}
-                    </div>
-
-                    <PvBadge
-                      :value="isSiteSelected ? getSumOfUsersByOrg(Object.values(value?.users)) : '-'"
-                      class="badge"
-                    />
-                  </div>
-                </PvAccordionHeader>
-
-                <PvAccordionContent>
-                  <div class="flex flex-column gap-2">
-                    <div
-                      v-for="user in value?.users"
-                      :key="user?.label"
-                      class="flex justify-content-between align-items-center gap-3 w-full"
-                    >
-                      <span class="text-sm">{{ user?.label }}</span>
-
-                      <div class="divider" />
-
-                      <PvBadge :value="isSiteSelected ? user.numOf : '-'" class="badge" />
-                    </div>
-                  </div>
-                </PvAccordionContent>
-              </PvAccordionPanel>
-            </PvAccordion> -->
-
             <div v-if="classes.length">
               <div v-for="_class in classes" :key="_class?.id" class="group-item">
                 <div class="flex flex-column">
                   <small class="text-color-secondary">{{ getParentSchoolName(_class?.schoolId) }}</small>
                   <div>{{ _class?.name }}</div>
                 </div>
-                <a :href="`/list-users/classes/${_class?.id}/${_class?.name}`" class="group-item-link">
+                <RouterLink :to="`/list-users/classes/${_class?.id}/${_class?.name}`" class="group-item-link">
                   <i class="pi pi-users" />
-                </a>
+                </RouterLink>
               </div>
             </div>
 
@@ -237,13 +216,19 @@
             </div>
 
             <div v-if="isSiteSelected">
-              <a href="#" class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline">
+              <RouterLink
+                :to="{
+                  name: 'ListGroups',
+                  state: { tab: 'groups' },
+                }"
+                class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline"
+              >
                 <span v-if="Object.keys(cohorts).length">View cohorts</span>
                 <span v-else>Create</span>
 
                 <i v-if="Object.keys(cohorts).length" class="pi pi-arrow-right text-xs" />
                 <i v-else class="pi pi-plus text-xs" />
-              </a>
+              </RouterLink>
             </div>
           </div>
 
@@ -251,9 +236,9 @@
             <div v-if="cohorts.length">
               <div v-for="cohort in cohorts" :key="cohort?.id" class="group-item">
                 <div>{{ cohort?.name }}</div>
-                <a :href="`/list-users/groups/${cohort?.id}/${cohort?.name}`" class="group-item-link">
+                <RouterLink :to="`/list-users/groups/${cohort?.id}/${cohort?.name}`" class="group-item-link">
                   <i class="pi pi-users" />
-                </a>
+                </RouterLink>
               </div>
             </div>
 
@@ -284,6 +269,7 @@ import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 import PvBadge from 'primevue/badge';
 import { computed } from 'vue';
+import { RouterLink } from 'vue-router';
 
 const authStore = useAuthStore();
 const { currentSite, userData } = storeToRefs(authStore);
@@ -338,18 +324,18 @@ const numOfUsers = computed(() => usersBySiteIdData.value?.length ?? 0);
 const assignments = computed(() => {
   let numOfOpen = 0;
   let numOfUpcoming = 0;
-  let numOfPast = 0;
+  let numOfClosed = 0;
 
   assignmentsBySiteIdData.value?.forEach((assignment: any) => {
     if (isCurrent(assignment)) numOfOpen++;
     if (isUpcoming(assignment)) numOfUpcoming++;
-    if (isPast(assignment)) numOfPast++;
+    if (isPast(assignment)) numOfClosed++;
   });
 
   return {
     open: { label: 'Open', numOf: numOfOpen },
     upcoming: { label: 'Upcoming', numOf: numOfUpcoming },
-    past: { label: 'Past', numOf: numOfPast },
+    closed: { label: 'Past', numOf: numOfClosed },
   };
 });
 
@@ -542,7 +528,7 @@ const getParentSchoolName = (schoolId: string): string => {
     color: var(--bright-yellow);
   }
 
-  &.assignment-icon-wrapper--past {
+  &.assignment-icon-wrapper--closed {
     background: rgba(var(--bright-red-rgb), 0.1);
     color: var(--bright-red);
   }
