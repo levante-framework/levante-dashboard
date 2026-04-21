@@ -202,14 +202,8 @@ nav {
 .levante-logo {
   display: block;
   width: 100%;
-  max-width: 200px;
+  max-width: 150px;
   margin: 0;
   padding: 0;
-}
-
-@media screen and (max-width: 768px) {
-  .levante-logo :deep(img) {
-    width: 160px !important;
-  }
 }
 </style>
