@@ -14,6 +14,8 @@ export const useLevanteStore = defineStore(
     function $reset(): void {
       assignmentsSelectedFilter.value = null;
       assignmentsSelectedSorting.value = null;
+      hasUserConfirmed.value = false;
+      shouldUserConfirm.value = false;
     }
 
     function setAssignmentsSelectedFilter(filter: any): void {
