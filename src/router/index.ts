@@ -191,7 +191,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/administration/:administrationId/:orgType/:orgId',
     name: 'ProgressReport',
     props: true,
-    component: () => import('@/pages/ProgressReport.vue'),
+    component: () => import('@/pages/ProgressReportEntry.vue'),
     meta: {
       pageTitle: 'View Administration',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
