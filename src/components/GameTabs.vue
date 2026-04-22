@@ -208,6 +208,7 @@ import { useAssignmentsStore } from '@/store/assignments';
 import { ASSIGNMENT_STATUSES } from '@/constants';
 import { getAssignmentStatus } from '@/helpers/assignments';
 import { LEVANTE_TASK_IDS, ROAR_TASK_IDS } from '@/constants/coreTasks';
+import { logger } from '@/logger';
 
 interface TaskData {
   name: string;
@@ -390,13 +391,14 @@ const getRoutePath = (taskId: string, variantURL?: string, taskURL?: string): st
   // do not navigate if the task is external
   if (variantURL || taskURL) return '/';
 
-  const lowerCasedAndCamelizedTaskId = toCamelCase(taskId.toLowerCase());
+  const camelizedTaskId = toCamelCase(taskId.toLowerCase());
 
-  if (lowerCasedAndCamelizedTaskId === 'teacherSurvey' || lowerCasedAndCamelizedTaskId === 'caregiverSurvey') {
+  if (camelizedTaskId === 'teacherSurvey' || camelizedTaskId === 'caregiverSurvey' || camelizedTaskId === 'survey') {
     return '/survey';
-  } else if (LEVANTE_TASK_IDS.some((taskId) => taskId === lowerCasedAndCamelizedTaskId)) {
+  } else if (normalizedLevanteTaskIds.has(camelizedTaskId)) {
     return '/game/core-tasks/' + taskId;
   } else {
+    logger.capture(`Task ${camelizedTaskId} is not a core task`, { taskId });
     return '/game/' + taskId;
   }
 };
@@ -551,7 +553,12 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   box-sizing: border-box;
   transition: box-shadow 0.2s ease-in-out;
 
-  // Reset button defaults
+  // Reset native <button> when .game-btn is used on `<button>` (e.g. completed task)
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  appearance: none;
+
   &[disabled] {
     cursor: not-allowed;
   }

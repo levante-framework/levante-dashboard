@@ -20,4 +20,21 @@ export class Repository {
       throw error;
     }
   }
+
+  protected async callWithTimeout<TData = unknown, TResponse = unknown>(
+    functionName: string,
+    data: TData | undefined,
+    timeoutMs: number,
+  ): Promise<TResponse> {
+    try {
+      const callable = httpsCallable<TData, TResponse>(FirebaseService.functions, functionName, {
+        timeout: timeoutMs,
+      });
+      const response: HttpsCallableResult<TResponse> = await callable(data);
+      return response?.data;
+    } catch (error) {
+      console.error(`[${functionName}]`, error);
+      throw error;
+    }
+  }
 }

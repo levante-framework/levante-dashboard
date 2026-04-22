@@ -154,11 +154,11 @@ const isSubmitBtnDisabled = ref(false);
 
 watch(
   () => authStore.currentSite,
-  (newCurrentSite) => {
-    if (!newCurrentSite || newCurrentSite.toLowerCase() === 'any') {
-      isSubmitBtnDisabled.value = true;
-    } else {
+  () => {
+    if (authStore.isUserSuperAdmin() || authStore.currentSite !== 'any') {
       isSubmitBtnDisabled.value = false;
+    } else {
+      isSubmitBtnDisabled.value = true;
     }
   },
   { immediate: true },
@@ -179,6 +179,8 @@ const allOrgTypes: OrgType[] = [
   { firestoreCollection: FIRESTORE_COLLECTIONS.GROUPS, singular: SINGULAR_ORG_TYPES.GROUPS, label: 'Cohort' },
 ];
 
+const isAllSitesSelected = computed(() => authStore.currentSite === 'any');
+
 const orgTypes = computed(() => {
   if (!authStore.shouldUsePermissions) {
     return allOrgTypes;
@@ -188,14 +190,16 @@ const orgTypes = computed(() => {
     return [];
   }
 
+  if (isAllSitesSelected.value) {
+    return allOrgTypes.filter((orgType) => orgType.singular === SINGULAR_ORG_TYPES.DISTRICTS);
+  }
+
   return allOrgTypes.filter((orgType) =>
     orgType.singular === SINGULAR_ORG_TYPES.DISTRICTS
       ? hasMinimumRole(ROLES.SUPER_ADMIN)
       : hasMinimumRole(ROLES.SITE_ADMIN),
   );
 });
-
-const isAllSitesSelected = computed(() => authStore.currentSite === 'any');
 
 const parentDistrict = computed<SelectedOrg | undefined>(() => {
   if (!authStore.currentSite || !authStore.currentSiteName || isAllSitesSelected.value) {

@@ -231,10 +231,6 @@ export const useAuthStore = defineStore(
       return false;
     }
 
-    async function createUsers(userData: unknown): Promise<unknown> {
-      return roarfirekit.value?.createUsers(userData as any);
-    }
-
     async function signOut(): Promise<void> {
       console.log('PostHog Reset (explicit signOut)');
       posthogInstance.reset();
@@ -302,7 +298,6 @@ export const useAuthStore = defineStore(
       // Actions
       $reset,
       completeAssessment,
-      createUsers,
       forceIdTokenRefresh,
       getLegalDoc,
       initFirekit,
