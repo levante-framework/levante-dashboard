@@ -291,9 +291,9 @@ const isLoading = computed(
 );
 
 const userName = computed(() => {
-  const first = userData.value?.name?.first;
-  const middle = userData.value?.name?.middle;
-  const last = userData.value?.name?.last;
+  const first = userData.value?.name?.first || '';
+  const middle = userData.value?.name?.middle || '';
+  const last = userData.value?.name?.last || '';
 
   return userData.value?.displayName || `${first} ${middle} ${last}`;
 });
