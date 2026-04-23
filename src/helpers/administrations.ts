@@ -2,7 +2,18 @@ import { normalizeToLowercase } from '@/helpers';
 
 function extractOrgIds(orgs: unknown): string[] {
   if (!Array.isArray(orgs)) return [];
-  return orgs.map((item) => (typeof item === 'object' && item !== null && 'id' in item ? (item as { id: string }).id : String(item)));
+
+  const ids = orgs
+    .map((item) => {
+      if (typeof item === 'string') return item.trim();
+      if (typeof item === 'object' && item !== null && 'id' in item && typeof (item as { id?: unknown }).id === 'string') {
+        return ((item as { id: string }).id || '').trim();
+      }
+      return '';
+    })
+    .filter((id) => id.length > 0);
+
+  return [...new Set(ids)];
 }
 
 export function buildRetryAdministrationArgs(admin: Record<string, unknown>, siteId: string | undefined) {
