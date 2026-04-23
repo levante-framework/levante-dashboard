@@ -724,8 +724,27 @@ function convertUsersToCSV() {
   downloadCSV();
 }
 
+function getTimestamp() {
+  const now = new Date();
+
+  const day = now.getDate().toString().padStart(2, '0');
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const year = now.getFullYear();
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+
+  return `${year}${month}${day}_${hours}${minutes}`;
+}
+
 function downloadCSV() {
-  const filename = 'registered-users.csv';
+  const timestamp = getTimestamp();
+
+  const formatted = uploadedFile.value?.name
+    ?.split('.') // Split to find extension
+    ?.slice(0, -1) // Remove the extension
+    ?.join('.'); // Keep other dots in the orginal file name
+
+  const filename = `${formatted}_${timestamp}_registered.csv`;
 
   if (csvURL.value) {
     // Create Download Link
