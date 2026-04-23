@@ -183,6 +183,7 @@ const isAllSitesSelected = computed(() => currentSite.value === 'any');
 
 const isFileUploaded = ref(false);
 const uploadedFile = ref(null);
+const uploadedFileName = ref(null);
 const rawUserFile = ref({});
 const registeredUsers = ref([]);
 const hasMultipleSites = ref(false);
@@ -255,6 +256,7 @@ watch(
 
 const resetUserProgress = () => {
   uploadedFile.value = null;
+  uploadedFileName.value = null;
   errorUsers.value = [];
   errorUserColumns.value = [];
   showErrorTable.value = false;
@@ -278,6 +280,10 @@ const onFileUpload = async (event) => {
   // Read the file. In case of multiple files, use the last one.
   const file = event.files[event.files.length - 1];
   uploadedFile.value = file;
+
+  const fileNameParts = file?.name?.split('.');
+  const fileNamePartsWithoutExt = fileNameParts.slice(0, -1);
+  uploadedFileName.value = fileNamePartsWithoutExt.join('.');
 
   const parsedData = await csvFileToJson(file);
 
@@ -724,8 +730,25 @@ function convertUsersToCSV() {
   downloadCSV();
 }
 
+function getTimestamp() {
+  const now = new Date();
+
+  const day = now.getDate().toString().padStart(2, '0');
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const year = now.getFullYear();
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+
+  return `${year}${month}${day}_${hours}${minutes}`;
+}
+
 function downloadCSV() {
-  const filename = 'registered-users.csv';
+  const timestamp = getTimestamp();
+  let filename = `${timestamp}_registered.csv`;
+
+  if (uploadedFileName.value?.toString()?.trim()?.length) {
+    filename = `${uploadedFileName.value}_${filename}`;
+  }
 
   if (csvURL.value) {
     // Create Download Link
