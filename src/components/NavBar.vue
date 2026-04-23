@@ -106,6 +106,7 @@ onUnmounted((): void => {
 
 const computedItems = computed((): MenuItem[] => {
   const items: MenuItem[] = [];
+
   // Groups only has one associated page and therefore is not nested within items
   const groupsAction = rawActions.value.find((action) => action.category === 'Groups');
   if (groupsAction) {
@@ -161,7 +162,9 @@ const computedIsBasicView = computed((): boolean => {
 
 const rawActions = computed((): NavbarAction[] => {
   const userRoles = userData.value?.roles || [];
-  const currentRoleObj = userRoles.find((r: { siteId: string; role: string }) => (r.siteId === currentSite.value) || r.role === ROLES.SUPER_ADMIN);
+  const currentRoleObj = userRoles.find(
+    (r: { siteId: string; role: string }) => r.siteId === currentSite.value || r.role === ROLES.SUPER_ADMIN,
+  );
 
   return getNavbarActions({
     userRole: currentRoleObj?.role,
@@ -193,14 +196,8 @@ nav {
 .levante-logo {
   display: block;
   width: 100%;
-  max-width: 200px;
+  max-width: 150px;
   margin: 0;
   padding: 0;
-}
-
-@media screen and (max-width: 768px) {
-  .levante-logo :deep(img) {
-    width: 160px !important;
-  }
 }
 </style>

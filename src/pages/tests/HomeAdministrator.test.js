@@ -1,425 +1,250 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ref, nextTick } from 'vue';
-import { mount } from '@vue/test-utils';
-import { createPinia, setActivePinia } from 'pinia';
 import * as VueQuery from '@tanstack/vue-query';
-import HomeAdministrator from '@/pages/HomeAdministrator.vue';
+import { createPinia, setActivePinia } from 'pinia';
+import { mount } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
-import ConfirmService from 'primevue/confirmationservice';
-import ToastService from 'primevue/toastservice';
-import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockAdministration = {
-  id: 'DlAhRnbOFDnCF5AwEkhB',
-  name: 'Newest assignment',
-  publicName: 'Newest assignment',
-  dates: {
-    start: '2025-01-13T23:36:25.121Z',
-    end: '2025-01-16T07:59:59.999Z',
-    created: '2025-04-14T23:49:03.756Z',
+let HomeAdministrator;
+
+const mockState = vi.hoisted(() => {
+  const { createRequire } = require('node:module');
+  const { ref } = createRequire(import.meta.url)('vue');
+  return {
+    mockCurrentSite: ref('site-1'),
+    mockUserData: ref({ displayName: 'Test Admin' }),
+    assignmentsData: ref([]),
+    assignmentsLoading: ref(false),
+    schoolsData: ref([]),
+    schoolsLoading: ref(false),
+    classesData: ref([]),
+    classesLoading: ref(false),
+    cohortsData: ref([]),
+    cohortsLoading: ref(false),
+    usersData: ref([]),
+    usersLoading: ref(false),
+  };
+});
+
+vi.mock('@bdelab/roar-utils', () => ({ default: {} }));
+
+vi.mock('@/store/auth', () => ({
+  useAuthStore: vi.fn(() => ({
+    $subscribe: vi.fn(),
+    currentSite: mockState.mockCurrentSite,
+    userData: mockState.mockUserData,
+  })),
+}));
+
+vi.mock('@/composables/queries/useGetAssignmentsBySiteId', () => ({
+  useGetAssignmentsBySiteId: () => ({
+    data: mockState.assignmentsData,
+    isLoading: mockState.assignmentsLoading,
+  }),
+}));
+
+vi.mock('@/composables/queries/useGetSchoolsBySiteId', () => ({
+  useGetSchoolsBySiteId: () => ({
+    data: mockState.schoolsData,
+    isLoading: mockState.schoolsLoading,
+  }),
+}));
+
+vi.mock('@/composables/queries/useGetClassesBySiteId', () => ({
+  useGetClassesBySiteId: () => ({
+    data: mockState.classesData,
+    isLoading: mockState.classesLoading,
+  }),
+}));
+
+vi.mock('@/composables/queries/useGetCohortsBySiteId', () => ({
+  useGetCohortsBySiteId: () => ({
+    data: mockState.cohortsData,
+    isLoading: mockState.cohortsLoading,
+  }),
+}));
+
+vi.mock('@/composables/queries/useGetUsersBySiteId', () => ({
+  useGetUsersBySiteId: () => ({
+    data: mockState.usersData,
+    isLoading: mockState.usersLoading,
+  }),
+}));
+
+vi.mock('@/components/LevanteSpinner.vue', () => ({
+  default: {
+    name: 'LevanteSpinner',
+    template: '<div data-cy="home-admin-spinner" />',
+    props: ['fullscreen'],
   },
-  assessments: [
-    {
-      variantId: 'DRjLxIQsFrgj4VJapHbz',
-      variantName: 'es-CO',
-      taskId: 'hearts-and-flowers',
-      params: {
-        storeItemId: false,
-        maxTime: 8,
-        sequentialStimulus: true,
-        numberOfTrials: 21,
-        keyHelpers: true,
-        stimulusBlocks: 3,
-        corpus: null,
-        numOfPracticeTrials: 3,
-        sequentialPractice: true,
-        skipInstructions: true,
-        taskName: 'hearts-and-flowers',
-        buttonLayout: 'default',
-        age: null,
-        language: 'es',
-        maxIncorrect: 100,
-      },
-    },
-    {
-      variantId: 'Z6Cbf1V6CFGR2pg2iJDA',
-      variantName: 'math-default',
-      taskId: 'egma-math',
-      params: {
-        sequentialStimulus: true,
-        stimulusBlocks: 3,
-        corpus: 'math-item-bank',
-        numOfPracticeTrials: 2,
-        language: 'en',
-        sequentialPractice: true,
-        skipInstructions: true,
-        taskName: 'egma-math',
-        buttonLayout: 'default',
-        age: null,
-        numberOfTrials: 200,
-        maxIncorrect: 6,
-        maxTime: 15,
-        keyHelpers: false,
-      },
-      conditions: {
-        assigned: {
-          op: 'AND',
-          conditions: [
-            {
-              field: 'userType',
-              op: 'EQUAL',
-              value: 'student',
-            },
-          ],
-        },
-      },
-    },
-  ],
-  assignedOrgs: {
-    districts: [],
-    schools: [],
-    classes: [],
-    groups: ['CInb348Nz7LcPlylblKv', '6m00OVq4zEQIWOrmBqez', 'flVb1sDVG5gTroczTi1m'],
-    families: [],
-  },
-  testData: false,
-  stats: {
-    total: {
-      assignment: {
-        started: 2,
-        completed: 1,
-        assigned: 597,
-      },
-      'hearts-and-flowers': {
-        assigned: 592,
-      },
-      'egma-math': {
-        started: 2,
-        completed: 1,
-        assigned: 219,
+}));
+
+const mountOptions = {
+  global: {
+    plugins: [VueQuery.VueQueryPlugin, PrimeVue],
+    stubs: {
+      RouterLink: {
+        props: ['to'],
+        template: '<span class="router-link-stub"><slot /></span>',
       },
     },
   },
 };
 
-describe('HomeAdministrator', () => {
+function resetMockState() {
+  mockState.mockCurrentSite.value = 'site-1';
+  mockState.mockUserData.value = { displayName: 'Test Admin' };
+  mockState.assignmentsData.value = [];
+  mockState.assignmentsLoading.value = false;
+  mockState.schoolsData.value = [];
+  mockState.schoolsLoading.value = false;
+  mockState.classesData.value = [];
+  mockState.classesLoading.value = false;
+  mockState.cohortsData.value = [];
+  mockState.cohortsLoading.value = false;
+  mockState.usersData.value = [];
+  mockState.usersLoading.value = false;
+}
+
+describe('HomeAdministrator.vue', () => {
+  beforeAll(async () => {
+    ({ default: HomeAdministrator } = await import('../HomeAdministrator.vue'));
+  });
+
   beforeEach(() => {
     setActivePinia(createPinia());
-
-    // not sure where this is a dependency but won't run without
-    vi.mock('@bdelab/roar-utils', () => {
-      return {
-        default: {},
-      };
-    });
-
-    vi.mock('@/store/auth', () => ({
-      useAuthStore: vi.fn(() => ({
-        $subscribe: vi.fn(),
-        roarfirekit: ref({
-          restConfig: true,
-        }),
-        isUserSuperAdmin: vi.fn(() => true),
-        currentSite: ref('test-site'),
-      })),
-    }));
-
-    vi.mock('@/helpers/query/utils', () => ({
-      orderByNameASC: [
-        {
-          field: { fieldPath: 'name' },
-          direction: 'ASCENDING',
-        },
-      ],
-    }));
-
-    vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
-      default: vi.fn(() => ({
-        data: ref({
-          id: 'zbTRSOS70cNGWyu2Ecc4T2aOU2y2',
-          collectionValue: 'userClaims',
-          lastUpdated: 1741677423988,
-          testData: false,
-          claims: {
-            // will evenutally want to mock both
-            // super_admin view and admin view
-            super_admin: true,
-            minimalAdminOrgs: {
-              groups: [],
-              schools: [],
-              districts: [],
-              families: [],
-              classes: [],
-            },
-            adminOrgs: {
-              groups: [],
-              schools: [],
-              families: [],
-              districts: [],
-              classes: [],
-            },
-            roarUid: 'zbTRSOS70cNGWyu2Ecc4T2aOU2y2',
-            assessmentUid: 'mlrlu8rqPYh3IeXKHT83UpVMtzE2',
-            admin: true,
-            adminUid: 'zbTRSOS70cNGWyu2Ecc4T2aOU2y2',
-          },
-        }),
-      })),
-    }));
-
-    // mocking PvChart since it is used within CardAdministration and throwing errors.
-    // if we do want to test the chart's functionality we should revisit or test in
-    // CardAdministration's unit test
-    vi.mock('primevue/chart', () => ({
-      default: {
-        template: '<div />',
-      },
-    }));
-
-    vi.mock('vue-router', () => ({
-      useRouter: () => ({
-        push: vi.fn(),
-        replace: vi.fn(),
-      }),
-    }));
-
-    vi.mock('@/composables/queries/useAdministrationsListQuery', () => ({
-      default: vi.fn(),
-    }));
-
-    // Mock CardAdministration component
-    vi.mock('@/components/CardAdministration.vue', () => ({
-      default: {
-        name: 'CardAdministration',
-        template: '<div data-cy="h2-card-admin"><h2 data-cy="h2-card-admin-title">{{ title }}</h2></div>',
-        props: [
-          'title',
-          'stats',
-          'dates',
-          'assignees',
-          'assessments',
-          'publicName',
-          'showParams',
-          'isSuperAdmin',
-          'creator',
-        ],
-      },
-    }));
-
-    // Mock LevanteSpinner component
-    vi.mock('@/components/LevanteSpinner.vue', () => ({
-      default: {
-        name: 'LevanteSpinner',
-        template: '<div class="levante-spinner-container">Loading...</div>',
-        props: ['size'],
-      },
-    }));
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2025-06-15T12:00:00.000Z'));
+    resetMockState();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
-  it('renders static elements before data loads and empty table', async () => {
-    vi.mocked(useAdministrationsListQuery).mockReturnValue({
-      data: ref([]),
-      isLoading: ref(false),
-      isFetching: ref(false),
-      isError: ref(false),
-      error: ref(null),
-      isSuccess: ref(true),
-    });
+  it('renders fullscreen spinner while queries are loading', () => {
+    mockState.usersLoading.value = true;
 
-    const wrapper = mount(HomeAdministrator, {
-      global: {
-        plugins: [VueQuery.VueQueryPlugin, PrimeVue],
-      },
-    });
+    const wrapper = mount(HomeAdministrator, mountOptions);
 
-    await nextTick();
-    const wrapperText = wrapper.text();
-    expect(wrapperText).toContain('View Assignments');
-    // Check for the first part of the description
-    expect(wrapperText).toContain('This page lists all the assignments');
-    expect(wrapperText).toContain('administered to your users');
-    // Check for the second part of the description
-    expect(wrapperText).toContain('You can view and monitor completion');
-    expect(wrapperText).toContain('bundles of tasks, surveys, and questionnaires');
-    expect(wrapperText).toContain('Search by name');
-    expect(wrapperText).toContain('Sort by');
-    expect(wrapperText).not.toContain('Fetching Assignments');
-    expect(wrapperText).toContain('No Assignments Yet');
-    expect(wrapperText).toContain('Go create your first assignment to get started');
+    expect(wrapper.find('[data-cy="home-admin-spinner"]').exists()).toBe(true);
+    expect(wrapper.text()).not.toContain('Welcome,');
   });
 
-  it('renders loading state when data is loading', async () => {
-    const mockedUseAdministrationsListQuery = vi.mocked(useAdministrationsListQuery);
+  it('shows welcome text and display name when loaded', () => {
+    const wrapper = mount(HomeAdministrator, mountOptions);
 
-    mockedUseAdministrationsListQuery.mockReturnValue({
-      data: ref([]),
-      isLoading: ref(true),
-      isFetching: ref(false),
-      isError: ref(false),
-      error: ref(null),
-      isSuccess: ref(false),
-    });
-
-    const wrapper = mount(HomeAdministrator, {
-      global: {
-        plugins: [VueQuery.VueQueryPlugin, PrimeVue],
-      },
-    });
-
-    await nextTick();
-
-    expect(wrapper.find('.loading-container').exists()).toBe(true);
-    expect(wrapper.find('.levante-spinner-container').exists()).toBe(true);
-    expect(wrapper.text()).toContain('Fetching Assignments');
+    expect(wrapper.find('[data-cy="home-admin-spinner"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Welcome,');
+    expect(wrapper.text()).toContain('Test Admin');
   });
 
-  it('Data table renders with administrations data', async () => {
-    vi.mocked(useAdministrationsListQuery).mockReturnValue({
-      data: ref([mockAdministration]),
-      isLoading: ref(false),
-      isFetching: ref(false),
-      isError: ref(false),
-      error: ref(null),
-      isSuccess: ref(true),
-    });
+  it('falls back to first middle last when displayName is absent', () => {
+    mockState.mockUserData.value = {
+      name: { first: 'Ada', middle: 'M', last: 'Lovelace' },
+    };
 
-    const wrapper = mount(HomeAdministrator, {
-      global: {
-        plugins: [VueQuery.VueQueryPlugin, PrimeVue, ConfirmService, ToastService],
-        components: {
-          'router-link': { template: '<a></a>' },
-        },
-        directives: {
-          tooltip: {},
-        },
-      },
-    });
+    const wrapper = mount(HomeAdministrator, mountOptions);
 
-    await nextTick();
-
-    const card = wrapper.find('[data-cy="h2-card-admin-title"]');
-    expect(card.exists()).toBe(true);
-    expect(card.text()).toContain('Newest assignment');
+    expect(wrapper.text()).toContain('Ada M Lovelace');
   });
 
-  it('Data table search functionality', async () => {
-    vi.mocked(useAdministrationsListQuery).mockReturnValue({
-      data: ref([mockAdministration]),
-      isLoading: ref(false),
-      isFetching: ref(false),
-      isError: ref(false),
-      error: ref(null),
-      isSuccess: ref(true),
-    });
+  it('when no site is selected, prompts to select a site and shows placeholders for totals', () => {
+    mockState.mockCurrentSite.value = 'any';
 
-    const wrapper = mount(HomeAdministrator, {
-      global: {
-        plugins: [VueQuery.VueQueryPlugin, PrimeVue, ConfirmService, ToastService],
-        components: {
-          'router-link': { template: '<a></a>' },
-        },
-        directives: {
-          tooltip: {},
-        },
-      },
-    });
+    const wrapper = mount(HomeAdministrator, mountOptions);
 
-    await nextTick();
+    const siteMessages = wrapper.findAll('.info--site-not-selected');
+    expect(siteMessages.length).toBeGreaterThanOrEqual(1);
+    expect(wrapper.text()).toContain('Select a site to see stats');
 
-    const searchInput = wrapper.find('[data-cy="search-input"] input');
-    expect(searchInput.exists()).toBe(true);
-
-    await searchInput.setValue('New');
-    await searchInput.trigger('keyup.enter');
-    expect(wrapper.find('[data-cy="h2-card-admin-title"]').text()).toContain('Newest assignment');
-
-    await searchInput.setValue('Fake');
-    await searchInput.trigger('keyup.enter');
-    expect(wrapper.find('[data-cy="h2-card-admin-title"]').exists()).toBe(false);
+    const totalsRow = wrapper.text();
+    const dashSegments = totalsRow.match(/Total:\s*-/g) ?? [];
+    expect(dashSegments.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('Data table sort functionality', async () => {
-    const mockData = [
+  it('when a site is selected, shows user type breakdown and totals from query data', () => {
+    mockState.usersData.value = [
+      { userType: 'teacher' },
+      { userType: 'Teacher' },
+      { userType: 'parent' },
+      { userType: 'student' },
+    ];
+
+    const wrapper = mount(HomeAdministrator, mountOptions);
+
+    expect(wrapper.text()).toContain('Teachers');
+    expect(wrapper.text()).toContain('Caregivers');
+    expect(wrapper.text()).toContain('Children');
+    expect(wrapper.text()).toContain('Total:');
+    expect(wrapper.text()).toContain('4');
+  });
+
+  it('when a site is selected, classifies assignments into open, upcoming, and past buckets', () => {
+    mockState.assignmentsData.value = [
       {
-        ...mockAdministration,
-        id: '1',
-        name: 'B Assignment',
-        publicName: 'B Assignment',
+        dates: {
+          start: '2025-06-01T00:00:00.000Z',
+          end: '2025-06-30T23:59:59.999Z',
+        },
       },
       {
-        ...mockAdministration,
-        id: '2',
-        name: 'A Assignment',
-        publicName: 'A Assignment',
+        dates: {
+          start: '2025-07-01T00:00:00.000Z',
+          end: '2025-07-31T23:59:59.999Z',
+        },
+      },
+      {
+        dates: {
+          start: '2025-01-01T00:00:00.000Z',
+          end: '2025-05-01T00:00:00.000Z',
+        },
       },
     ];
 
-    vi.mocked(useAdministrationsListQuery).mockReturnValue({
-      data: ref(mockData),
-      isLoading: ref(false),
-      isFetching: ref(false),
-      isError: ref(false),
-      error: ref(null),
-      isSuccess: ref(true),
-    });
+    const wrapper = mount(HomeAdministrator, mountOptions);
 
-    const wrapper = mount(HomeAdministrator, {
-      global: {
-        plugins: [VueQuery.VueQueryPlugin, PrimeVue, ConfirmService, ToastService],
-        components: {
-          'router-link': { template: '<a></a>' },
-        },
-        directives: {
-          tooltip: {},
-        },
-      },
-    });
+    expect(wrapper.text()).toContain('Open Assignments');
+    expect(wrapper.text()).toContain('Upcoming Assignments');
+    expect(wrapper.text()).toContain('Past Assignments');
+    expect(wrapper.text()).toMatch(/1Open Assignments/);
+    expect(wrapper.text()).toMatch(/1Upcoming Assignments/);
+    expect(wrapper.text()).toMatch(/1Past Assignments/);
+    expect(wrapper.text()).toContain('View open');
+    expect(wrapper.text()).toContain('View upcoming');
+    expect(wrapper.text()).toContain('View closed');
+  });
 
-    await nextTick();
+  it('renders sorted schools and class parent school labels when a site is selected', () => {
+    mockState.schoolsData.value = [
+      { id: 's2', name: 'Beta School' },
+      { id: 's1', name: 'Alpha School' },
+    ];
+    mockState.classesData.value = [{ id: 'c1', name: 'Room 1', schoolId: 's2' }];
 
-    const sortSelect = wrapper.findComponent('[data-cy="dropdown-sort-administrations"]');
-    expect(sortSelect.exists()).toBe(true);
+    const wrapper = mount(HomeAdministrator, mountOptions);
 
-    // Test ascending sort
-    await sortSelect.vm.$emit('change', {
-      value: {
-        label: 'Name (ascending)',
-        value: [
-          {
-            field: {
-              fieldPath: 'name',
-            },
-            direction: 'ASCENDING',
-          },
-        ],
-      },
-    });
+    expect(wrapper.text()).toContain('Alpha School');
+    expect(wrapper.text()).toContain('Beta School');
+    expect(wrapper.text()).toContain('Beta School');
+    expect(wrapper.text()).toContain('Room 1');
 
-    const titlesAscend = wrapper.findAll('[data-cy="h2-card-admin-title"]');
-    if (titlesAscend.length > 0) {
-      expect(titlesAscend[0].text()).toContain('A Assignment');
-      expect(titlesAscend[1].text()).toContain('B Assignment');
-    }
-    // Test descending sort
-    await sortSelect.vm.$emit('change', {
-      value: {
-        label: 'Name (descending)',
-        value: [
-          {
-            field: {
-              fieldPath: 'name',
-            },
-            direction: 'DESCENDING',
-          },
-        ],
-      },
-    });
-    const titlesDesc = wrapper.findAll('[data-cy="h2-card-admin-title"]');
-    expect(titlesDesc[0].text()).toContain('B Assignment');
-    expect(titlesDesc[1].text()).toContain('A Assignment');
+    const userLinks = wrapper.findAll('.group-item-link');
+    expect(userLinks.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('shows empty-state copy for schools when none exist', () => {
+    mockState.schoolsData.value = [];
+
+    const wrapper = mount(HomeAdministrator, mountOptions);
+
+    expect(wrapper.text()).toContain('There are no schools yet');
+  });
+
+  it('shows documentation link with expected href', () => {
+    const wrapper = mount(HomeAdministrator, mountOptions);
+
+    const docLink = wrapper.find('[data-cy="docs-button"]');
+    expect(docLink.exists()).toBe(true);
+    expect(docLink.attributes('href')).toBe('https://researcher.levante-network.org/dashboard/add-users');
   });
 });
