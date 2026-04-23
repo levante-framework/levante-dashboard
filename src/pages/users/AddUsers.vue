@@ -171,6 +171,7 @@ import { logger } from '@/logger';
 import { storeToRefs } from 'pinia';
 import { validateAddUsersFileUpload } from '@levante-framework/levante-zod';
 import { useLevanteStore } from '@/store/levante';
+import { REGISTERED_USERS_CSV_MARKER } from '@/constants/registeredUsersCsv';
 
 const levanteStore = useLevanteStore();
 const { hasUserConfirmed } = storeToRefs(levanteStore);
@@ -692,14 +693,14 @@ const csvBlob = ref(null);
 const csvURL = ref(null);
 
 function convertUsersToCSV() {
-  // Get the first user to determine headers
-  const headerObj = toRaw(rawUserFile.value[0]);
+  const allUsers = toRaw(rawUserFile.value).map((row) => ({
+    ...row,
+    [REGISTERED_USERS_CSV_MARKER]: REGISTERED_USERS_CSV_MARKER,
+  }));
 
-  // Convert Objects to CSV String
+  const headerObj = allUsers[0];
+
   const csvHeader = Object.keys(headerObj).join(',') + '\n';
-
-  // Get all users from rawUserFile (which now contains updated data for newly registered users)
-  const allUsers = toRaw(rawUserFile.value);
 
   const csvRows = allUsers
     .map((obj) =>
