@@ -183,7 +183,6 @@ const isAllSitesSelected = computed(() => currentSite.value === 'any');
 
 const isFileUploaded = ref(false);
 const uploadedFile = ref(null);
-const uploadedFileName = ref(null);
 const rawUserFile = ref({});
 const registeredUsers = ref([]);
 const hasMultipleSites = ref(false);
@@ -256,7 +255,6 @@ watch(
 
 const resetUserProgress = () => {
   uploadedFile.value = null;
-  uploadedFileName.value = null;
   errorUsers.value = [];
   errorUserColumns.value = [];
   showErrorTable.value = false;
@@ -280,10 +278,6 @@ const onFileUpload = async (event) => {
   // Read the file. In case of multiple files, use the last one.
   const file = event.files[event.files.length - 1];
   uploadedFile.value = file;
-
-  const fileNameParts = file?.name?.split('.');
-  const fileNamePartsWithoutExt = fileNameParts.slice(0, -1);
-  uploadedFileName.value = fileNamePartsWithoutExt.join('.');
 
   const parsedData = await csvFileToJson(file);
 
@@ -744,11 +738,13 @@ function getTimestamp() {
 
 function downloadCSV() {
   const timestamp = getTimestamp();
-  let filename = `${timestamp}_registered.csv`;
 
-  if (uploadedFileName.value?.toString()?.trim()?.length) {
-    filename = `${uploadedFileName.value}_${filename}`;
-  }
+  const formatted = uploadedFile.value?.name
+    ?.split('.') // Split to find extension
+    ?.slice(0, -1) // Remove the extension
+    ?.join('.'); // Keep other dots in the orginal file name
+
+  const filename = `${formatted}_${timestamp}_registered.csv`;
 
   if (csvURL.value) {
     // Create Download Link
