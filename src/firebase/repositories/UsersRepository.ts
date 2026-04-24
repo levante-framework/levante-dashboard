@@ -42,10 +42,58 @@ export interface CreateUpdateAdministratorPayload {
 }
 
 const CREATE_USERS_CALLABLE_TIMEOUT_MS = 540_000;
+const CREATE_USERS_EXPORT_POLL_INTERVAL_MS = 2_500;
+const CREATE_USERS_EXPORT_MAX_POLL_MS = 1_200_000;
 
-export interface CreateUsersPayload {
-  users: Record<string, unknown>[];
+export interface InputUserOrgIds {
+  districts: string[];
+  schools: string[];
+  classes: string[];
+  groups: string[];
+  families: string[];
+}
+
+export interface InputUser {
+  userType: string;
+  childId?: string;
+  parentId?: string;
+  teacherId?: string;
+  month: string;
+  year: string;
+  orgIds: InputUserOrgIds;
+  isTestData: boolean;
+}
+
+export interface CreateUsersWithEmailExportRequestData {
+  jobId?: string;
+  users?: InputUser[];
   siteId?: string;
+  sendCredentialsEmail?: boolean;
+}
+
+export interface ReturnUserData {
+  uid: string;
+  email: string;
+  password: string;
+  username?: string;
+}
+
+export type CreateUsersCallableResult = {
+  status: 'success';
+  message: string;
+  data: ReturnUserData[];
+};
+
+export type CreateUsersWithEmailExportPollResponse =
+  | { status: 'pending'; jobId: string }
+  | CreateUsersCallableResult
+  | { status: 'failed'; jobId: string; message: string }
+  | { status: 'rolled_back'; jobId: string; message: string };
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 const ADMIN_ROLES = new Set<string>([
@@ -127,12 +175,41 @@ class UsersRepository extends Repository {
     return this.call<CreateUpdateAdministratorPayload, unknown>('createAdministrator', payload);
   }
 
-  async createUsers(payload: CreateUsersPayload): Promise<unknown> {
-    return this.callWithTimeout<CreateUsersPayload, unknown>(
-      'createUsers',
-      payload,
-      CREATE_USERS_CALLABLE_TIMEOUT_MS,
-    );
+  async createUsersWithEmailExport(
+    payload: CreateUsersWithEmailExportRequestData,
+  ): Promise<CreateUsersCallableResult> {
+    let response = await this.callWithTimeout<
+      CreateUsersWithEmailExportRequestData,
+      CreateUsersWithEmailExportPollResponse
+    >('createUsersWithEmailExport', payload, CREATE_USERS_CALLABLE_TIMEOUT_MS);
+
+    const deadline = Date.now() + CREATE_USERS_EXPORT_MAX_POLL_MS;
+
+    for (;;) {
+      if (response.status === 'success') {
+        return response;
+      }
+      if (response.status === 'failed' || response.status === 'rolled_back') {
+        throw new Error(response.message || `User creation ${response.status}`);
+      }
+      if (response.status !== 'pending') {
+        throw new Error('Unexpected response from createUsersWithEmailExport');
+      }
+      if (Date.now() > deadline) {
+        throw new Error(
+          'User creation timed out while waiting for the server. Try again with a smaller batch or contact support.',
+        );
+      }
+      await sleep(CREATE_USERS_EXPORT_POLL_INTERVAL_MS);
+      response = await this.callWithTimeout<
+        CreateUsersWithEmailExportRequestData,
+        CreateUsersWithEmailExportPollResponse
+      >(
+        'createUsersWithEmailExport',
+        { jobId: response.jobId },
+        CREATE_USERS_CALLABLE_TIMEOUT_MS,
+      );
+    }
   }
 }
 

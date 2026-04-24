@@ -13,8 +13,8 @@
       <div class="flex flex-column align-items-center gap-3 py-4">
         <AppSpinner />
         <p class="m-0 text-center text-gray-700 line-height-3">
-          This step runs on the server and can take several minutes for large files. Please keep this tab open until it
-          finishes.
+          This step runs on the server. Large batches can take several minutes while the job completes. Please keep this
+          tab open until it finishes.
         </p>
       </div>
     </PvDialog>
@@ -84,6 +84,13 @@
               </template>
             </PvColumn>
           </PvDataTable>
+
+          <div v-if="!registeredUsers.length" class="flex align-items-center gap-2 mb-3">
+            <PvCheckbox v-model="sendCredentialsEmail" input-id="chbx-send-credentials-email" :binary="true" />
+            <label class="cursor-pointer select-none text-gray-800 m-0" for="chbx-send-credentials-email">
+              Email credentials spreadsheet to my account email
+            </label>
+          </div>
 
           <div class="submit-container">
             <div v-if="registeredUsers.length" class="button-group">
@@ -159,6 +166,7 @@ import { usersRepository } from '@/firebase/repositories/UsersRepository';
 import AppSpinner from '@/components/AppSpinner.vue';
 import { pluralizeFirestoreCollection } from '@/helpers';
 import { fetchOrgByName } from '@/helpers/query/orgs';
+import PvCheckbox from 'primevue/checkbox';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
@@ -187,6 +195,7 @@ const rawUserFile = ref({});
 const registeredUsers = ref([]);
 const hasMultipleSites = ref(false);
 const showBulkCreateUsersModal = ref(false);
+const sendCredentialsEmail = ref(false);
 
 // Primary Table & Dropdown refs
 const dataTable = ref();
@@ -265,6 +274,7 @@ const resetUserProgress = () => {
   registeredUsers.value = [];
   activeSubmit.value = false;
   hasMultipleSites.value = false;
+  sendCredentialsEmail.value = false;
 
   // Reset user confirmation
   setHasUserConfirmed(false);
@@ -567,6 +577,7 @@ async function submitUsers() {
         delete orgInfo.sites;
         orgInfo.groups = orgInfo.cohorts;
         delete orgInfo.cohorts;
+        orgInfo.families = [];
         user.orgIds = orgInfo;
       } else if (!usersWithErrors.some((err) => err.user === user)) {
         // Only add this error if the user doesn't already have an error
@@ -636,11 +647,23 @@ async function submitUsers() {
           }
         }
 
+        if (processedUser.month != null && processedUser.month !== '') {
+          processedUser.month = String(processedUser.month);
+        }
+        if (processedUser.year != null && processedUser.year !== '') {
+          processedUser.year = String(processedUser.year);
+        }
+
+        const rawTest = processedUser.isTestData;
+        processedUser.isTestData =
+          rawTest === true || rawTest === 'true' || rawTest === 'True' || rawTest === 1 || rawTest === '1';
+
         return processedUser;
       });
 
       const createUsersPayload = {
         users: processedUsers,
+        sendCredentialsEmail: sendCredentialsEmail.value,
       };
 
       if (currentSite.value && currentSite.value !== 'any') {
@@ -649,7 +672,7 @@ async function submitUsers() {
         createUsersPayload.siteId = processedUsers[0].orgIds.districts[0];
       }
 
-      return await usersRepository.createUsers(createUsersPayload);
+      return await usersRepository.createUsersWithEmailExport(createUsersPayload);
     });
 
     for (const result of createUserResults) {
@@ -673,6 +696,9 @@ async function submitUsers() {
       severity: 'success',
       summary: 'User Creation Successful',
       life: TOAST_DEFAULT_LIFE_DURATION,
+      ...(sendCredentialsEmail.value
+        ? { detail: 'A credentials spreadsheet is also being sent to your account email.' }
+        : {}),
     });
     convertUsersToCSV();
   } catch (error) {
