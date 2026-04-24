@@ -270,10 +270,9 @@ const findVariantWithParams = (variants, params) => {
 };
 
 function resolveVariantForAssessment(assessment, allVariantInfo) {
-  const taskId = assessment?.taskId;
-  const tid = String(taskId ?? '').toLowerCase();
+  const taskId = String(assessment?.taskId ?? '').toLowerCase();
   const forTask = _filter(allVariantInfo, (variant) =>
-    String(variant.task?.id ?? '').toLowerCase() === tid,
+    String(variant.task?.id ?? '').toLowerCase() === taskId,
   );
 
   let found = findVariantWithParams(forTask, assessment.params ?? {});
