@@ -12,10 +12,10 @@ import PvSelect from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
 
-const { mockUseUpsertOrgMutation, mockOrgNameExistsState } = vi.hoisted(() => ({
+const { mockUseUpsertOrgMutation, mockExistingOrgs } = vi.hoisted(() => ({
   mockUseUpsertOrgMutation: vi.fn(),
-  mockOrgNameExistsState: {
-    value: false,
+  mockExistingOrgs: {
+    value: [],
   },
 }));
 
@@ -70,17 +70,20 @@ vi.mock('@/composables/mutations/useUpsertOrgMutation', () => ({
   })),
 }));
 
-vi.mock('@/composables/queries/useDistrictsListQuery', () => ({
-  default: vi.fn(() => ({
-    data: ref([]),
-    isLoading: ref(false),
-  })),
-}));
-
-vi.mock('@/composables/queries/useDistrictSchoolsQuery', () => ({
+vi.mock('@/composables/queries/_useSchoolsQuery', () => ({
   default: vi.fn(() => ({
     data: ref([]),
     isFetching: ref(false),
+  })),
+}));
+
+vi.mock('@/composables/queries/useOrgsTableQuery', () => ({
+  default: vi.fn(() => ({
+    data: mockExistingOrgs,
+    isLoading: ref(false),
+    isFetching: ref(false),
+    isError: ref(false),
+    error: ref(null),
   })),
 }));
 
@@ -111,11 +114,10 @@ const mountOptions = {
 };
 
 beforeEach(() => {
-  mockOrgNameExistsState.value = false;
+  mockExistingOrgs.value = [];
   mockUseUpsertOrgMutation.mockClear();
   setActivePinia(createPinia());
   mockToastAdd.mockClear();
-  mockUseUpsertOrgMutation.mockClear();
 });
 
 describe('AddGroupModal.vue', () => {
@@ -166,6 +168,10 @@ describe('AddGroupModal.vue', () => {
   });
 
   it('should NOT allow users to create 2 or more groups with the same name', async () => {
+    // Seed the existing-orgs list returned by useOrgsTableQuery with a duplicate (case/whitespace
+    // insensitive via normalizeToLowercase) so the `unique` validator should fail.
+    mockExistingOrgs.value = [{ id: 'existing-1', name: 'Test Site' }];
+
     const wrapper = mount(AddGroupModal, mountOptions);
     await nextTick();
 
@@ -176,17 +182,13 @@ describe('AddGroupModal.vue', () => {
     await nextTick();
     await flushPromises();
 
-    // Now we provide a site name
     const orgName = document.querySelector('[data-cy="input-org-name"]');
     expect(orgName).not.toBeNull();
-    orgName.value = 'Test Site';
+    orgName.value = 'test site'; // Different casing/whitespace on purpose
     orgName.dispatchEvent(new Event('input'));
     await nextTick();
 
-    // Mocking the vuelidate
-    wrapper.vm.v$.$validate = () => Promise.resolve(true);
-
-    // After that, we select the submit button and check if it says "Create Site"
+    // Do NOT bypass vuelidate here; we want the real `unique` validator to run.
     const submitBtn = document.querySelector('[data-testid="submitBtn"]');
     expect(submitBtn).not.toBeNull();
     expect(submitBtn.textContent).toContain('Create Site');
@@ -194,8 +196,46 @@ describe('AddGroupModal.vue', () => {
     await submitBtn.click();
     await flushPromises();
 
-    // Component does not yet validate duplicate names via useOrgNameExistsQuery; mutation is called
-    expect(mockUseUpsertOrgMutation).toHaveBeenCalledTimes(1);
+    // Mutation must NOT fire when the unique rule fails.
+    expect(mockUseUpsertOrgMutation).not.toHaveBeenCalled();
+
+    // The dynamic withMessage() callback should render the orgTypeLabel-aware error.
+    const errorTexts = Array.from(document.querySelectorAll('.p-error')).map((el) =>
+      el.textContent.trim(),
+    );
+    expect(errorTexts).toContain('A site with this name already exists.');
+
+    wrapper.unmount();
+  });
+
+  it('should render the unique error message reflecting the current orgType label', async () => {
+    mockExistingOrgs.value = [{ id: 'existing-1', name: 'Grade 3' }];
+
+    const wrapper = mount(AddGroupModal, mountOptions);
+    await nextTick();
+
+    // Switch to "Cohort" (groups) so the dynamic message uses that label instead of "site".
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    wrapper.vm.orgType = { firestoreCollection: 'groups', singular: 'group', label: 'Cohort' };
+    await nextTick();
+    await flushPromises();
+
+    const orgName = document.querySelector('[data-cy="input-org-name"]');
+    orgName.value = 'Grade 3';
+    orgName.dispatchEvent(new Event('input'));
+    await nextTick();
+
+    const submitBtn = document.querySelector('[data-testid="submitBtn"]');
+    await submitBtn.click();
+    await flushPromises();
+
+    expect(mockUseUpsertOrgMutation).not.toHaveBeenCalled();
+
+    const errorTexts = Array.from(document.querySelectorAll('.p-error')).map((el) =>
+      el.textContent.trim(),
+    );
+    expect(errorTexts).toContain('A cohort with this name already exists.');
 
     wrapper.unmount();
   });
