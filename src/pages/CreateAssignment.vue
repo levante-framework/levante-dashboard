@@ -1023,19 +1023,19 @@ watch(
     const mo = minimalOrgsFromDoc(admin);
     if (mo.districts?.length) {
       const next = existingDistrictsData.value;
-      if (next !== undefined) state.districts = next;
+      if (next) state.districts = next;
     }
     if (mo.schools?.length) {
       const next = existingSchoolsData.value;
-      if (next !== undefined) state.schools = next;
+      if (next) state.schools = next;
     }
     if (mo.classes?.length) {
       const next = existingClassesData.value;
-      if (next !== undefined) state.classes = next;
+      if (next) state.classes = next;
     }
     if (mo.groups?.length) {
       const next = existingGroupData.value;
-      if (next !== undefined) state.groups = next;
+      if (next) state.groups = next;
     }
   },
 );
