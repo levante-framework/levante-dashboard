@@ -56,11 +56,7 @@
           <PvInputText id="orgName" v-model="orgName" class="w-full" data-cy="input-org-name" />
           <label for="orgName">{{ orgTypeLabel }} Name<span class="required-asterisk">*</span></label>
         </PvFloatLabel>
-        <small
-          v-for="error in v$.orgName.$errors"
-          :key="error.$uid"
-          class="p-error"
-        >
+        <small v-for="error in v$.orgName.$errors" :key="error.$uid" class="p-error">
           {{ error.$message }}
         </small>
       </div>
@@ -241,9 +237,7 @@ const { data: existingOrgs } = useOrgsTableQuery(
 const isUnique = (value: string) => {
   if (!value) return true;
   const target = normalizeToLowercase(value);
-  return !(existingOrgs.value ?? []).some(
-    (o) => normalizeToLowercase(o.name) === target,
-  );
+  return !(existingOrgs.value ?? []).some((o) => normalizeToLowercase(o.name) === target);
 };
 
 const v$ = useVuelidate(
