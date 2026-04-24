@@ -200,9 +200,7 @@ describe('AddGroupModal.vue', () => {
     expect(mockUseUpsertOrgMutation).not.toHaveBeenCalled();
 
     // The dynamic withMessage() callback should render the orgTypeLabel-aware error.
-    const errorTexts = Array.from(document.querySelectorAll('.p-error')).map((el) =>
-      el.textContent.trim(),
-    );
+    const errorTexts = Array.from(document.querySelectorAll('.p-error')).map((el) => el.textContent.trim());
     expect(errorTexts).toContain('A site with this name already exists.');
 
     wrapper.unmount();
@@ -232,9 +230,7 @@ describe('AddGroupModal.vue', () => {
 
     expect(mockUseUpsertOrgMutation).not.toHaveBeenCalled();
 
-    const errorTexts = Array.from(document.querySelectorAll('.p-error')).map((el) =>
-      el.textContent.trim(),
-    );
+    const errorTexts = Array.from(document.querySelectorAll('.p-error')).map((el) => el.textContent.trim());
     expect(errorTexts).toContain('A cohort with this name already exists.');
 
     wrapper.unmount();
