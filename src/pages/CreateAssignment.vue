@@ -461,14 +461,15 @@ const handleVariantsChanged = (newVariants) => {
 };
 
 const handleConsentSelected = (newConsentAssent) => {
-  if (newConsentAssent !== 'No Consent') {
+  const isNoConsent =
+    typeof newConsentAssent === 'string' && newConsentAssent.toLowerCase() === 'no consent';
+  if (!isNoConsent) {
     noConsent.value = '';
     state.consent = newConsentAssent.consent;
     state.assent = newConsentAssent.assent;
     state.amount = newConsentAssent.amount;
     state.expectedTime = newConsentAssent.expectedTime;
   } else {
-    // Set to "No Consent"
     noConsent.value = newConsentAssent;
     state.consent = newConsentAssent;
     state.assent = newConsentAssent;
@@ -952,7 +953,7 @@ function applyAdministrationMetadataToForm(adminInfo) {
   state.assent = adminInfo?.legal?.assent ?? null;
   isTestData.value = adminInfo.testData;
 
-  if (state.consent === 'No Consent') {
+  if (state.consent?.toLowerCase() === 'no consent') {
     noConsent.value = state.consent;
   }
 }
