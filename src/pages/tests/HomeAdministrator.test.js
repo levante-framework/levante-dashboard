@@ -167,15 +167,6 @@ describe('HomeAdministrator', () => {
       })),
     }));
 
-    // mocking PvChart since it is used within CardAdministration and throwing errors.
-    // if we do want to test the chart's functionality we should revisit or test in
-    // CardAdministration's unit test
-    vi.mock('primevue/chart', () => ({
-      default: {
-        template: '<div />',
-      },
-    }));
-
     vi.mock('vue-router', () => ({
       useRouter: () => ({
         push: vi.fn(),
@@ -194,7 +185,6 @@ describe('HomeAdministrator', () => {
         template: '<div data-cy="h2-card-admin"><h2 data-cy="h2-card-admin-title">{{ title }}</h2></div>',
         props: [
           'title',
-          'stats',
           'dates',
           'assignees',
           'assessments',
