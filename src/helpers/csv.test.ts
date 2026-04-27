@@ -197,4 +197,59 @@ describe('unparseCsvFile', () => {
     const result = unparseCsvFile(data);
     expect(result).toEqual('name,age\nAlice,30\nBob,25');
   });
+
+  it('returns an empty string for empty data when no keys are provided', () => {
+    expect(unparseCsvFile([])).toEqual('');
+  });
+
+  it('serializes non-string values (numbers, booleans, null, arrays) using Papa defaults', () => {
+    const data = [
+      {
+        name: 'Alice',
+        age: 30,
+        isActive: true,
+        nickname: null,
+        singleTag: ['org1'],
+        emptyTags: [],
+        tags: ['org1', 'org2', 'org3'],
+      },
+    ];
+    const result = unparseCsvFile(data);
+    expect(result).toEqual(
+      'name,age,isActive,nickname,singleTag,emptyTags,tags\nAlice,30,true,,org1,,"org1,org2,org3"',
+    );
+  });
+
+  describe('keys parameter', () => {
+    it('orders columns according to the provided keys', () => {
+      const data = [
+        { name: 'Alice', age: '30' },
+        { name: 'Bob', age: '25' },
+      ];
+      const result = unparseCsvFile(data, ['age', 'name']);
+      expect(result).toEqual('age,name\n30,Alice\n25,Bob');
+    });
+
+    it('appends extraneous keys (not in keys) to the end in their original order', () => {
+      const data = [{ name: 'Alice', age: '30', email: 'a@example.com' }];
+      const result = unparseCsvFile(data, ['email']);
+      expect(result).toEqual('email,name,age\na@example.com,Alice,30');
+    });
+
+    it('includes provided keys not present in the data with empty values', () => {
+      const data = [{ name: 'Alice', age: '30' }];
+      const result = unparseCsvFile(data, ['name', 'age', 'email']);
+      expect(result).toEqual('name,age,email\nAlice,30,');
+    });
+
+    it('uses the data row key order when an empty keys array is provided', () => {
+      const data = [{ name: 'Alice', age: '30' }];
+      const result = unparseCsvFile(data, []);
+      expect(result).toEqual('name,age\nAlice,30');
+    });
+
+    it('returns a quoted header row (no data rows) when data is empty but keys are provided', () => {
+      expect(unparseCsvFile([], ['name', 'age'])).toEqual('"name","age"\n');
+    });
+  });
 });

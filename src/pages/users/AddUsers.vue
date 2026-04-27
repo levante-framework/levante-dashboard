@@ -48,7 +48,7 @@
                 variant="outlined"
                 class="download-button"
                 data-cy="button-download-users"
-                @click="() => convertUsersToCSV()"
+                @click="downloadRegisteredUsers"
               />
             </div>
             <PvButton
@@ -110,7 +110,7 @@ import AppSpinner from '@/components/AppSpinner.vue';
 import CsvTable from '@/components/CsvTable.vue';
 import CsvUploader from '@/components/CsvUploader.vue';
 import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
-import { NORMALIZED_USER_CSV_HEADERS } from '@/constants/csv';
+import { NORMALIZED_USER_CSV_HEADERS, USER_CSV_HEADERS } from '@/constants/csv';
 import { CreateUsersPayload, usersRepository } from '@/firebase/repositories/UsersRepository';
 import { normalizeToLowercase } from '@/helpers';
 import { parseCsvFile, unparseCsvFile } from '@/helpers/csv';
@@ -500,7 +500,7 @@ const submitUsers = async () => {
     });
     registeredUsers.value = mergedUsers;
     status.value = { message: 'Users created successfully.', severity: 'success' };
-    convertUsersToCSV();
+    downloadRegisteredUsers();
   } catch (error) {
     logger.error('Error Registering Users', { error });
     const message = error instanceof Error ? error.message : String(error);
@@ -602,23 +602,11 @@ const runWithConcurrency = async <T, R>(
   return results;
 };
 
-const convertUsersToCSV = () => {
+const downloadRegisteredUsers = () => {
   if (!registeredUsers.value || registeredUsers.value.length === 0) return;
 
   // Convert objects to CSV string
-  const users = toRaw(registeredUsers.value);
-  const csvHeader = Object.keys(users[0]!).join(',') + '\n';
-  const csvRows = users
-    .map((obj) =>
-      Object.values(obj)
-        .map((value) => {
-          if (value === null || value === undefined) return '';
-          return `"${value.toString().replace(/"/g, '""')}"`;
-        })
-        .join(','),
-    )
-    .join('\n');
-  const csvString = csvHeader + csvRows;
+  const csvString = unparseCsvFile(toRaw(registeredUsers.value), USER_CSV_HEADERS);
 
   // Initiate download
   downloadCSV(URL.createObjectURL(new Blob([csvString], { type: 'text/csv;charset=utf-8;' })));

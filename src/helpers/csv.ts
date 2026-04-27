@@ -97,10 +97,29 @@ export const parseCsvFile = async (
 /**
  * Unparse an array of objects into a CSV string
  * @param data The data to unparse
+ * @param keys Optional array of keys to determine CSV header order
  * @returns A CSV string representing the data
  */
-export const unparseCsvFile = (data: Record<string, string>[]): string => {
-  return Papa.unparse(data, {
-    newline: '\n',
-  });
+export const unparseCsvFile = (data: Record<string, unknown>[], keys?: string[]): string => {
+  // If no data, return an empty string or a header row if keys are provided
+  if (data.length === 0) {
+    return !keys ? '' : keys.map((k) => `"${k}"`).join(',') + '\n';
+  }
+
+  // If keys are provided, use them and add any extraneous keys to the end,
+  // otherwise use all keys from the first object
+  let fields = Object.keys(data[0]!);
+  if (keys) {
+    fields = [...keys, ...fields.filter((v) => !keys.includes(v))];
+  }
+
+  return Papa.unparse(
+    {
+      data,
+      fields,
+    },
+    {
+      newline: '\n',
+    },
+  );
 };

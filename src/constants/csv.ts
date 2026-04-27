@@ -17,3 +17,6 @@ export const NORMALIZED_USER_CSV_HEADERS = {
   email: 'email',
   password: 'password',
 };
+
+/** Array of keys to use for the CSV header */
+export const USER_CSV_HEADERS = Object.values(NORMALIZED_USER_CSV_HEADERS);

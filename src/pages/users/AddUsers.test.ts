@@ -683,7 +683,7 @@ describe('AddUsers Page', () => {
         { uid: 'uid-1', email: 'a@b.com', password: 'pw' },
       ]);
 
-      // Stub DOM/URL APIs that convertUsersToCSV touches on the success
+      // Stub DOM/URL APIs that downloadRegisteredUsers touches on the success
       // path so the test doesn't trip over JSDOM's missing
       // URL.createObjectURL or trigger a real link click.
       global.URL.createObjectURL = vi.fn(() => 'mock-blob-url');
@@ -1017,7 +1017,7 @@ describe('AddUsers Page', () => {
     });
   });
 
-  describe('convertUsersToCSV', () => {
+  describe('downloadRegisteredUsers', () => {
     it('does nothing when registeredUsers is null', () => {
       const createObjectURL = vi.spyOn(URL, 'createObjectURL');
 
@@ -1025,16 +1025,18 @@ describe('AddUsers Page', () => {
 
       // Fresh mount: registeredUsers is null. The guard short-circuits
       // before any blob is created or download triggered.
-      vm.convertUsersToCSV();
+      vm.downloadRegisteredUsers();
 
       expect(createObjectURL).not.toHaveBeenCalled();
       createObjectURL.mockRestore();
     });
 
-    it('produces a CSV with quoted values and triggers a download', async () => {
-      // The component builds this CSV by hand (no unparseCsvFile), so the
-      // serialisation rules — quote wrapping, '"' doubling, null/undefined
-      // → empty cell — only have coverage if exercised here.
+    it('produces a CSV ordered by USER_CSV_HEADERS and triggers a download', async () => {
+      // The component delegates serialisation to unparseCsvFile (Papa.unparse
+      // under the hood) and pins the column order to USER_CSV_HEADERS. This
+      // test verifies that contract and the download wiring; the granular
+      // escaping rules (commas, quote doubling, null/undefined → empty) live
+      // in src/helpers/csv.test.ts.
       const createObjectURL = vi.fn(() => 'mock-blob-url');
       const appendChildMock = vi.fn();
       const removeChildMock = vi.fn();
@@ -1053,19 +1055,37 @@ describe('AddUsers Page', () => {
       try {
         const vm = mountAddUsers().vm as any;
 
-        // Seed registeredUsers directly so this test isolates the
-        // serialisation logic from the submitUsers integration. The
-        // payload covers every branch of the value mapper:
-        //   • a string containing '"'  → doubled to '""'
-        //   • a numeric value          → wrapped via .toString()
-        //   • null and undefined       → collapsed to empty cells
-        //   • a plain string           → wrapped in double quotes
+        // Seed registeredUsers directly so this test isolates the download
+        // path from the submitUsers integration. The payload mixes:
+        //   • USER_CSV_HEADERS keys in arbitrary insertion order — to prove
+        //     the output column order is dictated by USER_CSV_HEADERS, not
+        //     the row's own key order.
+        //   • a school containing both a comma and a '"' — to confirm the
+        //     helper's escaping reaches the produced blob.
+        //   • null / undefined values — render as empty cells.
+        //   • an extraneous 'extraField' key — appended after the headers.
         vm.registeredUsers = [
-          { id: '1', name: 'Alice "A" Smith', age: 30, nickname: null, note: undefined },
-          { id: '2', name: 'Bob', age: 25, nickname: 'Bobby', note: 'plain' },
+          {
+            id: '1',
+            userType: 'child',
+            month: 5,
+            year: 2018,
+            school: 'Test, "Quoted" School',
+            class: 'Class A',
+            uid: 'uid-1',
+            email: null,
+            password: undefined,
+            extraField: 'x',
+          },
+          {
+            id: '2',
+            userType: 'caregiver',
+            school: 'Plain School',
+            uid: 'uid-2',
+          },
         ];
 
-        vm.convertUsersToCSV();
+        vm.downloadRegisteredUsers();
 
         // A Blob of the correct MIME type was passed to createObjectURL.
         expect(createObjectURL).toHaveBeenCalledOnce();
@@ -1075,7 +1095,7 @@ describe('AddUsers Page', () => {
         expect(blob.type).toBe('text/csv;charset=utf-8;');
 
         // The download link is built with the default filename from
-        // downloadCSV — convertUsersToCSV invokes it without a filename
+        // downloadCSV — downloadRegisteredUsers invokes it without a filename
         // override, so 'registered-users.csv' is the contract.
         expect(appendChildMock).toHaveBeenCalledOnce();
         expect(clickMock).toHaveBeenCalledOnce();
@@ -1088,16 +1108,20 @@ describe('AddUsers Page', () => {
         const lines = csvText.split('\n');
         expect(lines).toHaveLength(3);
 
-        // Header: keys of the first row in insertion order.
-        expect(lines[0]).toBe('id,name,age,nickname,note');
+        // Header: USER_CSV_HEADERS in order, with the extraneous key tacked
+        // onto the end (the helper's documented behaviour).
+        expect(lines[0]).toBe(
+          'id,userType,month,year,caregiverId,teacherId,site,school,class,cohort,uid,email,password,extraField',
+        );
 
-        // Row 1 exercises every escape case in one go. nickname (null)
-        // and note (undefined) render as empty cells with no surrounding
-        // quotes; the inner '"' in name is doubled.
-        expect(lines[1]).toBe('"1","Alice ""A"" Smith","30",,');
+        // Row 1 exercises the helper's escaping in one go: the school cell
+        // is quoted because it contains a comma, with the inner '"' doubled.
+        // null (email) and undefined (password) collapse to empty cells.
+        expect(lines[1]).toBe('1,child,5,2018,,,,"Test, ""Quoted"" School",Class A,,uid-1,,,x');
 
-        // Row 2 is a plain row — every cell is a quoted scalar.
-        expect(lines[2]).toBe('"2","Bob","25","Bobby","plain"');
+        // Row 2 has only a handful of fields populated; every absent header
+        // becomes an empty cell, including the appended 'extraField'.
+        expect(lines[2]).toBe('2,caregiver,,,,,,Plain School,,,uid-2,,,');
       } finally {
         document.createElement = originalCreateElement;
       }
