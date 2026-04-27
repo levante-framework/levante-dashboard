@@ -17,6 +17,3 @@ export const NORMALIZED_USER_CSV_HEADERS = {
   email: 'email',
   password: 'password',
 };
-
-/** Registered Users Watermark */
-export const REGISTERED_USERS_CSV_MARKER = 'levante-registered-user';

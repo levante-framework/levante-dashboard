@@ -5,7 +5,6 @@ import Tooltip from 'primevue/tooltip';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import { mount } from '@vue/test-utils';
-import { REGISTERED_USERS_CSV_MARKER } from '@/constants/csv';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
 import { fetchOrgByName } from '@/helpers/query/orgs';
 import { useAuthStore } from '@/store/auth';
@@ -400,24 +399,22 @@ describe('AddUsers Page', () => {
       expect(vm.validationErrors).toBeNull();
     });
 
-    it('strips errors and registered-users marker columns before validating', async () => {
+    it('strips errors column before validating', async () => {
       const vm = mountAddUsers().vm as any;
 
-      // A round-tripped CSV — either a downloaded errors file or a
-      // registered-users export — carries extra columns that the schema
+      // A downloaded errors file carries extra column that the schema
       // would otherwise reject. parseCsvFile is configured with
-      // omitColumns so onFileUpload should validate the row as if those
-      // columns were never there.
+      // omitColumns so onFileUpload should validate the row as if the
+      // column was never there.
       const csv = [
-        `id,userType,month,year,caregiverId,teacherId,school,class,cohort,errors,${REGISTERED_USERS_CSV_MARKER}`,
-        `1,child,5,2018,,,"Test School","Class A",,id: Required,${REGISTERED_USERS_CSV_MARKER}`,
+        `id,userType,month,year,caregiverId,teacherId,school,class,cohort,errors`,
+        `1,child,5,2018,,,"Test School","Class A",,id: Required`,
       ].join('\n');
       await vm.onFileUpload(mockFileUploadEvent(csv));
 
       expect(vm.validationErrors).toBeNull();
       expect(vm.validatedData).toHaveLength(1);
       expect(vm.validatedData[0]).not.toHaveProperty('errors');
-      expect(vm.validatedData[0]).not.toHaveProperty(REGISTERED_USERS_CSV_MARKER);
     });
 
     it('normalizes header casing via NORMALIZED_USER_CSV_HEADERS', async () => {
@@ -1034,7 +1031,7 @@ describe('AddUsers Page', () => {
       createObjectURL.mockRestore();
     });
 
-    it('produces a watermarked CSV with quoted values and triggers a download', async () => {
+    it('produces a CSV with quoted values and triggers a download', async () => {
       // The component builds this CSV by hand (no unparseCsvFile), so the
       // serialisation rules — quote wrapping, '"' doubling, null/undefined
       // → empty cell — only have coverage if exercised here.
@@ -1091,17 +1088,16 @@ describe('AddUsers Page', () => {
         const lines = csvText.split('\n');
         expect(lines).toHaveLength(3);
 
-        // Header: keys of the first row in insertion order, with the
-        // watermark column appended last by the spread.
-        expect(lines[0]).toBe(`id,name,age,nickname,note,${REGISTERED_USERS_CSV_MARKER}`);
+        // Header: keys of the first row in insertion order.
+        expect(lines[0]).toBe('id,name,age,nickname,note');
 
         // Row 1 exercises every escape case in one go. nickname (null)
         // and note (undefined) render as empty cells with no surrounding
         // quotes; the inner '"' in name is doubled.
-        expect(lines[1]).toBe(`"1","Alice ""A"" Smith","30",,,"${REGISTERED_USERS_CSV_MARKER}"`);
+        expect(lines[1]).toBe('"1","Alice ""A"" Smith","30",,');
 
         // Row 2 is a plain row — every cell is a quoted scalar.
-        expect(lines[2]).toBe(`"2","Bob","25","Bobby","plain","${REGISTERED_USERS_CSV_MARKER}"`);
+        expect(lines[2]).toBe('"2","Bob","25","Bobby","plain"');
       } finally {
         document.createElement = originalCreateElement;
       }

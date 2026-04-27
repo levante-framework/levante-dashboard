@@ -110,7 +110,7 @@ import AppSpinner from '@/components/AppSpinner.vue';
 import CsvTable from '@/components/CsvTable.vue';
 import CsvUploader from '@/components/CsvUploader.vue';
 import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
-import { NORMALIZED_USER_CSV_HEADERS, REGISTERED_USERS_CSV_MARKER } from '@/constants/csv';
+import { NORMALIZED_USER_CSV_HEADERS } from '@/constants/csv';
 import { CreateUsersPayload, usersRepository } from '@/firebase/repositories/UsersRepository';
 import { normalizeToLowercase } from '@/helpers';
 import { parseCsvFile, unparseCsvFile } from '@/helpers/csv';
@@ -198,7 +198,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   // Parse the file
   const _parsedData = await parseCsvFile(file, {
     normalizedHeaders: NORMALIZED_USER_CSV_HEADERS,
-    omitColumns: ['errors', REGISTERED_USERS_CSV_MARKER],
+    omitColumns: ['errors'],
   });
   if (!_parsedData) {
     status.value = {
@@ -337,7 +337,6 @@ const submitUsers = async () => {
     isSubmitting.value = false;
     return;
   }
-  console.log('usersToBeRegistered', usersToBeRegistered);
 
   // Ensure the orgs referenced in the user data exist
   const getOrgId = createOrgIdResolver();
@@ -476,7 +475,6 @@ const submitUsers = async () => {
 
       return await usersRepository.createUsers(createUsersPayload);
     })) as { status: string; message: string; data: Record<string, string>[] }[];
-    console.log('chunkResults', chunkResults);
 
     const createUserResults = chunkResults.flatMap((result) => {
       if (result == null || typeof result !== 'object') return [];
@@ -485,7 +483,6 @@ const submitUsers = async () => {
       if (payload && typeof payload === 'object' && Array.isArray(payload.data)) return payload.data;
       return [];
     });
-    console.log('createUserResults', createUserResults);
 
     // Merging the registered users with the validated data
     // assuming the order of the registered users is the same as the order of usersToBeRegistered
@@ -606,20 +603,11 @@ const runWithConcurrency = async <T, R>(
 };
 
 const convertUsersToCSV = () => {
-  if (!registeredUsers.value) return;
+  if (!registeredUsers.value || registeredUsers.value.length === 0) return;
 
-  // Add the registered users watermark to the CSV
-  const users = toRaw(registeredUsers.value).map((row) => ({
-    ...row,
-    [REGISTERED_USERS_CSV_MARKER]: REGISTERED_USERS_CSV_MARKER,
-  }));
-
-  // Get the first user to determine headers
-  const headerObj = users[0] ?? {};
-
-  // Convert Objects to CSV String
-  const csvHeader = Object.keys(headerObj).join(',') + '\n';
-
+  // Convert objects to CSV string
+  const users = toRaw(registeredUsers.value);
+  const csvHeader = Object.keys(users[0]!).join(',') + '\n';
   const csvRows = users
     .map((obj) =>
       Object.values(obj)
@@ -630,7 +618,6 @@ const convertUsersToCSV = () => {
         .join(','),
     )
     .join('\n');
-
   const csvString = csvHeader + csvRows;
 
   // Initiate download
