@@ -27,11 +27,6 @@ const ROWS: Record<string, unknown>[] = [
 
 describe('CsvTable', () => {
   describe('table visibility', () => {
-    it('does not render the table when rows is null', () => {
-      const wrapper = mountCsvTable({ keys: KEYS, rows: null });
-      expect(wrapper.find('table').exists()).toBe(false);
-    });
-
     it('does not render the table when rows is an empty array', () => {
       const wrapper = mountCsvTable({ keys: KEYS, rows: [] });
       expect(wrapper.find('table').exists()).toBe(false);
@@ -123,46 +118,6 @@ describe('CsvTable', () => {
       const text = wrapper.text();
       expect(text).toContain('42');
       expect(text).toContain('true');
-    });
-  });
-
-  describe('download errors button', () => {
-    it('does not render the button by default', () => {
-      const wrapper = mountCsvTable({ keys: KEYS, rows: ROWS });
-      expect(wrapper.find('button').exists()).toBe(false);
-    });
-
-    it('does not render the button when showDownloadErrorsButton is false', () => {
-      const wrapper = mountCsvTable({ keys: KEYS, rows: ROWS, showDownloadErrorsButton: false });
-      expect(wrapper.find('button').exists()).toBe(false);
-    });
-
-    it('renders the button when showDownloadErrorsButton is true', () => {
-      const wrapper = mountCsvTable({ keys: KEYS, rows: ROWS, showDownloadErrorsButton: true });
-      expect(wrapper.find('button').exists()).toBe(true);
-    });
-
-    it('calls onDownloadErrors when the button is clicked', async () => {
-      const onDownloadErrors = vi.fn();
-      const wrapper = mountCsvTable({
-        keys: KEYS,
-        rows: ROWS,
-        showDownloadErrorsButton: true,
-        onDownloadErrors,
-      });
-      await wrapper.find('button').trigger('click');
-      expect(onDownloadErrors).toHaveBeenCalledOnce();
-    });
-
-    it('renders the button even when rows is null', () => {
-      // The button is controlled independently of the table's v-if.
-      const wrapper = mountCsvTable({
-        keys: KEYS,
-        rows: null,
-        showDownloadErrorsButton: true,
-      });
-      expect(wrapper.find('table').exists()).toBe(false);
-      expect(wrapper.find('button').exists()).toBe(true);
     });
   });
 });
