@@ -156,7 +156,7 @@ describe('AddUsers Page', () => {
       expect(caregiver['class']).toEqual(['Class A']);
 
       expect(vm.status).toEqual({
-        message: 'File successfully uploaded.',
+        message: 'File successfully uploaded. See table for summary of users to be added.',
         severity: 'success',
       });
     });
@@ -309,7 +309,7 @@ describe('AddUsers Page', () => {
       expect(vm.validationErrors).toBeNull();
       expect(vm.validatedData).toHaveLength(2);
       expect(vm.status).toEqual({
-        message: 'File successfully uploaded.',
+        message: 'File successfully uploaded. See table for summary of users to be added.',
         severity: 'success',
       });
     });

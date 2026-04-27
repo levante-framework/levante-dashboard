@@ -265,7 +265,10 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
 
   // Validation succeeded
   validatedData.value = validated.data ?? null;
-  status.value = { message: 'File successfully uploaded.', severity: 'success' };
+  status.value = {
+    message: 'File successfully uploaded. See table for summary of users to be added.',
+    severity: 'success',
+  };
 };
 
 const downloadErrors = () => {
