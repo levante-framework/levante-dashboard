@@ -232,7 +232,7 @@ import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
 import { useFullAdministrationsListQuery } from '@/composables/queries/useAdministrationsListQuery';
 import EditOrgsForm from '@/components/EditOrgsForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
-import { CSV_EXPORT_MAX_RECORD_COUNT } from '@/constants/csvExport';
+import { CSV_EXPORT_MAX_RECORD_COUNT } from '@/constants/csv';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import PvFloatLabel from 'primevue/floatlabel';

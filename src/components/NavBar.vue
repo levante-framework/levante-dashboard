@@ -1,5 +1,5 @@
 <template>
-  <header id="site-header" class="navbar-container" data-cy="nav-bar">
+  <header id="site-header" class="navbar-container" data-cy="nav-bar" ref="navbarRef">
     <nav class="flex flex-row align-items-center justify-content-between w-full">
       <div id="navBarRightEnd" class="flex flex-row align-items-center justify-content-start w-full gap-1">
         <div class="flex align-items-center justify-content-center w-full">
@@ -42,9 +42,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, type Ref } from 'vue';
+import { ref, computed, onMounted, onUnmounted, type Ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
+import { useElementSize } from '@vueuse/core';
 import PvButton from 'primevue/button';
 import PvMenubar from 'primevue/menubar';
 import { useAuthStore } from '@/store/auth';
@@ -79,8 +80,14 @@ const { userRole } = usePermissions();
 
 const initialized = ref<boolean>(false);
 const menu = ref();
+const navbarRef = ref<HTMLElement | null>(null);
+const { height } = useElementSize(navbarRef);
 const screenWidth = ref<number>(window.innerWidth);
 let unsubscribe: (() => void) | undefined;
+
+watchEffect(() => {
+  document.documentElement.style.setProperty('--navbar-height', `${height.value}px`);
+});
 
 const init = (): void => {
   if (unsubscribe) unsubscribe();
@@ -161,7 +168,9 @@ const computedIsBasicView = computed((): boolean => {
 
 const rawActions = computed((): NavbarAction[] => {
   const userRoles = userData.value?.roles || [];
-  const currentRoleObj = userRoles.find((r: { siteId: string; role: string }) => (r.siteId === currentSite.value) || r.role === ROLES.SUPER_ADMIN);
+  const currentRoleObj = userRoles.find(
+    (r: { siteId: string; role: string }) => r.siteId === currentSite.value || r.role === ROLES.SUPER_ADMIN,
+  );
 
   return getNavbarActions({
     userRole: currentRoleObj?.role,
