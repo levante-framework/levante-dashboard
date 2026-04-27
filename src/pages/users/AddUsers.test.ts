@@ -392,7 +392,8 @@ describe('AddUsers Page', () => {
       await vm.onFileUpload(mockFileUploadEvent(MALFORMED_CSV));
 
       expect(vm.status).toEqual({
-        message: 'The uploaded file is malformed.',
+        message:
+          'The uploaded file could not be read. If you used a spreadsheet app, please "Save as" or "Export" to CSV and upload again.',
         severity: 'error',
       });
       expect(vm.validatedData).toBeNull();

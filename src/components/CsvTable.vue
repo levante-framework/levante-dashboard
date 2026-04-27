@@ -40,7 +40,7 @@ defineProps<{
 function formatCell(value: unknown): string {
   if (value === null || value === undefined) return '';
   if (Array.isArray(value)) {
-    return value.length > 5 ? 'Many rows affected, check CSV for details' : value.join(', ');
+    return value.length > 5 ? 'Many rows affected, download Error CSV for details' : value.join(', ');
   }
   return String(value);
 }

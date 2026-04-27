@@ -98,7 +98,7 @@ describe('CsvTable', () => {
         keys: ['tags'],
         rows: [{ tags: ['a', 'b', 'c', 'd', 'e', 'f'] }],
       });
-      expect(wrapper.text()).toContain('Many rows affected, check CSV for details');
+      expect(wrapper.text()).toContain('Many rows affected, download Error CSV for details');
     });
 
     it('does not show a placeholder for an array of exactly 5 items', () => {

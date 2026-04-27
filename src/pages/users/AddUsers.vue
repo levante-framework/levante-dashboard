@@ -32,11 +32,7 @@
         <!-- Errors datatable -->
         <div v-if="validationErrors" class="mb-3">
           <CsvTable :headers="validationErrors.headers" :keys="validationErrors.keys" :rows="validationErrors.rows" />
-          <PvButton
-            v-if="validationErrors.showDownloadButton"
-            label="Download CSV with Errors"
-            @click="downloadErrors"
-          />
+          <PvButton v-if="validationErrors.showDownloadButton" label="Download Error CSV" @click="downloadErrors" />
         </div>
 
         <!-- Rows datatable -->
@@ -174,7 +170,7 @@ watch(hasUserConfirmed, (userConfirmed) => {
 });
 
 watch(
-  [validationErrors, validatedData],
+  [status],
   () => {
     // Scroll to bottom of page after datatable is displayed
     // NB: nextTick ensures datatable is rendered before scroll
@@ -205,7 +201,11 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
     omitColumns: ['errors', REGISTERED_USERS_CSV_MARKER],
   });
   if (!_parsedData) {
-    status.value = { message: 'The uploaded file is malformed.', severity: 'error' };
+    status.value = {
+      message:
+        'The uploaded file could not be read. If you used a spreadsheet app, please "Save as" or "Export" to CSV and upload again.',
+      severity: 'error',
+    };
     return;
   }
   if (_parsedData.length === 0) {
