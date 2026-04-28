@@ -131,6 +131,7 @@ const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const router = useRouter();
 
 const isSubmitting = ref(false);
+const newUsers = ref<{ user: Record<string, unknown>; userIdx: number }[] | null>(null); // @TODO: replace user type w/ UserCsvRowType when published
 const parsedData = ref<Record<string, string>[] | null>(null);
 const registeredUsers = ref<UserCsvType | null>(null);
 const showBulkCreateUsersModal = ref(false);
@@ -145,14 +146,9 @@ const validationErrors = ref<{
   showDownloadButton: boolean;
 } | null>(null);
 
-const newUsers = computed(() => {
-  return validatedData.value?.filter((user) => {
-    return !user.uid || user.uid === '';
-  });
-});
-
 const resetUserProgress = () => {
   isSubmitting.value = false;
+  newUsers.value = null;
   parsedData.value = null;
   registeredUsers.value = null;
   showBulkCreateUsersModal.value = false;
@@ -266,7 +262,22 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
     return;
   }
 
-  // Validation succeeded
+  // Validation succeeded, filter out users that already have a uid
+  const _newUsers = validated
+    .data!.map((user, idx) => ({
+      user: { ...user },
+      userIdx: idx,
+    }))
+    .filter(({ user }) => {
+      return !user.uid || user.uid === '';
+    });
+  if (_newUsers.length === 0) {
+    status.value = { message: 'All users in the file have already been registered.', severity: 'info' };
+    return;
+  }
+  newUsers.value = _newUsers;
+
+  // There are new, valid users to be added
   validatedData.value = validated.data!;
   status.value = {
     message: 'File successfully uploaded. See table for summary of users to be added.',
@@ -333,13 +344,8 @@ const submitUsers = async () => {
     return;
   }
 
-  // Ensure there are users to be registered (those with empty uid)
-  const usersToBeRegistered = _cloneDeep(toRaw(validatedData.value))
-    .map((user, idx) => ({
-      user: { ...user },
-      userIdx: idx,
-    }))
-    .filter(({ user }) => !user.uid || user.uid === '');
+  // Ensure there are users to be registered
+  const usersToBeRegistered = _cloneDeep(toRaw(newUsers.value)) ?? [];
   if (usersToBeRegistered.length === 0) {
     status.value = { message: 'All users in the file have already been registered.', severity: 'info' };
     isSubmitting.value = false;
@@ -358,7 +364,7 @@ const submitUsers = async () => {
     };
 
     // Get firestore ids for schools
-    for (const schoolName of user.school) {
+    for (const schoolName of user.school as string[]) {
       try {
         const schoolId = await getOrgId('schools', schoolName, selectedSiteId);
         orgInfo.schools.push(schoolId);
@@ -371,7 +377,7 @@ const submitUsers = async () => {
     }
 
     // Get firestore ids for classes
-    for (const className of user.class) {
+    for (const className of user.class as string[]) {
       let classFound = false;
       for (const schoolId of orgInfo.schools) {
         try {
@@ -392,7 +398,7 @@ const submitUsers = async () => {
     }
 
     // Get firestore ids for cohorts
-    for (const cohortName of user.cohort) {
+    for (const cohortName of user.cohort as string[]) {
       try {
         const cohortId = await getOrgId(
           'groups', // NB: the backend expects groups for cohorts

@@ -620,8 +620,10 @@ describe('AddUsers Page', () => {
     it('skips submission when every user already has a uid', async () => {
       // The 'uid' header is recognised by NORMALIZED_USER_CSV_HEADERS
       // and accepted by the schema, so a row with a populated uid is
-      // treated as already-registered and filtered out before the
-      // org-resolution loop runs.
+      // treated as already-registered. onFileUpload filters these out
+      // up front: when the resulting newUsers list is empty, it sets an
+      // 'info' status and returns before populating validatedData, so
+      // submitUsers never has anything to send to the backend.
       const csv = [
         'id,userType,month,year,caregiverId,teacherId,school,class,cohort,uid',
         '1,child,5,2018,,,"Test School","Class A",,existing-uid',
@@ -629,14 +631,21 @@ describe('AddUsers Page', () => {
 
       const vm = mountAddUsers().vm as any;
       await vm.onFileUpload(mockFileUploadEvent(csv));
-      expect(vm.validatedData).toHaveLength(1);
 
-      await vm.submitUsers();
-
+      // The all-already-registered case is now caught at upload time:
+      // onFileUpload sets the info status and returns before populating
+      // either newUsers or validatedData.
+      expect(vm.validatedData).toBeNull();
+      expect(vm.newUsers).toBeNull();
       expect(vm.status).toEqual({
         message: 'All users in the file have already been registered.',
         severity: 'info',
       });
+
+      // Calling submitUsers in this state hits the !validatedData guard
+      // and bails out before any org lookup or repository call.
+      await vm.submitUsers();
+
       expect(vm.isSubmitting).toBe(false);
       expect(fetchOrgByName).not.toHaveBeenCalled();
       expect(usersRepository.createUsers).not.toHaveBeenCalled();
@@ -1183,9 +1192,10 @@ describe('AddUsers Page', () => {
 
     it('rows datatable shows only users without a uid', async () => {
       // Mixed upload: rows 1 and 3 are new (uid empty) and row 2 is
-      // already registered (uid populated). The newUsers computed must
-      // filter out the registered row, and CsvTable receives the
-      // filtered list as its rows prop.
+      // already registered (uid populated). onFileUpload populates
+      // newUsers as a list of { user, userIdx } entries, omitting the
+      // already-registered row, and CsvTable receives that filtered
+      // list as its rows prop.
       const csv = [
         'id,userType,month,year,caregiverId,teacherId,school,class,cohort,uid',
         '1,child,5,2018,,,"Test School","Class A",,',
@@ -1203,10 +1213,12 @@ describe('AddUsers Page', () => {
       expect(vm.validatedData).toHaveLength(3);
 
       // …but newUsers excludes the already-registered row, preserving
-      // input order for the remaining two.
+      // input order for the remaining two and tagging each entry with
+      // its original userIdx into validatedData.
       expect(vm.newUsers).toHaveLength(2);
-      expect(vm.newUsers.map((u: { id: string }) => u.id)).toEqual(['1', '3']);
-      expect(vm.newUsers.every((u: { uid?: string }) => !u.uid)).toBe(true);
+      expect(vm.newUsers.map((entry: { user: { id: string } }) => entry.user.id)).toEqual(['1', '3']);
+      expect(vm.newUsers.map((entry: { userIdx: number }) => entry.userIdx)).toEqual([0, 2]);
+      expect(vm.newUsers.every((entry: { user: { uid?: string } }) => !entry.user.uid)).toBe(true);
 
       // The rows datatable receives the filtered list, not validatedData.
       // The errors datatable's CsvTable is not rendered (validationErrors
@@ -1214,6 +1226,41 @@ describe('AddUsers Page', () => {
       const csvTable = wrapper.findComponent({ name: 'CsvTable' });
       expect(csvTable.exists()).toBe(true);
       expect(csvTable.props('rows')).toEqual(vm.newUsers);
+    });
+
+    it('sets info status and hides rows datatable when every uploaded user already has a uid', async () => {
+      // Every row carries a populated uid, so onFileUpload's filter
+      // produces an empty list. The component then surfaces an
+      // info-level status to explain why nothing will be added and
+      // returns *before* assigning newUsers or validatedData, so the
+      // rows-datatable's `v-if="newUsers && !validationErrors"` keeps
+      // CsvTable from rendering at all.
+      const csv = [
+        'id,userType,month,year,caregiverId,teacherId,school,class,cohort,uid',
+        '1,child,5,2018,,,"Test School","Class A",,existing-uid-1',
+        '2,caregiver,,,,,"Test School","Class A",,existing-uid-2',
+      ].join('\n');
+
+      const wrapper = mountAddUsers();
+      const vm = wrapper.vm as any;
+
+      await vm.onFileUpload(mockFileUploadEvent(csv));
+      await wrapper.vm.$nextTick();
+
+      // Both refs stay at their initial null because onFileUpload
+      // returns immediately after detecting that nothing needs adding.
+      expect(vm.validatedData).toBeNull();
+      expect(vm.newUsers).toBeNull();
+      expect(vm.status).toEqual({
+        message: 'All users in the file have already been registered.',
+        severity: 'info',
+      });
+
+      // No CsvTable should render: the errors table is gated by
+      // validationErrors (null here) and the rows table is gated by
+      // newUsers (null here).
+      const csvTable = wrapper.findComponent({ name: 'CsvTable' });
+      expect(csvTable.exists()).toBe(false);
     });
   });
 });
