@@ -365,7 +365,6 @@ const { data: existingGroupData, isFetched: isGroupsFetched } = useGroupsQuery(g
 
 const editOrgsHydrated = computed(() => {
   const mo = existingAdminMinimalOrgs.value ?? {};
-  console.log('mo', mo);
   const ready = (ids, isFetchedRef) => !ids?.length || isFetchedRef.value;
   return (
     ready(mo.districts, isDistrictsFetched) &&
@@ -982,17 +981,12 @@ watch(
 );
 
 watch(
-  [
-    () => props.adminId,
-    existingData,
-    existingDistrictsData,
-    existingSchoolsData,
-    existingClassesData,
-    existingGroupData,
-  ],
-  ([adminId, admin]) => {
+  [() => props.adminId, existingData, editOrgsHydrated],
+  ([adminId, admin, orgsHydrated]) => {
+    if (isFormPopulated.value) return;
     if (!adminId || !admin) return;
     if (!administrationMatchesRoute(admin, adminId)) return;
+    if (!orgsHydrated) return;
     applyAdministrationMetadataToForm(admin);
     isFormPopulated.value = true;
   },
@@ -1017,39 +1011,6 @@ watch(
     editTasksHydrated.value = true;
   },
   { immediate: true },
-);
-
-watch(
-  [
-    existingDistrictsData,
-    existingSchoolsData,
-    existingClassesData,
-    existingGroupData,
-    existingData,
-    isFormPopulated,
-  ],
-  () => {
-    if (!props.adminId || !isFormPopulated.value) return;
-    const admin = existingData?.value;
-    if (!admin) return;
-    const mo = minimalOrgsFromDoc(admin);
-    if (mo.districts?.length) {
-      const next = existingDistrictsData.value;
-      if (next) state.districts = next;
-    }
-    if (mo.schools?.length) {
-      const next = existingSchoolsData.value;
-      if (next) state.schools = next;
-    }
-    if (mo.classes?.length) {
-      const next = existingClassesData.value;
-      if (next) state.classes = next;
-    }
-    if (mo.groups?.length) {
-      const next = existingGroupData.value;
-      if (next) state.groups = next;
-    }
-  },
 );
 </script>
 
