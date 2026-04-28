@@ -1213,12 +1213,13 @@ describe('AddUsers Page', () => {
       expect(vm.validatedData).toHaveLength(3);
 
       // …but newUsers excludes the already-registered row, preserving
-      // input order for the remaining two and tagging each entry with
-      // its original userIdx into validatedData.
+      // input order for the remaining two. newUsersMap is a parallel
+      // array carrying each row's original index into validatedData,
+      // which submitUsers needs to merge createUsers results back in.
       expect(vm.newUsers).toHaveLength(2);
-      expect(vm.newUsers.map((entry: { user: { id: string } }) => entry.user.id)).toEqual(['1', '3']);
-      expect(vm.newUsers.map((entry: { userIdx: number }) => entry.userIdx)).toEqual([0, 2]);
-      expect(vm.newUsers.every((entry: { user: { uid?: string } }) => !entry.user.uid)).toBe(true);
+      expect(vm.newUsers.map((u: { id: string }) => u.id)).toEqual(['1', '3']);
+      expect(vm.newUsers.every((u: { uid?: string }) => !u.uid)).toBe(true);
+      expect(vm.newUsersMap).toEqual([0, 2]);
 
       // The rows datatable receives the filtered list, not validatedData.
       // The errors datatable's CsvTable is not rendered (validationErrors

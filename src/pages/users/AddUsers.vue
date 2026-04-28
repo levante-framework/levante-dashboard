@@ -131,7 +131,8 @@ const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const router = useRouter();
 
 const isSubmitting = ref(false);
-const newUsers = ref<{ user: Record<string, unknown>; userIdx: number }[] | null>(null); // @TODO: replace user type w/ UserCsvRowType when published
+const newUsers = ref<UserCsvType | null>(null);
+const newUsersMap = ref<number[] | null>(null);
 const parsedData = ref<Record<string, string>[] | null>(null);
 const registeredUsers = ref<UserCsvType | null>(null);
 const showBulkCreateUsersModal = ref(false);
@@ -275,7 +276,8 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
     status.value = { message: 'All users in the file have already been registered.', severity: 'info' };
     return;
   }
-  newUsers.value = _newUsers;
+  newUsers.value = _newUsers.map(({ user }) => user);
+  newUsersMap.value = _newUsers.map(({ userIdx }) => userIdx);
 
   // There are new, valid users to be added
   validatedData.value = validated.data!;
@@ -330,7 +332,12 @@ const submitUsers = async () => {
   isSubmitting.value = true;
 
   // Ensure the user data is valid
-  if (validationErrors.value || !validatedData.value) {
+  if (
+    !newUsers.value ||
+    !newUsersMap.value ||
+    newUsers.value.length !== newUsersMap.value.length ||
+    !validatedData.value
+  ) {
     status.value = { message: 'Please fix the errors in your CSV file before submitting.', severity: 'error' };
     isSubmitting.value = false;
     return;
@@ -345,7 +352,10 @@ const submitUsers = async () => {
   }
 
   // Ensure there are users to be registered
-  const usersToBeRegistered = _cloneDeep(toRaw(newUsers.value)) ?? [];
+  const usersToBeRegistered = _cloneDeep(toRaw(newUsers.value)).map((user, idx) => ({
+    user,
+    userIdx: newUsersMap.value![idx]!,
+  }));
   if (usersToBeRegistered.length === 0) {
     status.value = { message: 'All users in the file have already been registered.', severity: 'info' };
     isSubmitting.value = false;
@@ -364,7 +374,7 @@ const submitUsers = async () => {
     };
 
     // Get firestore ids for schools
-    for (const schoolName of user.school as string[]) {
+    for (const schoolName of user.school) {
       try {
         const schoolId = await getOrgId('schools', schoolName, selectedSiteId);
         orgInfo.schools.push(schoolId);
@@ -377,7 +387,7 @@ const submitUsers = async () => {
     }
 
     // Get firestore ids for classes
-    for (const className of user.class as string[]) {
+    for (const className of user.class) {
       let classFound = false;
       for (const schoolId of orgInfo.schools) {
         try {
@@ -398,7 +408,7 @@ const submitUsers = async () => {
     }
 
     // Get firestore ids for cohorts
-    for (const cohortName of user.cohort as string[]) {
+    for (const cohortName of user.cohort) {
       try {
         const cohortId = await getOrgId(
           'groups', // NB: the backend expects groups for cohorts
