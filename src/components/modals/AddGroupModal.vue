@@ -56,7 +56,9 @@
           <PvInputText id="orgName" v-model="orgName" class="w-full" data-cy="input-org-name" />
           <label for="orgName">{{ orgTypeLabel }} Name<span class="required-asterisk">*</span></label>
         </PvFloatLabel>
-        <small v-if="v$.orgName.$error" class="p-error">Please supply a name.</small>
+        <small v-for="error in v$.orgName.$errors" :key="error.$uid" class="p-error">
+          {{ error.$message }}
+        </small>
       </div>
     </div>
 
@@ -85,7 +87,7 @@ import _capitalize from 'lodash/capitalize';
 import { computed, ref, toRaw, watch } from 'vue';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { normalizeToLowercase } from '@/helpers';
-import { required, requiredIf } from '@vuelidate/validators';
+import { helpers, required, requiredIf } from '@vuelidate/validators';
 import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { useToast } from 'primevue/usetoast';
@@ -109,6 +111,7 @@ import { useAuthStore } from '@/store/auth';
 import { ROLES } from '@/constants/roles';
 import { useQueryClient } from '@tanstack/vue-query';
 import { DISTRICTS_QUERY_KEY, ORGS_TABLE_QUERY_KEY, SCHOOLS_QUERY_KEY } from '@/constants/queryKeys';
+import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
 
 interface OrgType {
   firestoreCollection: string;
@@ -221,6 +224,22 @@ const orgTypesRequiringParent: string[] = [
   SINGULAR_ORG_TYPES.GROUPS,
 ];
 
+const existingOrgType = computed(() => orgType.value?.firestoreCollection ?? '');
+const { data: existingOrgs } = useOrgsTableQuery(
+  existingOrgType,
+  computed(() => parentDistrict.value?.id),
+  computed(() => parentSchool.value?.id),
+  ref(null),
+  false,
+  { enabled: computed(() => !!orgType.value) },
+);
+
+const isUnique = (value: string) => {
+  if (!value) return true;
+  const target = normalizeToLowercase(value);
+  return !(existingOrgs.value ?? []).some((o) => normalizeToLowercase(o.name) === target);
+};
+
 const v$ = useVuelidate(
   {
     orgType: {
@@ -228,6 +247,10 @@ const v$ = useVuelidate(
     },
     orgName: {
       required,
+      unique: helpers.withMessage(
+        () => `A ${orgTypeLabel.value.toLowerCase()} with this name already exists.`,
+        isUnique,
+      ),
     },
     parentSchool: {
       required: requiredIf(() => orgType?.value?.singular === SINGULAR_ORG_TYPES.CLASSES),
