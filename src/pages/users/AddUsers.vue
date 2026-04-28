@@ -209,7 +209,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
     return;
   }
   if (_parsedData.length === 0) {
-    status.value = { message: 'The uploaded file contains no data.', severity: 'error' };
+    status.value = { message: 'The uploaded file contains no users. Please add at least one user and upload again.', severity: 'error' };
     return;
   }
   parsedData.value = _parsedData;
@@ -264,7 +264,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   }
 
   // Validation succeeded
-  validatedData.value = validated.data ?? null;
+  validatedData.value = validated.data!;
   status.value = {
     message: 'File successfully uploaded. See table for summary of users to be added.',
     severity: 'success',
