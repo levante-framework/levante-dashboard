@@ -293,14 +293,16 @@ const downloadErrors = () => {
     };
   });
 
-  const csv = unparseCsvFile(mapped);
+  const csvString = unparseCsvFile(mapped);
 
   // Initiate download
-  downloadCSV(URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })), 'add-users-errors.csv');
+  downloadCsv(csvString, 'add-users-errors.csv');
 };
 
-const downloadCSV = (csvUrl: string, filename = 'registered-users.csv') => {
+const downloadCsv = (csv: string, filename: string) => {
   // Create Download Link
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const csvUrl = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', csvUrl);
   link.setAttribute('download', filename);
@@ -611,7 +613,7 @@ const downloadRegisteredUsers = () => {
   const csvString = unparseCsvFile(toRaw(registeredUsers.value), USER_CSV_HEADERS);
 
   // Initiate download
-  downloadCSV(URL.createObjectURL(new Blob([csvString], { type: 'text/csv;charset=utf-8;' })));
+  downloadCsv(csvString, 'registered-users.csv');
 };
 </script>
 

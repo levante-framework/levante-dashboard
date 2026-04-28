@@ -1126,9 +1126,8 @@ describe('AddUsers Page', () => {
         expect(blob).toBeInstanceOf(Blob);
         expect(blob.type).toBe('text/csv;charset=utf-8;');
 
-        // The download link is built with the default filename from
-        // downloadCSV — downloadRegisteredUsers invokes it without a filename
-        // override, so 'registered-users.csv' is the contract.
+        // downloadRegisteredUsers passes 'registered-users.csv' explicitly to
+        // downloadCsv, which is the documented filename contract for this path.
         expect(appendChildMock).toHaveBeenCalledOnce();
         expect(clickMock).toHaveBeenCalledOnce();
         expect(removeChildMock).toHaveBeenCalledOnce();
