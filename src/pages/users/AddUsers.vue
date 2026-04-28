@@ -505,7 +505,6 @@ const submitUsers = async () => {
     });
 
     // Merging the registered users with the validated data
-    // assuming the order of the registered users is the same as the order of usersToBeRegistered
     // TODO: the response of the create user should come back with an id
     // that can be mapped to validatedData
     const mergedUsers = _cloneDeep(toRaw(validatedData.value));
@@ -559,7 +558,7 @@ const createOrgIdResolver = (): GetOrgId => {
     groups: {},
   };
 
-  // @TODO: Refactor this to use a firebase function instead of a direct firestore SDK call
+  // TODO: Refactor this to use a firebase function instead of a direct firestore SDK call
   const getOrgId: GetOrgId = async (orgType, orgName, parentDistrictId, parentSchoolId) => {
     const normalizedOrgName = normalizeToLowercase(orgName);
 
