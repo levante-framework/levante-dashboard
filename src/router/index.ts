@@ -96,7 +96,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: APP_ROUTES.SIGN_IN,
     name: 'SignIn',
-    component: () => import('@/pages/SignIn.vue'),
+    component: () => import('@/pages/Login.vue'),
     meta: {
       pageTitle: { translationKey: 'signIn' },
       allowedRoles: ['*'],
