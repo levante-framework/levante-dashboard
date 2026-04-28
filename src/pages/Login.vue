@@ -95,8 +95,7 @@
       </div>
 
       <div v-if="isParticipantMode" class="flex justify-content-center gap-1 mt-5">
-        <div class="text-color-secondary">{{ $t('needHelp') }}</div>
-        <a href="#" class="font-medium text-color no-underline hover:underline">{{ $t('contactResearcher') }}</a>
+        <div class="text-color-secondary text-center">If you need help, please contact your researcher</div>
       </div>
       <div v-else class="flex flex-column align-items-center">
         <div class="flex justify-content-between align-items-center w-full mt-3">
