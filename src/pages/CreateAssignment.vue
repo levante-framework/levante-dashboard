@@ -309,21 +309,6 @@ const {
   gcTime: 0,
 });
 
-const editAssignmentBlockingLoader = computed(() => {
-  if (!props.adminId) return false;
-  if (!initialized.value) return true;
-  if (errorExistingData?.value != null) return false;
-
-  const admin = existingData?.value;
-  if (!admin) {
-    return isLoadingExistingData.value || !isAdministrationFetched.value;
-  }
-
-  if (!administrationMatchesRoute(admin, props.adminId)) return true;
-
-  return !isFormPopulated.value || !editTasksHydrated.value;
-});
-
 watch(
   [existingData, isLoadingExistingData, errorExistingData],
   ([newExistingData, newIsLoadingExistingData, newErrorExistingData]) => {
@@ -353,29 +338,56 @@ const existingAdminMinimalOrgs = computed(() => minimalOrgsFromDoc(existingData?
 // Fetch the districts assigned to the administration.
 const districtIds = computed(() => existingAdminMinimalOrgs.value?.districts ?? []);
 
-const { data: existingDistrictsData } = useDistrictsQuery(districtIds, {
+const { data: existingDistrictsData, isFetched: isDistrictsFetched } = useDistrictsQuery(districtIds, {
   enabled: initialized,
 });
 
 // Fetch the schools assigned to the administration.
 const schoolIds = computed(() => existingAdminMinimalOrgs.value?.schools ?? []);
 
-const { data: existingSchoolsData } = useSchoolsQuery(schoolIds, {
+const { data: existingSchoolsData, isFetched: isSchoolsFetched } = useSchoolsQuery(schoolIds, {
   enabled: initialized,
 });
 
 // Fetch the classes assigned to the administration.
 const classIds = computed(() => existingAdminMinimalOrgs.value?.classes ?? []);
 
-const { data: existingClassesData } = useClassesQuery(classIds, {
+const { data: existingClassesData, isFetched: isClassesFetched } = useClassesQuery(classIds, {
   enabled: initialized,
 });
 
 // Fetch the groups assigned to the administration.
 const groupIds = computed(() => existingAdminMinimalOrgs.value?.groups ?? []);
 
-const { data: existingGroupData } = useGroupsQuery(groupIds, {
+const { data: existingGroupData, isFetched: isGroupsFetched } = useGroupsQuery(groupIds, {
   enabled: initialized,
+});
+
+const editOrgsHydrated = computed(() => {
+  const mo = existingAdminMinimalOrgs.value ?? {};
+  console.log('mo', mo);
+  const ready = (ids, isFetchedRef) => !ids?.length || isFetchedRef.value;
+  return (
+    ready(mo.districts, isDistrictsFetched) &&
+    ready(mo.schools, isSchoolsFetched) &&
+    ready(mo.classes, isClassesFetched) &&
+    ready(mo.groups, isGroupsFetched)
+  );
+});
+
+const editAssignmentBlockingLoader = computed(() => {
+  if (!props.adminId) return false;
+  if (!initialized.value) return true;
+  if (errorExistingData?.value != null) return false;
+
+  const admin = existingData?.value;
+  if (!admin) {
+    return isLoadingExistingData.value || !isAdministrationFetched.value;
+  }
+
+  if (!administrationMatchesRoute(admin, props.adminId)) return true;
+
+  return !isFormPopulated.value || !editTasksHydrated.value || !editOrgsHydrated.value;
 });
 
 // +------------------------------------------------------------------------------------------------------------------+
