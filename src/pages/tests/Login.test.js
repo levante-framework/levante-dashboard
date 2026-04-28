@@ -3,16 +3,13 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import Login from '@/pages/Login.vue';
 
-const authRefs = vi.hoisted(() => {
-  const { ref } = require('vue');
-  return {
-    spinner: ref(false),
-    routeToProfile: ref(false),
-    ssoProvider: ref(null),
-    userClaims: ref(null),
-    roarfirekit: ref({ sendPasswordResetEmail: () => {} }),
-  };
-});
+const authRefs = vi.hoisted(() => ({
+  spinner: { value: false },
+  routeToProfile: { value: false },
+  ssoProvider: { value: null },
+  userClaims: { value: null },
+  roarfirekit: { value: { sendPasswordResetEmail: () => {} } },
+}));
 
 const captured = vi.hoisted(() => ({
   logInWithEmailAndPassword: [],
@@ -311,7 +308,10 @@ describe('Login.vue', () => {
     expect(wrapper.find('.roar-modal-stub').exists()).toBe(true);
     const modalInputs = wrapper.find('.roar-modal-stub').findAll('input');
     await modalInputs[0].setValue('valid@mail.com');
-    const sendBtn = wrapper.find('.roar-modal-stub').findAll('button').find((b) => b.text().includes('Send Reset Email'));
+    const sendBtn = wrapper
+      .find('.roar-modal-stub')
+      .findAll('button')
+      .find((b) => b.text().includes('Send Reset Email'));
     await sendBtn.trigger('click');
     expect(captured.resetPasswordEmails).toEqual(['valid@mail.com']);
   });
@@ -327,7 +327,10 @@ describe('Login.vue', () => {
     await nextTick();
     const modalInputs = wrapper.find('.roar-modal-stub').findAll('input');
     await modalInputs[0].setValue('not-an-email');
-    const sendBtn = wrapper.find('.roar-modal-stub').findAll('button').find((b) => b.text().includes('Send Reset Email'));
+    const sendBtn = wrapper
+      .find('.roar-modal-stub')
+      .findAll('button')
+      .find((b) => b.text().includes('Send Reset Email'));
     await sendBtn.trigger('click');
     expect(captured.resetPasswordEmails).toHaveLength(0);
   });
