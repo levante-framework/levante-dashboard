@@ -97,16 +97,6 @@
         @node-expand="onExpand"
       >
         <PvColumn field="name" expander style="width: 20rem"></PvColumn>
-        <PvColumn v-if="props.stats && isWideScreen" field="id">
-          <template #body="{ node }">
-            <PvChart
-              type="bar"
-              :data="setBarChartData(node.data.stats?.assignment)"
-              :options="setBarChartOptions(node.data.stats?.assignment)"
-              class="h-2rem w-full m-0 mt-2 p-0"
-            />
-          </template>
-        </PvColumn>
         <PvColumn field="id" header="" style="width: 14rem">
           <template #body="{ node }">
             <div v-if="node.data.id" class="flex m-0">
@@ -123,14 +113,14 @@
                 class="no-underline text-black"
               >
                 <PvButton
-                  v-tooltip.top="getTooltip('See completion details')"
+                  v-tooltip.top="getTooltip('See progress')"
                   class="m-0 bg-transparent text-bluegray-500 shadow-none border-none p-0 border-round"
                   style="color: var(--primary-color) !important"
                   severity="secondary"
                   text
                   raised
-                  label="See Details"
-                  aria-label="Completion details"
+                  label="See Progress"
+                  aria-label="See progress"
                   size="small"
                   data-cy="button-progress"
                 />
@@ -177,11 +167,8 @@ import _fromPairs from 'lodash/fromPairs';
 import _isEmpty from 'lodash/isEmpty';
 import _mapValues from 'lodash/mapValues';
 import _toPairs from 'lodash/toPairs';
-import _without from 'lodash/without';
-import _zip from 'lodash/zip';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
-import PvChart from 'primevue/chart';
 import PvConfirmPopup from 'primevue/confirmpopup';
 import PvDataTable from 'primevue/datatable';
 import PvPopover from 'primevue/popover';
@@ -189,7 +176,6 @@ import PvSpeedDial from 'primevue/speeddial';
 import PvTreeTable from 'primevue/treetable';
 import { batchGetDocs } from '@/helpers/query/utils';
 import { taskDisplayNames } from '@/helpers/reports';
-import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
 import useDsgfOrgQuery from '@/composables/queries/useDsgfOrgQuery';
 import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
 import useDeleteAdministrationMutation from '@/composables/mutations/useDeleteAdministrationMutation';
@@ -218,14 +204,6 @@ interface Assessment {
   params: Record<string, any>;
 }
 
-interface Stats {
-  assignment?: {
-    assigned?: number;
-    started?: number;
-    completed?: number;
-  };
-}
-
 interface Dates {
   start: string | Date;
   end: string | Date;
@@ -239,9 +217,6 @@ interface Props {
   id: string;
   title: string;
   publicName: string;
-  stats?: {
-    total?: Stats;
-  };
   dates: Dates;
   assignees: Assignees;
   assessments: Assessment[];
@@ -269,31 +244,9 @@ interface TreeNode {
     orgType?: string;
     districtId?: string;
     schoolId?: string;
-    stats?: Stats;
     expanded?: boolean;
   };
   children?: TreeNode[];
-}
-
-interface ChartData {
-  labels: string[];
-  datasets: Array<{
-    data: number[];
-    backgroundColor: string[];
-  }>;
-}
-
-interface ChartOptions {
-  cutout: string;
-  showToolTips: boolean;
-  plugins: {
-    legend: {
-      display: boolean;
-    };
-    tooltip: {
-      enabled: boolean;
-    };
-  };
 }
 
 const router = useRouter();
@@ -307,7 +260,6 @@ const props = withDefaults(defineProps<Props>(), {
   rowsPerPage: 10,
   cardIndexInPage: 0,
   onDeleteAdministration: () => {},
-  stats: () => ({}),
 });
 
 const { hasRole } = usePermissions();
@@ -509,10 +461,6 @@ onMounted((): void => {
   enableQueries.value = true;
 });
 
-const isWideScreen = computed((): boolean => {
-  return window.innerWidth > 768;
-});
-
 const { data: tasksDictionary, isLoading: isLoadingTasksDictionary } = useTasksDictionaryQuery();
 
 const { data: orgs, isLoading: isLoadingDsgfOrgs } = useDsgfOrgQuery(props.id, props.assignees, {
@@ -528,8 +476,6 @@ const loadingTreeTable = computed((): boolean => {
 const treeTableOrgs = ref<TreeNode[]>([]);
 
 const cloneTreeNodes = (nodes: TreeNode[] = []): TreeNode[] =>
-  // Clone each node so we never mutate the TanStack Query cache when
-  // expanding nodes or adding stats locally.
   nodes.map((node) => ({
     ...node,
     data: { ...node.data },
@@ -551,11 +497,7 @@ const onExpand = async (node: TreeNode): Promise<void> => {
     expanding.value = true;
 
     const classPaths = node.children.map(({ data }) => `classes/${data.id}`);
-    const statPaths = node.children.map(({ data }) => `administrations/${props.id}/stats/${data.id}`);
-
-    const classPromises = [batchGetDocs(classPaths, ['name', 'schoolId']), batchGetDocs(statPaths)];
-
-    const [classDocs, classStats] = await Promise.all(classPromises);
+    const classDocs = await batchGetDocs(classPaths, ['name', 'schoolId']);
 
     // Lazy node is a copy of the expanding node. We will insert more detailed
     // children nodes later.
@@ -567,25 +509,19 @@ const onExpand = async (node: TreeNode): Promise<void> => {
       },
     };
 
-    const childNodes = _without(
-      _zip(classDocs, classStats).map(([orgDoc, stats], index) => {
-        if (!orgDoc) return undefined;
-
-        const { collection = FIRESTORE_COLLECTIONS.CLASSES, ...nodeData } = orgDoc;
-
-        if (_isEmpty(nodeData)) return undefined;
-
-        return {
-          key: `${node.key}-${index}`,
-          data: {
-            orgType: (SINGULAR_ORG_TYPES as any)[collection.toUpperCase()],
-            ...(stats && { stats }),
-            ...nodeData,
-          },
-        };
-      }),
-      undefined,
-    ).filter((node): node is TreeNode => node !== undefined);
+    const childNodes: TreeNode[] = [];
+    classDocs.forEach((orgDoc: Record<string, unknown> | undefined, index: number) => {
+      if (!orgDoc) return;
+      const { collection = FIRESTORE_COLLECTIONS.CLASSES, ...nodeData } = orgDoc;
+      if (_isEmpty(nodeData)) return;
+      childNodes.push({
+        key: `${node.key}-${index}`,
+        data: {
+          orgType: (SINGULAR_ORG_TYPES as any)[String(collection).toUpperCase()],
+          ...nodeData,
+        },
+      });
+    });
 
     lazyNode.children = childNodes;
 
@@ -614,20 +550,12 @@ const onExpand = async (node: TreeNode): Promise<void> => {
       return n;
     });
 
-    // Sort the classes by existence of stats then alphabetically
-    // TODO: This fails currently as it tries to set a read only reactive handler
-    // Specifically, setting the `children` key fails because the
-    // schoolNode target is read-only.
-    // Also, I'm pretty sure this is useless now because all classes will have stats
-    // due to preallocation of accounts.
     for (const districtNode of newNodes ?? []) {
       for (const schoolNode of districtNode?.children ?? []) {
         if (schoolNode.children) {
-          schoolNode.children = schoolNode.children.toSorted((a, b) => {
-            if (!a.data.stats) return 1;
-            if (!b.data.stats) return -1;
-            return (a.data.name || '').localeCompare(b.data.name || '');
-          });
+          schoolNode.children = schoolNode.children.toSorted((a, b) =>
+            (a.data.name || '').localeCompare(b.data.name || ''),
+          );
         }
       }
     }

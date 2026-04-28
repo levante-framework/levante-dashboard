@@ -3,7 +3,6 @@ import _intersection from 'lodash/intersection';
 import _flattenDeep from 'lodash/flattenDeep';
 import _isEmpty from 'lodash/isEmpty';
 import _without from 'lodash/without';
-import _zip from 'lodash/zip';
 import _uniqBy from 'lodash/uniqBy';
 import {
   batchGetDocs,
@@ -344,22 +343,17 @@ export const fetchTreeOrgs = async (administrationId, assignedOrgs) => {
     orgTypes.map((orgType) => (assignedOrgs[orgType] ?? []).map((orgId) => `${orgType}/${orgId}`) ?? []),
   );
 
-  const statsPaths = _flattenDeep(
-    orgTypes.map(
-      (orgType) =>
-        (assignedOrgs[orgType] ?? []).map((orgId) => `administrations/${administrationId}/stats/${orgId}`) ?? [],
-    ),
-  );
-
-  const promises = [
-    batchGetDocs(orgPaths, ['name', 'schools', 'classes', 'archivedSchools', 'archivedClasses', 'districtId']),
-    batchGetDocs(statsPaths),
-  ];
-
-  const [orgDocs, statsDocs] = await Promise.all(promises);
+  const orgDocs = await batchGetDocs(orgPaths, [
+    'name',
+    'schools',
+    'classes',
+    'archivedSchools',
+    'archivedClasses',
+    'districtId',
+  ]);
 
   const dsgfOrgs = _without(
-    _zip(orgDocs, statsDocs).map(([orgDoc, stats], index) => {
+    orgDocs.map((orgDoc, index) => {
       if (!orgDoc || _isEmpty(orgDoc)) {
         return undefined;
       }
@@ -372,7 +366,6 @@ export const fetchTreeOrgs = async (administrationId, assignedOrgs) => {
           classes,
           archivedSchools,
           archivedClasses,
-          stats,
           ...nodeData,
         },
       };
@@ -415,19 +408,11 @@ export const fetchTreeOrgs = async (administrationId, assignedOrgs) => {
   });
 
   const independentClassPaths = independentClassIds.map((classId) => `classes/${classId}`);
-  const independentClassStatPaths = independentClassIds.map(
-    (classId) => `administrations/${administrationId}/stats/${classId}`,
-  );
 
-  const classPromises = [
-    batchGetDocs(independentClassPaths, ['name', 'schoolId', 'districtId']),
-    batchGetDocs(independentClassStatPaths),
-  ];
-
-  const [classDocs, classStats] = await Promise.all(classPromises);
+  const classDocs = await batchGetDocs(independentClassPaths, ['name', 'schoolId', 'districtId']);
 
   let independentClasses = _without(
-    _zip(classDocs, classStats).map(([orgDoc, stats], index) => {
+    classDocs.map((orgDoc, index) => {
       const { collection = FIRESTORE_COLLECTIONS.CLASSES, ...nodeData } = orgDoc ?? {};
 
       if (_isEmpty(nodeData)) return undefined;
@@ -436,7 +421,6 @@ export const fetchTreeOrgs = async (administrationId, assignedOrgs) => {
         key: String(dsgfOrgs.length + index),
         data: {
           orgType: SINGULAR_ORG_TYPES[collection.toUpperCase()],
-          ...(stats && { stats }),
           ...nodeData,
         },
       };
@@ -514,13 +498,8 @@ export const fetchTreeOrgs = async (administrationId, assignedOrgs) => {
   treeTableOrgs.push(...dsgfOrgs.filter((node) => node.data.orgType === SINGULAR_ORG_TYPES.FAMILIES));
 
   (treeTableOrgs ?? []).forEach((node) => {
-    // Sort the schools by existance of stats then alphabetically
     if (node.children) {
-      node.children.sort((a, b) => {
-        if (!a.data.stats) return 1;
-        if (!b.data.stats) return -1;
-        return a.data.name.localeCompare(b.data.name);
-      });
+      node.children.sort((a, b) => (a.data.name || '').localeCompare(b.data.name || ''));
     }
   });
 
