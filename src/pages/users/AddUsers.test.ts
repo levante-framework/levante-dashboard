@@ -651,13 +651,12 @@ describe('AddUsers Page', () => {
       expect(usersRepository.createUsers).not.toHaveBeenCalled();
     });
 
-    it('reports field-grouped org-resolution errors when an org cannot be found', async () => {
+    it('reports a school error and skips class lookup when a school cannot be resolved', async () => {
       // School lookup returns no matches → createOrgIdResolver throws
-      // 'Does not exist in selected site'. The class loop then has no
-      // school IDs to iterate over, so it appends the same message
-      // under the 'class' field. The two errors are grouped by their
-      // 'field: Does not exist in selected site' key, with affected
-      // CSV row numbers (header + 1-indexed) collected per group.
+      // 'Does not exist in selected site' and allSchoolsFound flips to
+      // false. The class loop is then skipped entirely so no spurious
+      // 'class: Does not exist…' is appended for the unresolved school
+      // — the user is told exactly one thing, the cause of the failure.
       vi.mocked(fetchOrgByName as any).mockResolvedValue([]);
 
       const vm = mountAddUsers().vm as any;
@@ -674,20 +673,16 @@ describe('AddUsers Page', () => {
       expect(vm.validationErrors.headers).toEqual(['Validation Errors', 'Affected Rows']);
       expect(vm.validationErrors.keys).toEqual(['message', 'rowNums']);
       expect(vm.validationErrors.showDownloadButton).toBe(true);
-      expect(vm.validationErrors.rows).toEqual(
-        expect.arrayContaining([
-          { message: 'school: Does not exist in selected site', rowNums: [2] },
-          { message: 'class: Does not exist in selected site', rowNums: [2] },
-        ]),
-      );
+      expect(vm.validationErrors.rows).toEqual([{ message: 'school: Does not exist in selected site', rowNums: [2] }]);
       expect(vm.isSubmitting).toBe(false);
     });
 
-    it('groups org-resolution errors across multiple rows by field', async () => {
+    it('groups school-resolution errors across multiple rows', async () => {
       // Every school lookup misses, so the same 'school: Does not exist…'
-      // and 'class: Does not exist…' messages are produced for each row.
-      // Identical messages are grouped into a single entry whose rowNums
-      // collects every affected CSV row (header + 1-indexing applied).
+      // message is produced for each row and class lookups are skipped
+      // (allSchoolsFound is false on every iteration). Identical messages
+      // are grouped into a single entry whose rowNums collects every
+      // affected CSV row (header + 1-indexing applied).
       vi.mocked(fetchOrgByName as any).mockResolvedValue([]);
 
       const csv = [
@@ -704,12 +699,53 @@ describe('AddUsers Page', () => {
 
       expect(usersRepository.createUsers).not.toHaveBeenCalled();
       expect(vm.validationErrors).not.toBeNull();
-      expect(vm.validationErrors.rows).toEqual(
-        expect.arrayContaining([
-          { message: 'school: Does not exist in selected site', rowNums: [2, 3, 4] },
-          { message: 'class: Does not exist in selected site', rowNums: [2, 3, 4] },
-        ]),
-      );
+      expect(vm.validationErrors.rows).toEqual([
+        { message: 'school: Does not exist in selected site', rowNums: [2, 3, 4] },
+      ]);
+    });
+
+    it('reports a class error when the school resolves but the class does not', async () => {
+      // The school lookup succeeds, so allSchoolsFound stays true and
+      // the class loop runs. The class lookup then misses against the
+      // resolved school, producing the genuine 'class: Does not exist…'
+      // error — no false 'school:' entry alongside it.
+      vi.mocked(fetchOrgByName as any)
+        .mockResolvedValueOnce([{ id: 'school-1' }])
+        .mockResolvedValueOnce([]);
+
+      const vm = mountAddUsers().vm as any;
+      await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
+
+      await vm.submitUsers();
+
+      expect(usersRepository.createUsers).not.toHaveBeenCalled();
+      expect(vm.validationErrors).not.toBeNull();
+      expect(vm.validationErrors.rows).toEqual([{ message: 'class: Does not exist in selected site', rowNums: [2] }]);
+    });
+
+    it('skips class lookup when one of multiple schools fails to resolve', async () => {
+      // Caregivers and teachers can list multiple schools. If even one
+      // school fails to resolve, allSchoolsFound flips to false and the
+      // class loop is skipped — the user sees only the genuine 'school:'
+      // error rather than a misleading 'class:' error from looking the
+      // class up against just the resolved subset of parent schools.
+      vi.mocked(fetchOrgByName as any)
+        .mockResolvedValueOnce([{ id: 'school-1' }])
+        .mockResolvedValueOnce([]);
+
+      const csv = [
+        'id,userType,month,year,caregiverId,teacherId,school,class,cohort',
+        'teacher-1,teacher,,,,,"Test School,Other School","Class A",',
+      ].join('\n');
+
+      const vm = mountAddUsers().vm as any;
+      await vm.onFileUpload(mockFileUploadEvent(csv));
+
+      await vm.submitUsers();
+
+      expect(usersRepository.createUsers).not.toHaveBeenCalled();
+      expect(vm.validationErrors).not.toBeNull();
+      expect(vm.validationErrors.rows).toEqual([{ message: 'school: Does not exist in selected site', rowNums: [2] }]);
     });
 
     it('submits with normalized userType and resolved orgIds, then merges createUsers results', async () => {

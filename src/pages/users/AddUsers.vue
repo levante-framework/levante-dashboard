@@ -374,11 +374,13 @@ const submitUsers = async () => {
     };
 
     // Get firestore ids for schools
+    let allSchoolsFound = true;
     for (const schoolName of user.school) {
       try {
         const schoolId = await getOrgId('schools', schoolName, selectedSiteId);
         orgInfo.schools.push(schoolId);
       } catch {
+        allSchoolsFound = false;
         orgErrors.push({
           field: 'school',
           userIdx,
@@ -387,23 +389,25 @@ const submitUsers = async () => {
     }
 
     // Get firestore ids for classes
-    for (const className of user.class) {
-      let classFound = false;
-      for (const schoolId of orgInfo.schools) {
-        try {
-          const classId = await getOrgId('classes', className, selectedSiteId, schoolId);
-          orgInfo.classes.push(classId);
-          classFound = true;
-          break;
-        } catch {
-          continue;
+    if (allSchoolsFound) {
+      for (const className of user.class) {
+        let classFound = false;
+        for (const schoolId of orgInfo.schools) {
+          try {
+            const classId = await getOrgId('classes', className, selectedSiteId, schoolId);
+            orgInfo.classes.push(classId);
+            classFound = true;
+            break;
+          } catch {
+            continue;
+          }
         }
-      }
-      if (!classFound) {
-        orgErrors.push({
-          field: 'class',
-          userIdx,
-        });
+        if (!classFound) {
+          orgErrors.push({
+            field: 'class',
+            userIdx,
+          });
+        }
       }
     }
 
