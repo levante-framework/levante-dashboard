@@ -19,4 +19,4 @@ export const NORMALIZED_USER_CSV_HEADERS = {
 };
 
 /** Array of keys to use for the CSV header */
-export const USER_CSV_HEADERS = Object.values(NORMALIZED_USER_CSV_HEADERS);
+export const USER_CSV_HEADERS = Object.values(NORMALIZED_USER_CSV_HEADERS).filter((header) => header !== 'site');

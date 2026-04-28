@@ -209,7 +209,10 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
     return;
   }
   if (_parsedData.length === 0) {
-    status.value = { message: 'The uploaded file contains no users. Please add at least one user and upload again.', severity: 'error' };
+    status.value = {
+      message: 'The uploaded file contains no users. Please add at least one user and upload again.',
+      severity: 'error',
+    };
     return;
   }
   parsedData.value = _parsedData;
@@ -343,8 +346,8 @@ const submitUsers = async () => {
 
   // Ensure the orgs referenced in the user data exist
   const getOrgId = createOrgIdResolver();
-  const usersWithErrors: { field: string; message: string; value: string }[] = [];
-  for (const { user } of usersToBeRegistered) {
+  const orgErrors: { field: string; userIdx: number }[] = [];
+  for (const { user, userIdx } of usersToBeRegistered) {
     const orgInfo: Record<'sites' | 'schools' | 'classes' | 'cohorts', string[]> = {
       sites: [selectedSiteId],
       schools: [],
@@ -357,12 +360,10 @@ const submitUsers = async () => {
       try {
         const schoolId = await getOrgId('schools', schoolName, selectedSiteId);
         orgInfo.schools.push(schoolId);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        usersWithErrors.push({
+      } catch {
+        orgErrors.push({
           field: 'school',
-          message,
-          value: schoolName,
+          userIdx,
         });
       }
     }
@@ -381,10 +382,9 @@ const submitUsers = async () => {
         }
       }
       if (!classFound) {
-        usersWithErrors.push({
+        orgErrors.push({
           field: 'class',
-          message: `Does not exist in selected site`,
-          value: className,
+          userIdx,
         });
       }
     }
@@ -398,12 +398,10 @@ const submitUsers = async () => {
           selectedSiteId,
         );
         orgInfo.cohorts.push(cohortId);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        usersWithErrors.push({
+      } catch {
+        orgErrors.push({
           field: 'cohort',
-          message: message,
-          value: cohortName,
+          userIdx,
         });
       }
     }
@@ -416,23 +414,24 @@ const submitUsers = async () => {
       groups: orgInfo.cohorts,
     };
   }
-  if (usersWithErrors.length > 0) {
-    const orgErrors: Record<string, string[]> = {};
-    usersWithErrors.forEach(({ field, message, value }) => {
-      const key = `${field}: ${message}`;
-      if (!orgErrors[key]) {
-        orgErrors[key] = [];
+  if (orgErrors.length > 0) {
+    const combinedOrgErrors: Record<string, number[]> = {};
+    orgErrors.forEach(({ field, userIdx }) => {
+      const key = `${field}: Does not exist in selected site`;
+      const rowNum = userIdx + 2; // +2 for header row and 1-indexing
+      if (!combinedOrgErrors[key]) {
+        combinedOrgErrors[key] = [];
       }
-      if (!orgErrors[key].includes(value)) {
-        orgErrors[key].push(value);
+      if (!combinedOrgErrors[key].includes(rowNum)) {
+        combinedOrgErrors[key].push(rowNum);
       }
     });
     status.value = { message: 'Please fix the errors in your CSV file before submitting.', severity: 'error' };
     validationErrors.value = {
-      headers: ['Validation Errors', 'Affected Values'],
-      keys: ['message', 'value'],
-      rows: Object.entries(orgErrors).map(([message, value]) => ({ message, value: value.join(', ') })),
-      showDownloadButton: false,
+      headers: ['Validation Errors', 'Affected Rows'],
+      keys: ['message', 'rowNums'],
+      rows: Object.entries(combinedOrgErrors).map(([message, rowNums]) => ({ message, rowNums })),
+      showDownloadButton: true,
     };
     isSubmitting.value = false;
     return;

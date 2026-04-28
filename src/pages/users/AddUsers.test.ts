@@ -211,7 +211,7 @@ describe('AddUsers Page', () => {
       await vm.onFileUpload(mockFileUploadEvent(HEADER_ONLY_CSV));
 
       expect(vm.status).toEqual({
-        message: 'The uploaded file contains no data.',
+        message: 'The uploaded file contains no users. Please add at least one user and upload again.',
         severity: 'error',
       });
       expect(vm.validatedData).toBeNull();
@@ -647,7 +647,8 @@ describe('AddUsers Page', () => {
       // 'Does not exist in selected site'. The class loop then has no
       // school IDs to iterate over, so it appends the same message
       // under the 'class' field. The two errors are grouped by their
-      // 'field: message' key into validationErrors.rows.
+      // 'field: Does not exist in selected site' key, with affected
+      // CSV row numbers (header + 1-indexed) collected per group.
       vi.mocked(fetchOrgByName as any).mockResolvedValue([]);
 
       const vm = mountAddUsers().vm as any;
@@ -661,14 +662,45 @@ describe('AddUsers Page', () => {
         severity: 'error',
       });
       expect(vm.validationErrors).not.toBeNull();
-      expect(vm.validationErrors.showDownloadButton).toBe(false);
+      expect(vm.validationErrors.headers).toEqual(['Validation Errors', 'Affected Rows']);
+      expect(vm.validationErrors.keys).toEqual(['message', 'rowNums']);
+      expect(vm.validationErrors.showDownloadButton).toBe(true);
       expect(vm.validationErrors.rows).toEqual(
         expect.arrayContaining([
-          { message: 'school: Does not exist in selected site', value: 'Test School' },
-          { message: 'class: Does not exist in selected site', value: 'Class A' },
+          { message: 'school: Does not exist in selected site', rowNums: [2] },
+          { message: 'class: Does not exist in selected site', rowNums: [2] },
         ]),
       );
       expect(vm.isSubmitting).toBe(false);
+    });
+
+    it('groups org-resolution errors across multiple rows by field', async () => {
+      // Every school lookup misses, so the same 'school: Does not exist…'
+      // and 'class: Does not exist…' messages are produced for each row.
+      // Identical messages are grouped into a single entry whose rowNums
+      // collects every affected CSV row (header + 1-indexing applied).
+      vi.mocked(fetchOrgByName as any).mockResolvedValue([]);
+
+      const csv = [
+        'id,userType,month,year,caregiverId,teacherId,school,class,cohort',
+        '1,child,5,2018,,,"Test School","Class A",',
+        '2,child,6,2019,,,"Test School","Class A",',
+        '3,child,7,2020,,,"Other School","Class B",',
+      ].join('\n');
+
+      const vm = mountAddUsers().vm as any;
+      await vm.onFileUpload(mockFileUploadEvent(csv));
+
+      await vm.submitUsers();
+
+      expect(usersRepository.createUsers).not.toHaveBeenCalled();
+      expect(vm.validationErrors).not.toBeNull();
+      expect(vm.validationErrors.rows).toEqual(
+        expect.arrayContaining([
+          { message: 'school: Does not exist in selected site', rowNums: [2, 3, 4] },
+          { message: 'class: Does not exist in selected site', rowNums: [2, 3, 4] },
+        ]),
+      );
     });
 
     it('submits with normalized userType and resolved orgIds, then merges createUsers results', async () => {
@@ -1109,19 +1141,21 @@ describe('AddUsers Page', () => {
         expect(lines).toHaveLength(3);
 
         // Header: USER_CSV_HEADERS in order, with the extraneous key tacked
-        // onto the end (the helper's documented behaviour).
+        // onto the end (the helper's documented behaviour). 'site' is
+        // intentionally excluded from USER_CSV_HEADERS because the column
+        // is only used for input validation, not download.
         expect(lines[0]).toBe(
-          'id,userType,month,year,caregiverId,teacherId,site,school,class,cohort,uid,email,password,extraField',
+          'id,userType,month,year,caregiverId,teacherId,school,class,cohort,uid,email,password,extraField',
         );
 
         // Row 1 exercises the helper's escaping in one go: the school cell
         // is quoted because it contains a comma, with the inner '"' doubled.
         // null (email) and undefined (password) collapse to empty cells.
-        expect(lines[1]).toBe('1,child,5,2018,,,,"Test, ""Quoted"" School",Class A,,uid-1,,,x');
+        expect(lines[1]).toBe('1,child,5,2018,,,"Test, ""Quoted"" School",Class A,,uid-1,,,x');
 
         // Row 2 has only a handful of fields populated; every absent header
         // becomes an empty cell, including the appended 'extraField'.
-        expect(lines[2]).toBe('2,caregiver,,,,,,Plain School,,,uid-2,,,');
+        expect(lines[2]).toBe('2,caregiver,,,,,Plain School,,,uid-2,,,');
       } finally {
         document.createElement = originalCreateElement;
       }
