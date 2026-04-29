@@ -66,13 +66,20 @@ vi.mock('@/store/auth', async () => {
   };
 });
 
+// Hoisted so the spies can be referenced both inside the factory below and
+// from within individual tests via the imported store mock.
+const { setHasUserConfirmedMock, setShouldUserConfirmMock } = vi.hoisted(() => ({
+  setHasUserConfirmedMock: vi.fn(),
+  setShouldUserConfirmMock: vi.fn(),
+}));
+
 vi.mock('@/store/levante', async () => {
   const { ref } = await import('vue');
   return {
     useLevanteStore: vi.fn(() => ({
       hasUserConfirmed: ref(false),
-      setHasUserConfirmed: vi.fn(),
-      setShouldUserConfirm: vi.fn(),
+      setHasUserConfirmed: setHasUserConfirmedMock,
+      setShouldUserConfirm: setShouldUserConfirmMock,
     })),
   };
 });
@@ -124,6 +131,8 @@ describe('AddUsers Page', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     mockRouter.push.mockReset();
+    setHasUserConfirmedMock.mockReset();
+    setShouldUserConfirmMock.mockReset();
   });
 
   describe('onFileUpload', () => {
@@ -443,6 +452,99 @@ describe('AddUsers Page', () => {
       expect(user.year).toBe(2018);
       expect(user.school).toEqual(['Test School']);
       expect(user['class']).toEqual(['Class A']);
+    });
+
+    describe('setShouldUserConfirm', () => {
+      // setShouldUserConfirm(true) gates the site selector while the user is
+      // mid-upload. It must only be called once the file is fully validated
+      // and there is something to add — otherwise an invalid or empty upload
+      // would lock the user out of switching sites for no reason.
+      //
+      // resetUserProgress() at the top of every onFileUpload call invokes
+      // setShouldUserConfirm(false), so the negative cases assert on the
+      // (true) call specifically rather than on the spy as a whole.
+
+      const wasCalledWithTrue = () => setShouldUserConfirmMock.mock.calls.some(([value]) => value === true);
+
+      it('is called with true after a successful upload', async () => {
+        const vm = mountAddUsers().vm as any;
+
+        await vm.onFileUpload(mockFileUploadEvent(VALID_CSV));
+
+        expect(vm.validatedData).not.toBeNull();
+        expect(wasCalledWithTrue()).toBe(true);
+      });
+
+      it('is not called with true when no file is provided', async () => {
+        const vm = mountAddUsers().vm as any;
+
+        await vm.onFileUpload({ files: [] });
+
+        expect(wasCalledWithTrue()).toBe(false);
+      });
+
+      it('is not called with true when the file is malformed', async () => {
+        const vm = mountAddUsers().vm as any;
+
+        const MALFORMED_CSV = ['id,userType', '1,"child'].join('\n');
+        await vm.onFileUpload(mockFileUploadEvent(MALFORMED_CSV));
+
+        expect(wasCalledWithTrue()).toBe(false);
+      });
+
+      it('is not called with true when the file is header-only (no data rows)', async () => {
+        const vm = mountAddUsers().vm as any;
+
+        const HEADER_ONLY_CSV = 'id,userType,month,year,caregiverId,teacherId,school,class,cohort';
+        await vm.onFileUpload(mockFileUploadEvent(HEADER_ONLY_CSV));
+
+        expect(wasCalledWithTrue()).toBe(false);
+      });
+
+      it('is not called with true when required headers are missing', async () => {
+        const vm = mountAddUsers().vm as any;
+
+        await vm.onFileUpload(mockFileUploadEvent(MISSING_HEADERS_CSV));
+
+        expect(wasCalledWithTrue()).toBe(false);
+      });
+
+      it('is not called with true when row-level zod validation fails', async () => {
+        const vm = mountAddUsers().vm as any;
+
+        const CSV_EMPTY_ID = [
+          'id,userType,month,year,caregiverId,teacherId,school,class,cohort',
+          ',child,5,2018,,,"Test School","Class A",',
+        ].join('\n');
+        await vm.onFileUpload(mockFileUploadEvent(CSV_EMPTY_ID));
+
+        expect(wasCalledWithTrue()).toBe(false);
+      });
+
+      it('is not called with true when site validation fails', async () => {
+        const vm = mountAddUsers().vm as any;
+
+        const CSV_WRONG_SITE = [
+          'id,userType,month,year,caregiverId,teacherId,school,class,cohort,site',
+          '1,child,5,2018,,,"Test School","Class A",,wrong-site',
+        ].join('\n');
+        await vm.onFileUpload(mockFileUploadEvent(CSV_WRONG_SITE));
+
+        expect(wasCalledWithTrue()).toBe(false);
+      });
+
+      it('is not called with true when every uploaded user already has a uid', async () => {
+        // No new users to add → no reason to gate the site selector.
+        const csv = [
+          'id,userType,month,year,caregiverId,teacherId,school,class,cohort,uid',
+          '1,child,5,2018,,,"Test School","Class A",,existing-uid',
+        ].join('\n');
+
+        const vm = mountAddUsers().vm as any;
+        await vm.onFileUpload(mockFileUploadEvent(csv));
+
+        expect(wasCalledWithTrue()).toBe(false);
+      });
     });
   });
 

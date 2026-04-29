@@ -125,8 +125,7 @@ const { currentSite, currentSiteName } = storeToRefs(authStore);
 const isAllSitesSelected = computed(() => currentSite.value === 'any');
 
 const levanteStore = useLevanteStore();
-const { hasUserConfirmed } = storeToRefs(levanteStore);
-const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
+const { setShouldUserConfirm } = levanteStore;
 
 const router = useRouter();
 
@@ -159,11 +158,12 @@ const resetUserProgress = () => {
   validationErrors.value = null;
 
   // Reset user confirmation
-  setHasUserConfirmed(false);
+  setShouldUserConfirm(false);
 };
 
-watch(hasUserConfirmed, (userConfirmed) => {
-  if (userConfirmed) resetUserProgress();
+watch(currentSite, () => {
+  if (isSubmitting.value) return;
+  resetUserProgress();
 });
 
 watch(
@@ -190,7 +190,6 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
     return;
   }
   uploadedFile.value = file;
-  setShouldUserConfirm(true); // Wait for user confirmation before changing the selected site
 
   // Parse the file
   const _parsedData = await parseCsvFile(file, {
@@ -285,6 +284,9 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
     message: 'File successfully uploaded. See table for summary of users to be added.',
     severity: 'success',
   };
+
+  // Set flag to ask user before changing the selected site
+  setShouldUserConfirm(true);
 };
 
 const downloadErrors = () => {
@@ -633,6 +635,9 @@ const downloadRegisteredUsers = () => {
 
   // Initiate download
   downloadCsv(csvString, 'registered-users.csv');
+
+  // Reset user confirmation
+  setShouldUserConfirm(false);
 };
 </script>
 
