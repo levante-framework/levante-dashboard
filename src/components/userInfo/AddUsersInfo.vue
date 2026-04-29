@@ -83,7 +83,7 @@
               Previously, <code>site</code> was a required column in the user information file. Now it is no longer
               required, because all users will be added to the site chosen within the site selector on the top right of
               the dashboard. If <code>site</code> exists in your spreadsheet and its values do not match the selected
-              site, you will see a warning. We recommend having a separate user information file for each site.
+              site, you will see an error. We recommend having a separate user information file for each site.
             </p>
           </PvAccordionContent>
         </PvAccordionPanel>
