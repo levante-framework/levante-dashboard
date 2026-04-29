@@ -1,5 +1,5 @@
 <template>
-  <div v-if="props.adminId && !isFormPopulated" class="levante-spinner-wrapper">
+  <div v-if="editAssignmentBlockingLoader" class="levante-spinner-wrapper">
     <LevanteSpinner fullscreen />
   </div>
 
@@ -191,13 +191,11 @@ import PvRadioButton from 'primevue/radiobutton';
 import _filter from 'lodash/filter';
 import _isEmpty from 'lodash/isEmpty';
 import _toPairs from 'lodash/toPairs';
-import _uniqBy from 'lodash/uniqBy';
 import _forEach from 'lodash/forEach';
 import _find from 'lodash/find';
 import _isEqual from 'lodash/isEqual';
 import _union from 'lodash/union';
 import _groupBy from 'lodash/groupBy';
-import _values from 'lodash/values';
 import { useVuelidate } from '@vuelidate/core';
 import { required, requiredIf } from '@vuelidate/validators';
 import { useAuthStore } from '@/store/auth';
@@ -224,6 +222,7 @@ import { logger } from '@/logger';
 
 const initialized = ref(false);
 const isFormPopulated = ref(false);
+const editTasksHydrated = ref(false);
 const router = useRouter();
 const toast = useToast();
 const queryClient = useQueryClient();
@@ -270,7 +269,25 @@ const findVariantWithParams = (variants, params) => {
   });
 };
 
-const { data: allVariants } = useTaskVariantsQuery(true, {
+function resolveVariantForAssessment(assessment, allVariantInfo) {
+  const taskId = String(assessment?.taskId ?? '').toLowerCase();
+  const forTask = _filter(allVariantInfo, (variant) =>
+    String(variant.task?.id ?? '').toLowerCase() === taskId,
+  );
+
+  let found = findVariantWithParams(forTask, assessment.params ?? {});
+
+  const variantId = assessment.variantId;
+  if (!found && variantId) {
+    found =
+      _find(forTask, (v) => v.id === variantId) ??
+      _find(allVariantInfo, (v) => v.id === variantId);
+  }
+
+  return found;
+}
+
+const { data: allVariants, isFetched: isVariantsFetched } = useTaskVariantsQuery(true, {
   enabled: initialized,
 });
 
@@ -278,12 +295,14 @@ const { data: allVariants } = useTaskVariantsQuery(true, {
 // | Fetch pre-existing administration data when editing an administration
 // +------------------------------------------------------------------------------------------------------------------+
 // Fetch the data of the currently being edited administration, incl. its assigned assessments.
+const administrationIdsForEdit = computed(() => (props.adminId ? [props.adminId] : []));
 const fetchAdminitrations = computed(() => initialized.value && !!props.adminId);
 const {
   data: existingData,
   isLoading: isLoadingExistingData,
   error: errorExistingData,
-} = useAdministrationsQuery([props.adminId], {
+  isFetched: isAdministrationFetched,
+} = useAdministrationsQuery(administrationIdsForEdit, {
   enabled: fetchAdminitrations,
   select: (data) => data[0],
   staleTime: 0,
@@ -293,6 +312,7 @@ const {
 watch(
   [existingData, isLoadingExistingData, errorExistingData],
   ([newExistingData, newIsLoadingExistingData, newErrorExistingData]) => {
+    if (!props.adminId) return;
     if (!newIsLoadingExistingData && !newExistingData) {
       logger.error('Failed to fetch administration by id', {
         assignmentId: props.adminId,
@@ -302,7 +322,7 @@ watch(
       toast.add({
         severity: TOAST_SEVERITIES.ERROR,
         summary: 'Failed to fetch assignment',
-        detail: "We could not fetch this assignment's data. Please try again later",
+        detail: 'We could not fetch this assignment\'s data. Please try again later',
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
 
@@ -313,32 +333,60 @@ watch(
 
 const existingAssessments = computed(() => existingData?.value?.assessments ?? []);
 
-// Fetch the districts assigned to the administration.
-const districtIds = computed(() => existingData?.value?.minimalOrgs?.districts ?? []);
+const existingAdminMinimalOrgs = computed(() => minimalOrgsFromDoc(existingData?.value));
 
-const { data: existingDistrictsData } = useDistrictsQuery(districtIds, {
+// Fetch the districts assigned to the administration.
+const districtIds = computed(() => existingAdminMinimalOrgs.value?.districts ?? []);
+
+const { data: existingDistrictsData, isFetched: isDistrictsFetched } = useDistrictsQuery(districtIds, {
   enabled: initialized,
 });
 
 // Fetch the schools assigned to the administration.
-const schoolIds = computed(() => existingData.value?.minimalOrgs?.schools ?? []);
+const schoolIds = computed(() => existingAdminMinimalOrgs.value?.schools ?? []);
 
-const { data: existingSchoolsData } = useSchoolsQuery(schoolIds, {
+const { data: existingSchoolsData, isFetched: isSchoolsFetched } = useSchoolsQuery(schoolIds, {
   enabled: initialized,
 });
 
 // Fetch the classes assigned to the administration.
-const classIds = computed(() => existingData.value?.minimalOrgs?.classes ?? []);
+const classIds = computed(() => existingAdminMinimalOrgs.value?.classes ?? []);
 
-const { data: existingClassesData } = useClassesQuery(classIds, {
+const { data: existingClassesData, isFetched: isClassesFetched } = useClassesQuery(classIds, {
   enabled: initialized,
 });
 
 // Fetch the groups assigned to the administration.
-const groupIds = computed(() => existingData.value?.minimalOrgs?.groups ?? []);
+const groupIds = computed(() => existingAdminMinimalOrgs.value?.groups ?? []);
 
-const { data: existingGroupData } = useGroupsQuery(groupIds, {
+const { data: existingGroupData, isFetched: isGroupsFetched } = useGroupsQuery(groupIds, {
   enabled: initialized,
+});
+
+const editOrgsHydrated = computed(() => {
+  const mo = existingAdminMinimalOrgs.value ?? {};
+  const ready = (ids, isFetchedRef) => !ids?.length || isFetchedRef.value;
+  return (
+    ready(mo.districts, isDistrictsFetched) &&
+    ready(mo.schools, isSchoolsFetched) &&
+    ready(mo.classes, isClassesFetched) &&
+    ready(mo.groups, isGroupsFetched)
+  );
+});
+
+const editAssignmentBlockingLoader = computed(() => {
+  if (!props.adminId) return false;
+  if (!initialized.value) return true;
+  if (errorExistingData?.value != null) return false;
+
+  const admin = existingData?.value;
+  if (!admin) {
+    return isLoadingExistingData.value || !isAdministrationFetched.value;
+  }
+
+  if (!administrationMatchesRoute(admin, props.adminId)) return true;
+
+  return !isFormPopulated.value || !editTasksHydrated.value || !editOrgsHydrated.value;
 });
 
 // +------------------------------------------------------------------------------------------------------------------+
@@ -414,7 +462,6 @@ const selection = (selected) => {
 // +------------------------------------------------------------------------------------------------------------------+
 const variants = ref([]);
 const preSelectedVariants = ref([]);
-const nonUniqueTasks = ref('');
 
 const variantsByTaskId = computed(() => {
   return _groupBy(allVariants.value, 'task.id');
@@ -425,14 +472,15 @@ const handleVariantsChanged = (newVariants) => {
 };
 
 const handleConsentSelected = (newConsentAssent) => {
-  if (newConsentAssent !== 'No Consent') {
+  const isNoConsent =
+    typeof newConsentAssent === 'string' && newConsentAssent.toLowerCase() === 'no consent';
+  if (!isNoConsent) {
     noConsent.value = '';
     state.consent = newConsentAssent.consent;
     state.assent = newConsentAssent.assent;
     state.amount = newConsentAssent.amount;
     state.expectedTime = newConsentAssent.expectedTime;
   } else {
-    // Set to "No Consent"
     noConsent.value = newConsentAssent;
     state.consent = newConsentAssent;
     state.assent = newConsentAssent;
@@ -490,25 +538,24 @@ const hasAssignmentChanges = () => {
   // If no original data exists (new assignment), there are always changes
   if (!original) return true;
 
-  // Compare name
-  if (current.administrationName !== original.name) {
+  const originalName = original.name ?? original.publicName ?? '';
+  if (current.administrationName !== originalName) {
     return true;
   }
 
-  // Compare dates - normalize to compare only date part (ignore time)
   const normalizeDate = (date) => {
     if (!date) return null;
     const d = new Date(date);
     return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   };
 
-  const originalStartDate = normalizeDate(original.dateOpened);
+  const originalStartDate = normalizeDate(original.dateOpened ?? original.dateOpen);
   const currentStartDate = normalizeDate(current.dateStarted);
   if (originalStartDate !== currentStartDate) {
     return true;
   }
 
-  const originalEndDate = normalizeDate(original.dateClosed);
+  const originalEndDate = normalizeDate(original.dateClosed ?? original.dateClose);
   const currentEndDate = normalizeDate(current.dateClosed);
   if (originalEndDate !== currentEndDate) {
     return true;
@@ -531,7 +578,7 @@ const hasAssignmentChanges = () => {
       .sort();
   };
 
-  const originalOrgs = original.minimalOrgs ?? {};
+  const originalOrgs = minimalOrgsFromDoc(original);
   const currentDistricts = getOrgIds(current.districts);
   const currentSchools = getOrgIds(current.schools);
   const currentClasses = getOrgIds(current.classes);
@@ -600,12 +647,9 @@ const hasAssignmentChanges = () => {
 };
 
 const submit = async () => {
-  console.log('Submit function called');
   submitted.value = true;
 
-  // Set publicName automatically based on administrationName
   state.administrationPublicName = state.administrationName;
-  console.log('Set administrationPublicName:', state.administrationPublicName);
 
   // First check dates
   if (!state.dateStarted || !state.dateClosed) {
@@ -637,11 +681,8 @@ const submit = async () => {
     groups: toRaw(state.groups).map((org) => org.id),
   };
 
-  console.log('Checking required orgs...', orgs);
   const orgsValid = checkForRequiredOrgs(orgs);
-  console.log('Orgs valid result:', orgsValid);
   if (!orgsValid) {
-    console.log('Org check failed, showing toast.');
     toast.add({
       severity: TOAST_SEVERITIES.ERROR,
       summary: 'Missing Selection',
@@ -867,41 +908,110 @@ watch(
 );
 
 watch(hasUserConfirmed, (userConfirmed) => {
-  if (userConfirmed) resetUserProgress();
+  if (userConfirmed && !props.adminId) resetUserProgress();
 });
 
-watch([existingData, allVariants], ([adminInfo, allVariantInfo]) => {
-  if (adminInfo && !_isEmpty(allVariantInfo)) {
-    state.administrationName = adminInfo.name;
-    state.administrationPublicName = adminInfo.name;
-    state.dateStarted = new Date(adminInfo.dateOpened);
-    state.dateClosed = new Date(adminInfo.dateClosed);
-    state.districts = adminInfo.districts;
-    state.schools = adminInfo.schools;
-    state.classes = adminInfo.classes;
-    state.groups = adminInfo.groups;
-    state.sequential = adminInfo.sequential;
+function normalizeOrgListForState(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => (typeof item === 'string' ? { id: item } : item));
+}
+
+function minimalOrgsFromDoc(admin) {
+  if (!admin) return {};
+  return admin.minimalOrgs ?? admin.assignedOrgs ?? {};
+}
+
+function administrationMatchesRoute(admin, routeAdminId) {
+  if (!admin || !routeAdminId) return false;
+  const docId = admin.id;
+  if (docId == null) return true;
+  return String(docId) === String(routeAdminId);
+}
+
+function applyAdministrationMetadataToForm(adminInfo) {
+  const displayName = adminInfo.name ?? adminInfo.publicName ?? '';
+  state.administrationName = displayName;
+  state.administrationPublicName = adminInfo.publicName ?? adminInfo.name ?? displayName;
+
+  const opened = adminInfo.dateOpened ?? adminInfo.dateOpen;
+  const closed = adminInfo.dateClosed ?? adminInfo.dateClose;
+  state.dateStarted = opened ? new Date(opened) : null;
+  state.dateClosed = closed ? new Date(closed) : null;
+
+  const mo = minimalOrgsFromDoc(adminInfo);
+  const expectsFetchedOrgs =
+    (mo.districts?.length ?? 0) +
+      (mo.schools?.length ?? 0) +
+      (mo.classes?.length ?? 0) +
+      (mo.groups?.length ?? 0) >
+    0;
+
+  if (expectsFetchedOrgs) {
+    state.districts = existingDistrictsData.value ?? [];
+    state.schools = existingSchoolsData.value ?? [];
+    state.classes = existingClassesData.value ?? [];
+    state.groups = existingGroupData.value ?? [];
+  } else {
+    state.districts = normalizeOrgListForState(adminInfo.districts);
+    state.schools = normalizeOrgListForState(adminInfo.schools);
+    state.classes = normalizeOrgListForState(adminInfo.classes);
+    state.groups = normalizeOrgListForState(adminInfo.groups);
+  }
+
+  state.sequential = adminInfo.sequential;
+  state.legal = adminInfo.legal;
+  state.consent = adminInfo?.legal?.consent ?? null;
+  state.assent = adminInfo?.legal?.assent ?? null;
+  isTestData.value = adminInfo.testData;
+
+  if (state.consent?.toLowerCase() === 'no consent') {
+    noConsent.value = state.consent;
+  }
+}
+
+watch(
+  () => props.adminId,
+  (nextId, prevId) => {
+    if (nextId === prevId) return;
+    preSelectedVariants.value = [];
+    variants.value = [];
+    isFormPopulated.value = false;
+    editTasksHydrated.value = false;
+  },
+);
+
+watch(
+  [() => props.adminId, existingData, editOrgsHydrated],
+  ([adminId, admin, orgsHydrated]) => {
+    if (isFormPopulated.value) return;
+    if (!adminId || !admin) return;
+    if (!administrationMatchesRoute(admin, adminId)) return;
+    if (!orgsHydrated) return;
+    applyAdministrationMetadataToForm(admin);
+    isFormPopulated.value = true;
+  },
+  { immediate: true },
+);
+
+watch(
+  [existingData, allVariants, isVariantsFetched],
+  ([adminInfo, allVariantInfo, variantsFetched]) => {
+    if (!props.adminId) return;
+    if (!adminInfo || !administrationMatchesRoute(adminInfo, props.adminId)) return;
+    if (!variantsFetched || !Array.isArray(allVariantInfo)) return;
+
+    preSelectedVariants.value = [];
     _forEach(adminInfo.assessments, (assessment) => {
-      const assessmentParams = assessment.params;
-      const taskId = assessment.taskId;
-      const allVariantsForThisTask = _filter(allVariantInfo, (variant) => variant.task.id === taskId);
-      const found = findVariantWithParams(allVariantsForThisTask, assessmentParams);
+      const found = resolveVariantForAssessment(assessment, allVariantInfo);
       if (found) {
         preSelectedVariants.value = _union(preSelectedVariants.value, [found]);
       }
     });
-    state.legal = adminInfo.legal;
-    state.consent = adminInfo?.legal?.consent ?? null;
-    state.assent = adminInfo?.legal?.assent ?? null;
-    isTestData.value = adminInfo.testData;
-
-    if (state.consent === 'No Consent') {
-      noConsent.value = state.consent;
-    }
-
-    isFormPopulated.value = true;
-  }
-});
+    variants.value = preSelectedVariants.value.slice();
+    editTasksHydrated.value = true;
+  },
+  { immediate: true },
+);
 </script>
 
 <style lang="scss" scoped>
