@@ -259,8 +259,12 @@ describe('unparseCsvFile', () => {
       expect(result).toEqual('name,age\nAlice,30');
     });
 
-    it('returns a quoted header row (no data rows) when data is empty but keys are provided', () => {
-      expect(unparseCsvFile([], ['name', 'age'])).toEqual('"name","age"\n');
+    it('returns a header row (no data rows) when data is empty but keys are provided', () => {
+      expect(unparseCsvFile([], ['name', 'age'])).toEqual('name,age\n');
+    });
+
+    it('quotes empty-data headers that contain commas or quotes', () => {
+      expect(unparseCsvFile([], ['na,me', 'a"ge'])).toEqual('"na,me","a""ge"\n');
     });
   });
 });

@@ -113,7 +113,7 @@ export const parseCsvFile = async (
 export const unparseCsvFile = (data: Record<string, unknown>[], keys?: string[]): string => {
   // If no data, return an empty string or a header row if keys are provided
   if (data.length === 0) {
-    return !keys ? '' : keys.map((k) => `"${k}"`).join(',') + '\n';
+    return !keys ? '' : Papa.unparse({ data: [], fields: keys }, { newline: '\n' });
   }
 
   // If keys are provided, use them and add any extraneous keys to the end,
