@@ -19,42 +19,57 @@
       </div>
       <div v-else class="m-0 mt-4 font-semibold text-xl text-color text-center">Log in to access your dashboard</div>
 
-      <form class="form" @submit.prevent="authWithEmailOrUsername">
-        <PvInputText
-          :id="$t('authSignIn.emailId')"
-          v-model="v$.email.$model"
-          :placeholder="$t('authSignIn.emailPlaceholder')"
-          aria-describedby="email-error"
-          class="w-full"
-          data-cy="input-username-email"
-          @blur="isCapsLockOn = false"
-          @keydown="checkForCapsLock"
-          @keyup="checkForCapsLock"
-        />
+      <PvMessage
+        v-for="msg of messages"
+        :key="msg?.id"
+        :severity="msg?.severity"
+        class="mt-4"
+        closable
+        icon="pi pi-times-circle"
+      >
+        {{ msg?.content }}
+      </PvMessage>
 
-        <PvPassword
-          :id="$t('authSignIn.passwordId')"
-          v-model="v$.password.$model"
-          :disabled="isSigningInWithEmailLink"
-          :feedback="false"
-          :placeholder="$t('authSignIn.passwordPlaceholder')"
-          class="w-full"
-          data-cy="input-password"
-          hide-icon="pi pi-eye"
-          show-icon="pi pi-eye-slash"
-          toggle-mask
-          @blur="isCapsLockOn = false"
-          @keydown="checkForCapsLock"
-          @keyup="checkForCapsLock"
-        />
+      <form class="form" @submit.prevent="authWithEmailOrUsername">
+        <div class="flex flex-column gap-1">
+          <PvInputText
+            :id="$t('authSignIn.emailId')"
+            v-model="v$.email.$model"
+            :placeholder="$t('authSignIn.emailPlaceholder')"
+            aria-describedby="email-error"
+            class="w-full"
+            data-cy="input-username-email"
+            @blur="isCapsLockOn = false"
+            @keydown="checkForCapsLock"
+            @keyup="checkForCapsLock"
+          />
+          <div v-for="error in v$.email.$errors" :key="error.$uid" class="text-sm p-error font-medium">
+            {{ error.$message }}
+          </div>
+        </div>
+
+        <div class="flex flex-column gap-1">
+          <PvPassword
+            :id="$t('authSignIn.passwordId')"
+            v-model="v$.password.$model"
+            :disabled="isSigningInWithEmailLink"
+            :feedback="false"
+            :placeholder="$t('authSignIn.passwordPlaceholder')"
+            class="w-full"
+            data-cy="input-password"
+            hide-icon="pi pi-eye"
+            show-icon="pi pi-eye-slash"
+            toggle-mask
+            @blur="isCapsLockOn = false"
+            @keydown="checkForCapsLock"
+            @keyup="checkForCapsLock"
+          />
+          <div v-for="error in v$.password.$errors" :key="error.$uid" class="text-sm p-error font-medium">
+            {{ error.$message }}
+          </div>
+        </div>
 
         <div v-if="isCapsLockOn" class="text-center p-error font-medium">⇪ {{ $t('capsLockIsOn') }}</div>
-        <div
-          v-if="v$.email.$errors.length || v$.password.$errors.length"
-          class="text-sm text-center p-error font-medium"
-        >
-          {{ $t('authSignIn.incorrectEmailOrPassword') }}
-        </div>
 
         <div v-if="!isParticipantMode" class="flex justify-content-between">
           <small
@@ -176,10 +191,11 @@ import { fetchDocById } from '@/helpers/query/utils';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore, UserClaims, UserData } from '@/store/auth';
 import useVuelidate from '@vuelidate/core';
-import { required, requiredUnless } from '@vuelidate/validators';
+import { helpers, required, requiredUnless } from '@vuelidate/validators';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
+import PvMessage from 'primevue/message';
 import PvPassword from 'primevue/password';
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -190,6 +206,12 @@ const MODES = {
 } as const;
 
 type Mode = (typeof MODES)[keyof typeof MODES];
+
+type Message = {
+  id: string;
+  severity: string;
+  content: string;
+};
 
 const assignmentsStore = useAssignmentsStore();
 const authStore = useAuthStore();
@@ -228,6 +250,7 @@ const isCapsLockOn = ref(false);
 const isOpenForgotPasswordModal = ref(false);
 const isOpenWarningModal = ref(false);
 const isSigningInWithEmailLink = ref(false);
+const messages = ref<Array<Message>>([]);
 const mode = ref<Mode>(MODES.participant);
 
 const isParticipantMode = computed(() => mode.value === MODES.participant);
@@ -238,22 +261,29 @@ const formState = reactive({
 });
 
 const formRules = {
-  email: { required },
-  password: { required: requiredUnless(() => isSigningInWithEmailLink.value) },
+  email: { required: helpers.withMessage('Username/email is required', required) },
+  password: {
+    required: helpers.withMessage(
+      'Password is required',
+      requiredUnless(() => isSigningInWithEmailLink.value),
+    ),
+  },
 };
 
 const v$ = useVuelidate(formRules, formState);
 
 const authWithEmailOrUsername = async () => {
-  let { email, password } = formState;
-
-  if (!email?.length || !password?.length) return false;
-
   spinner.value = true;
   googleSignInErrorKey.value = '';
+  messages.value = [];
 
   const isValid = await v$.value.$validate();
-  if (!isValid) return;
+  if (!isValid) {
+    spinner.value = false;
+    return;
+  }
+
+  let { email, password } = formState;
 
   if (!email.includes('@')) {
     email = `${email}@levante.com`;
@@ -275,8 +305,14 @@ const authWithEmailOrUsername = async () => {
       }
     })
     .catch((e) => {
-      const errorCodes = ['auth/user-not-found', 'auth/wrong-password'];
-      if (errorCodes.includes(e.code)) return;
+      const errorCodes = ['auth/invalid-email', 'auth/user-not-found', 'auth/wrong-password'];
+      if (errorCodes.includes(e.code)) {
+        messages.value.push({
+          id: e.code,
+          severity: 'error',
+          content: 'Incorrect username/email or password',
+        });
+      }
       throw e;
     })
     .finally(() => {
@@ -287,8 +323,9 @@ const authWithEmailOrUsername = async () => {
 const authWithGoogle = async () => {
   if (isMobileBrowser()) return signInWithGoogleRedirect();
 
-  googleSignInErrorKey.value = '';
   spinner.value = true;
+  googleSignInErrorKey.value = '';
+  messages.value = [];
 
   signInWithGooglePopup()
     .then(async () => {
@@ -304,7 +341,7 @@ const authWithGoogle = async () => {
       const errorCode = e?.code;
 
       if (errorCode === 'auth/email-already-in-use') {
-        openWarningModal();
+        isOpenWarningModal.value = true;
         spinner.value = false;
         return;
       }
@@ -352,7 +389,8 @@ const getAuthUserData = async () => {
 
 const changeMode = (): void => {
   mode.value = isParticipantMode.value ? MODES.researcher : MODES.participant;
-  isSigningInWithEmailLink.value = false; // Reset when changing mode
+  isSigningInWithEmailLink.value = false;
+  v$.value.$reset();
 };
 
 const checkForCapsLock = (e: KeyboardEvent): void => {
@@ -362,11 +400,6 @@ const checkForCapsLock = (e: KeyboardEvent): void => {
 const closeForgotPasswordModal = () => {
   forgotEmail.value = '';
   isOpenForgotPasswordModal.value = false;
-};
-
-const openWarningModal = async () => {
-  // signInMethods.value = await roarfirekit.value.fetchEmailAuthMethods(email.value);
-  isOpenWarningModal.value = true;
 };
 
 const sendResetPasswordEmail = () => {
