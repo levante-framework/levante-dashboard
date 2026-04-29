@@ -334,6 +334,35 @@ describe('AddUsers Page', () => {
       expect(vm.validatedData).toHaveLength(2);
     });
 
+    it('compares site values case-, whitespace-, and diacritic-insensitively', async () => {
+      // currentSiteName is overridden with mixed casing and surrounding
+      // whitespace so the comparison can't pass via raw equality.
+      // normalizeToLowercase (used on both sides) trims, lowercases, and
+      // strips combining diacritics, so every row below should match.
+      vi.mocked(useAuthStore).mockReturnValueOnce({
+        currentSite: ref('site-id-123'),
+        currentSiteName: ref('  My Sïte  '),
+      } as any);
+
+      const csv = [
+        'id,userType,month,year,caregiverId,teacherId,school,class,cohort,site',
+        '1,child,5,2018,,,"Test School","Class A",,my site',
+        '2,child,6,2019,,,"Test School","Class A",,MY SITE',
+        '3,child,7,2020,,,"Test School","Class A",,My Site',
+        '4,child,8,2021,,,"Test School","Class A",,My Sïte',
+      ].join('\n');
+
+      const vm = mountAddUsers().vm as any;
+      await vm.onFileUpload(mockFileUploadEvent(csv));
+
+      expect(vm.validationErrors).toBeNull();
+      expect(vm.validatedData).toHaveLength(4);
+      expect(vm.status).toEqual({
+        message: 'File successfully uploaded. See table for summary of users to be added.',
+        severity: 'success',
+      });
+    });
+
     // Per-field validation rules (empty userType, month/year bounds, XOR
     // between school+class and cohort, etc.) are covered by levante-zod's
     // own unit tests against UserCsvSchema. This suite only verifies that

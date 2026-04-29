@@ -234,9 +234,10 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   // Validate site column, if present
   const siteIssues: ZodIssue[] = [];
   if (headers.includes('site')) {
+    const normalizedSelectedSite = normalizeToLowercase(currentSiteName.value ?? '');
     _parsedData.forEach((row, idx) => {
       // Must match the selected site
-      if (row.site && row.site !== currentSiteName.value) {
+      if (row.site && normalizeToLowercase(row.site) !== normalizedSelectedSite) {
         siteIssues.push({
           code: 'custom',
           message: `Must match the selected site`,
