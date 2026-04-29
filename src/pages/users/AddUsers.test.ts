@@ -1064,6 +1064,28 @@ describe('AddUsers Page', () => {
       expect(fetchOrgByName).toHaveBeenCalledTimes(2);
     });
 
+    it('does not collide when an org name overlaps with a parent-id boundary', async () => {
+      // A naive `${name}__${parentDistrictId}` cache key would treat
+      //   ('schools', 'foo__district-1', undefined)            // org literally named "foo__district-1"
+      // and
+      //   ('schools', 'foo',              'district-1')        // org named "foo" scoped to district-1
+      // as the same entry. Each call must trigger its own fetch and
+      // round-trip its own resolved id.
+      vi.mocked(fetchOrgByName as any)
+        .mockResolvedValueOnce([{ id: 'school-literal' }])
+        .mockResolvedValueOnce([{ id: 'school-scoped' }]);
+
+      const vm = mountAddUsers().vm as any;
+      const getOrgId = vm.createOrgIdResolver();
+
+      const literal = await getOrgId('schools', 'foo__district-1');
+      const scoped = await getOrgId('schools', 'foo', 'district-1');
+
+      expect(literal).toBe('school-literal');
+      expect(scoped).toBe('school-scoped');
+      expect(fetchOrgByName).toHaveBeenCalledTimes(2);
+    });
+
     it('maintains independent caches per orgType', async () => {
       // Same normalized name across different orgTypes must not collide.
       vi.mocked(fetchOrgByName as any)

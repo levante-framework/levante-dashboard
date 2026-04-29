@@ -564,10 +564,8 @@ const createOrgIdResolver = (): GetOrgId => {
   const getOrgId: GetOrgId = async (orgType, orgName, parentDistrictId, parentSchoolId) => {
     const normalizedOrgName = normalizeToLowercase(orgName);
 
-    // Include parent IDs in cache key to avoid cross-site conflicts
-    let cacheKey = normalizedOrgName;
-    if (parentDistrictId) cacheKey += `__${parentDistrictId}`;
-    if (parentSchoolId) cacheKey += `__${parentSchoolId}`;
+    // Include parent IDs in cache key to avoid cross-site conflicts.
+    const cacheKey = JSON.stringify([normalizedOrgName, parentDistrictId ?? null, parentSchoolId ?? null]);
 
     // Check if the org is already in the cache
     if (cache[orgType][cacheKey]) {
