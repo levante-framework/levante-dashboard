@@ -134,7 +134,6 @@
                     :current-page="currentPage"
                     :rows-per-page="pageLimit"
                     :title="getTitle(item, isUserSuperAdmin())"
-                    :stats="item.stats"
                     :dates="item.dates"
                     :assignees="item.assignedOrgs"
                     :assessments="item.assessments"
