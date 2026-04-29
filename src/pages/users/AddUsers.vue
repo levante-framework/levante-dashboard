@@ -113,7 +113,7 @@ import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
 import { NORMALIZED_USER_CSV_HEADERS, USER_CSV_HEADERS } from '@/constants/csv';
 import { CreateUsersPayload, usersRepository } from '@/firebase/repositories/UsersRepository';
 import { normalizeToLowercase } from '@/helpers';
-import { parseCsvFile, unparseCsvFile } from '@/helpers/csv';
+import { downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
 import { fetchOrgByName } from '@/helpers/query/orgs';
 import { normalizeUserTypeForBackend } from '@/helpers/userType';
 import { logger } from '@/logger';
@@ -309,22 +309,6 @@ const downloadErrors = () => {
 
   // Initiate download
   downloadCsv(csvString, 'add-users-errors.csv');
-};
-
-const downloadCsv = (csv: string, filename: string) => {
-  // Create Download Link
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const csvUrl = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', csvUrl);
-  link.setAttribute('download', filename);
-  document.body.appendChild(link); // Required for Firefox
-
-  // Trigger the Download
-  link.click();
-
-  // Cleanup
-  document.body.removeChild(link);
 };
 
 const submitUsers = async () => {

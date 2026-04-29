@@ -34,6 +34,24 @@ export const csvFileToJson = async (file: File): Promise<any[]> => {
 };
 
 /**
+ * Trigger a browser download of a CSV string.
+ * @param csv The CSV string to download
+ * @param filename The filename to use for the downloaded file
+ */
+export const downloadCsv = (csv: string, filename: string) => {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const csvUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', csvUrl);
+  link.setAttribute('download', filename);
+  // NB: Required by Firefox to actually trigger the download
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(csvUrl);
+};
+
+/**
  * Generate CSV columns from a JSON object.
  * @param rawJson The JSON object to generate columns from.
  * @returns An array of CsvColumn objects.

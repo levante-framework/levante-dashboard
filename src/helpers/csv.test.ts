@@ -1,8 +1,84 @@
-import { describe, it, expect } from 'vitest';
-import { generateColumns, parseCsvFile, unparseCsvFile } from './csv';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { downloadCsv, generateColumns, parseCsvFile, unparseCsvFile } from './csv';
 
 const makeFile = (content: string[][]) =>
   new File([content.map((row) => row.join(',')).join('\n')], 'test.csv', { type: 'text/csv' });
+
+describe('downloadCsv', () => {
+  let createObjectURL: ReturnType<typeof vi.fn>;
+  let revokeObjectURL: ReturnType<typeof vi.fn>;
+  let appendChild: ReturnType<typeof vi.fn>;
+  let removeChild: ReturnType<typeof vi.fn>;
+  let click: ReturnType<typeof vi.fn>;
+  let originalCreateElement: typeof document.createElement;
+  let originalAppendChild: typeof document.body.appendChild;
+  let originalRemoveChild: typeof document.body.removeChild;
+
+  beforeEach(() => {
+    createObjectURL = vi.fn(() => 'mock-blob-url');
+    revokeObjectURL = vi.fn();
+    appendChild = vi.fn();
+    removeChild = vi.fn();
+    click = vi.fn();
+
+    global.URL.createObjectURL = createObjectURL;
+    global.URL.revokeObjectURL = revokeObjectURL;
+
+    originalCreateElement = document.createElement.bind(document);
+    document.createElement = vi.fn((tag: string) => {
+      const el = originalCreateElement(tag);
+      if (tag === 'a') el.click = click;
+      return el;
+    });
+
+    originalAppendChild = document.body.appendChild.bind(document.body);
+    originalRemoveChild = document.body.removeChild.bind(document.body);
+    document.body.appendChild = appendChild;
+    document.body.removeChild = removeChild;
+  });
+
+  afterEach(() => {
+    document.createElement = originalCreateElement;
+    document.body.appendChild = originalAppendChild;
+    document.body.removeChild = originalRemoveChild;
+  });
+
+  it('creates a CSV Blob with the correct MIME type', () => {
+    downloadCsv('a,b\n1,2', 'test.csv');
+
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    const [blob] = createObjectURL.mock.calls[0] as unknown as [Blob];
+    expect(blob).toBeInstanceOf(Blob);
+    expect(blob.type).toBe('text/csv;charset=utf-8;');
+  });
+
+  it('triggers a download via an anchor element with the given filename', () => {
+    downloadCsv('a,b\n1,2', 'my-file.csv');
+
+    expect(appendChild).toHaveBeenCalledOnce();
+    expect(click).toHaveBeenCalledOnce();
+    expect(removeChild).toHaveBeenCalledOnce();
+
+    const link = appendChild.mock.calls[0]?.[0] as HTMLAnchorElement;
+    expect(link.tagName).toBe('A');
+    expect(link.getAttribute('href')).toBe('mock-blob-url');
+    expect(link.getAttribute('download')).toBe('my-file.csv');
+  });
+
+  it('revokes the object URL after triggering the download', () => {
+    downloadCsv('a,b\n1,2', 'test.csv');
+
+    expect(revokeObjectURL).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledWith('mock-blob-url');
+  });
+
+  it('writes the provided CSV string to the Blob', async () => {
+    downloadCsv('id,name\n1,Alice', 'test.csv');
+
+    const [blob] = createObjectURL.mock.calls[0] as unknown as [Blob];
+    expect(await blob.text()).toBe('id,name\n1,Alice');
+  });
+});
 
 describe('generateColumns', () => {
   it('returns an empty array for an empty object', () => {

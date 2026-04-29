@@ -122,6 +122,9 @@ import PvAccordion from 'primevue/accordion';
 import PvAccordionPanel from 'primevue/accordionpanel';
 import PvAccordionHeader from 'primevue/accordionheader';
 import PvAccordionContent from 'primevue/accordioncontent';
+import { downloadCsv, unparseCsvFile } from '@/helpers/csv';
+
+const TEMPLATE_HEADERS = ['id', 'userType', 'month', 'year', 'caregiverId', 'teacherId', 'school', 'class', 'cohort'];
 
 const fileRequirementsAccordionValue = ref(null);
 const siteColumnAccordionValue = ref(null);
@@ -185,22 +188,8 @@ const fileRequirementsTableData = [
   },
 ];
 
-const generateTemplateFile = () => {
-  const headers = ['id', 'userType', 'month', 'year', 'caregiverId', 'teacherId', 'school', 'class', 'cohort'];
-  const csvContent = headers.join(',') + '\n';
-  return new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-};
-
 const downloadTemplate = () => {
-  const blob = generateTemplateFile();
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
-  link.setAttribute('download', 'add_users_template.csv');
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  downloadCsv(unparseCsvFile([], TEMPLATE_HEADERS), 'add_users_template.csv');
 };
 </script>
 
