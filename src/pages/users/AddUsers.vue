@@ -166,7 +166,7 @@ watch(currentSite, () => {
   resetUserProgress();
 });
 
-watch([status], () => {
+watch(status, () => {
   // Scroll to bottom of page after datatable is displayed
   // NB: nextTick ensures datatable is rendered before scroll
   nextTick(() => {
@@ -481,7 +481,10 @@ const submitUsers = async () => {
       };
     });
     registeredUsers.value = mergedUsers;
+
+    // Success: set status, reset user confirmation, and download registered users
     status.value = { message: 'Users created successfully.', severity: 'success' };
+    setShouldUserConfirm(false);
     downloadRegisteredUsers();
   } catch (error) {
     logger.error('Error Registering Users', { error });
@@ -590,9 +593,6 @@ const downloadRegisteredUsers = () => {
 
   // Initiate download
   downloadCsv(csvString, 'registered-users.csv');
-
-  // Reset user confirmation
-  setShouldUserConfirm(false);
 };
 </script>
 

@@ -66,23 +66,17 @@ vi.mock('@/store/auth', async () => {
   };
 });
 
-// Hoisted so the spies can be referenced both inside the factory below and
+// Hoisted so the spy can be referenced both inside the factory below and
 // from within individual tests via the imported store mock.
-const { setHasUserConfirmedMock, setShouldUserConfirmMock } = vi.hoisted(() => ({
-  setHasUserConfirmedMock: vi.fn(),
+const { setShouldUserConfirmMock } = vi.hoisted(() => ({
   setShouldUserConfirmMock: vi.fn(),
 }));
 
-vi.mock('@/store/levante', async () => {
-  const { ref } = await import('vue');
-  return {
-    useLevanteStore: vi.fn(() => ({
-      hasUserConfirmed: ref(false),
-      setHasUserConfirmed: setHasUserConfirmedMock,
-      setShouldUserConfirm: setShouldUserConfirmMock,
-    })),
-  };
-});
+vi.mock('@/store/levante', () => ({
+  useLevanteStore: vi.fn(() => ({
+    setShouldUserConfirm: setShouldUserConfirmMock,
+  })),
+}));
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
@@ -131,7 +125,6 @@ describe('AddUsers Page', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     mockRouter.push.mockReset();
-    setHasUserConfirmedMock.mockReset();
     setShouldUserConfirmMock.mockReset();
   });
 
