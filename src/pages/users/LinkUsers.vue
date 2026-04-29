@@ -6,8 +6,8 @@
       <PvDivider class="my-5" />
       <PvMessage v-if="validationErrors.length" severity="error" class="mt-3 mb-3">
         <p class="m-0 mb-2">
-          There are errors in the file you tried to upload, <code>{{ uploadedFile?.name || 'selected file' }}</code>. Please fix the listed errors and
-          try again.
+          There are errors in the file you tried to upload, <code>{{ uploadedFile?.name || 'selected file' }}</code
+          >. Please fix the listed errors and try again.
         </p>
         <ul class="m-0 pl-3">
           <li v-for="(error, index) in validationErrors" :key="`${index}-${error}`">
@@ -24,14 +24,15 @@
         @close="linkingAttemptError = ''"
       >
         <p class="m-0 mb-2">
-          Linking was attempted but did not complete for <code>{{ uploadedFile?.name || 'your file' }}</code>.
+          Linking was attempted but did not complete for <code>{{ uploadedFile?.name || 'your file' }}</code
+          >.
         </p>
         <p class="m-0">Error: {{ linkingAttemptError }}</p>
       </PvMessage>
 
       <PvMessage v-if="lastLinkedFileName" severity="success" closable class="mb-4">
-        Linking successful with file <code>{{ lastLinkedFileName }}</code>.
-        Click below to upload another file.
+        Linking successful with file <code>{{ lastLinkedFileName }}</code
+        >. Click below to upload another file.
       </PvMessage>
 
       <div class="m-0 mb-5 p-3 bg-gray-100 border-1 border-gray-200 border-round">
@@ -54,7 +55,6 @@
             {{ isAllSitesSelected ? 'Select a site to link users' : 'No file chosen' }}
           </span>
         </div>
-
 
         <div v-if="isFileUploaded && !errorUsers.length">
           <PvDataTable
@@ -119,7 +119,7 @@
 
 <script setup>
 import { ref, toRaw, watch, computed } from 'vue';
-import { csvFileToJson } from '@/helpers';
+import { csvFileToJson } from '@/helpers/csv';
 import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/store/auth';
 import LinkUsersInfo from '@/components/userInfo/LinkUsersInfo.vue';
@@ -297,7 +297,9 @@ const onFileUpload = async (event) => {
   }
 
   if (!hasAnyLinkingData(filteredData)) {
-    currentValidationErrors.push('At least one child row must include a <code>caregiverId</code> and/or a <code>teacherId</code> to link users.');
+    currentValidationErrors.push(
+      'At least one child row must include a <code>caregiverId</code> and/or a <code>teacherId</code> to link users.',
+    );
   }
 
   if (currentValidationErrors.length) {
@@ -467,8 +469,7 @@ const submitUsers = async () => {
         const userTypeValue = user[userTypeField];
         // Link users: send CSV userType as-is (trimmed). Do not use normalizeUserTypeForBackend —
         // the linkUsers Cloud Function expects child rows as "child", not "student".
-        normalizedUser.userType =
-          typeof userTypeValue === 'string' ? userTypeValue.trim() : userTypeValue;
+        normalizedUser.userType = typeof userTypeValue === 'string' ? userTypeValue.trim() : userTypeValue;
       }
       if (uidField) normalizedUser.uid = user[uidField];
 

@@ -8,28 +8,42 @@
     </template>
     <div class="info-message-container">
       <i class="pi pi-exclamation-circle"></i>
-      <p>Users are added to groups. You cannot add users without first <router-link :to="{ name: 'ListGroups' }">creating their group(s)</router-link>.</p>
+      <p>
+        Users are added to groups. You cannot add users without first
+        <router-link :to="{ name: 'ListGroups' }">creating their group(s)</router-link>.
+      </p>
     </div>
 
     <div class="how-to-section">
       <h3>How to Add Users</h3>
-      <div class="text-md text-gray-500 mb-1 line-height-3">Before adding users, read the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">add users documentation</a>. Use the template below to prepare your first user information file.</div>
+      <div class="text-md text-gray-500 mb-1 line-height-3">
+        Before adding users, read the
+        <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer"
+          >add users documentation</a
+        >. Use the template below to prepare your first user information file.
+      </div>
       <div class="download-button-container">
-      <PvButton
-        class="download-csv-btn"
-        data-testid="download-template"
-        severity="primary"
-        variant="outlined"
-        @click="downloadTemplate"
-      >
-        <i class="pi pi-download"></i>
-        Download CSV Template
-      </PvButton>
-    </div>
+        <PvButton
+          class="download-csv-btn"
+          data-testid="download-template"
+          severity="primary"
+          variant="outlined"
+          @click="downloadTemplate"
+        >
+          <i class="pi pi-download"></i>
+          Download CSV Template
+        </PvButton>
+      </div>
     </div>
     <div class="file-requirements-section">
       <h2>User Information File Requirements</h2>
-      <p>Formatting requirements for your user information file are detailed in the table below. For more information, refer to the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">add users documentation</a>.</p>
+      <p>
+        Formatting requirements for your user information file are detailed in the table below. For more information,
+        refer to the
+        <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer"
+          >add users documentation</a
+        >.
+      </p>
 
       <PvAccordion v-model:value="fileRequirementsAccordionValue" class="mb-4">
         <PvAccordionPanel value="requirements">
@@ -48,46 +62,56 @@
             <p>Notes:</p>
             <ul>
               <li>Reminder: Users either belong to a School and Class OR a Cohort.</li>
-              <li>Complete the appropriate column(s) according to the users' Group membership (School and Class OR Cohort).</li>
-              <li>Caregivers and teachers must belong to the same group(s) as the children to which they are linked in order to receive the correct surveys.</li>
+              <li>
+                Complete the appropriate column(s) according to the users' Group membership (School and Class OR
+                Cohort).
+              </li>
+              <li>
+                Caregivers and teachers must belong to the same group(s) as the children to which they are linked in
+                order to receive the correct surveys.
+              </li>
             </ul>
           </PvAccordionContent>
         </PvAccordionPanel>
       </PvAccordion>
 
-    <PvAccordion v-model:value="siteColumnAccordionValue" class="mb-6">
-      <PvAccordionPanel value="site-column">
-        <PvAccordionHeader>What if my user file has a site column?</PvAccordionHeader>
-        <PvAccordionContent>
-          <p>
-            Previously, <code>site</code> was a required column in the user information file. Now it is no longer required, because all users will be added to the site chosen within the site selector on the top right of the dashboard. If <code>site</code> exists in your spreadsheet and its values do not match the selected site, you will see a warning. We recommend having a separate user information file for each site.
-          </p>
-        </PvAccordionContent>
-      </PvAccordionPanel>
-    </PvAccordion>
+      <PvAccordion v-model:value="siteColumnAccordionValue" class="mb-6">
+        <PvAccordionPanel value="site-column">
+          <PvAccordionHeader>What if my user file has a site column?</PvAccordionHeader>
+          <PvAccordionContent>
+            <p>
+              Previously, <code>site</code> was a required column in the user information file. Now it is no longer
+              required, because all users will be added to the site chosen within the site selector on the top right of
+              the dashboard. If <code>site</code> exists in your spreadsheet and its values do not match the selected
+              site, you will see an error. We recommend having a separate user information file for each site.
+            </p>
+          </PvAccordionContent>
+        </PvAccordionPanel>
+      </PvAccordion>
 
-    <p>
-      Below is an example of what your CSV/spreadsheet should look like. Column names must match exactly. Columns with names that do not match exactly, including any additional columns, will not be processed or stored.</p>
-      
-    
+      <p>
+        Below is an example of what your CSV/spreadsheet should look like. Column names must match exactly. Columns with
+        names that do not match exactly, including any additional columns, will not be processed or stored.
+      </p>
 
-    <div class="csv-example-image-container">
-      <img
-        id="add-users-example-image"
-        :src="LEVANTE_STATIC_ASSETS_URL + '/add_users_example_with_permissions.png'"
-        alt="Add Users CSV Example "
-        class="csv-example-image"
-      />
-    </div>
-    <p>Once you have uploaded a valid file and clicked "Add Users", the platform will automatically download a <code>registered-users.csv</code> file with login information and LEVANTE <code>uid</code>s for each user.</p>
+      <div class="csv-example-image-container">
+        <img
+          id="add-users-example-image"
+          :src="LEVANTE_STATIC_ASSETS_URL + '/add_users_example_with_permissions.png'"
+          alt="Add Users CSV Example "
+          class="csv-example-image"
+        />
+      </div>
+      <p>
+        Once you have uploaded a valid file and clicked "Add Users", the platform will automatically download a
+        <code>registered-users.csv</code> file with login information and LEVANTE <code>uid</code>s for each user.
+      </p>
     </div>
   </PvPanel>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
-import { useAuthStore } from '@/store/auth';
-import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
 import DocsButton from '@/components/DocsButton.vue';
 import PvColumn from 'primevue/column';
@@ -98,46 +122,74 @@ import PvAccordion from 'primevue/accordion';
 import PvAccordionPanel from 'primevue/accordionpanel';
 import PvAccordionHeader from 'primevue/accordionheader';
 import PvAccordionContent from 'primevue/accordioncontent';
+import { downloadCsv, unparseCsvFile } from '@/helpers/csv';
 
-const authStore = useAuthStore();
-const { shouldUsePermissions } = storeToRefs(authStore);
+const TEMPLATE_HEADERS = ['id', 'userType', 'month', 'year', 'caregiverId', 'teacherId', 'school', 'class', 'cohort'];
+
 const fileRequirementsAccordionValue = ref(null);
 const siteColumnAccordionValue = ref(null);
 
 const fileRequirementsTableData = [
-  { column: 'id', required: 'Yes', definition: 'Project id; A lab- or site-specific user identifier', details: 'Often a study acronym and a number. Example: hkl_012' },
-  { column: 'userType', required: 'Yes', definition: 'Type of dashboard user', details: 'Must be one of “child”, “caregiver”, or “teacher”' },
-  { column: 'month', required: 'Yes, for child users only', definition: 'Month the child user was born', details: 'A number from 1 to 12. Example: 5 for May' },
-  { column: 'year', required: 'Yes, for child users only', definition: 'Year the child user was born', details: 'Four-digit year. Example: 2017' },
-  { column: 'caregiverId', required: 'For linking step only', definition: 'id of the child’s caregiver', details: 'If you are ready to link users, you can include these fields in your new user information CSV file. If you are not ready, you can leave this field blank until later.' },
-  { column: 'teacherId', required: 'For linking step only', definition: 'id of the child’s teacher', details: 'If you are ready to link users, you can include these fields in your new user information CSV file. If you are not ready, you can leave this field blank until later.' },
-  { column: 'school', required: 'See notes', definition: 'Relevant school name you created in the “Add Groups” step.', details: 'Example: LEVANTE School' },
-  { column: 'class', required: 'See notes', definition: 'Relevant class name you created in the “Add Groups” step.', details: 'Example: Class A' },
-  { column: 'cohort', required: 'See notes', definition: 'Relevant cohort name you created in the “Add Groups” step.', details: 'Example: How Kids Learn Study' },
+  {
+    column: 'id',
+    required: 'Yes',
+    definition: 'Project id; A lab- or site-specific user identifier',
+    details: 'Often a study acronym and a number. Example: hkl_012',
+  },
+  {
+    column: 'userType',
+    required: 'Yes',
+    definition: 'Type of dashboard user',
+    details: 'Must be one of “child”, “caregiver”, or “teacher”',
+  },
+  {
+    column: 'month',
+    required: 'Yes, for child users only',
+    definition: 'Month the child user was born',
+    details: 'A number from 1 to 12. Example: 5 for May',
+  },
+  {
+    column: 'year',
+    required: 'Yes, for child users only',
+    definition: 'Year the child user was born',
+    details: 'Four-digit year. Example: 2017',
+  },
+  {
+    column: 'caregiverId',
+    required: 'For linking step only',
+    definition: 'id of the child’s caregiver',
+    details:
+      'If you are ready to link users, you can include these fields in your new user information CSV file. If you are not ready, you can leave this field blank until later.',
+  },
+  {
+    column: 'teacherId',
+    required: 'For linking step only',
+    definition: 'id of the child’s teacher',
+    details:
+      'If you are ready to link users, you can include these fields in your new user information CSV file. If you are not ready, you can leave this field blank until later.',
+  },
+  {
+    column: 'school',
+    required: 'See notes',
+    definition: 'Relevant school name you created in the “Add Groups” step.',
+    details: 'Example: LEVANTE School',
+  },
+  {
+    column: 'class',
+    required: 'See notes',
+    definition: 'Relevant class name you created in the “Add Groups” step.',
+    details: 'Example: Class A',
+  },
+  {
+    column: 'cohort',
+    required: 'See notes',
+    definition: 'Relevant cohort name you created in the “Add Groups” step.',
+    details: 'Example: How Kids Learn Study',
+  },
 ];
 
-const generateTemplateFile = () => {
-  const headers = ['id', 'userType', 'month', 'year', 'caregiverId', 'teacherId', 'site', 'school', 'class', 'cohort'];
-
-  if (shouldUsePermissions.value) {
-    const siteIndex = headers.indexOf('site');
-    if (siteIndex != -1) headers.splice(siteIndex, 1);
-  }
-
-  const csvContent = headers.join(',') + '\n';
-  return new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-};
-
 const downloadTemplate = () => {
-  const blob = generateTemplateFile();
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
-  link.setAttribute('download', 'add_users_template.csv');
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  downloadCsv(unparseCsvFile([], TEMPLATE_HEADERS), 'add_users_template.csv');
 };
 </script>
 

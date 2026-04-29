@@ -91,7 +91,6 @@
 
 <script setup>
 import { ref, toRaw } from 'vue';
-import { csvFileToJson } from '@/helpers';
 import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/store/auth';
 import EditUsersInfo from '@/components/userInfo/EditUsersInfo.vue';
@@ -103,6 +102,8 @@ import _forEach from 'lodash/forEach';
 import _startCase from 'lodash/startCase';
 import _isEmpty from 'lodash/isEmpty';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import { csvFileToJson, generateColumns } from '@/helpers/csv';
+
 const authStore = useAuthStore();
 const toast = useToast();
 const isFileUploaded = ref(false);
@@ -303,23 +304,6 @@ const submitEdits = async () => {
     activeSubmit.value = false;
   }
 };
-
-function generateColumns(rawJson) {
-  let columns = [];
-  const columnValues = Object.keys(rawJson);
-  _forEach(columnValues, (col) => {
-    let dataType = typeof rawJson[col];
-    if (dataType === 'object') {
-      if (rawJson[col] instanceof Date) dataType = 'date';
-    }
-    columns.push({
-      field: col,
-      header: _startCase(col),
-      dataType: dataType,
-    });
-  });
-  return columns;
-}
 
 function addErrorUser(user, error) {
   // If there are no error users yet, generate the

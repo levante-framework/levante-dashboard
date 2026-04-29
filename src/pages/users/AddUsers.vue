@@ -1,5 +1,72 @@
 <template>
   <main class="container main">
+    <section class="main-body">
+      <AddUsersInfo />
+
+      <PvDivider class="my-5" />
+
+      <!-- Status message -->
+      <div class="navbar-offset" ref="statusRef">
+        <PvMessage
+          v-if="status"
+          class="mb-3"
+          :closable="false"
+          :icon="status.severity === 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"
+          :pt="{ transition: { css: false, appear: false } }"
+          :severity="status.severity"
+        >
+          {{ status.message }}
+        </PvMessage>
+      </div>
+
+      <div class="m-0 mb-3 p-3 pb-0 bg-gray-100 border-1 border-gray-200 border-round">
+        <!-- CSV uploader -->
+        <CsvUploader
+          :disabled="isAllSitesSelected"
+          :uploadedFile="uploadedFile"
+          disabledMessage="Select a site to add users"
+          data-cy="upload-add-users-csv"
+          @upload="onFileUpload"
+        />
+
+        <!-- Errors datatable -->
+        <div v-if="validationErrors" class="mb-3">
+          <CsvTable :headers="validationErrors.headers" :keys="validationErrors.keys" :rows="validationErrors.rows" />
+          <PvButton v-if="validationErrors.showDownloadButton" label="Download Error CSV" @click="downloadErrors" />
+        </div>
+
+        <!-- Rows datatable -->
+        <div v-if="newUsers && !validationErrors" class="mb-3">
+          <CsvTable :keys="['id', 'userType', 'month', 'year', 'school', 'class', 'cohort']" :rows="newUsers" />
+
+          <div class="submit-container">
+            <div v-if="registeredUsers" class="button-group">
+              <PvButton label="Continue to Link Users" icon="pi pi-link" @click="router.push({ name: 'Link Users' })" />
+              <PvButton
+                label="Download Users"
+                icon="pi pi-download"
+                variant="outlined"
+                class="download-button"
+                data-cy="button-download-users"
+                @click="downloadRegisteredUsers"
+              />
+            </div>
+            <PvButton
+              v-else
+              v-tooltip.bottom="isAllSitesSelected ? 'Please select a specific site to add users' : ''"
+              :label="isSubmitting ? 'Adding Users' : 'Add Users from Uploaded File'"
+              :icon="isSubmitting ? 'pi pi-spin pi-spinner' : ''"
+              :disabled="isSubmitting || isAllSitesSelected"
+              data-testid="start-adding-button"
+              data-cy="button-add-users-from-file"
+              @click="submitUsers"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bulk create users modal -->
     <PvDialog
       v-model:visible="showBulkCreateUsersModal"
       modal
@@ -18,865 +85,526 @@
         </p>
       </div>
     </PvDialog>
-
-    <section class="main-body">
-      <!--Upload file section-->
-      <AddUsersInfo />
-
-      <PvDivider class="my-5" />
-
-      <div class="m-0 mb-5 p-3 bg-gray-100 border-1 border-gray-200 border-round">
-        <div class="flex align-items-center gap-3">
-          <PvFileUpload
-            :choose-label="
-              isFileUploaded && !errorMissingColumns && !errorUsers.length
-                ? 'Choose Another CSV File'
-                : 'Choose CSV File'
-            "
-            :show-cancel-button="false"
-            :show-upload-button="false"
-            :disabled="isAllSitesSelected"
-            auto
-            accept=".csv"
-            custom-upload
-            mode="basic"
-            name="addUsersFile[]"
-            data-cy="upload-add-users-csv"
-            @uploader="onFileUpload($event)"
-          />
-          <span v-if="isFileUploaded" class="text-gray-500">File: {{ uploadedFile?.name }}</span>
-          <span v-else class="text-gray-500">
-            {{ isAllSitesSelected ? 'Select a site to add users' : 'No file chosen' }}
-          </span>
-        </div>
-
-        <div v-if="isFileUploaded && !errorMissingColumns && !errorUsers.length">
-          <div v-if="hasMultipleSites" class="mt-3 mb-4 p-3 bg-yellow-100 border-1 border-yellow-300 border-round">
-            <div class="flex align-items-center gap-2">
-              <i class="pi pi-exclamation-triangle text-yellow-600"></i>
-              <span class="text-yellow-800 font-semibold">
-                Multiple sites detected in file. Users will only be created for the currently selected site<template
-                  v-if="currentSiteName"
-                  >: {{ currentSiteName }}</template
-                >.
-              </span>
-            </div>
-          </div>
-          <PvDataTable
-            ref="dataTable"
-            :value="rawUserFile"
-            show-gridlines
-            :row-hover="true"
-            :resizable-columns="true"
-            paginator
-            :always-show-paginator="false"
-            :rows="10"
-            class="datatable"
-          >
-            <PvColumn v-for="col of allFields" :key="col.field" :field="col.field">
-              <template #header>
-                <div class="col-header">
-                  <b>{{ col.header }}</b>
-                </div>
-              </template>
-              <template #body="{ data, field }">
-                <span>{{ data[field] }}</span>
-              </template>
-            </PvColumn>
-          </PvDataTable>
-
-          <div class="submit-container">
-            <div v-if="registeredUsers.length" class="button-group">
-              <PvButton label="Continue to Link Users" icon="pi pi-link" @click="router.push({ name: 'Link Users' })" />
-              <PvButton
-                label="Download Users"
-                icon="pi pi-download"
-                variant="outlined"
-                class="download-button"
-                data-cy="button-download-users"
-                @click="downloadCSV"
-              />
-            </div>
-            <PvButton
-              v-else
-              v-tooltip.bottom="isAllSitesSelected ? 'Please select a specific site to add users' : ''"
-              :label="activeSubmit ? 'Adding Users' : 'Add Users from Uploaded File'"
-              :icon="activeSubmit ? 'pi pi-spin pi-spinner' : ''"
-              :disabled="activeSubmit || isAllSitesSelected"
-              data-testid="start-adding-button"
-              data-cy="button-add-users-from-file"
-              @click="submitUsers"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- Datatable of error children -->
-      <div v-if="showErrorTable" class="error-container">
-        <div class="error-header">
-          <h3>Rows with Errors</h3>
-        </div>
-        <PvDataTable
-          ref="errorTable"
-          :value="errorUsers"
-          show-gridlines
-          export-filename="error-datatable-export"
-          :row-hover="true"
-          :resizable-columns="true"
-          paginator
-          :always-show-paginator="false"
-          :rows="10"
-          class="datatable"
-        >
-          <PvColumn v-for="col of errorUserColumns" :key="col.field" :field="col.field">
-            <template #header>
-              {{ col.header }}
-            </template>
-            <template #body="{ data, field }">
-              <span>{{ data[field] }}</span>
-            </template>
-          </PvColumn>
-        </PvDataTable>
-      </div>
-    </section>
   </main>
 </template>
 
-<script setup>
-import { ref, toRaw, watch, nextTick, computed } from 'vue';
-import { csvFileToJson, normalizeToLowercase } from '@/helpers';
-import { normalizeUserTypeForBackend } from '@/helpers/userType';
-import _cloneDeep from 'lodash/cloneDeep';
-import _forEach from 'lodash/forEach';
-import _capitalize from 'lodash/capitalize';
-import _isEmpty from 'lodash/isEmpty';
-import _startCase from 'lodash/startCase';
+<script setup lang="ts">
 import _chunk from 'lodash/chunk';
-import { useToast } from 'primevue/usetoast';
-import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
-import { useAuthStore } from '@/store/auth';
-import { usersRepository } from '@/firebase/repositories/UsersRepository';
-import AppSpinner from '@/components/AppSpinner.vue';
-import { pluralizeFirestoreCollection } from '@/helpers';
-import { fetchOrgByName } from '@/helpers/query/orgs';
+import _cloneDeep from 'lodash/cloneDeep';
+import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
-import PvColumn from 'primevue/column';
-import PvDataTable from 'primevue/datatable';
 import PvDialog from 'primevue/dialog';
 import PvDivider from 'primevue/divider';
-import PvFileUpload from 'primevue/fileupload';
+import type { FileUploadUploaderEvent } from 'primevue/fileupload';
+import PvMessage from 'primevue/message';
+import { computed, nextTick, ref, toRaw, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import type { ZodIssue } from 'zod'; // @TODO: replace this w/ makeCustomIssue when published
+import {
+  AddUserCsvHeaderSchema,
+  UserCsvSchema,
+  UserCsvType,
+  combineUserCsvIssues,
+} from '@levante-framework/levante-zod';
+import AppSpinner from '@/components/AppSpinner.vue';
+import CsvTable from '@/components/CsvTable.vue';
+import CsvUploader from '@/components/CsvUploader.vue';
+import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
+import { NORMALIZED_USER_CSV_HEADERS, USER_CSV_HEADERS } from '@/constants/csv';
+import { CreateUsersPayload, usersRepository } from '@/firebase/repositories/UsersRepository';
+import { normalizeToLowercase } from '@/helpers';
+import { downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
+import { fetchOrgByName } from '@/helpers/query/orgs';
+import { normalizeUserTypeForBackend } from '@/helpers/userType';
 import { logger } from '@/logger';
-import { storeToRefs } from 'pinia';
-import { validateAddUsersFileUpload } from '@levante-framework/levante-zod';
+import { useAuthStore } from '@/store/auth';
 import { useLevanteStore } from '@/store/levante';
 
-const levanteStore = useLevanteStore();
-const { hasUserConfirmed } = storeToRefs(levanteStore);
-const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const authStore = useAuthStore();
 const { currentSite, currentSiteName } = storeToRefs(authStore);
-const toast = useToast();
-
 const isAllSitesSelected = computed(() => currentSite.value === 'any');
 
-const isFileUploaded = ref(false);
-const uploadedFile = ref(null);
-const rawUserFile = ref({});
-const registeredUsers = ref([]);
-const hasMultipleSites = ref(false);
-const showBulkCreateUsersModal = ref(false);
-
-// Primary Table & Dropdown refs
-const dataTable = ref();
-
-// One or the other of the following columns is required:
-// 'cohort', | 'site', 'school', 'class'
-
-// Month and Year are required only for 'child' or 'student' users
-const allFields = [
-  {
-    field: 'userType',
-    header: 'userType',
-    dataType: 'string',
-  },
-  {
-    field: 'month',
-    header: 'month',
-    dataType: 'number',
-  },
-  {
-    field: 'year',
-    header: 'year',
-    dataType: 'number',
-  },
-  {
-    field: 'school',
-    header: 'school',
-    dataType: 'string',
-  },
-  {
-    field: 'class',
-    header: 'class',
-    dataType: 'string',
-  },
-  {
-    field: 'cohort',
-    header: 'cohort',
-    dataType: 'string',
-  },
-];
-
-// Error Users Table refs
-const errorTable = ref();
-const errorUsers = ref([]);
-const errorUserColumns = ref([]);
-const errorMessage = ref('');
-const showErrorTable = ref(false);
-const errorMissingColumns = ref(false);
-
-const activeSubmit = ref(false);
+const levanteStore = useLevanteStore();
+const { setShouldUserConfirm } = levanteStore;
 
 const router = useRouter();
 
-watch(
-  errorUsers,
-  () => {
-    // Scroll to bottom of page after error table is displayed
-    // Using nextTick to ensure the error table is rendered otherwise the scroll
-    // happens before the table is rendered
-    nextTick(() => {
-      window.scrollTo(0, document.body.scrollHeight);
-    });
-  },
-  { deep: true },
-);
+const isSubmitting = ref(false);
+const newUsers = ref<UserCsvType | null>(null);
+const newUsersMap = ref<number[] | null>(null);
+const parsedData = ref<Record<string, string>[] | null>(null);
+const registeredUsers = ref<UserCsvType | null>(null);
+const showBulkCreateUsersModal = ref(false);
+const status = ref<{ message: string; severity: string } | null>(null);
+const statusRef = ref<HTMLElement | null>(null);
+const uploadedFile = ref<File | null>(null);
+const validatedData = ref<UserCsvType | null>(null);
+const validationErrors = ref<{
+  headers: string[];
+  keys: string[];
+  rows: Record<string, unknown>[];
+  showDownloadButton: boolean;
+} | null>(null);
 
 const resetUserProgress = () => {
+  isSubmitting.value = false;
+  newUsers.value = null;
+  parsedData.value = null;
+  registeredUsers.value = null;
+  showBulkCreateUsersModal.value = false;
+  status.value = null;
   uploadedFile.value = null;
-  errorUsers.value = [];
-  errorUserColumns.value = [];
-  showErrorTable.value = false;
-  errorMessage.value = '';
-  errorTable.value = null;
-  errorMissingColumns.value = false;
-  isFileUploaded.value = false;
-  registeredUsers.value = [];
-  activeSubmit.value = false;
-  hasMultipleSites.value = false;
+  validatedData.value = null;
+  validationErrors.value = null;
 
   // Reset user confirmation
-  setHasUserConfirmed(false);
+  setShouldUserConfirm(false);
 };
 
-// Functions supporting the uploader
-const onFileUpload = async (event) => {
+watch(currentSite, () => {
+  if (isSubmitting.value) return;
+  resetUserProgress();
+});
+
+watch(status, () => {
+  // Scroll to bottom of page after datatable is displayed
+  // NB: nextTick ensures datatable is rendered before scroll
+  nextTick(() => {
+    statusRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+const onFileUpload = async (event: FileUploadUploaderEvent) => {
   // Reset all error states and data
   resetUserProgress();
 
-  // Read the file. In case of multiple files, use the last one.
-  const file = event.files[event.files.length - 1];
+  // Read the file (if multiple files, use the last one)
+  const files = Array.isArray(event.files) ? event.files : [event.files];
+  const file = files[files.length - 1];
+  if (!file) {
+    status.value = { message: 'No file uploaded.', severity: 'error' };
+    return;
+  }
   uploadedFile.value = file;
 
-  const parsedData = await csvFileToJson(file);
-
-  if (!parsedData || parsedData.length === 0) {
-    toast.add({
+  // Parse the file
+  const _parsedData = await parseCsvFile(file, {
+    normalizedHeaders: NORMALIZED_USER_CSV_HEADERS,
+    omitColumns: ['errors'],
+  });
+  if (!_parsedData) {
+    status.value = {
+      message:
+        'The uploaded file could not be read. If you used a spreadsheet app, please "Save as" or "Export" to CSV and upload again.',
       severity: 'error',
-      summary: 'Error: Empty File',
-      detail: 'The uploaded file contains no data',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+    };
+    return;
+  }
+  if (_parsedData.length === 0) {
+    status.value = {
+      message: 'The uploaded file contains no users. Please add at least one user and upload again.',
+      severity: 'error',
+    };
+    return;
+  }
+  parsedData.value = _parsedData;
+
+  // Validate all required headers are present
+  const headers = Object.keys(_parsedData[0] ?? {});
+  const headerValidation = AddUserCsvHeaderSchema.safeParse(headers);
+  if (!headerValidation.success) {
+    status.value = { message: 'The uploaded file is invalid. See table for details.', severity: 'error' };
+    validationErrors.value = {
+      headers: ['Validation Errors'],
+      keys: ['message'],
+      rows: headerValidation.error.issues.map((issue) => {
+        return {
+          message: `${issue.path.join('.')}: ${issue.message}`,
+        };
+      }),
+      showDownloadButton: false,
+    };
     return;
   }
 
-  const validation = validateAddUsersFileUpload(parsedData, !!currentSite.value);
-
-  if (validation.headerErrors && validation.headerErrors.length > 0) {
-    const missingHeaders = validation.headerErrors.map((e) => e.field).join(', ');
-    toast.add({
-      severity: 'error',
-      summary: 'Error: Missing Column',
-      detail: `Missing required column(s): ${missingHeaders}`,
-      life: TOAST_DEFAULT_LIFE_DURATION,
+  // Validate site column, if present
+  const siteIssues: ZodIssue[] = [];
+  if (headers.includes('site')) {
+    const normalizedSelectedSite = normalizeToLowercase(currentSiteName.value ?? '');
+    _parsedData.forEach((row, idx) => {
+      // Must match the selected site
+      if (row.site && normalizeToLowercase(row.site) !== normalizedSelectedSite) {
+        siteIssues.push({
+          code: 'custom',
+          message: `Must match the selected site`,
+          path: [idx, 'site'],
+          input: row.site,
+        });
+      }
     });
-    errorMissingColumns.value = true;
+  }
+
+  // Validate w/ zod schema
+  const validated = UserCsvSchema.safeParse(_parsedData);
+  const issues = combineUserCsvIssues([...(validated.error?.issues ?? []), ...siteIssues]);
+  if (issues.length > 0) {
+    // Validation failed
+    status.value = { message: 'The uploaded file is invalid. See table for details.', severity: 'error' };
+    validationErrors.value = {
+      headers: ['Validation Errors', 'Affected Rows'],
+      keys: ['message', 'rowNums'],
+      rows: issues,
+      showDownloadButton: true,
+    };
     return;
   }
 
-  rawUserFile.value = validation.data;
-  hasMultipleSites.value = validation.hasMultipleSites;
+  // Validation succeeded, filter out users that already have a uid
+  const _newUsers = validated
+    .data!.map((user, idx) => ({
+      user: { ...user },
+      userIdx: idx,
+    }))
+    .filter(({ user }) => {
+      return !user.uid;
+    });
+  if (_newUsers.length === 0) {
+    status.value = { message: 'All users in the file have already been registered.', severity: 'info' };
+    return;
+  }
+  newUsers.value = _newUsers.map(({ user }) => user);
+  newUsersMap.value = _newUsers.map(({ userIdx }) => userIdx);
 
-  if (validation.errors.length > 0) {
-    validation.errors.forEach(({ user, error }) => {
-      addErrorUser(user, error);
+  // There are new, valid users to be added
+  validatedData.value = validated.data!;
+  status.value = {
+    message: 'File successfully uploaded. See table for summary of users to be added.',
+    severity: 'success',
+  };
+
+  // Set flag to ask user before changing the selected site
+  setShouldUserConfirm(true);
+};
+
+const downloadErrors = () => {
+  if (!parsedData.value || !validationErrors.value) return;
+
+  // Map errors column to the rows
+  const data = toRaw(parsedData.value);
+  const errors = validationErrors.value.rows as { message: string; rowNums: number[] }[];
+  const mapped: Record<string, string>[] = data.map((row, idx) => {
+    const rowErrors: string[] = [];
+    errors.forEach((error) => {
+      if (error.rowNums.includes(idx + 2)) {
+        rowErrors.push(error.message);
+      }
     });
-    toast.add({
-      severity: 'error',
-      summary: 'Validation Errors. See below for details.',
-      life: TOAST_DEFAULT_LIFE_DURATION,
+    return {
+      ...row,
+      errors: rowErrors.join('; '),
+    };
+  });
+
+  const csvString = unparseCsvFile(mapped);
+
+  // Initiate download
+  downloadCsv(csvString, 'add-users-errors.csv');
+};
+
+const submitUsers = async () => {
+  isSubmitting.value = true;
+
+  // Ensure the user data is valid
+  if (
+    !newUsers.value ||
+    !newUsersMap.value ||
+    newUsers.value.length !== newUsersMap.value.length ||
+    !validatedData.value
+  ) {
+    status.value = { message: 'Please fix the errors in your CSV file before submitting.', severity: 'error' };
+    isSubmitting.value = false;
+    return;
+  }
+
+  // Ensure a site is selected
+  const selectedSiteId = currentSite.value;
+  if (!selectedSiteId || isAllSitesSelected.value) {
+    status.value = { message: 'Please select a site before adding users.', severity: 'error' };
+    isSubmitting.value = false;
+    return;
+  }
+
+  // Ensure there are users to be registered
+  const usersToBeRegistered = _cloneDeep(toRaw(newUsers.value)).map((user, idx) => ({
+    user,
+    userIdx: newUsersMap.value![idx]!,
+  }));
+
+  // Ensure the orgs referenced in the user data exist
+  const getOrgId = createOrgIdResolver();
+  const orgErrors: { field: string; userIdx: number }[] = [];
+  for (const { user, userIdx } of usersToBeRegistered) {
+    const orgInfo: Record<'sites' | 'schools' | 'classes' | 'cohorts', string[]> = {
+      sites: [selectedSiteId],
+      schools: [],
+      classes: [],
+      cohorts: [],
+    };
+
+    // Get firestore ids for schools
+    let allSchoolsFound = true;
+    for (const schoolName of user.school) {
+      try {
+        const schoolId = await getOrgId('schools', schoolName, selectedSiteId);
+        orgInfo.schools.push(schoolId);
+      } catch {
+        allSchoolsFound = false;
+        orgErrors.push({
+          field: 'school',
+          userIdx,
+        });
+      }
+    }
+
+    // Get firestore ids for classes
+    if (allSchoolsFound) {
+      for (const className of user.class) {
+        let classFound = false;
+        for (const schoolId of orgInfo.schools) {
+          try {
+            const classId = await getOrgId('classes', className, selectedSiteId, schoolId);
+            orgInfo.classes.push(classId);
+            classFound = true;
+            break;
+          } catch {
+            continue;
+          }
+        }
+        if (!classFound) {
+          orgErrors.push({
+            field: 'class',
+            userIdx,
+          });
+        }
+      }
+    }
+
+    // Get firestore ids for cohorts
+    for (const cohortName of user.cohort) {
+      try {
+        const cohortId = await getOrgId(
+          'groups', // NB: the backend expects groups for cohorts
+          cohortName,
+          selectedSiteId,
+        );
+        orgInfo.cohorts.push(cohortId);
+      } catch {
+        orgErrors.push({
+          field: 'cohort',
+          userIdx,
+        });
+      }
+    }
+
+    // The backend expects districts and groups for site and cohort respectively
+    user.orgIds = {
+      districts: orgInfo.sites,
+      schools: orgInfo.schools,
+      classes: orgInfo.classes,
+      groups: orgInfo.cohorts,
+    };
+  }
+  if (orgErrors.length > 0) {
+    const combinedOrgErrors: Record<string, number[]> = {};
+    orgErrors.forEach(({ field, userIdx }) => {
+      const key = `${field}: Does not exist in selected site`;
+      const rowNum = userIdx + 2; // +2 for header row and 1-indexing
+      if (!combinedOrgErrors[key]) {
+        combinedOrgErrors[key] = [];
+      }
+      if (!combinedOrgErrors[key].includes(rowNum)) {
+        combinedOrgErrors[key].push(rowNum);
+      }
     });
-  } else {
-    isFileUploaded.value = true;
-    errorMissingColumns.value = false;
-    showErrorTable.value = false;
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'File Successfully Uploaded',
-      life: TOAST_DEFAULT_LIFE_DURATION,
+    status.value = { message: 'Please fix the errors in your CSV file before submitting.', severity: 'error' };
+    validationErrors.value = {
+      headers: ['Validation Errors', 'Affected Rows'],
+      keys: ['message', 'rowNums'],
+      rows: Object.entries(combinedOrgErrors).map(([message, rowNums]) => ({ message, rowNums })),
+      showDownloadButton: true,
+    };
+    isSubmitting.value = false;
+    return;
+  }
+
+  // Chunk and run: Not a transactional operation so partial success is possible
+  // TODO: Add some retry operations to handle partial successes
+  // @AB: This operation MUST be a transaction. E.g., if one chunk succeeds, one fails, and then the user
+  // resubmits the file, the backend cannot know which users were successfully created and which failed
+  // because `id` is not stored.
+  showBulkCreateUsersModal.value = true;
+  try {
+    const chunkResults = (await runWithConcurrency(_chunk(usersToBeRegistered, 25), async (chunk) => {
+      // Ensure each user has the proper userType field name for the backend
+      const processedUsers = chunk.map(({ user }) => ({
+        ...user,
+        userType: normalizeUserTypeForBackend(user.userType),
+      }));
+
+      const createUsersPayload: CreateUsersPayload = {
+        users: processedUsers,
+        siteId: selectedSiteId,
+      };
+
+      return await usersRepository.createUsers(createUsersPayload);
+    })) as { status: string; message: string; data: Record<string, string>[] }[];
+
+    const createUserResults = chunkResults.flatMap((result) => {
+      if (result == null || typeof result !== 'object') return [];
+      const payload = result.data !== undefined ? result.data : result;
+      if (Array.isArray(payload)) return payload;
+      if (payload && typeof payload === 'object' && Array.isArray(payload.data)) return payload.data;
+      return [];
     });
 
-    // Wait for user confirmation before changing the selected site
-    setShouldUserConfirm(true);
+    // Merging the registered users with the validated data
+    // TODO: the response of the create user should come back with an id
+    // that can be mapped to validatedData
+    const mergedUsers = _cloneDeep(toRaw(validatedData.value));
+    createUserResults.forEach((createdUser, resultIdx) => {
+      const userIdx = usersToBeRegistered[resultIdx]!.userIdx;
+      mergedUsers[userIdx] = {
+        ...mergedUsers[userIdx]!,
+        email: createdUser.email ?? '',
+        password: createdUser.password ?? '',
+        uid: createdUser.uid ?? '',
+      };
+    });
+    registeredUsers.value = mergedUsers;
+
+    // Success: set status, reset user confirmation, and download registered users
+    status.value = { message: 'Users created successfully.', severity: 'success' };
+    setShouldUserConfirm(false);
+    downloadRegisteredUsers();
+  } catch (error) {
+    logger.error('Error Registering Users', { error });
+    const message = error instanceof Error ? error.message : String(error);
+    status.value = { message: `Error creating users: ${message}`, severity: 'error' };
+  } finally {
+    isSubmitting.value = false;
+    showBulkCreateUsersModal.value = false;
   }
 };
 
-function generateColumns(rawJson) {
-  let columns = [];
-  const columnValues = Object.keys(rawJson);
-  _forEach(columnValues, (col) => {
-    // Hide orgIds column
-    if (col === 'orgIds') return;
+/**
+ * Resolves org IDs by type and name.
+ * @param orgType The org type to resolve.
+ * @param orgName The org name to resolve.
+ * @param parentDistrictId The parent district ID, if applicable.
+ * @param parentSchoolId The parent school ID, if applicable.
+ * @returns The ID of the org.
+ * @throws An error if no org is found for the given type and name.
+ */
+type GetOrgId = (
+  orgType: 'districts' | 'schools' | 'classes' | 'groups',
+  orgName: string,
+  parentDistrictId?: string,
+  parentSchoolId?: string,
+) => Promise<string>;
 
-    let dataType = typeof rawJson[col];
-    if (dataType === 'object') {
-      if (rawJson[col] instanceof Date) dataType = 'date';
+/**
+ * Creates a function that resolves org IDs by type and name w/ caching.
+ * @returns The org ID resolver.
+ */
+const createOrgIdResolver = (): GetOrgId => {
+  const cache: Record<'districts' | 'schools' | 'classes' | 'groups', Record<string, string>> = {
+    districts: {},
+    schools: {},
+    classes: {},
+    groups: {},
+  };
+
+  // TODO: Refactor this to use a firebase function instead of a direct firestore SDK call
+  const getOrgId: GetOrgId = async (orgType, orgName, parentDistrictId, parentSchoolId) => {
+    const normalizedOrgName = normalizeToLowercase(orgName);
+
+    // Include parent IDs in cache key to avoid cross-site conflicts.
+    const cacheKey = JSON.stringify([normalizedOrgName, parentDistrictId ?? null, parentSchoolId ?? null]);
+
+    // Check if the org is already in the cache
+    if (cache[orgType][cacheKey]) {
+      return cache[orgType][cacheKey]!;
     }
-    columns.push({
-      field: col,
-      header: _startCase(col),
-      dataType: dataType,
-    });
-  });
-  return columns;
-}
 
-function getRegisteredUsersFromCreateResult(result) {
-  if (result == null || typeof result !== 'object') return [];
-  const payload = result.data !== undefined ? result.data : result;
-  if (Array.isArray(payload)) return payload;
-  if (payload && typeof payload === 'object' && Array.isArray(payload.data)) return payload.data;
-  return [];
-}
+    // Fetch the org from the database
+    const orgs = (await fetchOrgByName(orgType, normalizedOrgName, parentDistrictId, parentSchoolId)) as {
+      id: string;
+    }[];
+    const orgId = orgs[0]?.id;
+    if (!orgId) {
+      throw new Error('Does not exist in selected site');
+    }
 
-async function runWithConcurrency(items, limit, worker) {
-  const results = new Array(items.length);
-  let nextIndex = 0;
+    // Add the org to the cache
+    cache[orgType][cacheKey] = orgId;
+
+    return orgId;
+  };
+
+  return getOrgId;
+};
+
+/**
+ * Runs parallel workers on chunks of data.
+ * @param chunks The data chunks to process.
+ * @param worker The function to run on each chunk.
+ * @param limit The maximum number of concurrent workers.
+ * @returns The worker results.
+ */
+const runWithConcurrency = async <T, R>(
+  chunks: T[],
+  worker: (chunk: T) => Promise<R>,
+  limit: number = 2,
+): Promise<R[]> => {
+  const results = new Array(chunks.length);
+  let nextIdx = 0;
 
   async function runner() {
-    while (nextIndex < items.length) {
-      const currentIndex = nextIndex++;
-      results[currentIndex] = await worker(items[currentIndex], currentIndex);
+    while (nextIdx < chunks.length) {
+      const currentIdx = nextIdx;
+      nextIdx = nextIdx + 1;
+      results[currentIdx] = await worker(chunks[currentIdx]!);
     }
   }
 
-  const runnerCount = Math.min(limit, items.length);
+  const runnerCount = Math.min(limit, chunks.length);
   const runners = Array.from({ length: runnerCount }, () => runner());
 
   await Promise.all(runners);
 
   return results;
-}
+};
 
-async function submitUsers() {
-  // Check if there are any errors before proceeding
-  if (errorUsers.value.length > 0) {
-    toast.add({
-      severity: 'error',
-      summary: 'Cannot Submit',
-      detail: 'Please fix the errors in your CSV file before submitting',
-      life: 5000,
-    });
-    return;
-  }
+const downloadRegisteredUsers = () => {
+  if (!registeredUsers.value || registeredUsers.value.length === 0) return;
 
-  // Reset error users
-  activeSubmit.value = true;
-  errorUsers.value = [];
-  errorUserColumns.value = [];
-  showErrorTable.value = false;
-  errorMessage.value = '';
-
-  // Get users to be registered (those with empty uid)
-  const usersToBeRegistered = _cloneDeep(toRaw(rawUserFile.value))
-    .map((user, index) => ({
-      user,
-      index,
-    }))
-    .filter(({ user }) => !user.uid || user.uid === '');
-  const usersWithErrors = [];
-
-  // If no users to register, show message and return
-  if (usersToBeRegistered.length === 0) {
-    toast.add({
-      severity: 'info',
-      summary: 'No New Users to Register',
-      detail: 'All users in the file have already been registered',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-    activeSubmit.value = false;
-    return;
-  }
-
-  const siteName = currentSiteName.value;
-
-  if (!siteName || isAllSitesSelected.value) {
-    toast.add({
-      severity: 'error',
-      summary: 'Cannot Submit',
-      detail: 'Please select a specific site before adding users',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-    activeSubmit.value = false;
-    return;
-  }
-
-  let selectedSiteId;
-  try {
-    selectedSiteId = await getOrgId('districts', siteName, ref(undefined), ref(undefined));
-  } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Invalid Site',
-      detail: error.message,
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-    activeSubmit.value = false;
-    return;
-  }
-
-  for (const { user, index } of usersToBeRegistered) {
-    try {
-      // Find fields case-insensitively
-      const schoolField = Object.keys(user).find((key) => key.toLowerCase() === 'school');
-      const classField = Object.keys(user).find((key) => key.toLowerCase() === 'class');
-      const cohortField = Object.keys(user).find((key) => key.toLowerCase() === 'cohort');
-
-      const schools = schoolField
-        ? user[schoolField]
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => s)
-        : [];
-
-      const classes = classField
-        ? user[classField]
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => s)
-        : [];
-
-      const cohorts = cohortField
-        ? user[cohortField]
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => s)
-        : [];
-
-      const orgNameMap = {
-        school: schools,
-        class: classes,
-        cohort: cohorts,
-      };
-
-      // Pluralized because of a ROAR change to the createUsers function.
-      // Only groups are allowed to be an array however, we've only been using one group per user.
-      // TODO: Figure out if we want to allow multiple orgs
-      const orgInfo = {
-        sites: [selectedSiteId],
-        schools: [],
-        classes: [],
-        cohorts: [],
-      };
-
-      // If orgType is a given column, check if the name is
-      //   associated with a valid id. If so, add the id to
-      //   the sendObject. If not, reject user
-      for (const [orgType, orgNames] of Object.entries(orgNameMap)) {
-        if (orgNames && orgNames.length > 0) {
-          try {
-            if (orgType === 'school') {
-              // Need a site for schools - try each school in the selected site
-              if (!selectedSiteId) {
-                throw new Error('Schools specified but no site provided');
-              }
-              for (const schoolName of orgNames) {
-                const schoolId = await getOrgId(
-                  pluralizeFirestoreCollection(orgType),
-                  schoolName,
-                  ref({ id: selectedSiteId }),
-                  ref(undefined),
-                );
-                orgInfo.schools.push(schoolId);
-              }
-            } else if (orgType === 'class') {
-              // Need site and school for classes - try each class with each school in the selected site
-              if (!selectedSiteId || schools.length === 0) {
-                throw new Error('Classes must be within schools. Classes specified but no school provided');
-              }
-              for (const className of orgNames) {
-                let classFound = false;
-                for (const schoolName of schools) {
-                  try {
-                    const schoolId = await getOrgId('schools', schoolName, ref({ id: selectedSiteId }), ref(undefined));
-                    const classId = await getOrgId(
-                      pluralizeFirestoreCollection(orgType),
-                      className,
-                      ref({ id: selectedSiteId }),
-                      ref({ id: schoolId }),
-                    );
-                    orgInfo.classes.push(classId);
-                    classFound = true;
-                    break;
-                  } catch {
-                    continue;
-                  }
-                }
-                if (!classFound) {
-                  throw new Error(`Class '${className}' not found in the selected school(s)`);
-                }
-              }
-            } else if (orgType === 'cohort') {
-              for (const cohortName of orgNames) {
-                const cohortId = await getOrgId(
-                  pluralizeFirestoreCollection('groups'),
-                  cohortName,
-                  ref({ id: currentSite.value }),
-                  ref(undefined),
-                );
-                orgInfo.cohorts.push(cohortId);
-              }
-            }
-          } catch (error) {
-            // Add the user to the error list with the specific organization error
-            usersWithErrors.push({
-              user,
-              index,
-              error: `Invalid ${_capitalize(orgType)}: ${error.message}`,
-            });
-            break; // Break out of the orgType loop for this user
-          }
-        }
-      }
-
-      if (!_isEmpty(orgInfo)) {
-        // The backend expects districts and groups for site and cohort respectively
-        orgInfo.districts = orgInfo.sites;
-        delete orgInfo.sites;
-        orgInfo.groups = orgInfo.cohorts;
-        delete orgInfo.cohorts;
-        user.orgIds = orgInfo;
-      } else if (!usersWithErrors.some((err) => err.user === user)) {
-        // Only add this error if the user doesn't already have an error
-        usersWithErrors.push({
-          user,
-          index,
-          error: 'No valid organization information found',
-        });
-      }
-    } catch (error) {
-      usersWithErrors.push({
-        user,
-        index,
-        error: error.message,
-      });
-    }
-  }
-
-  // If there are any errors, display them and return
-  if (usersWithErrors.length > 0) {
-    // Generate columns from the first user if needed
-    if (_isEmpty(errorUserColumns.value)) {
-      errorUserColumns.value = generateColumns(usersWithErrors[0].user);
-      errorUserColumns.value.unshift({
-        dataType: 'string',
-        field: 'error',
-        header: 'Cause of Error',
-      });
-    }
-
-    // Add all users with errors to the error table
-    usersWithErrors.forEach(({ user, error }) => {
-      addErrorUser(user, error);
-    });
-
-    showErrorTable.value = true;
-    activeSubmit.value = false;
-    return;
-  }
-  // Chunk and run: Not a transactional operation so partial success is possible
-  // TODO: Add some retry operations to handle partial successes
-  const chunkedUsersToBeRegistered = _chunk(usersToBeRegistered, 25);
-  const concurrencyLimit = 2;
-
-  showBulkCreateUsersModal.value = true;
-  try {
-    const createUserResults = await runWithConcurrency(chunkedUsersToBeRegistered, concurrencyLimit, async (users) => {
-      // Ensure each user has the proper userType field name for the backend
-      const processedUsers = users.map(({ user }) => {
-        const processedUser = { ...user };
-
-        // Find the userType field (case-insensitive)
-        const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-
-        // Ensure the key is exactly 'userType' and handle potential casing issues
-        if (userTypeField) {
-          const userTypeValue = user[userTypeField];
-          // Set the key to 'userType' regardless of original casing
-          processedUser.userType = userTypeValue;
-          // Remove the original field if the casing was different
-          if (userTypeField !== 'userType') {
-            delete processedUser[userTypeField];
-          }
-
-          if (typeof userTypeValue === 'string') {
-            processedUser.userType = normalizeUserTypeForBackend(userTypeValue);
-          }
-        }
-
-        return processedUser;
-      });
-
-      const createUsersPayload = {
-        users: processedUsers,
-      };
-
-      if (currentSite.value && currentSite.value !== 'any') {
-        createUsersPayload.siteId = currentSite.value;
-      } else if (processedUsers.length > 0 && processedUsers[0].orgIds?.districts?.length > 0) {
-        createUsersPayload.siteId = processedUsers[0].orgIds.districts[0];
-      }
-
-      return await usersRepository.createUsers(createUsersPayload);
-    });
-
-    for (const result of createUserResults) {
-      registeredUsers.value.push(...getRegisteredUsersFromCreateResult(result));
-    }
-
-    // Merging the registered users with the raw user file
-    // assuming the order of the registered users is the same as the order of the raw user file
-    // TODO: the response of the create user should come back with an id
-    // that can be mapped to the raw user file
-    (registeredUsers.value || []).forEach((registeredUser, index) => {
-      rawUserFile.value[index] = {
-        ...rawUserFile.value[index],
-        email: registeredUser.email,
-        password: registeredUser.password,
-        uid: registeredUser.uid,
-      };
-    });
-
-    toast.add({
-      severity: 'success',
-      summary: 'User Creation Successful',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-    convertUsersToCSV();
-  } catch (error) {
-    logger.error('Error Registering Users', { error });
-    toast.add({
-      severity: 'error',
-      summary: 'Error registering users: ' + error.message,
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  } finally {
-    showBulkCreateUsersModal.value = false;
-    activeSubmit.value = false;
-  }
-}
-
-const csvBlob = ref(null);
-const csvURL = ref(null);
-
-function convertUsersToCSV() {
-  // Get the first user to determine headers
-  const headerObj = toRaw(rawUserFile.value[0]);
-
-  // Convert Objects to CSV String
-  const csvHeader = Object.keys(headerObj).join(',') + '\n';
-
-  // Get all users from rawUserFile (which now contains updated data for newly registered users)
-  const allUsers = toRaw(rawUserFile.value);
-
-  const csvRows = allUsers
-    .map((obj) =>
-      Object.values(obj)
-        .map((value) => {
-          if (value === null || value === undefined) return '';
-          return `"${value.toString().replace(/"/g, '""')}"`;
-        })
-        .join(','),
-    )
-    .join('\n');
-
-  const csvString = csvHeader + csvRows;
-
-  // Create Blob from CSV String
-  csvBlob.value = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-
-  // Create URL from Blob
-  csvURL.value = URL.createObjectURL(csvBlob.value);
+  // Convert objects to CSV string
+  const csvString = unparseCsvFile(toRaw(registeredUsers.value), USER_CSV_HEADERS);
 
   // Initiate download
-  downloadCSV();
-}
-
-function downloadCSV() {
-  const filename = 'registered-users.csv';
-
-  if (csvURL.value) {
-    // Create Download Link
-    const link = document.createElement('a');
-    link.setAttribute('href', csvURL.value);
-    link.setAttribute('download', filename);
-    document.body.appendChild(link); // Required for Firefox
-
-    // Trigger the Download
-    link.click();
-
-    // Cleanup
-    document.body.removeChild(link);
-  }
-}
-
-function addErrorUser(user, error) {
-  // Check if this user is already in the error list
-  const userKey = JSON.stringify(user);
-  const alreadyExists = errorUsers.value.some((errUser) => {
-    const errUserKey = JSON.stringify({ ...errUser, error: undefined });
-    return errUserKey === userKey;
-  });
-
-  if (alreadyExists) {
-    // Update existing error message
-    const existingIndex = errorUsers.value.findIndex((errUser) => {
-      const errUserKey = JSON.stringify({ ...errUser, error: undefined });
-      return errUserKey === userKey;
-    });
-    if (existingIndex >= 0) {
-      errorUsers.value[existingIndex].error += `; ${error}`;
-    }
-    return;
-  }
-
-  // If there are no error users yet, generate the
-  //  columns before displaying the table.
-  if (_isEmpty(errorUserColumns.value)) {
-    errorUserColumns.value = generateColumns(user);
-    errorUserColumns.value.unshift({
-      dataType: 'string',
-      field: 'error',
-      header: 'Cause of Error',
-    });
-    showErrorTable.value = true;
-  }
-  // Concat the userObject with the error reason.
-  errorUsers.value.push({
-    ...user,
-    error,
-  });
-}
-
-// TODO: Refactor this to be a single call
-const orgIds = {
-  districts: {},
-  schools: {},
-  classes: {},
-  groups: {},
+  downloadCsv(csvString, 'registered-users.csv');
 };
-
-/**
- * Retrieves the ID of an Group based on its type and name.
- * If the ID is not already cached, it fetches it from the server.
- *
- * @async
- * @function getOrgId
- * @param {string} orgType - The type of Group (e.g., 'districts', 'schools', 'classes', 'groups').
- * @param {string} orgName - The name of the Group.
- * @param {Object|undefined} parentDistrict - The parent district reference, if applicable.
- * @param {Object|undefined} parentSchool - The parent school reference, if applicable.
- * @returns {Promise<String>} A promise that resolves to a string representing the Group ID.
- * @throws {Error} Throws an error if no Group is found for the given type and name.
- *
- * @example
- * // Get the ID for a school
- * const schoolInfo = await getOrgId('schools', 'High School A', districtRef, undefined);
- *
- * @description
- * This function first checks if the Group ID is already cached in the `orgIds.value` object.
- * If not, it calls the `fetchOrgByName` function to retrieve the Group details from the server.
- * The fetched data is then cached for future use.
- * If no Group is found, it throws an error.
- */
-const getOrgId = async (orgType, orgName, parentDistrict = ref(null), parentSchool = ref(null)) => {
-  const normalizedOrgName = normalizeToLowercase(orgName);
-
-  // For schools and classes, include parent IDs in cache key to avoid cross-site conflicts
-  const parentDistrictId = parentDistrict?.value?.id || null;
-  const parentSchoolId = parentSchool?.value?.id || null;
-  const cacheKey =
-    parentDistrictId || parentSchoolId
-      ? `${normalizedOrgName}__${parentDistrictId || ''}__${parentSchoolId || ''}`
-      : normalizedOrgName;
-
-  if (orgIds[orgType][cacheKey]) return orgIds[orgType][cacheKey];
-
-  // Array of objects. Ex: [{id: 'lut54353jkler'}]
-  const orgs = await fetchOrgByName(orgType, normalizedOrgName, parentDistrict, parentSchool);
-
-  if (orgs.length === 0) {
-    if (orgType === 'districts') {
-      throw new Error(`No Groups found for site '${orgName}'`);
-    } else if (orgType === 'groups') {
-      throw new Error(`No Groups found for cohort '${orgName}'`);
-    } else {
-      throw new Error(`No Groups found for ${orgType} '${orgName}'`);
-    }
-  }
-
-  orgIds[orgType][cacheKey] = orgs[0].id;
-
-  return orgs[0].id;
-};
-
-watch(hasUserConfirmed, (userConfirmed) => {
-  if (userConfirmed) resetUserProgress();
-});
 </script>
 
 <style lang="scss" scoped>
-.extra-height {
-  min-height: 33vh;
-}
-
-.optional-fields {
-  margin-bottom: 2rem;
-}
-
-.error-box {
-  padding: 0.5rem;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
-  background-color: var(--red-300);
-  border-radius: 5px;
-  border: 1px solid var(--red-600);
-  color: var(--red-600);
-  font-weight: bold;
-}
-
-.col-header {
-  display: flex;
-  flex-direction: column;
+.navbar-offset {
+  scroll-margin-top: var(--navbar-height, 5rem);
 }
 
 .submit-container {
   display: flex;
   flex-direction: column;
   width: 100%;
-  margin: 1rem 0 0;
   align-items: flex-start;
 }
 
@@ -893,39 +621,5 @@ watch(hasUserConfirmed, (userConfirmed) => {
     background: var(--primary-color);
     color: white;
   }
-}
-
-.error {
-  color: red;
-}
-
-.datatable {
-  border: 1px solid var(--surface-d);
-  border-radius: 5px;
-  margin: 1rem 0 0;
-}
-
-.error-container {
-  margin-top: 1rem;
-}
-
-.error-header {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  padding-bottom: 0.5rem;
-}
-
-.orgs-container {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  margin-top: -1rem;
-  margin-bottom: 1rem;
-}
-
-.org-dropdown {
-  margin-right: 3rem;
-  margin-top: 2rem;
 }
 </style>

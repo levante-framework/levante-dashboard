@@ -2,7 +2,6 @@ import { query, where, getDocs, CollectionReference, DocumentData, Query } from 
 import _fromPairs from 'lodash/fromPairs';
 import _invert from 'lodash/invert';
 import _toPairs from 'lodash/toPairs';
-import * as Papa from 'papaparse';
 import { TooltipOptions } from 'primevue/tooltip';
 import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
 
@@ -196,36 +195,6 @@ export const flattenObj = (obj: any): Record<string, any> => {
     }
   }
   return result;
-};
-
-interface CsvResult {
-  data: any[];
-  // Add other PapaParse result properties if needed
-}
-
-export const csvFileToJson = async (file: File): Promise<any[]> => {
-  const text = await file.text();
-  const results: CsvResult = await new Promise((resolve, reject) => {
-    Papa.parse(text, {
-      header: true,
-      skipEmptyLines: 'greedy',
-      transformHeader: (header: string): string => {
-        if (header.trim().toLowerCase() === 'id') return 'id';
-        return header.trim();
-      },
-      transform: (value: string, field: string | number): string => {
-        // Ensure field is treated as string if it's a number (column index)
-        if (typeof field === 'number') field = String(field);
-        if (field === 'id') {
-          return value.trim();
-        }
-        return value;
-      },
-      complete: (res) => resolve(res as CsvResult),
-      error: (err) => reject(err),
-    });
-  });
-  return results.data;
 };
 
 export const standardDeviation = (arr: number[], usePopulation: boolean = false): number => {
