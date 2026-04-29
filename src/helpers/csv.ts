@@ -63,7 +63,7 @@ export function generateColumns(rawJson: Record<string, unknown>): CsvColumn[] {
  * @param file The CSV file to parse
  * @param options.normalizedHeaders Optional map of lowercase-to-normalized headers
  * @param options.omitColumns Optional array of column names to omit from the results
- * @returns The parsed data, or null if the CSV is malformed
+ * @returns The parsed data, or null if the file could not be read or the CSV is malformed
  */
 export const parseCsvFile = async (
   file: File,
@@ -72,16 +72,26 @@ export const parseCsvFile = async (
     omitColumns?: string[];
   } = {},
 ): Promise<Record<string, string>[] | null> => {
-  const text = await file.text();
+  let text: string;
+  try {
+    text = await file.text();
+  } catch {
+    return null;
+  }
 
-  const results = Papa.parse<Record<string, string>>(text, {
-    header: true,
-    skipEmptyLines: 'greedy',
-    transformHeader: (header: string): string => {
-      return options.normalizedHeaders?.[header.trim().toLowerCase()] ?? header.trim();
-    },
-    transform: (v: string): string => v.trim(),
-  });
+  let results: Papa.ParseResult<Record<string, string>>;
+  try {
+    results = Papa.parse<Record<string, string>>(text, {
+      header: true,
+      skipEmptyLines: 'greedy',
+      transformHeader: (header: string): string => {
+        return options.normalizedHeaders?.[header.trim().toLowerCase()] ?? header.trim();
+      },
+      transform: (v: string): string => v.trim(),
+    });
+  } catch {
+    return null;
+  }
 
   // Delete omitted columns from the results
   if (options.omitColumns?.length) {

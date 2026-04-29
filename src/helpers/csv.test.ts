@@ -117,6 +117,17 @@ describe('parseCsvFile', () => {
       const result = await parseCsvFile(csv);
       expect(result).toBeNull();
     });
+
+    it('returns null when file.text() rejects', async () => {
+      // Browsers reject file.text() on cancelled streams or permission errors.
+      // parseCsvFile must surface this as the same null contract used for
+      // malformed CSVs, so callers don't see an unhandled rejection.
+      const file = {
+        text: () => Promise.reject(new Error('read failed')),
+      } as unknown as File;
+      const result = await parseCsvFile(file);
+      expect(result).toBeNull();
+    });
   });
 
   describe('options.normalizedHeaders', () => {
