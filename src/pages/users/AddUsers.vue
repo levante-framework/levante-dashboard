@@ -359,11 +359,6 @@ const submitUsers = async () => {
     user,
     userIdx: newUsersMap.value![idx]!,
   }));
-  if (usersToBeRegistered.length === 0) {
-    status.value = { message: 'All users in the file have already been registered.', severity: 'info' };
-    isSubmitting.value = false;
-    return;
-  }
 
   // Ensure the orgs referenced in the user data exist
   const getOrgId = createOrgIdResolver();
