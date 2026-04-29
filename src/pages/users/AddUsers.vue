@@ -166,17 +166,13 @@ watch(currentSite, () => {
   resetUserProgress();
 });
 
-watch(
-  [status],
-  () => {
-    // Scroll to bottom of page after datatable is displayed
-    // NB: nextTick ensures datatable is rendered before scroll
-    nextTick(() => {
-      statusRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  },
-  { deep: true },
-);
+watch([status], () => {
+  // Scroll to bottom of page after datatable is displayed
+  // NB: nextTick ensures datatable is rendered before scroll
+  nextTick(() => {
+    statusRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
 
 const onFileUpload = async (event: FileUploadUploaderEvent) => {
   // Reset all error states and data
@@ -270,7 +266,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
       userIdx: idx,
     }))
     .filter(({ user }) => {
-      return !user.uid || user.uid === '';
+      return !user.uid;
     });
   if (_newUsers.length === 0) {
     status.value = { message: 'All users in the file have already been registered.', severity: 'info' };
@@ -466,29 +462,10 @@ const submitUsers = async () => {
   try {
     const chunkResults = (await runWithConcurrency(_chunk(usersToBeRegistered, 25), async (chunk) => {
       // Ensure each user has the proper userType field name for the backend
-      const processedUsers = chunk.map(({ user }) => {
-        const processedUser: Record<string, unknown> = { ...user };
-
-        // Find the userType field (case-insensitive)
-        const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-
-        // Ensure the key is exactly 'userType' and handle potential casing issues
-        if (userTypeField) {
-          const userTypeValue = user[userTypeField];
-          // Set the key to 'userType' regardless of original casing
-          processedUser.userType = userTypeValue;
-          // Remove the original field if the casing was different
-          if (userTypeField !== 'userType') {
-            delete processedUser[userTypeField];
-          }
-
-          if (typeof userTypeValue === 'string') {
-            processedUser.userType = normalizeUserTypeForBackend(userTypeValue);
-          }
-        }
-
-        return processedUser;
-      });
+      const processedUsers = chunk.map(({ user }) => ({
+        ...user,
+        userType: normalizeUserTypeForBackend(user.userType),
+      }));
 
       const createUsersPayload: CreateUsersPayload = {
         users: processedUsers,

@@ -18,5 +18,18 @@ export const NORMALIZED_USER_CSV_HEADERS = {
   password: 'password',
 };
 
-/** Array of keys to use for the CSV header */
-export const USER_CSV_HEADERS = Object.values(NORMALIZED_USER_CSV_HEADERS).filter((header) => header !== 'site');
+/** Array of keys to use for exported UserCSV headers */
+export const USER_CSV_HEADERS = [
+  'id',
+  'userType',
+  'month',
+  'year',
+  'caregiverId',
+  'teacherId',
+  'school',
+  'class',
+  'cohort',
+  'uid',
+  'email',
+  'password',
+];
