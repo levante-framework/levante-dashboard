@@ -13,9 +13,9 @@ export const NORMALIZED_USER_CSV_HEADERS = {
   school: 'school',
   class: 'class',
   cohort: 'cohort',
-  uid: 'uid',
   email: 'email',
   password: 'password',
+  uid: 'uid',
 };
 
 /** Array of keys to use for exported UserCSV headers */
@@ -29,7 +29,7 @@ export const USER_CSV_HEADERS = [
   'school',
   'class',
   'cohort',
-  'uid',
   'email',
   'password',
+  'uid',
 ];
