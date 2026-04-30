@@ -1335,17 +1335,17 @@ describe('AddUsers Page', () => {
         // intentionally excluded from USER_CSV_HEADERS because the column
         // is only used for input validation, not download.
         expect(lines[0]).toBe(
-          'id,userType,month,year,caregiverId,teacherId,school,class,cohort,uid,email,password,extraField',
+          'id,userType,month,year,caregiverId,teacherId,school,class,cohort,email,password,uid,extraField',
         );
 
         // Row 1 exercises the helper's escaping in one go: the school cell
         // is quoted because it contains a comma, with the inner '"' doubled.
         // null (email) and undefined (password) collapse to empty cells.
-        expect(lines[1]).toBe('1,child,5,2018,,,"Test, ""Quoted"" School",Class A,,uid-1,,,x');
+        expect(lines[1]).toBe('1,child,5,2018,,,"Test, ""Quoted"" School",Class A,,,,uid-1,x');
 
         // Row 2 has only a handful of fields populated; every absent header
         // becomes an empty cell, including the appended 'extraField'.
-        expect(lines[2]).toBe('2,caregiver,,,,,Plain School,,,uid-2,,,');
+        expect(lines[2]).toBe('2,caregiver,,,,,Plain School,,,,,uid-2,');
       } finally {
         document.createElement = originalCreateElement;
       }
