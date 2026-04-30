@@ -385,10 +385,12 @@ const taskChartStats = computed(() => {
 const totalChartStats = computed(() => {
   const users = progressUsers.value;
   if (!users.length) return null;
+
+  const assignedTotal = users.length;
   const completed = users.filter((u) => u.status === 'completed').length;
-  const started = users.filter((u) => u.status === 'started').length;
-  const notStarted = users.filter((u) => u.status === 'notStarted').length;
-  return statsFromExclusiveCounts(notStarted, started, completed);
+  const startedOnly = users.filter((u) => u.status === 'started').length;
+  const notStarted = Math.max(0, assignedTotal - completed - startedOnly);
+  return statsFromExclusiveCounts(notStarted, startedOnly, completed);
 });
 
 const totalAssignedCount = computed(() => progressUsers.value.length);

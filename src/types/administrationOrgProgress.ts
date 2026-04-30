@@ -1,6 +1,6 @@
 export type OrgCollectionKey = 'districts' | 'schools' | 'classes' | 'groups';
 
-export type AssignmentRollupStatus = 'notStarted' | 'started' | 'completed';
+export type AssignmentRollupStatus = 'notStarted' | 'started' | 'completed' | 'notAssigned';
 
 export interface TaskProgressBreakdown {
   taskId: string;
