@@ -3,6 +3,10 @@
     <AppSpinner />
   </div>
 
+  <div v-if="isParticipantMode" class="language-selector-wrapper">
+    <LanguageSelector />
+  </div>
+
   <div :class="`login login--${mode}`">
     <img src="/levante-icon-black.svg" alt="Levante" class="levante-icon-black" />
 
@@ -35,7 +39,7 @@
           <PvInputText
             :id="$t('authSignIn.emailId')"
             v-model="v$.email.$model"
-            :placeholder="$t('authSignIn.emailPlaceholder')"
+            :placeholder="isParticipantMode ? $t('authSignIn.emailPlaceholder') : 'Username or email'"
             aria-describedby="email-error"
             class="w-full"
             data-cy="input-username-email"
@@ -54,7 +58,7 @@
             v-model="v$.password.$model"
             :disabled="isSigningInWithEmailLink"
             :feedback="false"
-            :placeholder="$t('authSignIn.passwordPlaceholder')"
+            :placeholder="isParticipantMode ? $t('authSignIn.passwordPlaceholder') : 'Password'"
             class="w-full"
             data-cy="input-password"
             hide-icon="pi pi-eye"
@@ -182,6 +186,7 @@
 
 <script setup lang="ts">
 import AppSpinner from '@/components/AppSpinner.vue';
+import LanguageSelector from '@/components/LanguageSelector.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import { APP_ROUTES } from '@/constants/routes';
 import { isEmailValid, isMobileBrowser } from '@/helpers';
@@ -387,10 +392,10 @@ const getAuthUserData = async () => {
   }
 };
 
-const changeMode = (): void => {
-  mode.value = isParticipantMode.value ? MODES.researcher : MODES.participant;
-  isSigningInWithEmailLink.value = false;
+const changeMode = async (): Promise<void> => {
   v$.value.$reset();
+  isSigningInWithEmailLink.value = false;
+  mode.value = isParticipantMode.value ? MODES.researcher : MODES.participant;
 };
 
 const checkForCapsLock = (e: KeyboardEvent): void => {
@@ -423,6 +428,13 @@ const sendResetPasswordEmail = () => {
   top: 0;
   left: 0;
   z-index: 10;
+}
+
+.language-selector-wrapper {
+  display: block;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
 }
 
 .login {
