@@ -52,38 +52,43 @@ jobs:
       - name: Read and process version
         id: version
         run: |
-          # Read current version from package.json
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          # Remove -dev suffix if it exists
           PROD_VERSION=${CURRENT_VERSION%-dev}
-          # Create new branch name
-          BRANCH_NAME="v${PROD_VERSION}"
-          # Store values for later use
-          echo "prod_version=${PROD_VERSION}" >> $GITHUB_OUTPUT
-          echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          TAG_NAME="v${PROD_VERSION}"
+          BRANCH_NAME="release/${TAG_NAME}"
           echo "current_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+          echo "prod_version=${PROD_VERSION}" >> $GITHUB_OUTPUT
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
 
-      - name: Create and switch to release branch
+      - name: Fail fast if tag or branch already exists
         run: |
-          git checkout -b ${{ steps.version.outputs.branch_name }}
-          # Update package.json with production version
-          npm version ${{ steps.version.outputs.prod_version }} --no-git-tag-version
-          git add package.json
-          git commit -m "chore(release): prepare version ${{ steps.version.outputs.prod_version }}"
-          git push --set-upstream origin ${{ steps.version.outputs.branch_name }}
-
-      - name: Create and push tag
-        run: |
-          # Check if tag already exists
-          if git rev-parse "v${{ steps.version.outputs.prod_version }}" >/dev/null 2>&1; then
-            echo "Tag v${{ steps.version.outputs.prod_version }} already exists, skipping tag creation"
-          else
-            # Create annotated tag with timestamp to ensure uniqueness
-            TIMESTAMP=$(date +%Y%m%d%H%M%S)
-            TAG_NAME="v${{ steps.version.outputs.prod_version }}-$TIMESTAMP"
-            git tag -a "$TAG_NAME" -m "Release v${{ steps.version.outputs.prod_version }}"
-            git push origin "$TAG_NAME"
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          BRANCH_NAME="${{ steps.version.outputs.branch_name }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
+            echo "::error::Tag ${TAG_NAME} already exists on origin. Bump package.json or delete the tag to retry."
+            exit 1
           fi
+          if git ls-remote --exit-code --heads origin "refs/heads/${BRANCH_NAME}" >/dev/null 2>&1; then
+            echo "::error::Branch ${BRANCH_NAME} already exists on origin. Delete it or bump package.json to retry."
+            exit 1
+          fi
+
+      - name: Create release branch and tag
+        id: release_ref
+        run: |
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          BRANCH_NAME="${{ steps.version.outputs.branch_name }}"
+          PROD_VERSION="${{ steps.version.outputs.prod_version }}"
+          git checkout -b "${BRANCH_NAME}"
+          npm version "${PROD_VERSION}" --no-git-tag-version
+          git add package.json
+          git commit -m "chore(release): prepare version ${PROD_VERSION}"
+          RELEASE_SHA=$(git rev-parse HEAD)
+          git tag -a "${TAG_NAME}" "${RELEASE_SHA}" -m "Release ${TAG_NAME}"
+          git push --set-upstream origin "${BRANCH_NAME}"
+          git push origin "refs/tags/${TAG_NAME}"
+          echo "sha=${RELEASE_SHA}" >> $GITHUB_OUTPUT
 
       - name: Build for production
         env:
@@ -99,7 +104,7 @@ jobs:
         with:
           environment: production
           sourcemaps: ./dist/assets
-          version: v${{ steps.version.outputs.prod_version }}
+          version: ${{ steps.version.outputs.tag_name }}
           finalize: false
 
       - name: Deploy to Firebase Production
@@ -119,48 +124,49 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         with:
           environment: production
-          version: v${{ steps.version.outputs.prod_version }}
+          version: ${{ steps.version.outputs.tag_name }}
           finalize: true
 
       - name: Generate Release Notes
         id: release_notes
+        env:
+          RELEASE_DESCRIPTION: ${{ github.event.inputs.release_description }}
+          TAG_NAME: ${{ steps.version.outputs.tag_name }}
+          DEPLOYED_BY: ${{ github.actor }}
         run: |
-          # Get commit messages since last tag
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$LAST_TAG" ]; then
-            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          PREV_TAG=$(git describe --tags --abbrev=0 "${TAG_NAME}^" 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log "${PREV_TAG}..${TAG_NAME}" --pretty=format:"- %s (%h)" --no-merges)
           else
             COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges -n 10)
           fi
 
-          # Create release notes
-          RELEASE_NOTES="## What's Changed\n\n$COMMITS\n\n"
-          RELEASE_NOTES+="## Deployment Info\n"
-          RELEASE_NOTES+="- Version: v${{ steps.version.outputs.prod_version }}\n"
-          RELEASE_NOTES+="- Environment: Production\n"
-          RELEASE_NOTES+="- Deployed by: ${{ github.actor }}\n\n"
-
-          # Add user description if provided
-          if [ -n "${{ github.event.inputs.release_description }}" ]; then
-            RELEASE_NOTES+="## Release Notes\n${{ github.event.inputs.release_description }}\n\n"
-          fi
-
-          # Set output
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "notes<<EOF"
+            echo "## What's Changed"
+            echo
+            echo "$COMMITS"
+            echo
+            echo "## Deployment Info"
+            echo "- Version: ${TAG_NAME}"
+            echo "- Environment: Production"
+            echo "- Deployed by: ${DEPLOYED_BY}"
+            if [ -n "$RELEASE_DESCRIPTION" ]; then
+              echo
+              echo "## Release Notes"
+              echo "$RELEASE_DESCRIPTION"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ steps.generate_token.outputs.token }}
-          tag_name: v${{ steps.version.outputs.prod_version }}
-          name: Release v${{ steps.version.outputs.prod_version }}
+          tag_name: ${{ steps.version.outputs.tag_name }}
+          name: Release ${{ steps.version.outputs.tag_name }}
           body: ${{ steps.release_notes.outputs.notes }}
-          target_commitish: ${{ steps.version.outputs.branch_name }}
-
-      - name: Push Tags
-        run: git push origin --tags
+          target_commitish: ${{ steps.release_ref.outputs.sha }}
 
       - name: Update main branch version
         run: |
