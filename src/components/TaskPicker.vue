@@ -277,13 +277,15 @@ const rebuildAvailableSearchResults = (): void => {
   );
 };
 
-const getVariantLanguage = (variantName: string): string => {
-  if (!variantName) return '';
-  // TODO: Remove the following line after fixing core-tasks
-  if (variantName === 'es') return 'es-CO';
-  if (variantName.length <= 5) return variantName;
-  const parts = variantName.split(' ');
-  return parts[0] ?? '';
+// @TODO: Remove the following function after normalizing the variant docs
+const formatVariantLanguage = (variantLanguage: string): string => {
+  if (!variantLanguage) return '';
+
+  if (variantLanguage === 'en') return 'en-us';
+  if (variantLanguage === 'es') return 'es-co';
+  if (variantLanguage === 'de') return 'de-de';
+
+  return variantLanguage?.toLowerCase();
 };
 
 const variantsByLanguage = (variants: VariantObject[] = []): VariantObject[] => {
@@ -292,13 +294,13 @@ const variantsByLanguage = (variants: VariantObject[] = []): VariantObject[] => 
   const selectedLang = selectedLanguage.value.value.toLowerCase();
 
   return variants.filter((variant) => {
-    const variantName = variant.variant?.name?.toLowerCase();
-    if (!variantName) return false;
-    if (variantName === 'all languages') return true;
+    const variantLanguage = variant.variant?.params?.language?.toLowerCase();
+    if (!variantLanguage) return false;
+    if (variantLanguage === 'all languages') return true;
 
-    const variantLanguage = getVariantLanguage(variantName);
-    const exactLangMatch = variantLanguage === selectedLang;
-    const langPrefixMatch = selectedLang.includes(variantLanguage);
+    const formattedVariantLanguage = formatVariantLanguage(variantLanguage);
+    const exactLangMatch = formattedVariantLanguage === selectedLang;
+    const langPrefixMatch = selectedLang.includes(formattedVariantLanguage);
 
     return exactLangMatch || langPrefixMatch;
   });
