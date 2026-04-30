@@ -102,6 +102,13 @@ vi.mock('@/helpers/query/utils', () => ({
   fetchDocById: vi.fn().mockResolvedValue({}),
 }));
 
+vi.mock('@/components/LanguageSelector.vue', () => ({
+  default: {
+    name: 'LanguageSelector',
+    template: '<div class="language-selector-stub" />',
+  },
+}));
+
 const PvInputTextStub = {
   name: 'PvInputText',
   props: ['modelValue'],
