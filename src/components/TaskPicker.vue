@@ -277,7 +277,7 @@ const rebuildAvailableSearchResults = (): void => {
   );
 };
 
-// TODO: Remove the following function after fixing core-tasks
+// @TODO: Remove the following function after normalizing the variant docs
 const formatVariantLanguage = (variantLanguage: string): string => {
   if (!variantLanguage) return '';
 
