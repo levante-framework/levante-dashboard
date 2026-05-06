@@ -113,7 +113,7 @@ import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
 import { NORMALIZED_USER_CSV_HEADERS, USER_CSV_HEADERS } from '@/constants/csv';
 import { CreateUsersPayload, usersRepository } from '@/firebase/repositories/UsersRepository';
 import { normalizeToLowercase } from '@/helpers';
-import { downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
+import { deriveNextCsvFilename, downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
 import { fetchOrgByName } from '@/helpers/query/orgs';
 import { normalizeUserTypeForBackend } from '@/helpers/userType';
 import { logger } from '@/logger';
@@ -287,7 +287,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
 };
 
 const downloadErrors = () => {
-  if (!parsedData.value || !validationErrors.value) return;
+  if (!parsedData.value || !validationErrors.value || !uploadedFile.value) return;
 
   // Map errors column to the rows
   const data = toRaw(parsedData.value);
@@ -305,10 +305,10 @@ const downloadErrors = () => {
     };
   });
 
+  // Download the Error CSV file
   const csvString = unparseCsvFile(mapped);
-
-  // Initiate download
-  downloadCsv(csvString, 'add-users-errors.csv');
+  const csvFilename = deriveNextCsvFilename(uploadedFile.value.name, { now: new Date(), suffix: 'errors' });
+  downloadCsv(csvString, csvFilename);
 };
 
 const submitUsers = async () => {
@@ -586,13 +586,12 @@ const runWithConcurrency = async <T, R>(
 };
 
 const downloadRegisteredUsers = () => {
-  if (!registeredUsers.value || registeredUsers.value.length === 0) return;
+  if (!registeredUsers.value || registeredUsers.value.length === 0 || !uploadedFile.value) return;
 
-  // Convert objects to CSV string
+  // Download the Registered CSV file
   const csvString = unparseCsvFile(toRaw(registeredUsers.value), USER_CSV_HEADERS);
-
-  // Initiate download
-  downloadCsv(csvString, 'registered-users.csv');
+  const csvFilename = deriveNextCsvFilename(uploadedFile.value.name, { now: new Date(), suffix: 'registered' });
+  downloadCsv(csvString, csvFilename);
 };
 </script>
 

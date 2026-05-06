@@ -34,6 +34,39 @@ export const csvFileToJson = async (file: File): Promise<any[]> => {
 };
 
 /**
+ * Derive the next CSV filename from a base filename and options
+ * @param filename The base filename
+ * @param options.now The date to add to the filename
+ * @param options.suffix The suffix to add to the filename
+ * @returns The next CSV filename
+ */
+export function deriveNextCsvFilename(
+  filename: string,
+  options: {
+    now?: Date;
+    suffix?: 'errors' | 'registered' | 'template';
+  },
+): string {
+  const basename = filename.replace(/\.csv$/i, '');
+
+  // Strip timestamp
+  let name = basename.replace(/_\d{8}-\d{4}$/, '');
+  // Strip suffix
+  name = name.replace(/_errors$/, '');
+  name = name.replace(/_registered$/, '');
+  name = name.replace(/_template$/, '');
+
+  // Add suffix
+  if (options.suffix && options.suffix.length) name += `_${options.suffix}`;
+  // Add timestamp
+  if (options.now) name += `_${formatTimestamp(options.now)}`;
+
+  if (name.length === 0) name = basename;
+
+  return `${name}.csv`;
+}
+
+/**
  * Trigger a browser download of a CSV string.
  * @param csv The CSV string to download
  * @param filename The filename to use for the downloaded file
@@ -50,6 +83,21 @@ export const downloadCsv = (csv: string, filename: string) => {
   document.body.removeChild(link);
   URL.revokeObjectURL(csvUrl);
 };
+
+/**
+ * Format a date for CSV filenames
+ * @param now The date to format
+ * @returns A YYYYMMDD-HHMM string
+ */
+export function formatTimestamp(now: Date): string {
+  const day = now.getDate().toString().padStart(2, '0');
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const year = now.getFullYear();
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+
+  return `${year}${month}${day}-${hours}${minutes}`;
+}
 
 /**
  * Generate CSV columns from a JSON object.

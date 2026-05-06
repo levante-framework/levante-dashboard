@@ -189,7 +189,7 @@ const fileRequirementsTableData = [
 ];
 
 const downloadTemplate = () => {
-  downloadCsv(unparseCsvFile([], TEMPLATE_HEADERS), 'add_users_template.csv');
+  downloadCsv(unparseCsvFile([], TEMPLATE_HEADERS), 'users_template.csv');
 };
 </script>
 
