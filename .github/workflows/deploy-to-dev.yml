@@ -11,7 +11,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24.x'
-      - uses: ./.github/workflows/setup-canvas-deps
+      # - uses: ./.github/workflows/setup-canvas-deps
       - name: 'Build'
         env:
           NODE_OPTIONS: '--max_old_space_size=8192'

@@ -135,5 +135,8 @@
     "workbox-core": "^7.1.0",
     "workbox-routing": "^7.1.0",
     "workbox-strategies": "^7.1.0"
+  },
+  "overrides": {
+    "canvas": "npm:@favware/skip-dependency@^1.2.2"
   }
 }
