@@ -41,7 +41,7 @@ jobs:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
 
-      - uses: ./.github/actions/setup-canvas-deps
+      - uses: ./.github/workflows/setup-canvas-deps
 
       - name: Install dependencies
         run: npm ci

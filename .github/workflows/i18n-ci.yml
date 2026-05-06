@@ -22,7 +22,7 @@ jobs:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
-      - uses: ./.github/actions/setup-canvas-deps
+      - uses: ./.github/workflows/setup-canvas-deps
 
       - name: Install deps
         run: npm ci
