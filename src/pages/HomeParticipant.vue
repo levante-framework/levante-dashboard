@@ -611,6 +611,16 @@ watch(
         ? surveyData.value.general
         : surveyData.value.specific;
 
+    const surveyAssessments = [...(selectedAssignment.value.assessments || [])]
+      .filter((assessment) => assessment?.taskId?.toLowerCase().includes('survey'))
+      .sort((a, b) => {
+        const optionalWeightA = a.optional ? 1 : 0;
+        const optionalWeightB = b.optional ? 1 : 0;
+        if (optionalWeightA !== optionalWeightB) return optionalWeightA - optionalWeightB;
+        return (a.taskId || '').localeCompare(b.taskId || '');
+      });
+    const surveyTaskId = surveyAssessments[0]?.taskId || 'survey';
+
     const surveyInstance = createSurveyInstance(surveyDataToStartAt);
     setupMarkdownConverter(surveyInstance);
 
@@ -630,6 +640,7 @@ watch(
       roarfirekit: roarfirekit.value,
       uid: userData.value.id,
       selectedAdminId: selectedAssignment.value?.id,
+      taskId: surveyTaskId,
       surveyStore,
       router,
       toast,

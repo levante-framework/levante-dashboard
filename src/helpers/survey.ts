@@ -117,6 +117,7 @@ interface SaveFinalSurveyDataParams {
   uid: string;
   surveyStore: UseSurveyStore;
   selectedAdmin: string | null;
+  taskId: string;
   router: Router;
   toast: ToastServiceMethods;
   queryClient: QueryClient;
@@ -370,6 +371,7 @@ export async function saveFinalSurveyData({
   uid,
   surveyStore,
   selectedAdmin,
+  taskId,
   router,
   toast,
   queryClient,
@@ -437,6 +439,7 @@ export async function saveFinalSurveyData({
     await roarfirekit.saveSurveyResponses({
       surveyData: structuredResponses,
       administrationId: selectedAdmin!,
+      taskId,
     });
 
     // Clear localStorage after successful submission

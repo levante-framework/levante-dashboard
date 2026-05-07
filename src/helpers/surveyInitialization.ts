@@ -65,6 +65,7 @@ interface SetupSurveyEventHandlersParams {
   roarfirekit: RoarfirekitType;
   uid: string;
   selectedAdminId: string | null;
+  taskId: string;
   surveyStore: SurveyStore;
   router: Router;
   toast: ToastServiceMethods;
@@ -167,6 +168,7 @@ export function setupSurveyEventHandlers({
   roarfirekit,
   uid,
   selectedAdminId,
+  taskId,
   surveyStore,
   router,
   toast,
@@ -234,6 +236,7 @@ export function setupSurveyEventHandlers({
             roarfirekit.saveSurveyResponses({
               surveyData: dataToSave,
               administrationId: selectedAdminId,
+              taskId,
             });
           } catch (error: unknown) {
             console.error(
@@ -257,6 +260,7 @@ export function setupSurveyEventHandlers({
       queryClient,
       specificIds: specificIds,
       selectedAdmin: selectedAdminId,
+      taskId,
       userType,
       assignmentsStore: assignmentsStore as any,
     }),

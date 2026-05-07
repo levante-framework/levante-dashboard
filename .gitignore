@@ -50,3 +50,6 @@ cypress/screenshots
 
 # Intl Hash
 .cache/
+
+# Local agent handoff notes (shareable via @path, never committed)
+.agent-handoff/
