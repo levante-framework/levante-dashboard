@@ -3,6 +3,9 @@
   "private": true,
   "version": "3.6.1-dev",
   "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "survey:pdf": "node -e \"(async()=>{const {loadSurveyFromFile}=await import('./dist/helpers/surveyLoader.js'); const {generateSurveyPdfFromJson}=await import('./dist/helpers/surveyPdfGenerator.js'); const fp=process.env.SURVEY_JSON||'surveys/demo.json'; const survey=await loadSurveyFromFile(fp); await generateSurveyPdfFromJson(survey,{filename:(process.env.OUTPUT||'survey.pdf')});})().catch(e=>{console.error(e);process.exit(1);})\"",
     "build:dev": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=DEV && vite build",
@@ -116,7 +119,7 @@
     "eslint-plugin-prettier": "^5.0.1",
     "eslint-plugin-vue": "^9.18.1",
     "firebase-admin": "^13.4.0",
-    "firebase-tools": "^13.12.0",
+    "firebase-tools": "^15.16.0",
     "happy-dom": "^14.12.3",
     "husky": "^9.1.6",
     "nanoid": "^5.0.7",
@@ -132,5 +135,8 @@
     "workbox-core": "^7.1.0",
     "workbox-routing": "^7.1.0",
     "workbox-strategies": "^7.1.0"
+  },
+  "overrides": {
+    "canvas": "npm:@favware/skip-dependency@^1.2.2"
   }
 }
