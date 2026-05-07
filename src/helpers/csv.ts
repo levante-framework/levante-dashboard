@@ -44,26 +44,25 @@ export function deriveNextCsvFilename(
   filename: string,
   options: {
     now?: Date;
-    suffix?: 'errors' | 'registered' | 'template';
+    suffix?: string;
   },
 ): string {
-  const basename = filename.replace(/\.csv$/i, '');
+  const next = [];
 
-  // Strip timestamp
-  let name = basename.replace(/_\d{8}-\d{4}$/, '');
-  // Strip suffix
-  name = name.replace(/_errors$/, '');
-  name = name.replace(/_registered$/, '');
-  name = name.replace(/_template$/, '');
+  // Strip metadata and extension
+  const basename = filename.replace(/(\.[^.]+)?\.csv$/i, '');
+  next.push(basename);
 
-  // Add suffix
-  if (options.suffix && options.suffix.length) name += `_${options.suffix}`;
-  // Add timestamp
-  if (options.now) name += `_${formatTimestamp(options.now)}`;
+  // Add metadata
+  const metadata: string[] = [];
+  if (options.suffix) metadata.push(options.suffix);
+  if (options.now) metadata.push(formatTimestamp(options.now));
+  if (metadata.length) next.push(metadata.join('_'));
 
-  if (name.length === 0) name = basename;
+  // Add extension
+  next.push('csv');
 
-  return `${name}.csv`;
+  return next.join('.');
 }
 
 /**

@@ -641,7 +641,7 @@ describe('AddUsers Page', () => {
       expect(removeChildMock).toHaveBeenCalledOnce();
       const link = appendChildMock.mock.calls[0]?.[0] as HTMLAnchorElement;
       expect(link.getAttribute('href')).toBe('mock-blob-url');
-      expect(link.getAttribute('download')).toMatch(/^test_errors_\d{8}-\d{4}\.csv$/);
+      expect(link.getAttribute('download')).toMatch(/^test\.errors_\d{8}-\d{4}\.csv$/);
 
       // Parse the blob back as CSV so we can assert the 'errors' column is
       // populated per row, rather than just probing for substrings.
@@ -1325,7 +1325,7 @@ describe('AddUsers Page', () => {
         expect(removeChildMock).toHaveBeenCalledOnce();
         const link = appendChildMock.mock.calls[0]?.[0] as HTMLAnchorElement;
         expect(link.getAttribute('href')).toBe('mock-blob-url');
-        expect(link.getAttribute('download')).toMatch(/^test_registered_\d{8}-\d{4}\.csv$/);
+        expect(link.getAttribute('download')).toMatch(/^test\.registered_\d{8}-\d{4}\.csv$/);
 
         const csvText = await blob.text();
         const lines = csvText.split('\n');
