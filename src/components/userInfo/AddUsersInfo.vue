@@ -122,7 +122,7 @@ import PvAccordion from 'primevue/accordion';
 import PvAccordionPanel from 'primevue/accordionpanel';
 import PvAccordionHeader from 'primevue/accordionheader';
 import PvAccordionContent from 'primevue/accordioncontent';
-import { downloadCsv, unparseCsvFile } from '@/helpers/csv';
+import { deriveNextCsvFilename, downloadCsv, unparseCsvFile } from '@/helpers/csv';
 
 const TEMPLATE_HEADERS = ['id', 'userType', 'month', 'year', 'caregiverId', 'teacherId', 'school', 'class', 'cohort'];
 
@@ -189,7 +189,9 @@ const fileRequirementsTableData = [
 ];
 
 const downloadTemplate = () => {
-  downloadCsv(unparseCsvFile([], TEMPLATE_HEADERS), 'add-users.template.csv');
+  const csv = unparseCsvFile([], TEMPLATE_HEADERS);
+  const filename = deriveNextCsvFilename('add-users', { suffix: 'template' });
+  downloadCsv(csv, filename);
 };
 </script>
 

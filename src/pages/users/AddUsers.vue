@@ -306,9 +306,9 @@ const downloadErrors = () => {
   });
 
   // Download the Error CSV file
-  const csvString = unparseCsvFile(mapped);
-  const csvFilename = deriveNextCsvFilename(uploadedFile.value.name, { now: new Date(), suffix: 'errors' });
-  downloadCsv(csvString, csvFilename);
+  const csv = unparseCsvFile(mapped);
+  const filename = deriveNextCsvFilename(uploadedFile.value.name, { suffix: 'errors', timestamp: new Date() });
+  downloadCsv(csv, filename);
 };
 
 const submitUsers = async () => {
@@ -589,9 +589,9 @@ const downloadRegisteredUsers = () => {
   if (!registeredUsers.value || registeredUsers.value.length === 0 || !uploadedFile.value) return;
 
   // Download the Registered CSV file
-  const csvString = unparseCsvFile(toRaw(registeredUsers.value), USER_CSV_HEADERS);
-  const csvFilename = deriveNextCsvFilename(uploadedFile.value.name, { now: new Date(), suffix: 'registered' });
-  downloadCsv(csvString, csvFilename);
+  const csv = unparseCsvFile(toRaw(registeredUsers.value), USER_CSV_HEADERS);
+  const filename = deriveNextCsvFilename(uploadedFile.value.name, { suffix: 'registered', timestamp: new Date() });
+  downloadCsv(csv, filename);
 };
 </script>
 

@@ -12,64 +12,47 @@ const makeFile = (content: string[][]) =>
   new File([content.map((row) => row.join(',')).join('\n')], 'test.csv', { type: 'text/csv' });
 
 describe('deriveNextCsvFilename', () => {
-  const date = new Date(2024, 10, 28, 14, 35);
-  const slug = '20241128-1435';
+  const suffix = 'registered';
+  const timestamp = new Date(2024, 10, 28, 14, 35);
+  const timestampStr = '20241128-1435';
 
-  it('returns the filename with .csv when no options are given', () => {
-    expect(deriveNextCsvFilename('users.csv', {})).toBe('users.csv');
+  it('adds .csv extension when filename does not have it', () => {
+    expect(deriveNextCsvFilename('foo')).toBe('foo.csv');
+    expect(deriveNextCsvFilename('foo.txt')).toBe('foo.txt.csv');
   });
 
-  it('strips the .csv extension before rebuilding the filename', () => {
-    expect(deriveNextCsvFilename('users.csv', { suffix: 'errors' })).toBe('users.errors.csv');
+  it('replaces .csv extension case-insensitively', () => {
+    expect(deriveNextCsvFilename('foo.Csv')).toBe('foo.csv');
+    expect(deriveNextCsvFilename('foo.CSV', { suffix })).toBe(`foo__${suffix}.csv`);
+    expect(deriveNextCsvFilename('foo.cSV', { suffix, timestamp })).toBe(`foo__${suffix}-${timestampStr}.csv`);
   });
 
-  it('strips the .CSV extension case-insensitively', () => {
-    expect(deriveNextCsvFilename('users.CSV', { suffix: 'errors' })).toBe('users.errors.csv');
+  it('returns the filename with no metadata when no options are given', () => {
+    expect(deriveNextCsvFilename('foo.csv')).toBe('foo.csv');
   });
 
-  it('strips a trailing dot-separated timestamp', () => {
-    expect(deriveNextCsvFilename(`users.${slug}.csv`, {})).toBe('users.csv');
+  it('adds metadata when options are provided', () => {
+    expect(deriveNextCsvFilename('foo.csv', { suffix })).toBe(`foo__${suffix}.csv`);
+    expect(deriveNextCsvFilename('foo.csv', { timestamp })).toBe(`foo__${timestampStr}.csv`);
+    expect(deriveNextCsvFilename('foo.csv', { suffix, timestamp })).toBe(`foo__${suffix}-${timestampStr}.csv`);
   });
 
-  it('strips the .errors suffix', () => {
-    expect(deriveNextCsvFilename('users.errors.csv', {})).toBe('users.csv');
+  it('strips previous metadata', () => {
+    expect(deriveNextCsvFilename(`foo__${suffix}.csv`)).toBe('foo.csv');
+    expect(deriveNextCsvFilename(`foo__${timestampStr}.csv`)).toBe('foo.csv');
+    expect(deriveNextCsvFilename(`foo__${suffix}-${timestampStr}.csv`)).toBe('foo.csv');
   });
 
-  it('strips the .registered suffix', () => {
-    expect(deriveNextCsvFilename('users.registered.csv', {})).toBe('users.csv');
+  it('replaces old metadata with new metadata', () => {
+    expect(deriveNextCsvFilename(`foo__errors-20260508-1407.csv`, { suffix })).toBe(`foo__${suffix}.csv`);
+    expect(deriveNextCsvFilename(`foo__errors-20260508-1407.csv`, { timestamp })).toBe(`foo__${timestampStr}.csv`);
+    expect(deriveNextCsvFilename(`foo__errors-20260508-1407.csv`, { suffix, timestamp })).toBe(
+      `foo__${suffix}-${timestampStr}.csv`,
+    );
   });
 
-  it('strips the .template suffix', () => {
-    expect(deriveNextCsvFilename('users.template.csv', {})).toBe('users.csv');
-  });
-
-  it('strips a timestamp that follows a suffix', () => {
-    expect(deriveNextCsvFilename(`users.errors_${slug}.csv`, {})).toBe('users.csv');
-  });
-
-  it('appends the suffix when options.suffix is provided', () => {
-    expect(deriveNextCsvFilename('users.csv', { suffix: 'registered' })).toBe('users.registered.csv');
-  });
-
-  it('appends a timestamp when options.now is provided', () => {
-    expect(deriveNextCsvFilename('users.csv', { now: date })).toBe(`users.${slug}.csv`);
-  });
-
-  it('appends suffix before timestamp when both options are provided', () => {
-    expect(deriveNextCsvFilename('users.csv', { suffix: 'errors', now: date })).toBe(`users.errors_${slug}.csv`);
-  });
-
-  it('replaces an old timestamp with a new one', () => {
-    const oldSlug = '20230101-0900';
-    expect(deriveNextCsvFilename(`users.${oldSlug}.csv`, { now: date })).toBe(`users.${slug}.csv`);
-  });
-
-  it('replaces an old suffix with a new one', () => {
-    expect(deriveNextCsvFilename('users.errors.csv', { suffix: 'registered' })).toBe('users.registered.csv');
-  });
-
-  it('does not strip underscore-separated suffixes', () => {
-    expect(deriveNextCsvFilename('users_errors.csv', {})).toBe('users_errors.csv');
+  it('only strips metadata and extension', () => {
+    expect(deriveNextCsvFilename('foo_bar_baz__registered-20260508-1407.csv')).toBe('foo_bar_baz.csv');
   });
 });
 

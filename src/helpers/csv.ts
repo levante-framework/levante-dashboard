@@ -36,33 +36,30 @@ export const csvFileToJson = async (file: File): Promise<any[]> => {
 /**
  * Derive the next CSV filename from a base filename and options
  * @param filename The base filename
- * @param options.now The date to add to the filename
  * @param options.suffix The suffix to add to the filename
+ * @param options.timestamp The date to add to the filename
  * @returns The next CSV filename
  */
 export function deriveNextCsvFilename(
   filename: string,
   options: {
-    now?: Date;
     suffix?: string;
-  },
+    timestamp?: Date;
+  } = {},
 ): string {
-  const next = [];
-
   // Strip metadata and extension
-  const basename = filename.replace(/(\.[^.]+)?\.csv$/i, '');
-  next.push(basename);
+  let next = filename.replace(/(__.+)?\.csv$/i, '');
 
   // Add metadata
   const metadata: string[] = [];
   if (options.suffix) metadata.push(options.suffix);
-  if (options.now) metadata.push(formatTimestamp(options.now));
-  if (metadata.length) next.push(metadata.join('_'));
+  if (options.timestamp) metadata.push(formatTimestamp(options.timestamp));
+  if (metadata.length) next += `__${metadata.join('-')}`;
 
   // Add extension
-  next.push('csv');
+  next += '.csv';
 
-  return next.join('.');
+  return next;
 }
 
 /**
