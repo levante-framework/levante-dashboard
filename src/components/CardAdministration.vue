@@ -89,17 +89,17 @@
       </div>
       <PvTreeTable
         v-if="isSyncComplete"
-        class="administration-progress-table mt-3"
+        class="mt-3"
         lazy
         row-hover
         :loading="loadingTreeTable"
         :value="treeTableOrgs"
         @node-expand="onExpand"
       >
-        <PvColumn field="name" expander style="width: 65%"></PvColumn>
-        <PvColumn field="id" header="" style="width: 17rem">
+        <PvColumn field="name" expander style="width: 20rem"></PvColumn>
+        <PvColumn field="id" header="" style="width: 14rem">
           <template #body="{ node }">
-            <div v-if="node.data.id" class="administration-progress-actions">
+            <div v-if="node.data.id" class="flex justify-content-end m-0 w-full">
               <router-link
                 v-if="isSyncComplete"
                 :to="{
@@ -110,7 +110,7 @@
                     orgType: node.data.orgType,
                   },
                 }"
-                class="no-underline"
+                class="no-underline text-black"
               >
                 <PvButton
                   v-tooltip.top="getTooltip('View detailed progress')"
@@ -728,27 +728,6 @@ const onExpand = async (node: TreeNode): Promise<void> => {
       }
     }
   }
-}
-
-.administration-progress-table {
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius);
-  overflow: hidden;
-
-  .p-treetable-tbody > tr > td {
-    padding: 1rem 1.25rem;
-    vertical-align: middle;
-  }
-
-  .p-treetable-tbody > tr > td:last-child {
-    text-align: right;
-  }
-}
-
-.administration-progress-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin: 0;
 }
 
 .progress-report-button {
