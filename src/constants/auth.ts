@@ -43,6 +43,7 @@ export const allowedUnauthenticatedRoutes = [
   'AuthEmailSent',
   'Debug',
   'Maintenance',
+  'SurveyPreview',
   'SignIn',
   'Login', // @TODO: Remove Login after replacing the login page
 ] as const;
