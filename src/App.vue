@@ -99,27 +99,27 @@ onBeforeMount(async () => {
 
   await authStore.initFirekit();
 
-  await authStore.initStateFromRedirect().then(async () => {
-    // @TODO: Refactor this callback as we should ideally use the useUserClaimsQuery and useUserDataQuery composables.
-    // @NOTE: Whilst the rest of the application relies on the user's ROAR UID, this callback requires the user's ID
-    // in order for SSO to work and cannot currently be changed without significant refactoring.
-    const uid = authStore.getUserId();
-    if (!uid) {
-      return;
-    }
-    try {
-      const [userClaims, userData] = await Promise.all([
-        fetchDocById('userClaims', uid),
-        fetchDocById('users', uid),
-      ]);
-      authStore.setUserClaims(userClaims);
-      authStore.setUserData(userData);
-    } catch (error) {
-      await recoverFromProfileFetchFailure(error);
-    }
-  }).catch((error) => {
-    console.error('Error initializing auth store', error);
-  });
+  await authStore
+    .initStateFromRedirect()
+    .then(async () => {
+      // @TODO: Refactor this callback as we should ideally use the useUserClaimsQuery and useUserDataQuery composables.
+      // @NOTE: Whilst the rest of the application relies on the user's ROAR UID, this callback requires the user's ID
+      // in order for SSO to work and cannot currently be changed without significant refactoring.
+      const uid = authStore.getUserId();
+      if (!uid) {
+        return;
+      }
+      try {
+        const [userClaims, userData] = await Promise.all([fetchDocById('userClaims', uid), fetchDocById('users', uid)]);
+        authStore.setUserClaims(userClaims);
+        authStore.setUserData(userData);
+      } catch (error) {
+        await recoverFromProfileFetchFailure(error);
+      }
+    })
+    .catch((error) => {
+      console.error('Error initializing auth store', error);
+    });
 
   isAuthStoreReady.value = true;
 });
