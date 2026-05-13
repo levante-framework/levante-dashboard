@@ -1,41 +1,38 @@
 <template>
-  <div class="language-selector-wrapper">
-    <div class="font-semibold text-color-secondary">{{ $t('authSignIn.selectLanguageLabel') }}:</div>
-
-    <PvSelect
-      v-model="$i18n.locale"
-      class="w-full"
-      :options="languageDropdownOptions"
-      option-label="name"
-      option-value="value"
-      :placeholder="$t('authSignIn.selectLanguage')"
-      :highlight-on-select="true"
-      @change="onLanguageChange"
-    >
-      <template #option="slotProps">
-        <div class="flex gap-2 w-full">
-          <PvTag
-            v-if="slotProps.option.testing"
-            severity="warn"
-            value="Testing"
-            class="text-xs font-semibold uppercase"
-          />
-          <div>{{ slotProps.option.name }}</div>
-        </div>
-      </template>
-    </PvSelect>
-  </div>
+  <PvSelect
+    v-model="$i18n.locale"
+    class="w-full"
+    :options="languageDropdownOptions"
+    option-label="name"
+    option-value="value"
+    :placeholder="$t('authSignIn.selectLanguage')"
+    :highlight-on-select="true"
+    size="small"
+    @change="onChangeLanguage"
+  >
+    <template #option="slotProps">
+      <div class="flex gap-2 w-full">
+        <PvTag
+          v-if="slotProps.option.testing"
+          severity="warn"
+          value="Testing"
+          class="text-xs font-semibold uppercase"
+        />
+        <div class="text-sm">{{ slotProps.option.name }}</div>
+      </div>
+    </template>
+  </PvSelect>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import PvSelect from 'primevue/select';
-import { languageOptions, getTranslations, LanguageOption } from '@/translations/i18n';
 import { isLevante } from '@/helpers';
-import { useSurveyStore } from '@/store/survey';
-import { setupStudentAudio } from '@/helpers/surveyInitialization';
 import { getParsedLocale } from '@/helpers/survey';
+import { setupStudentAudio } from '@/helpers/surveyInitialization';
+import { useSurveyStore } from '@/store/survey';
+import { getTranslations, LanguageOption, languageOptions } from '@/translations/i18n';
+import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
+import { computed } from 'vue';
 
 interface LanguageChangeEvent {
   value: string;
@@ -53,7 +50,7 @@ const languageDropdownOptions = computed(() => {
   });
 });
 
-async function onLanguageChange(event: LanguageChangeEvent): Promise<void> {
+async function onChangeLanguage(event: LanguageChangeEvent): Promise<void> {
   sessionStorage.setItem(`${isLevante ? 'levante' : 'roar'}PlatformLocale`, event.value);
 
   await getTranslations(event.value);
@@ -64,15 +61,3 @@ async function onLanguageChange(event: LanguageChangeEvent): Promise<void> {
   }
 }
 </script>
-
-<style lang="scss">
-.language-selector-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.p-select-label {
-  text-align: left;
-}
-</style>

@@ -309,3 +309,9 @@ export const formattedVariantName = (variantName: string): string => {
 export const isObject = (obj: unknown): boolean => obj !== null && typeof obj === 'object' && !Array.isArray(obj);
 // This one just accept plain objects
 export const isPlainObject = (obj: unknown): boolean => Object.prototype.toString.call(obj) === '[object Object]';
+
+export const isEmailValid = (email: string): boolean => {
+  const re =
+    /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(email);
+};

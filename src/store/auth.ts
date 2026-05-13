@@ -13,7 +13,7 @@ interface FirebaseUser {
   adminFirebaseUser: User | null;
 }
 
-interface UserClaims {
+export interface UserClaims {
   claims: {
     roarUid?: string;
     super_admin?: boolean;
@@ -34,7 +34,7 @@ interface EmailLinkCredentials {
   emailLink: string;
 }
 
-interface UserData {
+export interface UserData {
   roles: { siteId: string; role: string; siteName: string }[];
   [key: string]: unknown;
 }
