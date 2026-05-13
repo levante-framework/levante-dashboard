@@ -44,6 +44,7 @@ import { NAVBAR_BLACKLIST } from './constants';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 import { useI18n } from 'vue-i18n';
+import { slk } from 'survey-core';
 
 const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>
@@ -127,6 +128,8 @@ onBeforeMount(async () => {
 onMounted(() => {
   const isLocal = import.meta.env.MODE === 'development';
   const isDevToolsEnabled = import.meta.env.VITE_QUERY_DEVTOOLS_ENABLED === 'true';
+
+  slk(import.meta.env.VITE_SURVEYJS_LICENSE_KEY ?? '');
 
   if (isLocal) {
     showDevtools.value = true;
