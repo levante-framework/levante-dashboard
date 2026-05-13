@@ -1,8 +1,60 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
-import { downloadCsv, generateColumns, parseCsvFile, unparseCsvFile } from './csv';
+import {
+  deriveNextCsvFilename,
+  downloadCsv,
+  formatTimestamp,
+  generateColumns,
+  parseCsvFile,
+  unparseCsvFile,
+} from './csv';
 
 const makeFile = (content: string[][]) =>
   new File([content.map((row) => row.join(',')).join('\n')], 'test.csv', { type: 'text/csv' });
+
+describe('deriveNextCsvFilename', () => {
+  const suffix = 'registered';
+  const timestamp = new Date(2024, 10, 28, 14, 35);
+  const timestampStr = '20241128-1435';
+
+  it('adds .csv extension when filename does not have it', () => {
+    expect(deriveNextCsvFilename('foo')).toBe('foo.csv');
+    expect(deriveNextCsvFilename('foo.txt')).toBe('foo.txt.csv');
+  });
+
+  it('replaces .csv extension case-insensitively', () => {
+    expect(deriveNextCsvFilename('foo.Csv')).toBe('foo.csv');
+    expect(deriveNextCsvFilename('foo.CSV', { suffix })).toBe(`foo__${suffix}.csv`);
+    expect(deriveNextCsvFilename('foo.cSV', { suffix, timestamp })).toBe(`foo__${suffix}-${timestampStr}.csv`);
+  });
+
+  it('returns the filename with no metadata when no options are given', () => {
+    expect(deriveNextCsvFilename('foo.csv')).toBe('foo.csv');
+  });
+
+  it('adds metadata when options are provided', () => {
+    expect(deriveNextCsvFilename('foo.csv', { suffix })).toBe(`foo__${suffix}.csv`);
+    expect(deriveNextCsvFilename('foo.csv', { timestamp })).toBe(`foo__${timestampStr}.csv`);
+    expect(deriveNextCsvFilename('foo.csv', { suffix, timestamp })).toBe(`foo__${suffix}-${timestampStr}.csv`);
+  });
+
+  it('strips previous metadata', () => {
+    expect(deriveNextCsvFilename(`foo__${suffix}.csv`)).toBe('foo.csv');
+    expect(deriveNextCsvFilename(`foo__${timestampStr}.csv`)).toBe('foo.csv');
+    expect(deriveNextCsvFilename(`foo__${suffix}-${timestampStr}.csv`)).toBe('foo.csv');
+  });
+
+  it('replaces old metadata with new metadata', () => {
+    expect(deriveNextCsvFilename(`foo__errors-20260508-1407.csv`, { suffix })).toBe(`foo__${suffix}.csv`);
+    expect(deriveNextCsvFilename(`foo__errors-20260508-1407.csv`, { timestamp })).toBe(`foo__${timestampStr}.csv`);
+    expect(deriveNextCsvFilename(`foo__errors-20260508-1407.csv`, { suffix, timestamp })).toBe(
+      `foo__${suffix}-${timestampStr}.csv`,
+    );
+  });
+
+  it('only strips metadata and extension', () => {
+    expect(deriveNextCsvFilename('foo_bar_baz__registered-20260508-1407.csv')).toBe('foo_bar_baz.csv');
+  });
+});
 
 describe('downloadCsv', () => {
   let createObjectURL: ReturnType<typeof vi.fn>;
@@ -77,6 +129,28 @@ describe('downloadCsv', () => {
 
     const [blob] = createObjectURL.mock.calls[0] as unknown as [Blob];
     expect(await blob.text()).toBe('id,name\n1,Alice');
+  });
+});
+
+describe('formatTimestamp', () => {
+  it('formats a date as YYYYMMDD-HHMM', () => {
+    expect(formatTimestamp(new Date(2024, 10, 28, 14, 35))).toBe('20241128-1435');
+  });
+
+  it('pads a single-digit month with a leading zero', () => {
+    expect(formatTimestamp(new Date(2024, 0, 28, 14, 35))).toBe('20240128-1435');
+  });
+
+  it('pads a single-digit day with a leading zero', () => {
+    expect(formatTimestamp(new Date(2024, 10, 5, 14, 35))).toBe('20241105-1435');
+  });
+
+  it('pads single-digit hours with a leading zero', () => {
+    expect(formatTimestamp(new Date(2024, 10, 28, 9, 35))).toBe('20241128-0935');
+  });
+
+  it('pads single-digit minutes with a leading zero', () => {
+    expect(formatTimestamp(new Date(2024, 10, 28, 14, 7))).toBe('20241128-1407');
   });
 });
 

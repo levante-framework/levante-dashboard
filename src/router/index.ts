@@ -103,6 +103,15 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/pages/Login.vue'),
+    meta: {
+      pageTitle: { translationKey: 'login' },
+      allowedRoles: ['*'],
+    },
+  },
+  {
     path: '/auth-email-link',
     name: 'AuthEmailLink',
     beforeRouteLeave: [removeQueryParams, removeHash],

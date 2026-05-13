@@ -481,9 +481,3 @@ const submit = async () => {
   });
 };
 </script>
-
-<style lang="scss">
-.p-dialog .p-dialog-footer {
-  padding: 0;
-}
-</style>

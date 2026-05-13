@@ -99,7 +99,7 @@
         <PvColumn field="name" expander style="width: 20rem"></PvColumn>
         <PvColumn field="id" header="" style="width: 14rem">
           <template #body="{ node }">
-            <div v-if="node.data.id" class="flex m-0">
+            <div v-if="node.data.id" class="flex justify-content-end m-0 w-full">
               <router-link
                 v-if="isSyncComplete"
                 :to="{
@@ -113,14 +113,13 @@
                 class="no-underline text-black"
               >
                 <PvButton
-                  v-tooltip.top="getTooltip('See progress')"
-                  class="m-0 bg-transparent text-bluegray-500 shadow-none border-none p-0 border-round"
-                  style="color: var(--primary-color) !important"
+                  v-tooltip.top="getTooltip('View detailed progress')"
+                  class="progress-report-button"
+                  icon="pi pi-chart-line"
                   severity="secondary"
-                  text
-                  raised
-                  label="See Progress"
-                  aria-label="See progress"
+                  outlined
+                  label="View Detailed Progress"
+                  aria-label="View detailed progress"
                   size="small"
                   data-cy="button-progress"
                 />
@@ -728,6 +727,25 @@ const onExpand = async (node: TreeNode): Promise<void> => {
         color: white;
       }
     }
+  }
+}
+
+.progress-report-button {
+  min-width: 13rem;
+  justify-content: center;
+  border-color: rgba(var(--bright-red-rgb), 0.28) !important;
+  background: rgba(var(--bright-red-rgb), 0.04) !important;
+  color: var(--primary-color) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+
+  &:enabled:hover {
+    border-color: var(--primary-color) !important;
+    background: rgba(var(--bright-red-rgb), 0.08) !important;
+    color: var(--primary-color) !important;
+  }
+
+  .p-button-icon {
+    font-size: 0.85rem;
   }
 }
 </style>

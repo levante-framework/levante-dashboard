@@ -109,6 +109,6 @@ async function playAudio(name) {
   border-radius: 25%;
 }
 .play-button-visible:hover {
-  background-color: var(--primary-color-hover);
+  background-color: var(--secondary-color);
 }
 </style>

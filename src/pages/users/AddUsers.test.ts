@@ -641,7 +641,7 @@ describe('AddUsers Page', () => {
       expect(removeChildMock).toHaveBeenCalledOnce();
       const link = appendChildMock.mock.calls[0]?.[0] as HTMLAnchorElement;
       expect(link.getAttribute('href')).toBe('mock-blob-url');
-      expect(link.getAttribute('download')).toBe('add-users-errors.csv');
+      expect(link.getAttribute('download')).toMatch(/^test__errors-\d{8}-\d{4}\.csv$/);
 
       // Parse the blob back as CSV so we can assert the 'errors' column is
       // populated per row, rather than just probing for substrings.
@@ -1307,6 +1307,7 @@ describe('AddUsers Page', () => {
             uid: 'uid-2',
           },
         ];
+        vm.uploadedFile = createMockFile('', 'test.csv');
 
         vm.downloadRegisteredUsers();
 
@@ -1324,7 +1325,7 @@ describe('AddUsers Page', () => {
         expect(removeChildMock).toHaveBeenCalledOnce();
         const link = appendChildMock.mock.calls[0]?.[0] as HTMLAnchorElement;
         expect(link.getAttribute('href')).toBe('mock-blob-url');
-        expect(link.getAttribute('download')).toBe('registered-users.csv');
+        expect(link.getAttribute('download')).toMatch(/^test__registered-\d{8}-\d{4}\.csv$/);
 
         const csvText = await blob.text();
         const lines = csvText.split('\n');
@@ -1335,17 +1336,17 @@ describe('AddUsers Page', () => {
         // intentionally excluded from USER_CSV_HEADERS because the column
         // is only used for input validation, not download.
         expect(lines[0]).toBe(
-          'id,userType,month,year,caregiverId,teacherId,school,class,cohort,uid,email,password,extraField',
+          'id,userType,month,year,caregiverId,teacherId,school,class,cohort,email,password,uid,extraField',
         );
 
         // Row 1 exercises the helper's escaping in one go: the school cell
         // is quoted because it contains a comma, with the inner '"' doubled.
         // null (email) and undefined (password) collapse to empty cells.
-        expect(lines[1]).toBe('1,child,5,2018,,,"Test, ""Quoted"" School",Class A,,uid-1,,,x');
+        expect(lines[1]).toBe('1,child,5,2018,,,"Test, ""Quoted"" School",Class A,,,,uid-1,x');
 
         // Row 2 has only a handful of fields populated; every absent header
         // becomes an empty cell, including the appended 'extraField'.
-        expect(lines[2]).toBe('2,caregiver,,,,,Plain School,,,uid-2,,,');
+        expect(lines[2]).toBe('2,caregiver,,,,,Plain School,,,,,uid-2,');
       } finally {
         document.createElement = originalCreateElement;
       }
