@@ -104,19 +104,14 @@ const selectedSurveyName = computed(
     SURVEYS.find((survey: SurveyOption) => survey.id.toLowerCase() === (route.params.id as string).toLowerCase())
       ?.name || '',
 );
+
 const surveyOptions = computed(() => SURVEYS);
+
 const surveyModel = computed(() => {
   const surveyDataRaw = surveyData.value;
-
   if (!surveyDataRaw) return null;
-
-  const plain =
-    typeof structuredClone === 'function'
-      ? structuredClone(toRaw(surveyDataRaw))
-      : JSON.parse(JSON.stringify(toRaw(surveyDataRaw)));
-
+  const plain = getPlainSurveyData(surveyDataRaw);
   plain.locale = getParsedLocale(routeLocale.value || locale.value);
-
   return markRaw(new Model(plain));
 });
 
@@ -129,17 +124,31 @@ const {
 
 const downloadPDF = async () => {
   isDownloading.value = true;
-
-  const surveyPDF = new SurveyPDF(surveyData.value, {});
+  const plain = getPlainSurveyData(surveyData.value);
+  plain.locale = getParsedLocale(routeLocale.value || locale.value);
+  const fileName = `${getFullDate()}_${routeSurveyId.value}`;
+  const surveyPDF = new SurveyPDF(plain, {});
   surveyPDF.data = surveyModel.value;
   surveyPDF
-    .save(routeSurveyId.value)
+    .save(fileName)
     .catch((error) => {
       console.error('Failed to download as PDF', error);
     })
     .finally(() => {
       isDownloading.value = false;
     });
+};
+
+const getFullDate = () => {
+  const now = new Date();
+  const day = now.getDate().toString().padStart(2, '0');
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const year = now.getFullYear();
+  return `${year}${month}${day}`;
+};
+
+const getPlainSurveyData = (raw: unknown) => {
+  return typeof structuredClone === 'function' ? structuredClone(toRaw(raw)) : JSON.parse(JSON.stringify(toRaw(raw)));
 };
 
 const onChangeSurvey = ({ value }: { value: string }) => {
