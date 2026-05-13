@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import SurveyPreview from '@/pages/SurveyPreview.vue';
 
+const getFullDate = () => {
+  const now = new Date();
+  const day = now.getDate().toString().padStart(2, '0');
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const year = now.getFullYear();
+  return `${year}${month}${day}`;
+};
+
 const h = vi.hoisted(() => {
   const { ref } = require('vue');
   const surveyPdfSaveCalls = [];
@@ -187,7 +195,8 @@ describe('SurveyPreview', () => {
     expect(anchor.attributes('href')).toBe('/survey/preview/parent_survey_child/live/en-US');
   });
 
-  it('downloadPDF constructs SurveyPDF and calls save with survey id', async () => {
+  it('downloadPDF constructs SurveyPDF and calls save with survey id and full date', async () => {
+    const fullDate = getFullDate();
     h.mockRoute.params.id = 'parent_survey_child';
     h.surveyData.value = { title: 'Test', pages: [] };
     h.isSurveyLoading.value = false;
@@ -202,6 +211,6 @@ describe('SurveyPreview', () => {
     await flushPromises();
 
     expect(SurveyPDF).toHaveBeenCalled();
-    expect(h.surveyPdfSave.getCalls()).toEqual([['parent_survey_child']]);
+    expect(h.surveyPdfSave.getCalls()).toEqual([[`${fullDate}_parent_survey_child`]]);
   });
 });
