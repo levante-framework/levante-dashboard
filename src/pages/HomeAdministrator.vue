@@ -276,7 +276,6 @@ const { data: siteOverview, isLoading } = useGetSiteOverviewQuery(() =>
 );
 
 const userName = computed(() => {
-  console.log('userData.value', userData.value);
   let displayName = userData.value?.displayName;
   if (!displayName) {
     const name = userData.value?.name as
