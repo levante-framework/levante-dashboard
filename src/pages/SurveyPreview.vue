@@ -197,15 +197,16 @@ watchEffect(() => {
   display: block;
   width: 100%;
   max-width: 320px;
-  height: auto;
-  min-height: 100%;
+  height: calc(100% - 6px);
   margin: 0;
+  padding: 0 0 1.5rem;
   background-color: white;
   border-right: 2px solid #f3f3f3;
   position: fixed;
   top: 6px;
   left: 0;
   z-index: 100;
+  overflow-y: auto;
 }
 
 .preview-aside-header {
