@@ -4,13 +4,22 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { createTestingPinia } from '@pinia/testing';
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 import PrimeVue from 'primevue/config';
+import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
 import { useGetSiteOverviewQuery } from '@/composables/queries/useGetSiteOverviewQuery';
 import HomeAdministrator from '@/pages/HomeAdministrator.vue';
+import ViewAssignments from '@/pages/ViewAssignments.vue';
 import { useAuthStore } from '@/store/auth';
 
 vi.mock('@/composables/queries/useGetSiteOverviewQuery', () => ({
   useGetSiteOverviewQuery: vi.fn(),
 }));
+
+vi.mock('@/composables/queries/useAdministrationsListQuery', () => ({
+  default: vi.fn(),
+}));
+
+// `@bdelab/roar-utils` has a broken transitive import path; stub it so tests can load.
+vi.mock('@bdelab/roar-utils', () => ({ default: {} }));
 
 vi.mock('@/components/DocsButton.vue', () => ({
   default: {
@@ -233,5 +242,105 @@ describe('HomeAdministrator', () => {
 
     const createLinks = wrapper.findAll('[data-cy="router-link"]').filter((el) => el.text().includes('Create'));
     expect(createLinks.length).toBe(3);
+  });
+});
+
+describe('Welcome page → ViewAssignments handoff', () => {
+  // happy-dom does not actually persist state from history.pushState/replaceState (the `state`
+  // getter always returns null), so we stub the getter directly to simulate router navigation
+  // state and spy on replaceState to verify the on-mount cleanup.
+  const stubHistoryState = (state) => {
+    vi.spyOn(history, 'state', 'get').mockReturnValue(state);
+  };
+
+  const mockAdministrationsListQuery = (administrations = []) => {
+    vi.mocked(useAdministrationsListQuery).mockReturnValue({
+      data: ref(administrations),
+      isLoading: ref(false),
+      isFetching: ref(false),
+      isError: ref(false),
+      error: ref(null),
+      isSuccess: ref(true),
+    });
+  };
+
+  const mountViewAssignments = () => {
+    const pinia = createTestingPinia({ stubActions: false, createSpy: vi.fn });
+
+    const authStore = useAuthStore(pinia);
+    authStore.currentSite = 'site-1';
+    authStore.roarfirekit = { restConfig: true };
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    return mount(ViewAssignments, {
+      global: {
+        plugins: [pinia, PrimeVue, [VueQueryPlugin, { queryClient }]],
+        stubs: {
+          CardAdministration: true,
+          RouterLink: true,
+        },
+      },
+    });
+  };
+
+  const getFilterValue = (wrapper) =>
+    wrapper.findComponent('[data-cy="dropdown-filter-administrations"]').props('modelValue');
+
+  beforeEach(() => {
+    mockAdministrationsListQuery();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('initializes the status filter from history.state when arriving from a "View open" card', async () => {
+    stubHistoryState({ status: 'open' });
+
+    const wrapper = mountViewAssignments();
+    await flushPromises();
+
+    expect(getFilterValue(wrapper)).toEqual({ label: 'Open', value: 'open' });
+  });
+
+  it.each([
+    ['upcoming', { label: 'Upcoming', value: 'upcoming' }],
+    ['closed', { label: 'Closed', value: 'closed' }],
+  ])('also honors the %s status from history.state', async (status, expectedOption) => {
+    stubHistoryState({ status });
+
+    const wrapper = mountViewAssignments();
+    await flushPromises();
+
+    expect(getFilterValue(wrapper)).toEqual(expectedOption);
+  });
+
+  it('clears the one-shot router state on mount so a refresh does not re-apply the filter', async () => {
+    stubHistoryState({ status: 'open' });
+    const replaceStateSpy = vi.spyOn(history, 'replaceState');
+
+    mountViewAssignments();
+    await flushPromises();
+
+    expect(replaceStateSpy).toHaveBeenCalledWith({}, '');
+  });
+
+  it('falls back to the default "All" filter when history.state has no status', async () => {
+    stubHistoryState(null);
+
+    const wrapper = mountViewAssignments();
+    await flushPromises();
+
+    expect(getFilterValue(wrapper)).toEqual({ label: 'All', value: null });
+  });
+
+  it('ignores an unrecognized status value and uses the default filter', async () => {
+    stubHistoryState({ status: 'not-a-real-status' });
+
+    const wrapper = mountViewAssignments();
+    await flushPromises();
+
+    expect(getFilterValue(wrapper)).toEqual({ label: 'All', value: null });
   });
 });

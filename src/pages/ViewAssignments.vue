@@ -220,6 +220,9 @@ unsubscribeInitializer = authStore.$subscribe(async (mutation, state) => {
 
 onMounted(() => {
   if (roarfirekit.value.restConfig) init();
+  // Drop any one-shot router state (e.g. { status: 'open' } from the welcome page) so a refresh
+  // or back/forward doesn't keep re-applying it on subsequent visits.
+  history.replaceState({}, '');
 });
 
 /**
@@ -262,6 +265,17 @@ const filterOptions = ref([
 ]);
 
 const getAssignmentsSelectedFilter = () => {
+  // Honor a status filter passed via router state (e.g. "View open" on the welcome page) over any
+  // previously-persisted filter so an explicit click always lands on the requested status.
+  const statusFromRouterState = history.state?.status;
+  if (typeof statusFromRouterState === 'string') {
+    const optionFromRouterState = filterOptions.value.find((option) => option.value === statusFromRouterState);
+    if (optionFromRouterState) {
+      setAssignmentsSelectedFilter(optionFromRouterState);
+      return optionFromRouterState;
+    }
+  }
+
   if (assignmentsSelectedFilter.value) return assignmentsSelectedFilter.value;
 
   const defaultLabel = 'All';
