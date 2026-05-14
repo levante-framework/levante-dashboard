@@ -44,7 +44,7 @@
               </div>
 
               <div class="flex flex-column gap-1">
-                <small for="dd-sort" class="text-gray-400">Sort by</small>
+                <label for="dd-sort" class="text-gray-400 text-xs">Sort by</label>
                 <PvSelect
                   v-model="sortKey"
                   input-id="dd-sort"
@@ -56,7 +56,7 @@
               </div>
 
               <div class="flex flex-column gap-1">
-                <small for="dd-sort" class="text-gray-400">Status</small>
+                <label for="dd-filter" class="text-gray-400 text-xs">Status</label>
                 <PvSelect
                   v-model="filterKey"
                   input-id="dd-filter"
@@ -423,13 +423,13 @@ const onFilterChange = (event) => {
   filteredAdministrations.value = administrations.value?.filter((assignment) => {
     switch (filterValue.value) {
       case 'open':
-        return isCurrent(assignment) && assignment;
+        return isCurrent(assignment);
       case 'upcoming':
-        return isUpcoming(assignment) && assignment;
+        return isUpcoming(assignment);
       case 'closed':
-        return isPast(assignment) && assignment;
+        return isPast(assignment);
       default:
-        return assignment;
+        return true;
     }
   });
 

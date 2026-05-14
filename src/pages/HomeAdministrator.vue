@@ -3,8 +3,8 @@
 
   <div v-else class="text-color">
     <div class="w-full px-5 my-5">
-      <div class="text-2xl">Welcome,</div>
-      <div class="font-bold text-3xl">{{ userName }}</div>
+      <div class="text-2xl">{{ userName ? 'Welcome,' : 'Welcome!' }}</div>
+      <div v-if="userName" class="font-bold text-3xl">{{ userName }}</div>
     </div>
 
     <div class="w-full px-5 mb-5">
@@ -25,7 +25,7 @@
       </div>
     </div>
 
-    <div v-if="!isSiteSelected" class="w-full px-5 mb-5 -mt-4">
+    <div v-if="showSelectSitePrompt" class="w-full px-5 mb-5 -mt-4">
       <div class="info info--site-not-selected">
         <i class="pi pi-exclamation-circle" />
         <div class="font-medium">Select a site to see stats</div>
@@ -123,7 +123,7 @@
           <div class="group-card-header">
             <div class="flex align-items-center gap-2">
               <div class="font-semibold">Schools</div>
-              <PvBadge :value="isSiteSelected ? Object.keys(schools).length : '-'" class="badge" />
+              <PvBadge :value="isSiteSelected ? schools.length : '-'" class="badge" />
             </div>
 
             <div v-if="isSiteSelected">
@@ -134,9 +134,9 @@
                 }"
                 class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline"
               >
-                <span v-if="Object.keys(schools).length">View schools</span>
+                <span v-if="schools.length">View schools</span>
                 <span v-else>Create</span>
-                <i v-if="Object.keys(schools).length" class="pi pi-arrow-right text-xs" />
+                <i v-if="schools.length" class="pi pi-arrow-right text-xs" />
                 <i v-else class="pi pi-plus text-xs" />
               </RouterLink>
             </div>
@@ -166,7 +166,7 @@
           <div class="group-card-header">
             <div class="flex align-items-center gap-2">
               <div class="font-semibold">Classes</div>
-              <PvBadge :value="isSiteSelected ? Object.keys(classes).length : '-'" class="badge" />
+              <PvBadge :value="isSiteSelected ? classes.length : '-'" class="badge" />
             </div>
 
             <div v-if="isSiteSelected">
@@ -177,10 +177,10 @@
                 }"
                 class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline"
               >
-                <span v-if="Object.keys(classes).length">View classes</span>
+                <span v-if="classes.length">View classes</span>
                 <span v-else>Create</span>
 
-                <i v-if="Object.keys(classes).length" class="pi pi-arrow-right text-xs" />
+                <i v-if="classes.length" class="pi pi-arrow-right text-xs" />
                 <i v-else class="pi pi-plus text-xs" />
               </RouterLink>
             </div>
@@ -213,10 +213,11 @@
           <div class="group-card-header">
             <div class="flex align-items-center gap-2">
               <div class="font-semibold">Cohorts</div>
-              <PvBadge :value="isSiteSelected ? Object.keys(cohorts).length : '-'" class="badge" />
+              <PvBadge :value="isSiteSelected ? cohorts.length : '-'" class="badge" />
             </div>
 
             <div v-if="isSiteSelected">
+              <!-- `tab: 'groups'` is the legacy id for the Cohorts tab. -->
               <RouterLink
                 :to="{
                   name: 'ListGroups',
@@ -224,10 +225,10 @@
                 }"
                 class="inline-flex align-items-center gap-2 font-semibold text-sm text-color no-underline"
               >
-                <span v-if="Object.keys(cohorts).length">View cohorts</span>
+                <span v-if="cohorts.length">View cohorts</span>
                 <span v-else>Create</span>
 
-                <i v-if="Object.keys(cohorts).length" class="pi pi-arrow-right text-xs" />
+                <i v-if="cohorts.length" class="pi pi-arrow-right text-xs" />
                 <i v-else class="pi pi-plus text-xs" />
               </RouterLink>
             </div>
@@ -271,27 +272,23 @@ const authStore = useAuthStore();
 const { currentSite, userData } = storeToRefs(authStore);
 
 const isSiteSelected = computed(() => !!currentSite.value && currentSite.value !== 'any');
+const showSelectSitePrompt = computed(() => !!userData.value && !isSiteSelected.value);
 const { data: siteOverview, isLoading } = useGetSiteOverviewQuery(() =>
   isSiteSelected.value ? (currentSite.value as string) : '',
 );
 
 const userName = computed(() => {
-  let displayName = userData.value?.displayName;
-  if (!displayName) {
-    const name = userData.value?.name as
-      | {
-          first?: string;
-          middle?: string;
-          last?: string;
-        }
-      | undefined;
-    const first = name?.first || '';
-    const middle = name?.middle || '';
-    const last = name?.last || '';
-    displayName = [first, middle, last].filter(Boolean).join(' ');
-  }
+  const displayName = userData.value?.displayName;
+  if (displayName) return displayName;
 
-  return displayName;
+  const name = userData.value?.name as
+    | {
+        first?: string;
+        middle?: string;
+        last?: string;
+      }
+    | undefined;
+  return [name?.first, name?.middle, name?.last].filter(Boolean).join(' ');
 });
 
 const userCounts = computed(() => siteOverview.value?.counts.users ?? { teachers: 0, caregivers: 0, children: 0 });

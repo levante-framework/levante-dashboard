@@ -17,7 +17,6 @@ import {
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
-import { Ref } from 'vue';
 
 export interface CreateUpdateSuperAdminNamePayload {
   first: string;
