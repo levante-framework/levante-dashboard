@@ -286,6 +286,15 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
+    path: '/survey/preview/:id?/:live?/:locale?',
+    name: 'SurveyPreview',
+    component: () => import('@/pages/SurveyPreview.vue'),
+    meta: {
+      pageTitle: 'Survey Preview',
+      allowedRoles: [],
+    },
+  },
+  {
     path: '/maintenance',
     name: 'Maintenance',
     component: () => import('@/pages/MaintenancePage.vue'),
