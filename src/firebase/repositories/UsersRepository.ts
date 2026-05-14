@@ -132,22 +132,6 @@ class UsersRepository extends Repository {
     return this.callWithTimeout<CreateUsersPayload, unknown>('createUsers', payload, CREATE_USERS_CALLABLE_TIMEOUT_MS);
   }
 
-  async getUsersBySiteId(siteIdRef: Ref<string | null>): Promise<Array<unknown>> {
-    if (!siteIdRef.value?.length || siteIdRef.value === 'any') return [];
-
-    try {
-      const usersRef = collection(FirebaseService.db, FIRESTORE_COLLECTIONS.USERS);
-      const usersQuery = query(usersRef, where('districts.all', 'array-contains', siteIdRef.value));
-      const snapshot = await getDocs(usersQuery);
-      const docs = snapshot.docs.map((doc) => doc.data());
-      return docs;
-    } catch (error) {
-      console.error('getUsersBySiteId: Error fetching admin users from Firestore:', error);
-      logger.error(error, { context: { function: 'getUsersBySiteId' } });
-      throw error;
-    }
-  }
-
   async getAdministrationOrgProgress(
     payload: GetAdministrationOrgProgressPayload,
   ): Promise<GetAdministrationOrgProgressResult> {

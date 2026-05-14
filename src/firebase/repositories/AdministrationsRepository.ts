@@ -73,22 +73,6 @@ class AdministrationsRepository extends Repository {
       throw error;
     }
   }
-
-  async getAssignmentsBySiteId(siteIdRef: Ref<string | null>): Promise<Array<unknown>> {
-    if (!siteIdRef.value?.length || siteIdRef.value === 'any') return [];
-
-    try {
-      const assignmentsRef = collection(FirebaseService.db, FIRESTORE_COLLECTIONS.ADMINISTRATIONS);
-      const assignmentsQuery = query(assignmentsRef, where('siteId', '==', siteIdRef.value));
-      const snapshot = await getDocs(assignmentsQuery);
-      const docs = snapshot.docs.map((doc) => doc.data());
-      return docs;
-    } catch (error) {
-      console.error('getAssignmentsBySiteId: Error fetching assignments from Firestore:', error);
-      logger.error(error, { context: { function: 'getAssignmentsBySiteId' } });
-      throw error;
-    }
-  }
 }
 
 export const administrationsRepository = new AdministrationsRepository();
