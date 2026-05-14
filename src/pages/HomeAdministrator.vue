@@ -12,7 +12,7 @@
         <i class="pi pi-exclamation-circle" />
 
         <div class="mr-auto">
-          First things first, let's read the quick documentation to get a better overview of the Levante Platform.
+          First things first, let's read the quick documentation to get a better overview of the LEVANTE Platform.
 
           <div class="font-semibold">
             Always remember: create a group, add some users to it, and finally create an assignment.
@@ -260,12 +260,7 @@
 <script setup lang="ts">
 import DocsButton from '@/components/DocsButton.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import { useGetAssignmentsBySiteId } from '@/composables/queries/useGetAssignmentsBySiteId';
-import { useGetClassesBySiteId } from '@/composables/queries/useGetClassesBySiteId';
-import { useGetCohortsBySiteId } from '@/composables/queries/useGetCohortsBySiteId';
-import { useGetSchoolsBySiteId } from '@/composables/queries/useGetSchoolsBySiteId';
-import { useGetUsersBySiteId } from '@/composables/queries/useGetUsersBySiteId';
-import { isCurrent, isPast, isUpcoming } from '@/helpers/assignments';
+import { useGetSiteOverviewQuery } from '@/composables/queries/useGetSiteOverviewQuery';
 import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 import PvBadge from 'primevue/badge';
@@ -275,167 +270,64 @@ import { RouterLink } from 'vue-router';
 const authStore = useAuthStore();
 const { currentSite, userData } = storeToRefs(authStore);
 
-const { data: assignmentsBySiteIdData, isLoading: assignmentsBySiteIdLoading } = useGetAssignmentsBySiteId(currentSite);
-const { data: schoolsBySiteIdData, isLoading: schoolsBySiteIdLoading } = useGetSchoolsBySiteId(currentSite);
-const { data: classesBySiteIdData, isLoading: classesBySiteIdLoading } = useGetClassesBySiteId(currentSite);
-const { data: cohortsBySiteIdData, isLoading: cohortsBySiteIdLoading } = useGetCohortsBySiteId(currentSite);
-const { data: usersBySiteIdData, isLoading: usersBySiteIdLoading } = useGetUsersBySiteId(currentSite);
-
-const isLoading = computed(
-  () =>
-    assignmentsBySiteIdLoading.value ||
-    classesBySiteIdLoading.value ||
-    cohortsBySiteIdLoading.value ||
-    schoolsBySiteIdLoading.value ||
-    usersBySiteIdLoading.value,
+const isSiteSelected = computed(() => !!currentSite.value && currentSite.value !== 'any');
+const { data: siteOverview, isLoading } = useGetSiteOverviewQuery(() =>
+  isSiteSelected.value ? (currentSite.value as string) : '',
 );
 
 const userName = computed(() => {
-  const first = userData.value?.name?.first || '';
-  const middle = userData.value?.name?.middle || '';
-  const last = userData.value?.name?.last || '';
+  console.log('userData.value', userData.value);
+  let displayName = userData.value?.displayName;
+  if (!displayName) {
+    const name = userData.value?.name as
+      | {
+          first?: string;
+          middle?: string;
+          last?: string;
+        }
+      | undefined;
+    const first = name?.first || '';
+    const middle = name?.middle || '';
+    const last = name?.last || '';
+    displayName = [first, middle, last].filter(Boolean).join(' ');
+  }
 
-  return userData.value?.displayName || `${first} ${middle} ${last}`;
+  return displayName;
 });
 
-const isSiteSelected = computed(() => currentSite.value !== 'any');
+const userCounts = computed(() => siteOverview.value?.counts.users ?? { teachers: 0, caregivers: 0, children: 0 });
 
-const users = computed(() => {
-  let numOfTeachers = 0;
-  let numOfCaregivers = 0;
-  let numOfChildren = 0;
+const assignmentCounts = computed(() => siteOverview.value?.counts.assignments ?? { open: 0, upcoming: 0, closed: 0 });
 
-  usersBySiteIdData.value?.forEach((user: any) => {
-    const lowerCaseUserType = user?.userType?.toLowerCase();
+const users = computed(() => ({
+  teachers: { label: 'Teachers', numOf: userCounts.value.teachers },
+  caregivers: { label: 'Caregivers', numOf: userCounts.value.caregivers },
+  children: { label: 'Children', numOf: userCounts.value.children },
+}));
 
-    if (lowerCaseUserType === 'teacher') numOfTeachers++;
-    if (lowerCaseUserType === 'caregiver' || lowerCaseUserType === 'parent') numOfCaregivers++;
-    if (lowerCaseUserType === 'student' || lowerCaseUserType === 'child') numOfChildren++;
-  });
+const numOfUsers = computed(() => userCounts.value.teachers + userCounts.value.caregivers + userCounts.value.children);
 
-  return {
-    teachers: { label: 'Teachers', numOf: numOfTeachers },
-    caregivers: { label: 'Caregivers', numOf: numOfCaregivers },
-    children: { label: 'Children', numOf: numOfChildren },
-  };
-});
+const assignments = computed(() => ({
+  open: { label: 'Open', numOf: assignmentCounts.value.open },
+  upcoming: { label: 'Upcoming', numOf: assignmentCounts.value.upcoming },
+  closed: { label: 'Past', numOf: assignmentCounts.value.closed },
+}));
 
-const numOfUsers = computed(() => usersBySiteIdData.value?.length ?? 0);
+const numOfAssignments = computed(
+  () => assignmentCounts.value.open + assignmentCounts.value.upcoming + assignmentCounts.value.closed,
+);
 
-const assignments = computed(() => {
-  let numOfOpen = 0;
-  let numOfUpcoming = 0;
-  let numOfClosed = 0;
+const sortByName = <T extends { name: string }>(items: readonly T[]): T[] =>
+  [...items].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
-  assignmentsBySiteIdData.value?.forEach((assignment: any) => {
-    if (isCurrent(assignment)) numOfOpen++;
-    if (isUpcoming(assignment)) numOfUpcoming++;
-    if (isPast(assignment)) numOfClosed++;
-  });
+const schools = computed(() => sortByName(siteOverview.value?.schools ?? []));
+const classes = computed(() => sortByName(siteOverview.value?.classes ?? []));
+const cohorts = computed(() => sortByName(siteOverview.value?.cohorts ?? []));
 
-  return {
-    open: { label: 'Open', numOf: numOfOpen },
-    upcoming: { label: 'Upcoming', numOf: numOfUpcoming },
-    closed: { label: 'Past', numOf: numOfClosed },
-  };
-});
+const numOfGroups = computed(() => schools.value.length + classes.value.length + cohorts.value.length);
 
-const numOfAssignments = computed(() => assignmentsBySiteIdData.value?.length ?? 0);
-
-const schools = computed(() => {
-  return [...(schoolsBySiteIdData.value ?? [])].sort((a: any, b: any) => {
-    const nameA = a?.name ?? '';
-    const nameB = b?.name ?? '';
-    return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
-  });
-
-  // return [
-  //   {
-  //     name: 'School Name',
-  //     users: {
-  //       teachers: { label: 'Teachers', numOf: 10 },
-  //       caregivers: { label: 'Caregivers', numOf: 10 },
-  //       children: { label: 'Children', numOf: 10 },
-  //     },
-  //   },
-  //   {
-  //     name: 'Larger School Name',
-  //     users: {
-  //       teachers: { label: 'Teachers', numOf: 10 },
-  //       caregivers: { label: 'Caregivers', numOf: 10 },
-  //       children: { label: 'Children', numOf: 10 },
-  //     },
-  //   },
-  // ];
-});
-
-const classes = computed(() => {
-  return [...(classesBySiteIdData.value ?? [])].sort((a: any, b: any) => {
-    const nameA = a?.name ?? '';
-    const nameB = b?.name ?? '';
-    return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
-  });
-
-  // return [
-  //   {
-  //     name: 'Class Name',
-  //     parentName: 'School Name',
-  //     users: {
-  //       teachers: { label: 'Teachers', numOf: 10 },
-  //       caregivers: { label: 'Caregivers', numOf: 10 },
-  //       children: { label: 'Children', numOf: 10 },
-  //     },
-  //   },
-  //   {
-  //     name: 'Larger Class Name',
-  //     parentName: 'Larger School Name',
-  //     users: {
-  //       teachers: { label: 'Teachers', numOf: 10 },
-  //       caregivers: { label: 'Caregivers', numOf: 10 },
-  //       children: { label: 'Children', numOf: 10 },
-  //     },
-  //   },
-  // ];
-});
-
-const cohorts = computed(() => {
-  return [...(cohortsBySiteIdData.value ?? [])].sort((a: any, b: any) => {
-    const nameA = a?.name ?? '';
-    const nameB = b?.name ?? '';
-    return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
-  });
-
-  // return [
-  //   {
-  //     name: 'Cohort Name',
-  //     users: {
-  //       teachers: { label: 'Teachers', numOf: 10 },
-  //       caregivers: { label: 'Caregivers', numOf: 10 },
-  //       children: { label: 'Children', numOf: 10 },
-  //     },
-  //   },
-  //   {
-  //     name: 'Larger Cohort Name',
-  //     users: {
-  //       teachers: { label: 'Teachers', numOf: 10 },
-  //       caregivers: { label: 'Caregivers', numOf: 10 },
-  //       children: { label: 'Children', numOf: 10 },
-  //     },
-  //   },
-  // ];
-});
-
-const numOfGroups = computed(() => {
-  const numOfSchools = schoolsBySiteIdData.value?.length ?? 0;
-  const numOfClasses = classesBySiteIdData.value?.length ?? 0;
-  const numOfCohorts = cohortsBySiteIdData.value?.length ?? 0;
-  return numOfSchools + numOfClasses + numOfCohorts;
-});
-
-const getParentSchoolName = (schoolId: string): string => {
-  const school: any = schoolsBySiteIdData.value?.find((school: any) => school?.id === schoolId);
-  return school?.name;
-};
+const getParentSchoolName = (schoolId: string): string =>
+  schools.value.find((school) => school.id === schoolId)?.name ?? '';
 </script>
 
 <style scoped lang="scss">
