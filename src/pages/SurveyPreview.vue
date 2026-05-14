@@ -14,7 +14,7 @@
       <div class="preview-aside-main">
         <div class="preview-aside-option">
           <small class="label">Language</small>
-          <LanguageSelector />
+          <LanguageSelector size="default" />
         </div>
 
         <div class="preview-aside-option">
@@ -25,7 +25,6 @@
             option-label="name"
             option-value="id"
             placeholder="Select Survey"
-            size="small"
             :highlight-on-select="true"
             :options="surveyOptions"
             @change="onChangeSurvey"
