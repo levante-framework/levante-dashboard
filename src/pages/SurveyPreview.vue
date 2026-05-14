@@ -25,6 +25,7 @@
             option-label="name"
             option-value="id"
             placeholder="Select Survey"
+            size="small"
             :highlight-on-select="true"
             :options="surveyOptions"
             @change="onChangeSurvey"
