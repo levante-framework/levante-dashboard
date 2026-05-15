@@ -904,6 +904,7 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
     grid-template-columns: repeat(2, var(--game-tile-size));
     justify-content: start;
     gap: 2rem 2rem;
+    padding-bottom: 2rem;
   }
 
   .game-tile__description {
