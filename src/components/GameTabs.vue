@@ -224,7 +224,7 @@
           @click="routeExternalTask(game)"
         >
           <img v-if="game.taskData.image" :src="game.taskData.image" alt="" />
-          <i v-else :class="['pi', getTaskIcon(game.taskId)]"></i>
+          <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" alt="" />
           <span class="game-tile__play">
             <i class="pi pi-play"></i>
           </span>
@@ -232,7 +232,7 @@
 
         <div v-else class="game-tile__square --disabled">
           <img v-if="game.taskData.image" :src="game.taskData.image" alt="" />
-          <i v-else :class="['pi', getTaskIcon(game.taskId)]"></i>
+          <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" alt="" />
           <span class="game-tile__play">
             <i :class="['pi', isTaskComplete(game.completedOn, game.taskId) ? 'pi-check' : 'pi-lock']"></i>
           </span>
@@ -480,18 +480,6 @@ const isTaskAvailable = (game: Game, index: number): boolean => {
   if (!isCurrentAssignment.value || isTaskComplete(game.completedOn, game.taskId)) return false;
   if (!props.sequential) return true;
   return game.taskId === currentGameId.value && (!allGamesComplete.value || index === 0);
-};
-
-const getTaskIcon = (taskId: string): string => {
-  const normalizedTaskId = toCamelCase(taskId.toLowerCase());
-
-  if (normalizedTaskId.includes('survey')) return 'pi-list-check';
-  if (normalizedTaskId.includes('math')) return 'pi-calculator';
-  if (normalizedTaskId.includes('memory')) return 'pi-th-large';
-  if (normalizedTaskId.includes('vocab') || normalizedTaskId.includes('reading')) return 'pi-book';
-  if (normalizedTaskId.includes('rotation') || normalizedTaskId.includes('reasoning')) return 'pi-sparkles';
-
-  return 'pi-play-circle';
 };
 
 const toggleDescription = (taskId: string): void => {
