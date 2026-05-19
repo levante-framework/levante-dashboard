@@ -267,14 +267,16 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
 }
 
 .game-grid {
-  --game-tile-size: 128px;
+  --game-tile-size: clamp(150px, 9vw, 200px);
 
   display: grid;
-  grid-template-columns: repeat(5, var(--game-tile-size));
-  justify-content: center;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--game-tile-size)), var(--game-tile-size)));
+  justify-content: start;
   justify-items: center;
-  gap: 2.25rem clamp(1.25rem, 3vw, 3.5rem);
+  gap: 2.5rem clamp(1rem, 2.5vw, 3rem);
   width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .game-tile {
@@ -341,10 +343,10 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
 }
 
 .game-tile__info {
-  top: 0.5rem;
-  left: 0.5rem;
-  width: 1.25rem;
-  height: 1.25rem;
+  top: 0.625rem;
+  left: 0.625rem;
+  width: clamp(1.25rem, 1.35vw, 1.5rem);
+  height: clamp(1.25rem, 1.35vw, 1.5rem);
   padding: 0.25rem;
   border: 1px solid var(--surface-600);
   background: var(--surface-0);
@@ -356,27 +358,27 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
 }
 
 .game-tile__info .pi {
-  font-size: 0.5625rem;
+  font-size: clamp(0.5625rem, 0.65vw, 0.75rem);
 }
 
 .game-tile__complete {
-  top: 0.5rem;
-  right: 0.5rem;
-  width: 1.75rem;
-  height: 1.75rem;
+  top: 0.625rem;
+  right: 0.625rem;
+  width: clamp(1.75rem, 1.8vw, 2.125rem);
+  height: clamp(1.75rem, 1.8vw, 2.125rem);
   background: var(--bright-green);
   color: white;
-  font-size: 0.9375rem;
+  font-size: clamp(0.9375rem, 1vw, 1.125rem);
 }
 
 .game-tile__play {
-  right: 0.5rem;
-  bottom: 0.5rem;
-  width: 2rem;
-  height: 2rem;
+  right: 0.625rem;
+  bottom: 0.625rem;
+  width: clamp(2rem, 2vw, 2.375rem);
+  height: clamp(2rem, 2vw, 2.375rem);
   background: var(--primary-color);
   color: var(--primary-color-text);
-  font-size: 0.75rem;
+  font-size: clamp(0.75rem, 0.8vw, 0.9375rem);
 }
 
 .game-tile.--completed .game-tile__play {
@@ -395,13 +397,13 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   width: var(--game-tile-size);
   height: var(--game-tile-size);
   margin: 0;
-  padding: 1.75rem 0.625rem 0.5rem;
+  padding: clamp(1.75rem, 2vw, 2.25rem) clamp(0.625rem, 1vw, 1rem) 0.75rem;
   overflow: hidden;
   border: 2px solid var(--primary-color);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.9);
   color: var(--text-color);
-  font-size: 0.875rem;
+  font-size: clamp(0.875rem, 0.85vw, 1.0625rem);
   line-height: 1.2;
   text-align: center;
   -webkit-box-orient: vertical;
@@ -421,9 +423,9 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
 
 .game-tile__name {
   width: 100%;
-  margin: 0.875rem 0 0;
+  margin: 1rem 0 0;
   color: var(--text-color);
-  font-size: 1rem;
+  font-size: clamp(1rem, 1vw, 1.25rem);
   font-weight: 500;
   line-height: 1.35;
   text-align: center;
@@ -433,22 +435,11 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   color: var(--text-color-secondary);
 }
 
-@media screen and (max-width: 1280px) {
-  .game-grid {
-    grid-template-columns: repeat(4, var(--game-tile-size));
-  }
-}
-
-@media screen and (max-width: 1080px) {
-  .game-grid {
-    grid-template-columns: repeat(3, var(--game-tile-size));
-  }
-}
-
 @media screen and (max-width: 820px) {
   .game-grid {
-    grid-template-columns: repeat(2, var(--game-tile-size));
-    justify-content: start;
+    --game-tile-size: 128px;
+
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--game-tile-size)), var(--game-tile-size)));
     gap: 2rem 2rem;
     padding-bottom: 2rem;
   }
@@ -461,27 +452,9 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   }
 }
 
-@media screen and (min-width: 480px) and (max-width: 820px) {
-  .game-grid {
-    grid-template-columns: repeat(3, var(--game-tile-size));
-  }
-}
-
-@media screen and (min-width: 640px) and (max-width: 820px) {
-  .game-grid {
-    grid-template-columns: repeat(4, var(--game-tile-size));
-  }
-}
-
-@media screen and (min-width: 760px) and (max-width: 820px) {
-  .game-grid {
-    grid-template-columns: repeat(5, var(--game-tile-size));
-  }
-}
-
 @media screen and (max-width: 340px) {
   .game-grid {
-    --game-tile-size: 112px;
+    --game-tile-size: min(112px, 100%);
   }
 }
 </style>
