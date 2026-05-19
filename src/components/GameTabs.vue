@@ -289,6 +289,25 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   min-width: 0;
 }
 
+.game-tile::after {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 7;
+  display: none;
+  width: var(--game-tile-size);
+  height: var(--game-tile-size);
+  border: 2px solid var(--primary-color);
+  border-radius: 16px;
+  pointer-events: none;
+  content: '';
+}
+
+.game-tile.--available:hover::after,
+.game-tile.--available.--described::after {
+  display: block;
+}
+
 .game-tile__square {
   position: relative;
   display: inline-flex;
@@ -297,13 +316,12 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   width: var(--game-tile-size);
   height: var(--game-tile-size);
   overflow: visible;
-  border: 2px solid transparent;
+  border: 0;
   border-radius: 16px;
   background: var(--surface-100);
   color: inherit;
   text-decoration: none;
   transition:
-    border-color 0.2s ease,
     box-shadow 0.2s ease,
     transform 0.2s ease;
 }
@@ -313,7 +331,7 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   width: 100%;
   height: 100%;
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: 16px;
   object-fit: contain;
 }
 
@@ -324,7 +342,6 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
 
 .game-tile.--available .game-tile__square:hover,
 .game-tile.--available .game-tile__square:focus-visible {
-  border-color: var(--primary-color);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
   transform: translateY(-1px);
 }
@@ -404,7 +421,7 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   margin: 0;
   padding: clamp(1.75rem, 2vw, 2.25rem) clamp(0.625rem, 1vw, 1rem) 0.75rem;
   overflow: hidden;
-  border: 2px solid var(--primary-color);
+  border: 0;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.72);
   color: var(--text-color);
