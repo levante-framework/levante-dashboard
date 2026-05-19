@@ -722,6 +722,7 @@ watch(
 
 .assignment__main {
   display: flex;
+  align-items: flex-start;
   gap: 2rem;
   width: 100%;
   min-width: 0;
@@ -735,7 +736,7 @@ watch(
   width: calc(100% - 200px - 2rem);
   min-width: 0;
   height: auto;
-  margin: 1rem 0 0;
+  margin: 0;
   padding: 0;
   overflow-x: clip;
 }
