@@ -296,7 +296,7 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   justify-content: center;
   width: var(--game-tile-size);
   height: var(--game-tile-size);
-  overflow: hidden;
+  overflow: visible;
   border: 2px solid transparent;
   border-radius: 16px;
   background: var(--surface-100);
@@ -309,8 +309,11 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
 }
 
 .game-tile__square img {
+  display: block;
   width: 100%;
   height: 100%;
+  overflow: hidden;
+  border-radius: 14px;
   object-fit: contain;
 }
 
@@ -372,8 +375,10 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
 }
 
 .game-tile__play {
+  z-index: 5;
+  top: calc(var(--game-tile-size) - 2.75rem);
   right: 0.625rem;
-  bottom: 0.625rem;
+  bottom: auto;
   width: clamp(2rem, 2vw, 2.375rem);
   height: clamp(2rem, 2vw, 2.375rem);
   background: var(--primary-color);
@@ -392,7 +397,7 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
 .game-tile__description {
   position: absolute;
   inset: 0 auto auto 0;
-  z-index: 2;
+  z-index: 3;
   display: none;
   width: var(--game-tile-size);
   height: var(--game-tile-size);
@@ -401,14 +406,24 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   overflow: hidden;
   border: 2px solid var(--primary-color);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.72);
   color: var(--text-color);
   font-size: clamp(0.875rem, 0.85vw, 1.0625rem);
   line-height: 1.2;
   text-align: center;
+  pointer-events: none;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 5;
   align-content: center;
+}
+
+.game-tile.--described .game-tile__info,
+.game-tile:hover .game-tile__info,
+.game-tile.--described .game-tile__complete,
+.game-tile:hover .game-tile__complete,
+.game-tile.--described .game-tile__play,
+.game-tile:hover .game-tile__play {
+  z-index: 6;
 }
 
 .game-tile.--described .game-tile__description {
