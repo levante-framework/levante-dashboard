@@ -138,8 +138,8 @@ const surveyCreatorTheme = {
 };
 
 const surveyCreatorOptions: ICreatorOptions = {
-  autoSaveEnabled: true,
-  // collapseOnDrag: true,
+  autoSaveEnabled: isUserSuperAdmin(),
+  collapseOnDrag: true,
   showCreatorThemeSettings: isUserSuperAdmin(),
   showDesignerTab: isUserSuperAdmin(),
   showJSONEditorTab: isUserSuperAdmin(),
