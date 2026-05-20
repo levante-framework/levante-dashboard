@@ -291,14 +291,14 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
 
 .game-tile::after {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: -1px;
+  left: -1px;
   z-index: 7;
   display: none;
-  width: var(--game-tile-size);
-  height: var(--game-tile-size);
-  border: 2px solid var(--primary-color);
-  border-radius: 16px;
+  width: calc(var(--game-tile-size) + 2px);
+  height: calc(var(--game-tile-size) + 2px);
+  border: 3px solid var(--primary-color);
+  border-radius: 18px;
   pointer-events: none;
   content: '';
 }
@@ -317,7 +317,7 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   height: var(--game-tile-size);
   overflow: visible;
   border: 0;
-  border-radius: 16px;
+  border-radius: 18px;
   background: var(--surface-100);
   color: inherit;
   text-decoration: none;
@@ -331,7 +331,7 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   width: 100%;
   height: 100%;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 18px;
   object-fit: contain;
 }
 
@@ -393,8 +393,8 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
 
 .game-tile__play {
   z-index: 5;
-  top: calc(var(--game-tile-size) - 2.75rem);
-  right: 0.625rem;
+  top: calc(var(--game-tile-size) - 3rem);
+  right: 0.75rem;
   bottom: auto;
   width: clamp(2rem, 2vw, 2.375rem);
   height: clamp(2rem, 2vw, 2.375rem);
@@ -422,7 +422,7 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   padding: clamp(1.75rem, 2vw, 2.25rem) clamp(0.625rem, 1vw, 1rem) 0.75rem;
   overflow: hidden;
   border: 0;
-  border-radius: 16px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.72);
   color: var(--text-color);
   font-size: clamp(0.875rem, 0.85vw, 1.0625rem);
