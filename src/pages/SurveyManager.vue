@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isPreview" class="">
+  <div v-if="isPreview">
     <SurveyComponent v-if="surveyPreviewModel" :model="surveyPreviewModel" />
   </div>
 
@@ -10,12 +10,12 @@
       </div>
 
       <div class="aside__actions">
-        <div v-if="!isUserSuperAdmin()" class="aside__action">
+        <div v-if="!isSuperAdmin" class="aside__action">
           <small class="label">Language</small>
           <LanguageSelector size="default" />
         </div>
 
-        <div v-if="isUserSuperAdmin()" class="aside__action">
+        <div v-if="isSuperAdmin" class="aside__action">
           <small class="label">Bucket</small>
           <PvSelect
             v-model="selectedBucketId"
@@ -26,6 +26,7 @@
             placeholder="Select Bucket"
             :highlight-on-select="true"
             :options="bucketOptions"
+            @change="onChangeBucket"
           />
         </div>
 
@@ -46,15 +47,13 @@
         </div>
 
         <div v-if="surveyId" class="aside__action">
-          <a :href="`/survey-manager/preview/${surveyId}/${language}`" target="_blank">
-            <PvButton class="w-full">
-              <span class="flex justify-content-between align-items-center w-full">
-                Full Preview <i class="pi pi-external-link"></i>
-              </span>
-            </PvButton>
-          </a>
+          <PvButton v-if="previewUrl" as="a" :href="previewUrl" target="_blank" class="w-full no-underline">
+            <span class="flex justify-content-between align-items-center w-full">
+              Full Preview <i class="pi pi-external-link"></i>
+            </span>
+          </PvButton>
 
-          <PvButton variant="outlined" class="w-full mt-2" @click="downloadPDF">
+          <PvButton variant="outlined" class="w-full mt-2" :disabled="!canUseSurveyActions" @click="downloadPDF">
             <span class="flex justify-content-between align-items-center gap-3 w-full">
               Download as PDF <i class="pi pi-download"></i>
             </span>
@@ -62,7 +61,7 @@
         </div>
       </div>
 
-      <div v-if="isUserSuperAdmin()" class="aside__footer">
+      <div v-if="isSuperAdmin" class="aside__footer">
         <router-link :to="{ name: 'Home' }">
           <PvButton class="w-full" variant="outlined">
             <i class="pi pi-arrow-left"></i>
@@ -108,6 +107,7 @@ const BUCKETS = [
   { id: 'levante-assets-dev', name: 'Development' },
   { id: 'levante-assets-draft', name: 'Draft' },
 ];
+const DEFAULT_BUCKET_ID = BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.id ?? '';
 
 const { locale } = useI18n();
 const authStore = useAuthStore();
@@ -116,19 +116,40 @@ const route = useRoute();
 const router = useRouter();
 
 const bucketOptions = ref(BUCKETS);
-const bucketId = computed(
-  () => selectedBucketId.value || BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.id,
+const isSuperAdmin = computed(() => isUserSuperAdmin());
+const routeBucketId = computed(() => getRouteValue(route.query.bucketId));
+const routeSurveyId = computed(() => getRouteValue(route.params.surveyId));
+const routeSurveyLanguage = computed(() => getRouteValue(route.params.surveyLanguage));
+const routeSurveyPreview = computed(() => getRouteValue(route.params.surveyPreview));
+const selectedBucketId = ref<string>(
+  routeBucketId.value || window.sessionStorage.getItem(STORAGE_KEYS.BUCKET_ID) || DEFAULT_BUCKET_ID,
 );
-const isPreview = computed(() => surveyPreview.value.toLowerCase() === 'preview');
+const surveyId = ref<string | null>(routeSurveyId.value || window.sessionStorage.getItem(STORAGE_KEYS.SURVEY_ID));
+const previousBucketId = ref(selectedBucketId.value);
+const previousSurveyId = ref<string | null>(surveyId.value);
+const surveyBaseline = ref('');
+const surveyLanguage = ref<string>(routeSurveyLanguage.value);
+const bucketId = computed(() => selectedBucketId.value || DEFAULT_BUCKET_ID);
+const isPreview = computed(() => routeSurveyPreview.value.toLowerCase() === 'preview');
 const language = computed(() => surveyLanguage.value || locale.value);
-const selectedBucketId = ref<string>('');
-const surveyId = ref(route.params.surveyId as string);
-const surveyLanguage = ref(route.params.surveyLanguage as string);
-const surveyOptions = computed(() => surveyListData.value ?? []);
-const surveyPreview = ref(route.params.surveyPreview as string);
+const surveyQueryId = computed(() => surveyId.value ?? undefined);
 
 const { data: surveyListData } = useSurveyListQuery(selectedBucketId);
-const { data: surveyData } = useSurveyQuery(bucketId, surveyId);
+const { data: surveyData, isFetching: isSurveyFetching } = useSurveyQuery(bucketId, surveyQueryId);
+const surveyOptions = computed(() => surveyListData.value ?? []);
+const canUseSurveyActions = computed(() => Boolean(surveyId.value && surveyData.value));
+const previewUrl = computed(() => {
+  if (!surveyId.value) return '';
+
+  return router.resolve({
+    name: 'SurveyManager',
+    params: {
+      surveyPreview: 'preview',
+      surveyId: surveyId.value,
+      surveyLanguage: language.value,
+    },
+  }).href;
+});
 
 const surveyCreatorTheme = {
   ...SC2020,
@@ -144,22 +165,44 @@ const surveyCreatorTheme = {
 };
 
 const surveyCreatorOptions: ICreatorOptions = {
-  autoSaveEnabled: isUserSuperAdmin(),
+  autoSaveEnabled: isSuperAdmin.value,
   collapseOnDrag: true,
-  showCreatorThemeSettings: isUserSuperAdmin(),
-  showDesignerTab: isUserSuperAdmin(),
-  showJSONEditorTab: isUserSuperAdmin(),
-  showLogicTab: isUserSuperAdmin(),
+  showCreatorThemeSettings: isSuperAdmin.value,
+  showDesignerTab: isSuperAdmin.value,
+  showJSONEditorTab: isSuperAdmin.value,
+  showLogicTab: isSuperAdmin.value,
 };
 
 const surveyCreator = new SurveyCreatorModel(surveyCreatorOptions);
 surveyCreator.applyCreatorTheme(surveyCreatorTheme);
-surveyCreator.saveSurveyFunc = (saveNo: number, callback: Function) => {
+surveyCreator.saveSurveyFunc = (saveNo: number, callback: (saveNo: number, isSuccess: boolean) => void) => {
   window.sessionStorage.setItem(STORAGE_KEYS.BUCKET_ID, selectedBucketId.value);
-  window.sessionStorage.setItem(STORAGE_KEYS.SURVEY_ID, surveyId.value);
+  if (surveyId.value) window.sessionStorage.setItem(STORAGE_KEYS.SURVEY_ID, surveyId.value);
   window.sessionStorage.setItem(STORAGE_KEYS.SURVEY, surveyCreator.text);
   callback(saveNo, true);
 };
+
+function getRouteValue(value: unknown): string {
+  if (Array.isArray(value)) return value[0] ?? '';
+  return typeof value === 'string' ? value : '';
+}
+
+function setSurveyBaseline(): void {
+  surveyBaseline.value = surveyCreator.text;
+}
+
+function hasUnsavedSurveyChanges(): boolean {
+  return Boolean(surveyId.value && surveyCreator.text !== surveyBaseline.value);
+}
+
+function confirmDiscardChanges(): boolean {
+  if (!hasUnsavedSurveyChanges()) return true;
+  return window.confirm('Discard unsaved survey changes?');
+}
+
+function clearStoredSurveyDraft(): void {
+  window.sessionStorage.removeItem(STORAGE_KEYS.SURVEY);
+}
 
 const surveyPreviewModel = computed(() => {
   const raw = surveyData.value;
@@ -170,54 +213,107 @@ const surveyPreviewModel = computed(() => {
 });
 
 const downloadPDF = async () => {
+  if (!surveyId.value || !surveyData.value) return;
+
   const plain = getPlainSurveyData(surveyData.value);
   const locale = getParsedLocale(language.value);
   plain.locale = locale;
   const fileName = `${surveyId.value}_${locale.toLowerCase()}`;
   const surveyPDF = new SurveyPDF(plain, {});
-  surveyPDF.data = surveyPreviewModel.value;
-  surveyPDF.save(fileName).catch((error) => {
+
+  try {
+    await surveyPDF.save(fileName);
+  } catch (error) {
     console.error('Failed to download as PDF', error);
-  });
+  }
 };
 
-const onChangeSurvey = ({ value }: { value: string }) => {
+const onChangeBucket = ({ value }: { value: string }) => {
+  const nextBucketId = value || DEFAULT_BUCKET_ID;
+  if (nextBucketId === previousBucketId.value) return;
+
+  if (!confirmDiscardChanges()) {
+    selectedBucketId.value = previousBucketId.value;
+    return;
+  }
+
+  clearStoredSurveyDraft();
+  selectedBucketId.value = nextBucketId;
+  previousBucketId.value = nextBucketId;
+  surveyId.value = null;
+  previousSurveyId.value = null;
+  surveyCreator.JSON = {};
+  setSurveyBaseline();
+  window.sessionStorage.setItem(STORAGE_KEYS.BUCKET_ID, nextBucketId);
+  window.sessionStorage.removeItem(STORAGE_KEYS.SURVEY_ID);
+};
+
+const onChangeSurvey = ({ value }: { value: string | null }) => {
+  if (value === previousSurveyId.value) return;
+
+  if (!confirmDiscardChanges()) {
+    surveyId.value = previousSurveyId.value;
+    return;
+  }
+
+  clearStoredSurveyDraft();
   surveyId.value = value;
+  previousSurveyId.value = value;
+  surveyCreator.JSON = {};
+  setSurveyBaseline();
+  if (value) window.sessionStorage.setItem(STORAGE_KEYS.SURVEY_ID, value);
+  else window.sessionStorage.removeItem(STORAGE_KEYS.SURVEY_ID);
 };
 
 watch(
-  [locale, selectedBucketId, surveyData, surveyId],
-  ([_, newSelectedBucketId, newSurveyData, newSurveyId]) => {
+  [locale, bucketId, surveyData, surveyId, isSurveyFetching],
+  ([, newBucketId, newSurveyData, newSurveyId, newIsSurveyFetching]) => {
+    if (!newSurveyId) {
+      surveyCreator.JSON = {};
+      return;
+    }
+
+    if (newIsSurveyFetching) return;
+    if (!newSurveyData) return;
+
     // If the selected survey has been modified, use the local stored content
     if (
-      window.sessionStorage.getItem(STORAGE_KEYS.BUCKET_ID) === newSelectedBucketId &&
+      window.sessionStorage.getItem(STORAGE_KEYS.BUCKET_ID) === newBucketId &&
       window.sessionStorage.getItem(STORAGE_KEYS.SURVEY_ID) === newSurveyId &&
       window.sessionStorage.getItem(STORAGE_KEYS.SURVEY)
     ) {
       surveyCreator.text = window.sessionStorage.getItem(STORAGE_KEYS.SURVEY)!;
+      setSurveyBaseline();
       return;
     }
 
     const plain = getPlainSurveyData(newSurveyData);
     if (plain) plain.locale = getParsedLocale(language.value);
     surveyCreator.JSON = plain;
+    setSurveyBaseline();
   },
   { immediate: true },
 );
 
+watch(routeBucketId, (newBucketId) => {
+  if (!newBucketId) return;
+  selectedBucketId.value = newBucketId;
+  previousBucketId.value = newBucketId;
+});
+
+watch(routeSurveyId, (newSurveyId) => {
+  if (!newSurveyId) return;
+  surveyId.value = newSurveyId;
+  previousSurveyId.value = newSurveyId;
+});
+
+watch(routeSurveyLanguage, (newSurveyLanguage) => {
+  surveyLanguage.value = newSurveyLanguage;
+});
+
 watchEffect(() => {
-  selectedBucketId.value = window.sessionStorage.getItem(STORAGE_KEYS.BUCKET_ID)!;
-  surveyId.value = window.sessionStorage.getItem(STORAGE_KEYS.SURVEY_ID)!;
-
-  // Survey id is required to preview it
-  if (surveyPreview.value && !surveyId.value) {
-    router.push({ name: 'SurveyManager' });
-  }
-
-  // Set development bucket as the default for non-superadmin users
-  if (!isUserSuperAdmin()) {
-    selectedBucketId.value = BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.id || '';
-  }
+  if (!selectedBucketId.value) selectedBucketId.value = DEFAULT_BUCKET_ID;
+  if (isPreview.value && !surveyId.value) router.push({ name: 'SurveyManager' });
 });
 </script>
 
