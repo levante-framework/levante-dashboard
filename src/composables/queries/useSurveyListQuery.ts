@@ -17,10 +17,10 @@ export interface SurveyListItem {
   url: string;
 }
 
-const fetchSurveyList = async (bucketUrl?: string): Promise<Array<SurveyListItem> | null> => {
-  if (!bucketUrl) return null;
+const fetchSurveyList = async (bucketId?: string): Promise<Array<SurveyListItem> | null> => {
+  if (!bucketId) return null;
 
-  const url = new URL(bucketUrl);
+  const url = new URL(`https://storage.googleapis.com/${bucketId}/surveys`);
   const [, bucketName, ...prefixParts] = url.pathname.split('/');
   const prefix = prefixParts.filter(Boolean).join('/');
   const normalizedPrefix = prefix ? `${prefix}/` : '';
@@ -45,10 +45,10 @@ const fetchSurveyList = async (bucketUrl?: string): Promise<Array<SurveyListItem
     });
 };
 
-export const useSurveyListQuery = (bucketUrl?: MaybeRefOrGetter<string | undefined>) => {
+export const useSurveyListQuery = (bucketId?: MaybeRefOrGetter<string | undefined>) => {
   return useQuery({
-    queryKey: computed(() => ['survey-list', toValue(bucketUrl)]),
-    queryFn: () => fetchSurveyList(toValue(bucketUrl)),
-    enabled: computed(() => !!toValue(bucketUrl)),
+    queryKey: computed(() => ['survey-list', toValue(bucketId)]),
+    queryFn: () => fetchSurveyList(toValue(bucketId)),
+    enabled: computed(() => !!toValue(bucketId)),
   });
 };

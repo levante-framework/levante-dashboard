@@ -7,11 +7,11 @@ export interface SurveyOption {
   name: string;
 }
 
-const fetchSurvey = async (bucketUrl?: string, surveyId?: string) => {
-  if (!bucketUrl || !surveyId) return null;
+const fetchSurvey = async (bucketId?: string, surveyId?: string) => {
+  if (!bucketId || !surveyId) return null;
 
   return axios
-    .get<Record<string, unknown>>(`${bucketUrl}/${surveyId}.json`)
+    .get<Record<string, unknown>>(`https://storage.googleapis.com/${bucketId}/surveys/${surveyId}.json`)
     .then((response) => response.data)
     .catch((error) => {
       console.error(`Failed to fetch survey ${surveyId}`, error);
@@ -20,12 +20,12 @@ const fetchSurvey = async (bucketUrl?: string, surveyId?: string) => {
 };
 
 export const useSurveyQuery = (
-  bucketUrl?: MaybeRefOrGetter<string | undefined>,
+  bucketId?: MaybeRefOrGetter<string | undefined>,
   surveyId?: MaybeRefOrGetter<string | undefined>,
 ): UseQueryReturnType<Record<string, unknown>, Error> => {
   return useQuery({
-    queryKey: computed(() => ['survey', toValue(bucketUrl), toValue(surveyId)]),
-    queryFn: () => fetchSurvey(toValue(bucketUrl), toValue(surveyId)),
+    queryKey: computed(() => ['survey', toValue(bucketId), toValue(surveyId)]),
+    queryFn: () => fetchSurvey(toValue(bucketId), toValue(surveyId)),
     enabled: computed(() => !!toValue(surveyId)),
   });
 };
