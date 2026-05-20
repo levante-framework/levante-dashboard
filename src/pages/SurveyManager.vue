@@ -18,7 +18,7 @@
         <div v-if="isUserSuperAdmin()" class="aside__action">
           <small class="label">Bucket</small>
           <PvSelect
-            v-model="selectedBucket"
+            v-model="selectedBucketUrl"
             class="w-full"
             empty-message="No available buckets"
             option-label="name"
@@ -38,7 +38,7 @@
             option-value="id"
             placeholder="Select Survey"
             show-clear
-            :empty-message="selectedBucket ? 'No available surveys' : 'Select a bucket to see surveys'"
+            :empty-message="selectedBucketUrl ? 'No available surveys' : 'Select a bucket to see surveys'"
             :highlight-on-select="true"
             :options="surveyOptions"
             @change="onChangeSurvey"
@@ -111,17 +111,17 @@ const router = useRouter();
 
 const bucketOptions = ref(BUCKETS);
 const bucketUrl = computed(
-  () => selectedBucket.value || BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.url,
+  () => selectedBucketUrl.value || BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.url,
 );
 const isPreview = computed(() => surveyPreview.value.toLowerCase() === 'preview');
 const language = computed(() => surveyLanguage.value || locale.value);
-const selectedBucket = ref<string | undefined>(undefined);
+const selectedBucketUrl = ref<string>('');
 const surveyId = ref(route.params.surveyId as string);
 const surveyLanguage = ref(route.params.surveyLanguage as string);
 const surveyOptions = computed(() => surveyListData.value ?? []);
 const surveyPreview = ref(route.params.surveyPreview as string);
 
-const { data: surveyListData } = useSurveyListQuery(selectedBucket);
+const { data: surveyListData } = useSurveyListQuery(selectedBucketUrl);
 const { data: surveyData } = useSurveyQuery(bucketUrl, surveyId);
 
 const surveyCreatorTheme = {
@@ -195,7 +195,7 @@ watchEffect(() => {
 
   // Set development bucket as the default for non-superadmin users
   if (!isUserSuperAdmin()) {
-    selectedBucket.value = BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.url;
+    selectedBucketUrl.value = BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.url || '';
   }
 });
 </script>
