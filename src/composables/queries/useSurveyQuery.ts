@@ -22,10 +22,10 @@ const fetchSurvey = async (bucketId?: string, surveyId?: string) => {
 export const useSurveyQuery = (
   bucketId?: MaybeRefOrGetter<string | undefined>,
   surveyId?: MaybeRefOrGetter<string | undefined>,
-): UseQueryReturnType<Record<string, unknown>, Error> => {
+): UseQueryReturnType<Record<string, unknown> | null, Error> => {
   return useQuery({
     queryKey: computed(() => ['survey', toValue(bucketId), toValue(surveyId)]),
     queryFn: () => fetchSurvey(toValue(bucketId), toValue(surveyId)),
-    enabled: computed(() => !!toValue(surveyId)),
+    enabled: computed(() => !!toValue(bucketId) && !!toValue(surveyId)),
   });
 };
