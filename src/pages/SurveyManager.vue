@@ -18,11 +18,11 @@
         <div v-if="isUserSuperAdmin()" class="aside__action">
           <small class="label">Bucket</small>
           <PvSelect
-            v-model="selectedBucketUrl"
+            v-model="selectedBucketId"
             class="w-full"
             empty-message="No available buckets"
             option-label="name"
-            option-value="url"
+            option-value="id"
             placeholder="Select Bucket"
             :highlight-on-select="true"
             :options="bucketOptions"
@@ -38,7 +38,7 @@
             option-value="id"
             placeholder="Select Survey"
             show-clear
-            :empty-message="selectedBucketUrl ? 'No available surveys' : 'Select a bucket to see surveys'"
+            :empty-message="selectedBucketId ? 'No available surveys' : 'Select a bucket to see surveys'"
             :highlight-on-select="true"
             :options="surveyOptions"
             @change="onChangeSurvey"
@@ -64,7 +64,7 @@
 
       <div v-if="isUserSuperAdmin()" class="aside__footer">
         <router-link :to="{ name: 'Home' }">
-          <PvButton class="w-full mt-2" variant="outlined">
+          <PvButton class="w-full" variant="outlined">
             <i class="pi pi-arrow-left"></i>
             Return to Dashboard
           </PvButton>
@@ -98,9 +98,15 @@ import { computed, markRaw, ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
+const STORAGE_KEYS = {
+  BUCKET_ID: 'levanteBucketId',
+  SURVEY_ID: 'levanteSurveyId',
+  SURVEY: 'levanteSurvey',
+};
+
 const BUCKETS = [
-  { name: 'Development', url: 'https://storage.googleapis.com/levante-assets-dev/surveys' },
-  { name: 'Draft', url: 'https://storage.googleapis.com/levante-assets-draft/surveys' },
+  { id: 'levante-assets-dev', name: 'Development' },
+  { id: 'levante-assets-draft', name: 'Draft' },
 ];
 
 const { locale } = useI18n();
@@ -110,19 +116,19 @@ const route = useRoute();
 const router = useRouter();
 
 const bucketOptions = ref(BUCKETS);
-const bucketUrl = computed(
-  () => selectedBucketUrl.value || BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.url,
+const bucketId = computed(
+  () => selectedBucketId.value || BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.id,
 );
 const isPreview = computed(() => surveyPreview.value.toLowerCase() === 'preview');
 const language = computed(() => surveyLanguage.value || locale.value);
-const selectedBucketUrl = ref<string>('');
+const selectedBucketId = ref<string>('');
 const surveyId = ref(route.params.surveyId as string);
 const surveyLanguage = ref(route.params.surveyLanguage as string);
 const surveyOptions = computed(() => surveyListData.value ?? []);
 const surveyPreview = ref(route.params.surveyPreview as string);
 
-const { data: surveyListData } = useSurveyListQuery(selectedBucketUrl);
-const { data: surveyData } = useSurveyQuery(bucketUrl, surveyId);
+const { data: surveyListData } = useSurveyListQuery(selectedBucketId);
+const { data: surveyData } = useSurveyQuery(bucketId, surveyId);
 
 const surveyCreatorTheme = {
   ...SC2020,
@@ -149,8 +155,10 @@ const surveyCreatorOptions: ICreatorOptions = {
 const surveyCreator = new SurveyCreatorModel(surveyCreatorOptions);
 surveyCreator.applyCreatorTheme(surveyCreatorTheme);
 surveyCreator.saveSurveyFunc = (saveNo: number, callback: Function) => {
-  // window.localStorage.setItem('survey-json', surveyCreator.text);
-  // callback(saveNo, true);
+  window.sessionStorage.setItem(STORAGE_KEYS.BUCKET_ID, selectedBucketId.value);
+  window.sessionStorage.setItem(STORAGE_KEYS.SURVEY_ID, surveyId.value);
+  window.sessionStorage.setItem(STORAGE_KEYS.SURVEY, surveyCreator.text);
+  callback(saveNo, true);
 };
 
 const surveyPreviewModel = computed(() => {
@@ -178,8 +186,18 @@ const onChangeSurvey = ({ value }: { value: string }) => {
 };
 
 watch(
-  [surveyData, locale],
-  ([newSurveyData]) => {
+  [locale, selectedBucketId, surveyData, surveyId],
+  ([_, newSelectedBucketId, newSurveyData, newSurveyId]) => {
+    // If the selected survey has been modified, use the local stored content
+    if (
+      window.sessionStorage.getItem(STORAGE_KEYS.BUCKET_ID) === newSelectedBucketId &&
+      window.sessionStorage.getItem(STORAGE_KEYS.SURVEY_ID) === newSurveyId &&
+      window.sessionStorage.getItem(STORAGE_KEYS.SURVEY)
+    ) {
+      surveyCreator.text = window.sessionStorage.getItem(STORAGE_KEYS.SURVEY)!;
+      return;
+    }
+
     const plain = getPlainSurveyData(newSurveyData);
     if (plain) plain.locale = getParsedLocale(language.value);
     surveyCreator.JSON = plain;
@@ -188,6 +206,9 @@ watch(
 );
 
 watchEffect(() => {
+  selectedBucketId.value = window.sessionStorage.getItem(STORAGE_KEYS.BUCKET_ID)!;
+  surveyId.value = window.sessionStorage.getItem(STORAGE_KEYS.SURVEY_ID)!;
+
   // Survey id is required to preview it
   if (surveyPreview.value && !surveyId.value) {
     router.push({ name: 'SurveyManager' });
@@ -195,7 +216,7 @@ watchEffect(() => {
 
   // Set development bucket as the default for non-superadmin users
   if (!isUserSuperAdmin()) {
-    selectedBucketUrl.value = BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.url || '';
+    selectedBucketId.value = BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.id || '';
   }
 });
 </script>
