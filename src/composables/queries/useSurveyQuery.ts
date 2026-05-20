@@ -1,3 +1,4 @@
+import { logger } from '@/logger';
 import { useQuery, type UseQueryReturnType } from '@tanstack/vue-query';
 import axios from 'axios';
 import { computed, type MaybeRefOrGetter, toValue } from 'vue';
@@ -14,7 +15,7 @@ const fetchSurvey = async (bucketId?: string, surveyId?: string) => {
     .get<Record<string, unknown>>(`https://storage.googleapis.com/${bucketId}/surveys/${surveyId}.json`)
     .then((response) => response.data)
     .catch((error) => {
-      console.error(`Failed to fetch survey ${surveyId}`, error);
+      logger.capture(`Failed to fetch survey ${surveyId}`, { error });
       throw error;
     });
 };
