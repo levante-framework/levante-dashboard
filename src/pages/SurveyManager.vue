@@ -93,27 +93,48 @@ import { SC2020 } from 'survey-creator-core/themes';
 import { SurveyCreatorComponent } from 'survey-creator-vue';
 import { SurveyPDF } from 'survey-pdf';
 import { SurveyComponent } from 'survey-vue3-ui';
-import { computed, markRaw, ref, watch, watchEffect } from 'vue';
+import { computed, markRaw, nextTick, ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
-
-const STORAGE_KEYS = {
-  BUCKET_ID: 'levanteBucketId',
-  SURVEY_ID: 'levanteSurveyId',
-  SURVEY: 'levanteSurvey',
-};
 
 const BUCKETS = [
   { id: 'levante-assets-dev', name: 'Development' },
   { id: 'levante-assets-draft', name: 'Draft' },
 ];
 const DEFAULT_BUCKET_ID = BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.id ?? '';
+const STORAGE_KEYS = {
+  BUCKET_ID: 'levanteBucketId',
+  SURVEY_ID: 'levanteSurveyId',
+  SURVEY: 'levanteSurvey',
+};
 
 const { locale } = useI18n();
 const authStore = useAuthStore();
 const { isUserSuperAdmin } = authStore;
 const route = useRoute();
 const router = useRouter();
+
+const getRouteValue = (value: unknown): string => {
+  if (Array.isArray(value)) return value[0] ?? '';
+  return typeof value === 'string' ? value : '';
+};
+
+const setSurveyBaseline = (): void => {
+  surveyBaseline.value = surveyCreator.text;
+};
+
+const hasUnsavedSurveyChanges = (): boolean => {
+  return Boolean(previousSurveyId.value && surveyCreator.text !== surveyBaseline.value);
+};
+
+const confirmDiscardChanges = (): boolean => {
+  if (!hasUnsavedSurveyChanges()) return true;
+  return window.confirm('Discard unsaved survey changes?');
+};
+
+const clearStoredSurveyDraft = (): void => {
+  window.sessionStorage.removeItem(STORAGE_KEYS.SURVEY);
+};
 
 const bucketOptions = ref(BUCKETS);
 const isSuperAdmin = computed(() => isUserSuperAdmin());
@@ -136,6 +157,7 @@ const surveyQueryId = computed(() => surveyId.value ?? undefined);
 
 const { data: surveyListData } = useSurveyListQuery(selectedBucketId);
 const { data: surveyData, isFetching: isSurveyFetching } = useSurveyQuery(bucketId, surveyQueryId);
+
 const surveyOptions = computed(() => surveyListData.value ?? []);
 const canUseSurveyActions = computed(() => Boolean(surveyId.value && surveyData.value));
 const previewUrl = computed(() => {
@@ -182,28 +204,6 @@ surveyCreator.saveSurveyFunc = (saveNo: number, callback: (saveNo: number, isSuc
   callback(saveNo, true);
 };
 
-function getRouteValue(value: unknown): string {
-  if (Array.isArray(value)) return value[0] ?? '';
-  return typeof value === 'string' ? value : '';
-}
-
-function setSurveyBaseline(): void {
-  surveyBaseline.value = surveyCreator.text;
-}
-
-function hasUnsavedSurveyChanges(): boolean {
-  return Boolean(surveyId.value && surveyCreator.text !== surveyBaseline.value);
-}
-
-function confirmDiscardChanges(): boolean {
-  if (!hasUnsavedSurveyChanges()) return true;
-  return window.confirm('Discard unsaved survey changes?');
-}
-
-function clearStoredSurveyDraft(): void {
-  window.sessionStorage.removeItem(STORAGE_KEYS.SURVEY);
-}
-
 const surveyPreviewModel = computed(() => {
   const raw = surveyData.value;
   if (!raw) return null;
@@ -228,11 +228,12 @@ const downloadPDF = async () => {
   }
 };
 
-const onChangeBucket = ({ value }: { value: string }) => {
+const onChangeBucket = async ({ value }: { value: string }) => {
   const nextBucketId = value || DEFAULT_BUCKET_ID;
   if (nextBucketId === previousBucketId.value) return;
 
   if (!confirmDiscardChanges()) {
+    await nextTick();
     selectedBucketId.value = previousBucketId.value;
     return;
   }
@@ -248,10 +249,11 @@ const onChangeBucket = ({ value }: { value: string }) => {
   window.sessionStorage.removeItem(STORAGE_KEYS.SURVEY_ID);
 };
 
-const onChangeSurvey = ({ value }: { value: string | null }) => {
+const onChangeSurvey = async ({ value }: { value: string | null }) => {
   if (value === previousSurveyId.value) return;
 
   if (!confirmDiscardChanges()) {
+    await nextTick();
     surveyId.value = previousSurveyId.value;
     return;
   }
@@ -276,6 +278,11 @@ watch(
     if (newIsSurveyFetching) return;
     if (!newSurveyData) return;
 
+    const plain = getPlainSurveyData(newSurveyData);
+    if (plain) plain.locale = getParsedLocale(language.value);
+    surveyCreator.JSON = plain;
+    setSurveyBaseline();
+
     // If the selected survey has been modified, use the local stored content
     if (
       window.sessionStorage.getItem(STORAGE_KEYS.BUCKET_ID) === newBucketId &&
@@ -283,14 +290,8 @@ watch(
       window.sessionStorage.getItem(STORAGE_KEYS.SURVEY)
     ) {
       surveyCreator.text = window.sessionStorage.getItem(STORAGE_KEYS.SURVEY)!;
-      setSurveyBaseline();
       return;
     }
-
-    const plain = getPlainSurveyData(newSurveyData);
-    if (plain) plain.locale = getParsedLocale(language.value);
-    surveyCreator.JSON = plain;
-    setSurveyBaseline();
   },
   { immediate: true },
 );
