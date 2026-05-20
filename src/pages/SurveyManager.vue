@@ -190,7 +190,7 @@ watch(
 watchEffect(() => {
   // Survey id is required to preview it
   if (surveyPreview.value && !surveyId.value) {
-    router.push({ name: 'Survey_Manager' });
+    router.push({ name: 'SurveyManager' });
   }
 
   // Set development bucket as the default for non-superadmin users
