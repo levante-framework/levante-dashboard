@@ -214,9 +214,9 @@ const surveyPreviewModel = computed(() => {
 });
 
 const downloadPDF = async () => {
-  if (!surveyId.value || !surveyData.value) return;
+  if (!surveyId.value) return;
 
-  const plain = getPlainSurveyData(surveyData.value);
+  const plain = getPlainSurveyData(surveyCreator.JSON);
   const locale = getParsedLocale(language.value);
   plain.locale = locale;
   const fileName = `${surveyId.value}_${locale.toLowerCase()}`;
