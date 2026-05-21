@@ -82,6 +82,7 @@ import LanguageSelector from '@/components/LanguageSelector.vue';
 import { useSurveyListQuery } from '@/composables/queries/useSurveyListQuery';
 import { useSurveyQuery } from '@/composables/queries/useSurveyQuery';
 import { getParsedLocale, getPlainSurveyData } from '@/helpers/survey';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import PvButton from 'primevue/button';
 import PvSelect from 'primevue/select';
@@ -224,7 +225,7 @@ const downloadPDF = async () => {
   try {
     await surveyPDF.save(fileName);
   } catch (error) {
-    console.error('Failed to download as PDF', error);
+    logger.capture('Failed to download as PDF', { error });
   }
 };
 
