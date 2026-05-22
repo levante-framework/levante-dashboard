@@ -36,8 +36,11 @@
         </div>
 
         <!-- Rows datatable -->
-        <div v-if="newUsers && !validationErrors" class="mb-3">
-          <CsvTable :keys="['id', 'userType', 'month', 'year', 'school', 'class', 'cohort']" :rows="newUsers" />
+        <div v-if="unregisteredUsers && !validationErrors" class="mb-3">
+          <CsvTable
+            :keys="['id', 'userType', 'month', 'year', 'school', 'class', 'cohort']"
+            :rows="unregisteredUsers"
+          />
 
           <div class="submit-container">
             <div v-if="registeredUsers" class="button-group">
@@ -99,12 +102,13 @@ import type { FileUploadUploaderEvent } from 'primevue/fileupload';
 import PvMessage from 'primevue/message';
 import { computed, nextTick, ref, toRaw, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import type { ZodIssue } from 'zod'; // @TODO: replace this w/ makeCustomIssue when published
 import {
   AddUserCsvHeaderSchema,
   UserCsvSchema,
   UserCsvType,
   combineUserCsvIssues,
+  makeCustomIssue,
+  type ZodIssue,
 } from '@levante-framework/levante-zod';
 import AppSpinner from '@/components/AppSpinner.vue';
 import CsvTable from '@/components/CsvTable.vue';
@@ -130,13 +134,13 @@ const { setShouldUserConfirm } = levanteStore;
 const router = useRouter();
 
 const isSubmitting = ref(false);
-const newUsers = ref<UserCsvType | null>(null);
-const newUsersMap = ref<number[] | null>(null);
 const parsedData = ref<Record<string, string>[] | null>(null);
 const registeredUsers = ref<UserCsvType | null>(null);
 const showBulkCreateUsersModal = ref(false);
 const status = ref<{ message: string; severity: string } | null>(null);
 const statusRef = ref<HTMLElement | null>(null);
+const unregisteredToValidated = ref<number[] | null>(null);
+const unregisteredUsers = ref<UserCsvType | null>(null);
 const uploadedFile = ref<File | null>(null);
 const validatedData = ref<UserCsvType | null>(null);
 const validationErrors = ref<{
@@ -148,11 +152,12 @@ const validationErrors = ref<{
 
 const resetUserProgress = () => {
   isSubmitting.value = false;
-  newUsers.value = null;
   parsedData.value = null;
   registeredUsers.value = null;
   showBulkCreateUsersModal.value = false;
   status.value = null;
+  unregisteredToValidated.value = null;
+  unregisteredUsers.value = null;
   uploadedFile.value = null;
   validatedData.value = null;
   validationErrors.value = null;
@@ -188,11 +193,11 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   uploadedFile.value = file;
 
   // Parse the file
-  const _parsedData = await parseCsvFile(file, {
+  const parsed = await parseCsvFile(file, {
     normalizedHeaders: NORMALIZED_USER_CSV_HEADERS,
     omitColumns: ['errors'],
   });
-  if (!_parsedData) {
+  if (!parsed) {
     status.value = {
       message:
         'The uploaded file could not be read. If you used a spreadsheet app, please "Save as" or "Export" to CSV and upload again.',
@@ -200,24 +205,24 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
     };
     return;
   }
-  if (_parsedData.length === 0) {
+  if (parsed.length === 0) {
     status.value = {
       message: 'The uploaded file contains no users. Please add at least one user and upload again.',
       severity: 'error',
     };
     return;
   }
-  parsedData.value = _parsedData;
+  parsedData.value = parsed;
 
   // Validate all required headers are present
-  const headers = Object.keys(_parsedData[0] ?? {});
-  const headerValidation = AddUserCsvHeaderSchema.safeParse(headers);
-  if (!headerValidation.success) {
+  const headers = Object.keys(parsed[0] ?? {});
+  const validatedHeaders = AddUserCsvHeaderSchema.safeParse(headers);
+  if (!validatedHeaders.success) {
     status.value = { message: 'The uploaded file is invalid. See table for details.', severity: 'error' };
     validationErrors.value = {
       headers: ['Validation Errors'],
       keys: ['message'],
-      rows: headerValidation.error.issues.map((issue) => {
+      rows: validatedHeaders.error.issues.map((issue) => {
         return {
           message: `${issue.path.join('.')}: ${issue.message}`,
         };
@@ -231,21 +236,22 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   const siteIssues: ZodIssue[] = [];
   if (headers.includes('site')) {
     const normalizedSelectedSite = normalizeToLowercase(currentSiteName.value ?? '');
-    _parsedData.forEach((row, idx) => {
+    parsed.forEach((row, idx) => {
       // Must match the selected site
       if (row.site && normalizeToLowercase(row.site) !== normalizedSelectedSite) {
-        siteIssues.push({
-          code: 'custom',
-          message: `Must match the selected site`,
-          path: [idx, 'site'],
-          input: row.site,
-        });
+        siteIssues.push(
+          makeCustomIssue({
+            input: row.site,
+            message: `Must match the selected site`,
+            path: [idx, 'site'],
+          }),
+        );
       }
     });
   }
 
   // Validate w/ zod schema
-  const validated = UserCsvSchema.safeParse(_parsedData);
+  const validated = UserCsvSchema.safeParse(parsed);
   const issues = combineUserCsvIssues([...(validated.error?.issues ?? []), ...siteIssues]);
   if (issues.length > 0) {
     // Validation failed
@@ -260,20 +266,20 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   }
 
   // Validation succeeded, filter out users that already have a uid
-  const _newUsers = validated
+  const unregistered = validated
     .data!.map((user, idx) => ({
-      user: { ...user },
-      userIdx: idx,
+      user,
+      validatedIdx: idx,
     }))
     .filter(({ user }) => {
       return !user.uid;
     });
-  if (_newUsers.length === 0) {
+  if (unregistered.length === 0) {
     status.value = { message: 'All users in the file have already been registered.', severity: 'info' };
     return;
   }
-  newUsers.value = _newUsers.map(({ user }) => user);
-  newUsersMap.value = _newUsers.map(({ userIdx }) => userIdx);
+  unregisteredUsers.value = unregistered.map(({ user }) => user);
+  unregisteredToValidated.value = unregistered.map(({ validatedIdx }) => validatedIdx);
 
   // There are new, valid users to be added
   validatedData.value = validated.data!;
@@ -316,9 +322,9 @@ const submitUsers = async () => {
 
   // Ensure the user data is valid
   if (
-    !newUsers.value ||
-    !newUsersMap.value ||
-    newUsers.value.length !== newUsersMap.value.length ||
+    !unregisteredUsers.value ||
+    !unregisteredToValidated.value ||
+    unregisteredUsers.value.length !== unregisteredToValidated.value.length ||
     !validatedData.value
   ) {
     status.value = { message: 'Please fix the errors in your CSV file before submitting.', severity: 'error' };
@@ -334,16 +340,16 @@ const submitUsers = async () => {
     return;
   }
 
-  // Ensure there are users to be registered
-  const usersToBeRegistered = _cloneDeep(toRaw(newUsers.value)).map((user, idx) => ({
+  // Clone the unregistered users and map their validated indices
+  const unregistered = _cloneDeep(toRaw(unregisteredUsers.value)).map((user, idx) => ({
     user,
-    userIdx: newUsersMap.value![idx]!,
+    validatedIdx: unregisteredToValidated.value![idx]!,
   }));
 
   // Ensure the orgs referenced in the user data exist
   const getOrgId = createOrgIdResolver();
-  const orgErrors: { field: string; userIdx: number }[] = [];
-  for (const { user, userIdx } of usersToBeRegistered) {
+  const orgErrors: { field: string; validatedIdx: number }[] = [];
+  for (const { user, validatedIdx } of unregistered) {
     const orgInfo: Record<'sites' | 'schools' | 'classes' | 'cohorts', string[]> = {
       sites: [selectedSiteId],
       schools: [],
@@ -361,7 +367,7 @@ const submitUsers = async () => {
         allSchoolsFound = false;
         orgErrors.push({
           field: 'school',
-          userIdx,
+          validatedIdx,
         });
       }
     }
@@ -383,7 +389,7 @@ const submitUsers = async () => {
         if (!classFound) {
           orgErrors.push({
             field: 'class',
-            userIdx,
+            validatedIdx,
           });
         }
       }
@@ -401,12 +407,13 @@ const submitUsers = async () => {
       } catch {
         orgErrors.push({
           field: 'cohort',
-          userIdx,
+          validatedIdx,
         });
       }
     }
 
     // The backend expects districts and groups for site and cohort respectively
+    // TODO: use LEVANTE names
     user.orgIds = {
       districts: orgInfo.sites,
       schools: orgInfo.schools,
@@ -416,9 +423,9 @@ const submitUsers = async () => {
   }
   if (orgErrors.length > 0) {
     const combinedOrgErrors: Record<string, number[]> = {};
-    orgErrors.forEach(({ field, userIdx }) => {
+    orgErrors.forEach(({ field, validatedIdx }) => {
       const key = `${field}: Does not exist in selected site`;
-      const rowNum = userIdx + 2; // +2 for header row and 1-indexing
+      const rowNum = validatedIdx + 2; // +2 for header row and 1-indexing
       if (!combinedOrgErrors[key]) {
         combinedOrgErrors[key] = [];
       }
@@ -444,7 +451,7 @@ const submitUsers = async () => {
   // because `id` is not stored.
   showBulkCreateUsersModal.value = true;
   try {
-    const chunkResults = (await runWithConcurrency(_chunk(usersToBeRegistered, 25), async (chunk) => {
+    const chunkResults = (await runWithConcurrency(_chunk(unregistered, 25), async (chunk) => {
       // Ensure each user has the proper userType field name for the backend
       const processedUsers = chunk.map(({ user }) => ({
         ...user,
@@ -472,9 +479,9 @@ const submitUsers = async () => {
     // that can be mapped to validatedData
     const mergedUsers = _cloneDeep(toRaw(validatedData.value));
     createUserResults.forEach((createdUser, resultIdx) => {
-      const userIdx = usersToBeRegistered[resultIdx]!.userIdx;
-      mergedUsers[userIdx] = {
-        ...mergedUsers[userIdx]!,
+      const validatedIdx = unregistered[resultIdx]!.validatedIdx;
+      mergedUsers[validatedIdx] = {
+        ...mergedUsers[validatedIdx]!,
         email: createdUser.email ?? '',
         password: createdUser.password ?? '',
         uid: createdUser.uid ?? '',
