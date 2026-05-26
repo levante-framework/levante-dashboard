@@ -151,11 +151,19 @@ const queryClient = useQueryClient();
 const isDistrictTabActive = computed(() => props?.activeTabOrg?.singular === SINGULAR_ORG_TYPES.DISTRICTS);
 const isUserSuperAdmin = computed(() => userRole.value === ROLES.SUPER_ADMIN);
 const isSubmitBtnDisabled = ref(false);
+const isSubmitting = ref(false);
+const orgName = ref('');
+const orgType = ref<OrgType | undefined>();
 
 watch(
-  () => authStore.currentSite,
-  (newCurrentSite) => {
-    if (!newCurrentSite || newCurrentSite.toLowerCase() === 'any') {
+  () => ({
+    currentSite: authStore.currentSite,
+    isCreatingSite: orgType.value?.singular === SINGULAR_ORG_TYPES.DISTRICTS,
+    isUserSuperAdmin: isUserSuperAdmin.value,
+  }),
+  ({ currentSite, isCreatingSite, isUserSuperAdmin }) => {
+    const canCreateSiteFromAllSites = isCreatingSite && isUserSuperAdmin;
+    if ((!currentSite || currentSite.toLowerCase() === 'any') && !canCreateSiteFromAllSites) {
       isSubmitBtnDisabled.value = true;
     } else {
       isSubmitBtnDisabled.value = false;
@@ -164,9 +172,6 @@ watch(
   { immediate: true },
 );
 
-const isSubmitting = ref(false);
-const orgName = ref('');
-const orgType = ref<OrgType | undefined>();
 const orgTypeLabel = computed(() => {
   if (!orgType.value || (isDistrictTabActive.value && !isUserSuperAdmin.value)) return 'Group';
   return _capitalize(orgType.value.label);
