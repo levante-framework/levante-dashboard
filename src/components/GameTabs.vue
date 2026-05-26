@@ -10,7 +10,6 @@
           '--completed': isTaskComplete(game.completedOn, game.taskId),
           '--locked': !isTaskAvailable(game) && !isTaskComplete(game.completedOn, game.taskId),
           '--described': describedTaskId === game.taskId,
-          '--multipart-survey': isMultiPartSurvey(game.taskId),
         }"
         role="listitem"
       >
@@ -48,34 +47,9 @@
           </span>
         </div>
 
-        <p v-if="!isMultiPartSurvey(game.taskId)" class="game-tile__description">
+        <p class="game-tile__description">
           {{ getTaskDescription(game.taskId, game.taskData.description) }}
         </p>
-
-        <div
-          v-else
-          class="game-tile__survey-overlay"
-          role="group"
-          :aria-label="getTaskName(game.taskId, game.taskData.name)"
-        >
-          <button
-            v-for="part in getSurveyParts()"
-            :key="part.key"
-            class="survey-part"
-            type="button"
-            :disabled="!isTaskAvailable(game) || part.isComplete || part.isLocked"
-            @click="launchSurveyPart(part)"
-          >
-            <span
-              class="survey-part__progress"
-              :style="{ '--survey-progress': `${part.progress * 3.6}deg` }"
-              :aria-label="`${part.label}: ${part.progress}%`"
-            >
-              <span class="survey-part__progress-value">{{ part.progress }}%</span>
-            </span>
-            <span class="survey-part__label">{{ part.label }}</span>
-          </button>
-        </div>
 
         <h3 class="game-tile__name">
           {{ getTaskName(game.taskId, game.taskData.name) }}
@@ -97,9 +71,6 @@ import _capitalize from 'lodash/capitalize';
 import { useAssignmentsStore } from '@/store/assignments';
 import { ASSIGNMENT_STATUSES } from '@/constants';
 import { getAssignmentStatus } from '@/helpers/assignments';
-import { useRouter } from 'vue-router';
-import { useQueryClient } from '@tanstack/vue-query';
-import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 import { LEVANTE_TASK_IDS, ROAR_TASK_IDS } from '@/constants/coreTasks';
 import { logger } from '@/logger';
 
@@ -140,16 +111,6 @@ interface Props {
   userData: UserData;
 }
 
-interface SurveyPart {
-  key: string;
-  label: string;
-  type: 'general' | 'specific';
-  index: number;
-  progress: number;
-  isComplete: boolean;
-  isLocked: boolean;
-}
-
 const props = withDefaults(defineProps<Props>(), {
   sequential: true,
 });
@@ -158,8 +119,6 @@ const authStore = useAuthStore();
 const surveyStore = useSurveyStore();
 const assignmentsStore = useAssignmentsStore();
 const { selectedAssignment } = storeToRefs(assignmentsStore);
-const queryClient = useQueryClient();
-const router = useRouter();
 const describedTaskId = ref<string | null>(null);
 
 const { t, locale } = useI18n();
@@ -242,17 +201,7 @@ const currentGameId = computed((): string | undefined => {
   );
 });
 
-const isCurrentAssignment = computed(
-  (): boolean => getAssignmentStatus(selectedAssignment.value) === ASSIGNMENT_STATUSES.CURRENT,
-);
-
-const surveyResponseDoc = computed(() => {
-  const surveyResponsesData = queryClient.getQueryData(['surveyResponses', props.userData.id]);
-
-  if (!Array.isArray(surveyResponsesData)) return null;
-
-  return surveyResponsesData.find((doc) => doc?.administrationId === selectedAssignment.value?.id) ?? null;
-});
+const isCurrentAssignment = computed((): boolean => getAssignmentStatus(selectedAssignment.value) === ASSIGNMENT_STATUSES.CURRENT);
 
 const isTaskAvailable = (game: Game): boolean => {
   if (!isCurrentAssignment.value || isTaskComplete(game.completedOn, game.taskId)) return false;
@@ -262,134 +211,6 @@ const isTaskAvailable = (game: Game): boolean => {
 
 const toggleDescription = (taskId: string): void => {
   describedTaskId.value = describedTaskId.value === taskId ? null : taskId;
-};
-
-const isMultiPartSurvey = (taskId: string): boolean => {
-  return (
-    taskId.toLowerCase().includes('survey') &&
-    (props.userData.userType === 'teacher' || props.userData.userType === 'parent')
-  );
-};
-
-const getStoredSurveyProgress = (specificId = 0): number | null => {
-  const localStorageData = JSON.parse(
-    window.localStorage.getItem(`${LEVANTE_SURVEY_RESPONSES_KEY}-${props.userData.id}`) || '{}',
-  );
-
-  if (!localStorageData || localStorageData.specificId !== specificId) return null;
-  if (localStorageData.isComplete) return 100;
-
-  const totalPages = localStorageData.isGeneral ? surveyStore.numGeneralPages : surveyStore.numSpecificPages;
-  if (!totalPages) return 0;
-
-  return Math.min(99, Math.round(((localStorageData.pageNo || 0) / totalPages) * 100));
-};
-
-const getGeneralSurveyProgress = (): number => {
-  if (surveyStore.isGeneralSurveyComplete || surveyResponseDoc.value?.general?.isComplete) return 100;
-
-  const localProgress = getStoredSurveyProgress(0);
-  if (localProgress !== null) return localProgress;
-
-  if (!surveyStore.survey || !surveyStore.numGeneralPages) return 0;
-
-  return Math.min(99, Math.round(((surveyStore.survey.currentPageNo || 0) / surveyStore.numGeneralPages) * 100));
-};
-
-const getSpecificSurveyProgress = (index: number, specificId: string | number): number => {
-  const specificResponse = surveyResponseDoc.value?.specific?.[index];
-  if (specificResponse?.isComplete) return 100;
-
-  const localProgress = getStoredSurveyProgress(Number(specificId));
-  if (localProgress !== null) return localProgress;
-
-  if (!specificResponse || !surveyStore.numSpecificPages) return 0;
-
-  return Math.min(99, Math.round(((surveyResponseDoc.value?.pageNo || 0) / surveyStore.numSpecificPages) * 100));
-};
-
-const getSpecificSurveyLabel = (relation: Record<string, unknown> | undefined, index: number): string => {
-  if (props.userData.userType === 'teacher') {
-    return (relation?.name as string) || `${t('gameTabs.surveyProgressSpecificTeacher')} ${index + 1}`;
-  }
-
-  const childLabel = t('gameTabs.surveyProgressSpecificParent');
-  if (relation?.birthMonth || relation?.birthYear) {
-    return `${childLabel} ${relation.birthMonth ?? ''}/${relation.birthYear ?? ''}`.trim();
-  }
-
-  return `${childLabel} ${index + 1}`;
-};
-
-const getSurveyParts = (): SurveyPart[] => {
-  const generalComplete = surveyStore.isGeneralSurveyComplete || surveyResponseDoc.value?.general?.isComplete;
-
-  const parts: SurveyPart[] = [
-    {
-      key: 'general',
-      label:
-        props.userData.userType === 'teacher'
-          ? t('gameTabs.surveyProgressGeneralTeacher')
-          : t('gameTabs.surveyProgressGeneralParent'),
-      type: 'general',
-      index: 0,
-      progress: getGeneralSurveyProgress(),
-      isComplete: Boolean(generalComplete),
-      isLocked: false,
-    },
-  ];
-
-  const relationIds =
-    props.userData.userType === 'teacher' ? props.userData.classes?.current ?? [] : props.userData.childIds ?? [];
-
-  surveyStore.specificSurveyRelationData.forEach((relation: Record<string, unknown>, index: number) => {
-    const specificId = relation?.id ?? relationIds[index] ?? index;
-    const progress = getSpecificSurveyProgress(index, specificId as string | number);
-
-    parts.push({
-      key: `specific-${specificId}`,
-      label: getSpecificSurveyLabel(relation, index),
-      type: 'specific',
-      index,
-      progress,
-      isComplete: progress === 100,
-      isLocked: !parts[0].isComplete,
-    });
-  });
-
-  return parts;
-};
-
-const setSurveyResponses = (responses?: Record<string, { responseValue?: unknown } | unknown>): void => {
-  if (!surveyStore.survey || !responses) return;
-
-  surveyStore.survey.data = Object.fromEntries(
-    Object.entries(responses).map(([key, value]) => [
-      key,
-      (value as { responseValue?: unknown })?.responseValue ?? value,
-    ]),
-  );
-};
-
-const launchSurveyPart = (part: SurveyPart): void => {
-  if (part.isComplete || part.isLocked) return;
-
-  if (part.type === 'general') {
-    surveyStore.setIsGeneralSurveyComplete(false);
-    surveyStore.setSpecificSurveyRelationIndex(0);
-    setSurveyResponses(surveyResponseDoc.value?.general?.responses);
-  } else {
-    surveyStore.setIsGeneralSurveyComplete(true);
-    surveyStore.setSpecificSurveyRelationIndex(part.index);
-    setSurveyResponses(surveyResponseDoc.value?.specific?.[part.index]?.responses);
-  }
-
-  if (surveyStore.survey) {
-    surveyStore.survey.currentPageNo =
-      part.progress > 0 && part.progress < 100 ? surveyResponseDoc.value?.pageNo || 0 : 0;
-  }
-
-  router.push({ path: '/survey' });
 };
 
 async function routeExternalTask(game: Game): Promise<void> {
@@ -622,116 +443,13 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
   z-index: 6;
 }
 
-.game-tile.--multipart-survey.--described .game-tile__info,
-.game-tile.--multipart-survey:hover .game-tile__info {
-  z-index: 9;
-}
-
 .game-tile.--described .game-tile__description {
   display: -webkit-box;
-}
-
-.game-tile__survey-overlay {
-  position: absolute;
-  inset: 0 auto auto 0;
-  z-index: 8;
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.375rem;
-  width: var(--game-tile-size);
-  height: var(--game-tile-size);
-  margin: 0;
-  padding: clamp(1.5rem, 1.75vw, 1.875rem) 0.5rem 0.625rem;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border: 0;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.94);
-  pointer-events: auto;
-}
-
-.game-tile.--described .game-tile__survey-overlay {
-  display: flex;
-}
-
-.survey-part {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  min-width: 0;
-  padding: 0.25rem 0.375rem;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-color);
-  cursor: pointer;
-  text-align: left;
-  transition: background-color 0.15s ease;
-}
-
-.survey-part:hover:not(:disabled) {
-  background: var(--surface-100);
-}
-
-.survey-part:disabled {
-  cursor: not-allowed;
-}
-
-.survey-part__progress {
-  --ring-size: clamp(1.75rem, 1.8vw, 2rem);
-
-  position: relative;
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: var(--ring-size);
-  height: var(--ring-size);
-  border-radius: 999px;
-  background: conic-gradient(var(--primary-color) var(--survey-progress), var(--surface-200) 0);
-}
-
-.survey-part__progress::before {
-  position: absolute;
-  width: calc(var(--ring-size) - 6px);
-  height: calc(var(--ring-size) - 6px);
-  border-radius: 999px;
-  background: var(--surface-0);
-  content: '';
-}
-
-.survey-part__progress-value {
-  position: relative;
-  z-index: 1;
-  color: var(--text-color);
-  font-size: clamp(0.5625rem, 0.55vw, 0.6875rem);
-  font-weight: 600;
-  line-height: 1;
-}
-
-.survey-part__label {
-  overflow: hidden;
-  color: var(--text-color);
-  font-size: clamp(0.6875rem, 0.7vw, 0.8125rem);
-  font-weight: 500;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.survey-part:disabled .survey-part__label {
-  color: var(--text-color-secondary);
 }
 
 @media (hover: hover) {
   .game-tile:hover .game-tile__description {
     display: -webkit-box;
-  }
-
-  .game-tile.--multipart-survey.--available:hover .game-tile__survey-overlay {
-    display: flex;
   }
 }
 
@@ -763,11 +481,6 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
     font-size: 0.875rem;
     line-height: 1.15;
     -webkit-line-clamp: 5;
-  }
-
-  .game-tile__survey-overlay {
-    padding: 1.5rem 0.375rem 0.5rem;
-    gap: 0.25rem;
   }
 }
 
