@@ -2,6 +2,7 @@ import axios from 'axios';
 import _merge from 'lodash/merge';
 import { BufferLoader, AudioContext, type BufferList } from '@/helpers/audio';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
+import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
 import type { SurveyModel, Question } from 'survey-core';
 import type { Router } from 'vue-router';
 import type { QueryClient } from '@tanstack/vue-query';
@@ -455,7 +456,7 @@ export async function saveFinalSurveyData({
 
     surveyStore.setSpecificSurveyRelationIndex(surveyStore.specificSurveyRelationIndex + 1);
 
-    queryClient.invalidateQueries({ queryKey: ['surveyResponses', uid] });
+    queryClient.invalidateQueries({ queryKey: [SURVEY_RESPONSES_QUERY_KEY] });
 
     assignmentsStore.setHomeRefresh();
     router.push({ name: 'Home' });
