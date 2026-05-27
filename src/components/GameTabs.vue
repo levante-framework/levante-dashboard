@@ -129,6 +129,7 @@ const normalizedRoarTaskIds = new Set(ROAR_TASK_IDS.map((taskId) => toCamelCase(
 
 const isLevanteTask = (taskId: string): boolean => normalizedLevanteTaskIds.has(toCamelCase(taskId));
 const isRoarTask = (taskId: string): boolean => normalizedRoarTaskIds.has(toCamelCase(taskId));
+const isSurveyTask = (taskId: string): boolean => taskId.toLowerCase().includes('survey');
 
 const getTaskName = (taskId: string, taskName: string): string => {
   // Translate Levante task names. The task name is not the same as the taskId.
@@ -241,7 +242,7 @@ async function routeExternalTask(game: Game): Promise<void> {
 }
 
 const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: string): boolean => {
-  if (taskId === 'teacher-survey' || taskId === 'caregiver-survey') {
+  if (isSurveyTask(taskId)) {
     if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
       if (!surveyStore.isGeneralSurveyComplete) {
         return false;
