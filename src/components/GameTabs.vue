@@ -35,19 +35,18 @@
         >
           <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
           <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" :alt="getTaskImageAlt(game)" />
+          <span v-if="!game.surveyPart" class="game-tile__play game-tile__play--overlay" aria-hidden="true">
+            <i class="pi pi-play"></i>
+          </span>
         </router-link>
 
         <div v-else class="game-tile__square --disabled">
           <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
           <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" :alt="getTaskImageAlt(game)" />
+          <span v-if="!isTaskComplete(game)" class="game-tile__play game-tile__play--corner" aria-hidden="true">
+            <i class="pi pi-lock"></i>
+          </span>
         </div>
-
-        <span v-if="isTaskAvailable(game)" class="game-tile__play" aria-hidden="true">
-          <i class="pi pi-play"></i>
-        </span>
-        <span v-else-if="!isTaskComplete(game)" class="game-tile__play" aria-hidden="true">
-          <i class="pi pi-lock"></i>
-        </span>
 
         <p v-if="!game.surveyPart" class="game-tile__description">
           {{ getTaskDescription(game) }}
@@ -568,25 +567,30 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   font-size: clamp(0.9375rem, 1vw, 1.125rem);
 }
 
-.game-tile__play {
+.game-tile__play--overlay {
+  inset: 0;
+  z-index: 2;
+  display: none;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--game-tile-radius);
+  background: rgba(255, 255, 255, 0.42);
+  color: var(--primary-color);
+  font-size: clamp(2.5rem, 2.6vw, 3.25rem);
+  pointer-events: none;
+}
+
+.game-tile__play--corner {
   z-index: 5;
   top: calc(var(--game-tile-size) - 3rem);
   right: 0.75rem;
   bottom: auto;
   width: clamp(2rem, 2vw, 2.375rem);
   height: clamp(2rem, 2vw, 2.375rem);
-  background: var(--primary-color);
-  color: var(--primary-color-text);
+  background: var(--surface-500);
+  color: white;
   font-size: clamp(0.75rem, 0.8vw, 0.9375rem);
   pointer-events: none;
-}
-
-.game-tile.--completed .game-tile__play {
-  background: var(--bright-green);
-}
-
-.game-tile.--locked .game-tile__play {
-  background: var(--surface-500);
 }
 
 .game-tile__description {
@@ -634,7 +638,7 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   width: var(--wheel-size);
   height: var(--wheel-size);
   border-radius: 999px;
-  background: conic-gradient(from -90deg, var(--primary-color) var(--survey-progress), var(--surface-300) 0);
+  background: conic-gradient(from -90deg, var(--bright-green) var(--survey-progress), var(--surface-300) 0);
   content: '';
 }
 
@@ -663,8 +667,9 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   z-index: 6;
 }
 
-.game-tile.--described .game-tile__play,
-.game-tile:hover .game-tile__play {
+.game-tile.--available:hover .game-tile__play--overlay,
+.game-tile.--available.--described .game-tile__play--overlay {
+  display: inline-flex;
   z-index: 8;
 }
 
@@ -679,11 +684,25 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
 }
 
 .game-tile.--survey-part .game-tile__progress-wheel {
-  background: rgba(255, 255, 255, 0.82);
+  display: none;
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .game-tile.--survey-part.--locked .game-tile__progress-wheel {
   opacity: 0.72;
+}
+
+@media (hover: hover) {
+  .game-tile.--survey-part:hover .game-tile__progress-wheel {
+    display: flex;
+  }
+}
+
+@media (hover: none) {
+  .game-tile.--survey-part .game-tile__progress-wheel {
+    display: flex;
+    background: rgba(255, 255, 255, 0.55);
+  }
 }
 
 .game-tile__name {
