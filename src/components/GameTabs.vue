@@ -33,13 +33,13 @@
           :aria-label="`${$t('gameTabs.clickToStart')}: ${getTaskName(game)}`"
           @click="onGameCardClick($event, game)"
         >
-          <img v-if="game.taskData.image" :src="game.taskData.image" alt="" />
-          <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" alt="" />
+          <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
+          <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" :alt="getTaskImageAlt(game)" />
         </router-link>
 
         <div v-else class="game-tile__square --disabled">
-          <img v-if="game.taskData.image" :src="game.taskData.image" alt="" />
-          <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" alt="" />
+          <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
+          <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" :alt="getTaskImageAlt(game)" />
         </div>
 
         <span v-if="isTaskAvailable(game)" class="game-tile__play" aria-hidden="true">
@@ -261,6 +261,8 @@ const getTaskName = (game: DisplayGame): string => {
 
   return game.taskData.name;
 };
+
+const getTaskImageAlt = (game: DisplayGame): string => `${getTaskName(game)} thumbnail`;
 
 const getTaskDescription = (game: DisplayGame): string => {
   if (game.surveyPart) return getSurveyPartDescription(game);
