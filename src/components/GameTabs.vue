@@ -35,18 +35,19 @@
         >
           <img v-if="game.taskData.image" :src="game.taskData.image" alt="" />
           <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" alt="" />
-          <span class="game-tile__play">
-            <i class="pi pi-play"></i>
-          </span>
         </router-link>
 
         <div v-else class="game-tile__square --disabled">
           <img v-if="game.taskData.image" :src="game.taskData.image" alt="" />
           <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" alt="" />
-          <span v-if="!isTaskComplete(game)" class="game-tile__play">
-            <i class="pi pi-lock"></i>
-          </span>
         </div>
+
+        <span v-if="isTaskAvailable(game)" class="game-tile__play" aria-hidden="true">
+          <i class="pi pi-play"></i>
+        </span>
+        <span v-else-if="!isTaskComplete(game)" class="game-tile__play" aria-hidden="true">
+          <i class="pi pi-lock"></i>
+        </span>
 
         <p v-if="!game.surveyPart" class="game-tile__description">
           {{ getTaskDescription(game) }}
@@ -514,10 +515,10 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   color: var(--primary-color);
 }
 
-.game-tile.--available .game-tile__square:hover,
+.game-tile.--available:hover .game-tile__square,
+.game-tile.--available.--described .game-tile__square,
 .game-tile.--available .game-tile__square:focus-visible {
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
-  transform: translateY(-1px);
 }
 
 .game-tile__square.--disabled {
@@ -575,6 +576,7 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   background: var(--primary-color);
   color: var(--primary-color-text);
   font-size: clamp(0.75rem, 0.8vw, 0.9375rem);
+  pointer-events: none;
 }
 
 .game-tile.--completed .game-tile__play {
@@ -655,10 +657,13 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
 .game-tile.--described .game-tile__info,
 .game-tile:hover .game-tile__info,
 .game-tile.--described .game-tile__complete,
-.game-tile:hover .game-tile__complete,
+.game-tile:hover .game-tile__complete {
+  z-index: 6;
+}
+
 .game-tile.--described .game-tile__play,
 .game-tile:hover .game-tile__play {
-  z-index: 6;
+  z-index: 8;
 }
 
 .game-tile.--described .game-tile__description {
