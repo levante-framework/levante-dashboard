@@ -35,18 +35,19 @@
         >
           <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
           <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" :alt="getTaskImageAlt(game)" />
-          <span v-if="!game.surveyPart" class="game-tile__play game-tile__play--overlay" aria-hidden="true">
-            <i class="pi pi-play"></i>
-          </span>
         </router-link>
 
         <div v-else class="game-tile__square --disabled">
           <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
           <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" :alt="getTaskImageAlt(game)" />
-          <span v-if="!isTaskComplete(game)" class="game-tile__play game-tile__play--corner" aria-hidden="true">
-            <i class="pi pi-lock"></i>
-          </span>
         </div>
+
+        <span v-if="isTaskAvailable(game) && !game.surveyPart" class="game-tile__play game-tile__play--active" aria-hidden="true">
+          <i class="pi pi-play"></i>
+        </span>
+        <span v-else-if="!isTaskComplete(game) && !game.surveyPart" class="game-tile__play game-tile__play--locked" aria-hidden="true">
+          <i class="pi pi-lock"></i>
+        </span>
 
         <p v-if="!game.surveyPart" class="game-tile__description">
           {{ getTaskDescription(game) }}
@@ -567,30 +568,32 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   font-size: clamp(0.9375rem, 1vw, 1.125rem);
 }
 
-.game-tile__play--overlay {
-  inset: 0;
-  z-index: 2;
-  display: none;
-  width: 100%;
-  height: 100%;
-  border-radius: var(--game-tile-radius);
-  background: rgba(255, 255, 255, 0.42);
-  color: var(--primary-color);
-  font-size: clamp(2.5rem, 2.6vw, 3.25rem);
-  pointer-events: none;
-}
-
-.game-tile__play--corner {
-  z-index: 5;
+.game-tile__play--active,
+.game-tile__play--locked {
   top: calc(var(--game-tile-size) - 3rem);
   right: 0.75rem;
   bottom: auto;
   width: clamp(2rem, 2vw, 2.375rem);
   height: clamp(2rem, 2vw, 2.375rem);
-  background: var(--surface-500);
-  color: white;
-  font-size: clamp(0.75rem, 0.8vw, 0.9375rem);
+  box-sizing: border-box;
   pointer-events: none;
+}
+
+.game-tile__play--active {
+  z-index: 5;
+  display: none;
+  border: 2px solid var(--primary-color);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--primary-color);
+  font-size: clamp(0.75rem, 0.8vw, 0.9375rem);
+}
+
+.game-tile__play--locked {
+  z-index: 5;
+  border: 2px solid var(--surface-500);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--surface-600);
+  font-size: clamp(0.75rem, 0.8vw, 0.9375rem);
 }
 
 .game-tile__description {
@@ -667,8 +670,8 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   z-index: 6;
 }
 
-.game-tile.--available:hover .game-tile__play--overlay,
-.game-tile.--available.--described .game-tile__play--overlay {
+.game-tile.--available:hover .game-tile__play--active,
+.game-tile.--available.--described .game-tile__play--active {
   display: inline-flex;
   z-index: 8;
 }
