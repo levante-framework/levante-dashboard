@@ -35,19 +35,18 @@
         >
           <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
           <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" :alt="getTaskImageAlt(game)" />
+          <span v-if="!game.surveyPart" class="game-tile__play game-tile__play--active" aria-hidden="true">
+            <i class="pi pi-play"></i>
+          </span>
         </router-link>
 
         <div v-else class="game-tile__square --disabled">
           <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
           <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" :alt="getTaskImageAlt(game)" />
+          <span v-if="!isTaskComplete(game) && !game.surveyPart" class="game-tile__play game-tile__play--locked" aria-hidden="true">
+            <i class="pi pi-lock"></i>
+          </span>
         </div>
-
-        <span v-if="isTaskAvailable(game) && !game.surveyPart" class="game-tile__play game-tile__play--active" aria-hidden="true">
-          <i class="pi pi-play"></i>
-        </span>
-        <span v-else-if="!isTaskComplete(game) && !game.surveyPart" class="game-tile__play game-tile__play--locked" aria-hidden="true">
-          <i class="pi pi-lock"></i>
-        </span>
 
         <p v-if="!game.surveyPart" class="game-tile__description">
           {{ getTaskDescription(game) }}
@@ -530,13 +529,38 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
 
 .game-tile__info,
 .game-tile__complete,
-.game-tile__play {
+.game-tile__play--locked {
   position: absolute;
   z-index: 3;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
+}
+
+.game-tile__play--active {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(3rem, 3.25vw, 3.75rem);
+  height: clamp(3rem, 3.25vw, 3.75rem);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12);
+  color: var(--text-color);
+  font-size: clamp(1.125rem, 1.15vw, 1.375rem);
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.game-tile__play--active .pi {
+  margin-left: 0.12em;
 }
 
 .game-tile__info {
@@ -568,38 +592,25 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   font-size: clamp(0.9375rem, 1vw, 1.125rem);
 }
 
-.game-tile__play--active,
 .game-tile__play--locked {
+  z-index: 5;
   top: calc(var(--game-tile-size) - 3rem);
   right: 0.75rem;
   bottom: auto;
   width: clamp(2rem, 2vw, 2.375rem);
   height: clamp(2rem, 2vw, 2.375rem);
   box-sizing: border-box;
-  pointer-events: none;
-}
-
-.game-tile__play--active {
-  z-index: 5;
-  display: none;
-  border: 2px solid var(--primary-color);
-  background: rgba(255, 255, 255, 0.55);
-  color: var(--primary-color);
-  font-size: clamp(0.75rem, 0.8vw, 0.9375rem);
-}
-
-.game-tile__play--locked {
-  z-index: 5;
   border: 2px solid var(--surface-500);
   background: rgba(255, 255, 255, 0.55);
   color: var(--surface-600);
   font-size: clamp(0.75rem, 0.8vw, 0.9375rem);
+  pointer-events: none;
 }
 
 .game-tile__description {
   position: absolute;
   inset: 0 auto auto 0;
-  z-index: 3;
+  z-index: 4;
   display: none;
   width: var(--game-tile-size);
   height: var(--game-tile-size);
@@ -615,8 +626,8 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   text-align: center;
   pointer-events: none;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
-  line-clamp: 5;
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
   align-content: center;
 }
 
@@ -641,7 +652,7 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   width: var(--wheel-size);
   height: var(--wheel-size);
   border-radius: 999px;
-  background: conic-gradient(from -90deg, var(--bright-green) var(--survey-progress), var(--surface-300) 0);
+  background: conic-gradient(from 0deg, var(--bright-green) var(--survey-progress), var(--surface-300) 0);
   content: '';
 }
 
@@ -668,12 +679,6 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
 .game-tile.--described .game-tile__complete,
 .game-tile:hover .game-tile__complete {
   z-index: 6;
-}
-
-.game-tile.--available:hover .game-tile__play--active,
-.game-tile.--available.--described .game-tile__play--active {
-  display: inline-flex;
-  z-index: 8;
 }
 
 .game-tile.--described .game-tile__description {
@@ -745,6 +750,12 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
     line-height: 1.15;
     -webkit-line-clamp: 5;
     line-clamp: 5;
+  }
+
+  .game-tile__play--active {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.9375rem;
   }
 }
 
