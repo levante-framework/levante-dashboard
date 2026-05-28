@@ -474,7 +474,7 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   box-sizing: border-box;
   width: var(--game-tile-size);
   height: var(--game-tile-size);
-  border: 3px solid var(--primary-color);
+  border: 2px solid #fcd7b8;
   border-radius: var(--game-tile-radius);
   pointer-events: none;
   content: '';
