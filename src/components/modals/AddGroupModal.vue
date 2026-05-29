@@ -390,9 +390,7 @@ watch(
       }
     }
 
-    if (preSelectedSchool) {
-      parentSchool.value = preSelectedSchool;
-    }
+    parentSchool.value = preSelectedSchool ?? undefined;
   },
   { immediate: true },
 );
