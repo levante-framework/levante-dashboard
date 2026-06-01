@@ -550,7 +550,7 @@ const progressReportColumns = computed(() => {
   if (isLoadingTasksDictionary.value || progressPayload.value === undefined) return [];
 
   const tableColumns = [
-    { field: 'user.userId', header: 'User ID', dataType: 'text', sort: true, filter: true },
+    { field: 'user.userId', header: 'UID', dataType: 'text', sort: true, filter: true },
     { field: 'user.username', header: 'User Login', dataType: 'text', sort: true, filter: true },
     { field: 'user.userType', header: 'User Type', dataType: 'text', sort: true, filter: true },
   ];
