@@ -320,7 +320,7 @@ describe('ProgressReportFeature.vue', () => {
     const table = wrapper.findComponent({ name: 'RoarDataTable' });
     const columnHeaders = table.props('columns').map((column) => column.header);
 
-    expect(columnHeaders).toEqual(['User ID', 'User Login', 'User Type', 'Math', 'Vocabulary']);
+    expect(columnHeaders).toEqual(['UID', 'User Login', 'User Type', 'Math', 'Vocabulary']);
     expect(table.props('data')).toEqual([
       {
         progress: {
