@@ -3,6 +3,7 @@ import type { UseMutationReturnType } from '@tanstack/vue-query';
 import { useAuthStore } from '@/store/auth';
 import { TASKS_QUERY_KEY, TASK_VARIANTS_QUERY_KEY } from '@/constants/queryKeys';
 import { TASK_VARIANT_ADD_MUTATION_KEY } from '@/constants/mutationKeys';
+import { registerTaskVariant } from '@/helpers/query/tasks';
 
 interface TaskVariantData {
   [key: string]: any;
@@ -26,7 +27,16 @@ const useAddTaskVariantMutation = (): UseMutationReturnType<void, Error, TaskVar
   return useMutation({
     mutationKey: TASK_VARIANT_ADD_MUTATION_KEY,
     mutationFn: async (variant: TaskVariantData): Promise<void> => {
-      await authStore.roarfirekit.registerTaskVariant({ ...variant });
+      const data = {
+        taskId: variant.taskId,
+        name: variant.variantName,
+        params: variant.variantParams,
+        registered: true,
+        siteId: variant.siteId,
+        ...(variant.schemaVersion != null && { schemaVersion: variant.schemaVersion }),
+      };
+      await registerTaskVariant(data);
+      // await authStore.roarfirekit.registerTaskVariant({ ...variant });
     },
     onSuccess: (): void => {
       queryClient.invalidateQueries({ queryKey: [TASKS_QUERY_KEY] });
