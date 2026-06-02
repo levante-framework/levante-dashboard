@@ -1,7 +1,7 @@
 {
   "name": "roar-dashboard",
   "private": true,
-  "version": "3.6.1-dev",
+  "version": "3.6.1",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"
