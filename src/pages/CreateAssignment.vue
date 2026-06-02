@@ -786,7 +786,7 @@ const submit = async () => {
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
 
-    return router.push({ path: APP_ROUTES.HOME });
+    return router.push({ path: APP_ROUTES.VIEW_ASSIGNMENTS });
   }
 
   const { data: assignmentExists } = await refetchAssignmentExists();
@@ -815,7 +815,7 @@ const submit = async () => {
       queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: [DSGF_ORGS_QUERY_KEY] });
 
-      router.push({ path: APP_ROUTES.HOME });
+      router.push({ path: APP_ROUTES.VIEW_ASSIGNMENTS });
     },
     onError: (error) => {
       toast.add({
