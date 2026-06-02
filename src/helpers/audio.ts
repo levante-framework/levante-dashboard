@@ -49,8 +49,8 @@ export class BufferLoader {
   }
 
   load(): void {
-    Object.keys(this.urlListMap).forEach((key: string) => {
-      this.loadBuffer(this.urlListMap[key], key);
+    Object.keys(this.urlListMap || {}).forEach((key: string) => {
+      this.loadBuffer(this.urlListMap[key] || '', key);
     });
   }
 }

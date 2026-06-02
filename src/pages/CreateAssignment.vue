@@ -1,20 +1,36 @@
 <template>
-  <div v-if="props.adminId && !isFormPopulated" class="levante-spinner-wrapper">
+  <div v-if="editAssignmentBlockingLoader" class="levante-spinner-wrapper">
     <LevanteSpinner fullscreen />
   </div>
 
   <main v-else class="container main">
     <section class="main-body">
       <div class="flex flex-column mb-5">
-        <div class="flex justify-content-between mb-2">
-          <div class="flex align-items-center gap-3">
-            <div class="admin-page-header">{{ header }}</div>
+        <div class="page-title-row flex align-items-center justify-content-start gap-2 mb-2">
+          <div class="admin-page-header m-0">{{ header }}</div>
+          <DocsButton
+            href="https://researcher.levante-network.org/dashboard/create-an-assignment"
+            label="Documentation"
+          />
+        </div>
+        <div v-if="!adminId" class="how-to-section mb-4">
+          <h3>How to create an assignment</h3>
+          <div class="text-md text-gray-500 mb-1 line-height-3">
+            An assignment is a collection of tasks. New assignments have a name and date range, are given to certain
+            groups, and contain specified tasks. When an assignment is given to a group, all users within that group
+            receive those tasks. Before getting started, please read the
+            <a
+              href="https://researcher.levante-network.org/dashboard/create-an-assignment"
+              target="_blank"
+              rel="noopener noreferrer"
+              >documentation on creating assignments</a
+            >.
           </div>
         </div>
-        <div class="text-md text-gray-500">{{ description }}</div>
       </div>
 
       <PvDivider />
+
       <div class="text-sm text-gray-500 mt-3 mr-3 required"><span class="required-asterisk">*</span> Required</div>
       <div class="bg-gray-100 rounded p-5">
         <div class="formgrid grid mt-5">
@@ -115,8 +131,8 @@
         <div class="flex flex-column justify-content-center mt-5">
           <div class="flex flex-column mt-2 align-items-center justify-content-center">
             <div class="flex">
-              <label style="font-weight: bold" class="mb-2 mx-2"
-                >Sequential Task Order<span class="required-asterisk">*</span></label
+              <label class="mb-2 mx-2 font-semibold"
+                >Sequential Task Order <span class="required-asterisk">*</span></label
               >
               <span class="flex gap-2">
                 <PvRadioButton v-model="state.sequential" input-id="Yes" :value="true" />
@@ -139,7 +155,9 @@
             </div>
           </div>
           <div class="divider mx-2 my-3" />
-          <div class="mb-2 w-full flex justify-content-center">
+          <div class="mb-2 w-full flex justify-content-center gap-3">
+            <PvButton v-if="adminId" severity="danger" variant="outlined" @click="onClickCancelBtn">Cancel</PvButton>
+
             <PvButton
               :label="submitLabel"
               class="text-white bg-primary border-none border-round h-3rem p-3 hover:bg-red-900"
@@ -173,13 +191,11 @@ import PvRadioButton from 'primevue/radiobutton';
 import _filter from 'lodash/filter';
 import _isEmpty from 'lodash/isEmpty';
 import _toPairs from 'lodash/toPairs';
-import _uniqBy from 'lodash/uniqBy';
 import _forEach from 'lodash/forEach';
 import _find from 'lodash/find';
 import _isEqual from 'lodash/isEqual';
 import _union from 'lodash/union';
 import _groupBy from 'lodash/groupBy';
-import _values from 'lodash/values';
 import { useVuelidate } from '@vuelidate/core';
 import { required, requiredIf } from '@vuelidate/validators';
 import { useAuthStore } from '@/store/auth';
@@ -192,23 +208,30 @@ import useTaskVariantsQuery from '@/composables/queries/useTaskVariantsQuery';
 import useUpsertAdministrationMutation from '@/composables/mutations/useUpsertAdministrationMutation';
 import TaskPicker from '@/components/TaskPicker.vue';
 import ConsentPicker from '@/components/ConsentPicker.vue';
+import DocsButton from '@/components/DocsButton.vue';
 import GroupPicker from '@/components/GroupPicker.vue';
 import { APP_ROUTES } from '@/constants/routes';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
-import { isLevante, normalizeToLowercase } from '@/helpers';
+import { isLevante, isPlainObject, normalizeToLowercase } from '@/helpers';
 import { useQueryClient } from '@tanstack/vue-query';
 import useAssignmentExistsQuery from '@/composables/queries/useAssignmentExistsQuery';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import { useLevanteStore } from '@/store/levante';
+import { logger } from '@/logger';
 
 const initialized = ref(false);
 const isFormPopulated = ref(false);
+const editTasksHydrated = ref(false);
 const router = useRouter();
 const toast = useToast();
 const queryClient = useQueryClient();
 
 const { mutate: upsertAdministration, isPending: isSubmitting } = useUpsertAdministrationMutation();
 
+const levanteStore = useLevanteStore();
+const { hasUserConfirmed } = storeToRefs(levanteStore);
+const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const authStore = useAuthStore();
 const { roarfirekit, userData } = storeToRefs(authStore);
 
@@ -216,11 +239,11 @@ const props = defineProps({
   adminId: { type: String, required: false, default: null },
 });
 
-const header = computed(() => (props.adminId ? 'Edit an assignment' : 'Create Assignment'));
-
-const description = computed(
-  () => 'An assignment is a collection of tasks assigned to users who are members of a group',
-);
+const header = computed(() => {
+  if (!props.adminId) return 'Create Assignment';
+  const name = state.administrationName?.trim();
+  return name ? `Edit Assignment: ${name}` : 'Edit assignment';
+});
 
 const submitLabel = computed(() => (props.adminId ? 'Update Assignment' : 'Create Assignment'));
 
@@ -231,6 +254,8 @@ const creatorName = computed(() => {
 
   return userData.value?.displayName || `${firstName} ${middleName} ${lastName}`;
 });
+
+const onClickCancelBtn = () => router.back();
 
 // +------------------------------------------------------------------------------------------------------------------+
 // | Fetch Variants with Params
@@ -244,7 +269,25 @@ const findVariantWithParams = (variants, params) => {
   });
 };
 
-const { data: allVariants } = useTaskVariantsQuery(true, {
+function resolveVariantForAssessment(assessment, allVariantInfo) {
+  const taskId = String(assessment?.taskId ?? '').toLowerCase();
+  const forTask = _filter(allVariantInfo, (variant) =>
+    String(variant.task?.id ?? '').toLowerCase() === taskId,
+  );
+
+  let found = findVariantWithParams(forTask, assessment.params ?? {});
+
+  const variantId = assessment.variantId;
+  if (!found && variantId) {
+    found =
+      _find(forTask, (v) => v.id === variantId) ??
+      _find(allVariantInfo, (v) => v.id === variantId);
+  }
+
+  return found;
+}
+
+const { data: allVariants, isFetched: isVariantsFetched } = useTaskVariantsQuery(true, {
   enabled: initialized,
 });
 
@@ -252,42 +295,98 @@ const { data: allVariants } = useTaskVariantsQuery(true, {
 // | Fetch pre-existing administration data when editing an administration
 // +------------------------------------------------------------------------------------------------------------------+
 // Fetch the data of the currently being edited administration, incl. its assigned assessments.
+const administrationIdsForEdit = computed(() => (props.adminId ? [props.adminId] : []));
 const fetchAdminitrations = computed(() => initialized.value && !!props.adminId);
-const { data: existingAdministrationData } = useAdministrationsQuery([props.adminId], {
+const {
+  data: existingData,
+  isLoading: isLoadingExistingData,
+  error: errorExistingData,
+  isFetched: isAdministrationFetched,
+} = useAdministrationsQuery(administrationIdsForEdit, {
   enabled: fetchAdminitrations,
   select: (data) => data[0],
   staleTime: 0,
   gcTime: 0,
 });
 
-const existingAssessments = computed(() => existingAdministrationData?.value?.assessments ?? []);
+watch(
+  [existingData, isLoadingExistingData, errorExistingData],
+  ([newExistingData, newIsLoadingExistingData, newErrorExistingData]) => {
+    if (!props.adminId) return;
+    if (!newIsLoadingExistingData && !newExistingData) {
+      logger.error('Failed to fetch administration by id', {
+        assignmentId: props.adminId,
+        error: newErrorExistingData,
+      });
+
+      toast.add({
+        severity: TOAST_SEVERITIES.ERROR,
+        summary: 'Failed to fetch assignment',
+        detail: 'We could not fetch this assignment\'s data. Please try again later',
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+
+      router.go(-1);
+    }
+  },
+);
+
+const existingAssessments = computed(() => existingData?.value?.assessments ?? []);
+
+const existingAdminMinimalOrgs = computed(() => minimalOrgsFromDoc(existingData?.value));
 
 // Fetch the districts assigned to the administration.
-const districtIds = computed(() => existingAdministrationData?.value?.minimalOrgs?.districts ?? []);
+const districtIds = computed(() => existingAdminMinimalOrgs.value?.districts ?? []);
 
-const { data: existingDistrictsData } = useDistrictsQuery(districtIds, {
+const { data: existingDistrictsData, isFetched: isDistrictsFetched } = useDistrictsQuery(districtIds, {
   enabled: initialized,
 });
 
 // Fetch the schools assigned to the administration.
-const schoolIds = computed(() => existingAdministrationData.value?.minimalOrgs?.schools ?? []);
+const schoolIds = computed(() => existingAdminMinimalOrgs.value?.schools ?? []);
 
-const { data: existingSchoolsData } = useSchoolsQuery(schoolIds, {
+const { data: existingSchoolsData, isFetched: isSchoolsFetched } = useSchoolsQuery(schoolIds, {
   enabled: initialized,
 });
 
 // Fetch the classes assigned to the administration.
-const classIds = computed(() => existingAdministrationData.value?.minimalOrgs?.classes ?? []);
+const classIds = computed(() => existingAdminMinimalOrgs.value?.classes ?? []);
 
-const { data: existingClassesData } = useClassesQuery(classIds, {
+const { data: existingClassesData, isFetched: isClassesFetched } = useClassesQuery(classIds, {
   enabled: initialized,
 });
 
 // Fetch the groups assigned to the administration.
-const groupIds = computed(() => existingAdministrationData.value?.minimalOrgs?.groups ?? []);
+const groupIds = computed(() => existingAdminMinimalOrgs.value?.groups ?? []);
 
-const { data: existingGroupData } = useGroupsQuery(groupIds, {
+const { data: existingGroupData, isFetched: isGroupsFetched } = useGroupsQuery(groupIds, {
   enabled: initialized,
+});
+
+const editOrgsHydrated = computed(() => {
+  const mo = existingAdminMinimalOrgs.value ?? {};
+  const ready = (ids, isFetchedRef) => !ids?.length || isFetchedRef.value;
+  return (
+    ready(mo.districts, isDistrictsFetched) &&
+    ready(mo.schools, isSchoolsFetched) &&
+    ready(mo.classes, isClassesFetched) &&
+    ready(mo.groups, isGroupsFetched)
+  );
+});
+
+const editAssignmentBlockingLoader = computed(() => {
+  if (!props.adminId) return false;
+  if (!initialized.value) return true;
+  if (errorExistingData?.value != null) return false;
+
+  const admin = existingData?.value;
+  if (!admin) {
+    return isLoadingExistingData.value || !isAdministrationFetched.value;
+  }
+
+  if (!administrationMatchesRoute(admin, props.adminId)) return true;
+
+  return !isFormPopulated.value || !editTasksHydrated.value || !editOrgsHydrated.value;
 });
 
 // +------------------------------------------------------------------------------------------------------------------+
@@ -363,7 +462,6 @@ const selection = (selected) => {
 // +------------------------------------------------------------------------------------------------------------------+
 const variants = ref([]);
 const preSelectedVariants = ref([]);
-const nonUniqueTasks = ref('');
 
 const variantsByTaskId = computed(() => {
   return _groupBy(allVariants.value, 'task.id');
@@ -374,14 +472,15 @@ const handleVariantsChanged = (newVariants) => {
 };
 
 const handleConsentSelected = (newConsentAssent) => {
-  if (newConsentAssent !== 'No Consent') {
+  const isNoConsent =
+    typeof newConsentAssent === 'string' && newConsentAssent.toLowerCase() === 'no consent';
+  if (!isNoConsent) {
     noConsent.value = '';
     state.consent = newConsentAssent.consent;
     state.assent = newConsentAssent.assent;
     state.amount = newConsentAssent.amount;
     state.expectedTime = newConsentAssent.expectedTime;
   } else {
-    // Set to "No Consent"
     noConsent.value = newConsentAssent;
     state.consent = newConsentAssent;
     state.assent = newConsentAssent;
@@ -397,10 +496,12 @@ const checkForRequiredOrgs = (orgs) => {
 // | Form submission
 // +------------------------------------------------------------------------------------------------------------------+
 const removeNull = (obj) => {
+  if (!isPlainObject(obj)) return {};
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== null));
 };
 
 const removeUndefined = (obj) => {
+  if (!isPlainObject(obj)) return {};
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined));
 };
 
@@ -431,31 +532,30 @@ const scrollToError = (elementId) => {
 };
 
 const hasAssignmentChanges = () => {
-  const original = existingAdministrationData.value;
+  const original = existingData.value;
   const current = state;
 
   // If no original data exists (new assignment), there are always changes
   if (!original) return true;
 
-  // Compare name
-  if (current.administrationName !== original.name) {
+  const originalName = original.name ?? original.publicName ?? '';
+  if (current.administrationName !== originalName) {
     return true;
   }
 
-  // Compare dates - normalize to compare only date part (ignore time)
   const normalizeDate = (date) => {
     if (!date) return null;
     const d = new Date(date);
     return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   };
 
-  const originalStartDate = normalizeDate(original.dateOpened);
+  const originalStartDate = normalizeDate(original.dateOpened ?? original.dateOpen);
   const currentStartDate = normalizeDate(current.dateStarted);
   if (originalStartDate !== currentStartDate) {
     return true;
   }
 
-  const originalEndDate = normalizeDate(original.dateClosed);
+  const originalEndDate = normalizeDate(original.dateClosed ?? original.dateClose);
   const currentEndDate = normalizeDate(current.dateClosed);
   if (originalEndDate !== currentEndDate) {
     return true;
@@ -478,7 +578,7 @@ const hasAssignmentChanges = () => {
       .sort();
   };
 
-  const originalOrgs = original.minimalOrgs ?? {};
+  const originalOrgs = minimalOrgsFromDoc(original);
   const currentDistricts = getOrgIds(current.districts);
   const currentSchools = getOrgIds(current.schools);
   const currentClasses = getOrgIds(current.classes);
@@ -547,12 +647,9 @@ const hasAssignmentChanges = () => {
 };
 
 const submit = async () => {
-  console.log('Submit function called');
   submitted.value = true;
 
-  // Set publicName automatically based on administrationName
   state.administrationPublicName = state.administrationName;
-  console.log('Set administrationPublicName:', state.administrationPublicName);
 
   // First check dates
   if (!state.dateStarted || !state.dateClosed) {
@@ -584,11 +681,8 @@ const submit = async () => {
     groups: toRaw(state.groups).map((org) => org.id),
   };
 
-  console.log('Checking required orgs...', orgs);
   const orgsValid = checkForRequiredOrgs(orgs);
-  console.log('Orgs valid result:', orgsValid);
   if (!orgsValid) {
-    console.log('Org check failed, showing toast.');
     toast.add({
       severity: TOAST_SEVERITIES.ERROR,
       summary: 'Missing Selection',
@@ -741,6 +835,30 @@ const submit = async () => {
   });
 };
 
+const resetUserProgress = () => {
+  state.administrationName = '';
+  state.administrationPublicName = '';
+  state.dateStarted = null;
+  state.dateClosed = null;
+  state.sequential = null;
+  state.legal = null;
+  state.consent = null;
+  state.assent = null;
+  state.districts = [];
+  state.schools = [];
+  state.classes = [];
+  state.groups = [];
+  state.amount = '';
+  state.expectedTime = '';
+
+  // Reset tasks
+  variants.value = [];
+  preSelectedVariants.value = [];
+
+  // Reset user confirmation
+  setHasUserConfirmed(false);
+};
+
 // +------------------------------------------------------------------------------------------------------------------+
 // | Lifecycle hooks and subscriptions
 // +------------------------------------------------------------------------------------------------------------------+
@@ -758,39 +876,165 @@ onMounted(async () => {
   if (roarfirekit.value.restConfig) init();
 });
 
-watch([existingAdministrationData, allVariants], ([adminInfo, allVariantInfo]) => {
-  if (adminInfo && !_isEmpty(allVariantInfo)) {
-    state.administrationName = adminInfo.name;
-    state.administrationPublicName = adminInfo.name;
-    state.dateStarted = new Date(adminInfo.dateOpened);
-    state.dateClosed = new Date(adminInfo.dateClosed);
-    state.districts = adminInfo.districts;
-    state.schools = adminInfo.schools;
-    state.classes = adminInfo.classes;
-    state.groups = adminInfo.groups;
-    state.sequential = adminInfo.sequential;
+watch(
+  [state, variants],
+  ([newState, newVariants]) => {
+    if (
+      newState.administrationName !== '' ||
+      newState.administrationPublicName !== '' ||
+      newState.dateStarted !== null ||
+      newState.dateClosed !== null ||
+      newState.sequential !== null ||
+      newState.legal !== null ||
+      newState.consent !== null ||
+      newState.assent !== null ||
+      newState.schools.length > 0 ||
+      newState.classes.length > 0 ||
+      newState.groups.length > 0 ||
+      newState.amount !== '' ||
+      newState.expectedTime !== '' ||
+      newVariants.length > 0
+    ) {
+      // If there is any progress, user should confirm the site changing
+      setShouldUserConfirm(true);
+    } else {
+      // Otherwise, don't ask for confirmation
+      setShouldUserConfirm(false);
+    }
+  },
+  {
+    deep: true,
+  },
+);
+
+watch(hasUserConfirmed, (userConfirmed) => {
+  if (userConfirmed && !props.adminId) resetUserProgress();
+});
+
+function normalizeOrgListForState(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => (typeof item === 'string' ? { id: item } : item));
+}
+
+function minimalOrgsFromDoc(admin) {
+  if (!admin) return {};
+  return admin.minimalOrgs ?? admin.assignedOrgs ?? {};
+}
+
+function administrationMatchesRoute(admin, routeAdminId) {
+  if (!admin || !routeAdminId) return false;
+  const docId = admin.id;
+  if (docId == null) return true;
+  return String(docId) === String(routeAdminId);
+}
+
+function applyAdministrationMetadataToForm(adminInfo) {
+  const displayName = adminInfo.name ?? adminInfo.publicName ?? '';
+  state.administrationName = displayName;
+  state.administrationPublicName = adminInfo.publicName ?? adminInfo.name ?? displayName;
+
+  const opened = adminInfo.dateOpened ?? adminInfo.dateOpen;
+  const closed = adminInfo.dateClosed ?? adminInfo.dateClose;
+  state.dateStarted = opened ? new Date(opened) : null;
+  state.dateClosed = closed ? new Date(closed) : null;
+
+  const mo = minimalOrgsFromDoc(adminInfo);
+  const expectsFetchedOrgs =
+    (mo.districts?.length ?? 0) +
+      (mo.schools?.length ?? 0) +
+      (mo.classes?.length ?? 0) +
+      (mo.groups?.length ?? 0) >
+    0;
+
+  if (expectsFetchedOrgs) {
+    state.districts = existingDistrictsData.value ?? [];
+    state.schools = existingSchoolsData.value ?? [];
+    state.classes = existingClassesData.value ?? [];
+    state.groups = existingGroupData.value ?? [];
+  } else {
+    state.districts = normalizeOrgListForState(adminInfo.districts);
+    state.schools = normalizeOrgListForState(adminInfo.schools);
+    state.classes = normalizeOrgListForState(adminInfo.classes);
+    state.groups = normalizeOrgListForState(adminInfo.groups);
+  }
+
+  state.sequential = adminInfo.sequential;
+  state.legal = adminInfo.legal;
+  state.consent = adminInfo?.legal?.consent ?? null;
+  state.assent = adminInfo?.legal?.assent ?? null;
+  isTestData.value = adminInfo.testData;
+
+  if (state.consent?.toLowerCase() === 'no consent') {
+    noConsent.value = state.consent;
+  }
+}
+
+watch(
+  () => props.adminId,
+  (nextId, prevId) => {
+    if (nextId === prevId) return;
+    preSelectedVariants.value = [];
+    variants.value = [];
+    isFormPopulated.value = false;
+    editTasksHydrated.value = false;
+  },
+);
+
+watch(
+  [() => props.adminId, existingData, editOrgsHydrated],
+  ([adminId, admin, orgsHydrated]) => {
+    if (isFormPopulated.value) return;
+    if (!adminId || !admin) return;
+    if (!administrationMatchesRoute(admin, adminId)) return;
+    if (!orgsHydrated) return;
+    applyAdministrationMetadataToForm(admin);
+    isFormPopulated.value = true;
+  },
+  { immediate: true },
+);
+
+watch(
+  [existingData, allVariants, isVariantsFetched],
+  ([adminInfo, allVariantInfo, variantsFetched]) => {
+    if (!props.adminId) return;
+    if (!adminInfo || !administrationMatchesRoute(adminInfo, props.adminId)) return;
+    if (!variantsFetched || !Array.isArray(allVariantInfo)) return;
+
+    preSelectedVariants.value = [];
     _forEach(adminInfo.assessments, (assessment) => {
-      const assessmentParams = assessment.params;
-      const taskId = assessment.taskId;
-      const allVariantsForThisTask = _filter(allVariantInfo, (variant) => variant.task.id === taskId);
-      const found = findVariantWithParams(allVariantsForThisTask, assessmentParams);
+      const found = resolveVariantForAssessment(assessment, allVariantInfo);
       if (found) {
         preSelectedVariants.value = _union(preSelectedVariants.value, [found]);
       }
     });
-    state.legal = adminInfo.legal;
-    state.consent = adminInfo?.legal?.consent ?? null;
-    state.assent = adminInfo?.legal?.assent ?? null;
-    isTestData.value = adminInfo.testData;
-
-    if (state.consent === 'No Consent') {
-      noConsent.value = state.consent;
-    }
-
-    isFormPopulated.value = true;
-  }
-});
+    variants.value = preSelectedVariants.value.slice();
+    editTasksHydrated.value = true;
+  },
+  { immediate: true },
+);
 </script>
+
+<style lang="scss" scoped>
+.page-title-row :deep(.docs-button) {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.how-to-section {
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin: 2rem 0;
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+}
+</style>
 
 <style lang="scss">
 .required {

@@ -38,7 +38,7 @@ beforeEach(() => {
 });
 
 describe('UserActions', () => {
-  it('should redirect user to notion after selecting Report an Issue in the dropdown', async () => {
+  it('should redirect user to Freshdesk ticket template after selecting Report an Issue in the dropdown', async () => {
     const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => {});
 
     const wrapper = mount(UserActions, {
@@ -56,6 +56,6 @@ describe('UserActions', () => {
 
     helpSelect.vm.$emit('change', { value: 'reportAnIssue' });
 
-    expect(windowOpenSpy).toHaveBeenCalledWith('https://levante-support.freshdesk.com', '_blank');
+    expect(windowOpenSpy).toHaveBeenCalledWith('https://levante-support.freshdesk.com/support/tickets/new', '_blank');
   });
 });

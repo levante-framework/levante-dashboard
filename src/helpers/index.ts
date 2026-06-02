@@ -2,8 +2,8 @@ import { query, where, getDocs, CollectionReference, DocumentData, Query } from 
 import _fromPairs from 'lodash/fromPairs';
 import _invert from 'lodash/invert';
 import _toPairs from 'lodash/toPairs';
-import * as Papa from 'papaparse';
 import { TooltipOptions } from 'primevue/tooltip';
+import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
 
 export const isLevante: boolean = import.meta.env.VITE_LEVANTE === 'TRUE';
 export const isEmulator: boolean = (import.meta.env.VITE_EMULATOR as string) === 'TRUE';
@@ -197,36 +197,6 @@ export const flattenObj = (obj: any): Record<string, any> => {
   return result;
 };
 
-interface CsvResult {
-  data: any[];
-  // Add other PapaParse result properties if needed
-}
-
-export const csvFileToJson = async (file: File): Promise<any[]> => {
-  const text = await file.text();
-  const results: CsvResult = await new Promise((resolve, reject) => {
-    Papa.parse(text, {
-      header: true,
-      skipEmptyLines: 'greedy',
-      transformHeader: (header: string): string => {
-        if (header.trim().toLowerCase() === 'id') return 'id';
-        return header.trim();
-      },
-      transform: (value: string, field: string | number): string => {
-        // Ensure field is treated as string if it's a number (column index)
-        if (typeof field === 'number') field = String(field);
-        if (field === 'id') {
-          return value.trim();
-        }
-        return value;
-      },
-      complete: (res) => resolve(res as CsvResult),
-      error: (err) => reject(err),
-    });
-  });
-  return results.data;
-};
-
 export const standardDeviation = (arr: number[], usePopulation: boolean = false): number => {
   // prevent divide by 0
   if (arr.length === 0) return Infinity;
@@ -314,4 +284,68 @@ export const getTooltip = (value: string, options?: TooltipOptions): TooltipOpti
   } as TooltipOptions;
 
   return { ...defaultOptions, ...options, value };
+};
+
+export const formattedVariantName = (variantName: string): string => {
+  const rawName = variantName ?? '';
+
+  let variantLanguage = rawName;
+  if (rawName?.toLowerCase()?.includes('adaptive')) {
+    const parts = rawName?.split(' ');
+    variantLanguage = parts[0]!;
+  }
+
+  const trimmedName = variantLanguage.trim();
+  const exactMatch = languageOptions[trimmedName]?.languageTaskPicker;
+  if (exactMatch) return exactMatch;
+
+  const localeRegex = /^[a-z]{2}(?:-[a-z]{2})?$/i;
+  if (!localeRegex.test(trimmedName)) return rawName;
+
+  const matchedLocale = findBestMatchingLocale(trimmedName);
+  return languageOptions[matchedLocale]?.languageTaskPicker ?? rawName;
+};
+// Accept Date, Map, and others...
+export const isObject = (obj: unknown): boolean => obj !== null && typeof obj === 'object' && !Array.isArray(obj);
+// This one just accept plain objects
+export const isPlainObject = (obj: unknown): boolean => Object.prototype.toString.call(obj) === '[object Object]';
+
+// Convert dates to Date objects, handling both timestamp strings and Date objects
+export const convertToDate = (dateValue?: unknown): Date | null => {
+  if (!dateValue) return null;
+
+  // Already a Date
+  if (dateValue instanceof Date) {
+    return isNaN(dateValue.getTime()) ? null : dateValue;
+  }
+
+  // Firestore Timestamp (preferred way)
+  if (
+    typeof dateValue === 'object' &&
+    dateValue !== null &&
+    'toDate' in dateValue &&
+    typeof (dateValue as any).toDate === 'function'
+  ) {
+    return (dateValue as any).toDate();
+  }
+
+  // Firestore raw format fallback
+  if (typeof dateValue === 'object' && dateValue !== null && '_seconds' in dateValue) {
+    const { _seconds = 0, _nanoseconds = 0 } = dateValue as any;
+    return new Date(_seconds * 1000 + _nanoseconds / 1_000_000);
+  }
+
+  // String or number fallback
+  if (typeof dateValue === 'string' || typeof dateValue === 'number') {
+    const parsed = new Date(dateValue);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  return null;
+};
+
+export const isEmailValid = (email: string): boolean => {
+  const re =
+    /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(email);
 };

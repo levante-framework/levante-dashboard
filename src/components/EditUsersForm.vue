@@ -4,7 +4,9 @@
       <div class="form-field">
         <label :class="{ 'font-light uppercase text-sm': !editMode }"
           >Date of Birth
-          <span v-if="localUserType === 'student'" v-tooltip.top="getTooltip('Required')" class="required">*</span></label
+          <span v-if="localUserType === 'student'" v-tooltip.top="getTooltip('Required')" class="required"
+            >*</span
+          ></label
         >
         <div v-if="!editMode" :class="{ 'text-xl': !editMode }">
           {{ userDobString }}
@@ -22,7 +24,9 @@
       <div class="form-field">
         <label :class="{ 'font-light uppercase text-sm': !editMode }"
           >Grade
-          <span v-if="localUserType === 'student'" v-tooltip.top="getTooltip('Required')" class="required">*</span></label
+          <span v-if="localUserType === 'student'" v-tooltip.top="getTooltip('Required')" class="required"
+            >*</span
+          ></label
         >
         <div v-if="!editMode" :class="{ 'text-xl': !editMode }">
           {{ userData?.studentData?.grade ?? 'None' }}
@@ -490,18 +494,5 @@ const isSuperAdmin = computed((): boolean => {
   color: var(--gray-500);
   font-style: italic;
   user-select: none;
-}
-.modal-footer {
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-  width: 100%;
-  gap: 1rem;
-  padding: 1.5rem;
-  background-color: #e6e7eb;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-}
-.p-dialog .p-dialog-footer {
-  padding: 0;
 }
 </style>

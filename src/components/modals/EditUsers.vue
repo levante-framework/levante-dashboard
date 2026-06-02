@@ -486,22 +486,7 @@ const isSuperAdmin = computed<boolean>(() => {
 .admin-only {
   color: var(--blue-600);
 }
-.modal-footer {
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-  width: 100%;
-  padding: 1.5rem;
-  background-color: #e6e7eb;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-  & div {
-    display: flex;
-    gap: 1rem;
-  }
-}
-.p-dialog .p-dialog-footer {
-  padding: 0;
-}
+
 .divider {
   width: 100%;
   text-align: center;

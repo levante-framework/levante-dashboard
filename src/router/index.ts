@@ -1,9 +1,8 @@
-import { NAVBAR_BLACKLIST } from '@/constants';
+import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 import { ROLES } from '@/constants/roles';
 import { APP_ROUTES } from '@/constants/routes';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
-import { pageTitlesCO, pageTitlesES, pageTitlesUS } from '@/translations/exports';
 import { Role } from '@/types';
 import { storeToRefs } from 'pinia';
 import {
@@ -14,7 +13,6 @@ import {
   RouteRecordRaw,
   RouterScrollBehavior,
 } from 'vue-router';
-import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 
 function removeQueryParams(to: RouteLocationNormalized) {
   if (Object.keys(to.query).length) return { path: to.path, query: {}, hash: to.hash };
@@ -31,11 +29,7 @@ const routes: Array<RouteRecordRaw> = [
     name: 'Home',
     component: () => import('@/pages/HomeSelector.vue'),
     meta: {
-      pageTitle: {
-        'en-US': pageTitlesUS['home'],
-        es: pageTitlesES['home'],
-        'es-CO': pageTitlesCO['home'],
-      },
+      pageTitle: { translationKey: 'home' },
       allowedRoles: ['*'],
     },
   },
@@ -104,11 +98,16 @@ const routes: Array<RouteRecordRaw> = [
     name: 'SignIn',
     component: () => import('@/pages/SignIn.vue'),
     meta: {
-      pageTitle: {
-        'en-US': pageTitlesUS['signIn'],
-        es: pageTitlesES['signIn'],
-        'es-CO': pageTitlesCO['signIn'],
-      },
+      pageTitle: { translationKey: 'signIn' },
+      allowedRoles: ['*'],
+    },
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/pages/Login.vue'),
+    meta: {
+      pageTitle: { translationKey: 'login' },
       allowedRoles: ['*'],
     },
   },
@@ -138,6 +137,15 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       pageTitle: 'Administrator',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
+    },
+  },
+  {
+    path: '/view-assignments',
+    name: 'ViewAssignments',
+    component: () => import('@/pages/ViewAssignments.vue'),
+    meta: {
+      pageTitle: 'View Assignments',
+      allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
     },
   },
   {
@@ -201,7 +209,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/administration/:administrationId/:orgType/:orgId',
     name: 'ProgressReport',
     props: true,
-    component: () => import('@/pages/ProgressReport.vue'),
+    component: () => import('@/pages/ProgressReportFeature.vue'),
     meta: {
       pageTitle: 'View Administration',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
@@ -349,7 +357,8 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
 
   const allowedRoles = to.meta.allowedRoles as string[];
   const userRoles = userData.value?.roles?.map((role: Role) => role.role) || [ROLES.PARTICIPANT];
-  const isUserAllowed = allowedRoles.includes('*') || allowedRoles.some((allowedRole: string) => userRoles.includes(allowedRole));
+  const isUserAllowed =
+    allowedRoles.includes('*') || allowedRoles.some((allowedRole: string) => userRoles.includes(allowedRole));
   const requiresNewPermissions: boolean = (to?.meta?.requiresNewPermissions as boolean) || false;
 
   if ((requiresNewPermissions && !shouldUsePermissions.value) || (allowedRoles.length && !isUserAllowed)) {

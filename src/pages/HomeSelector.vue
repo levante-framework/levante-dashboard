@@ -35,7 +35,7 @@ const ConsentModal = defineAsyncComponent(() => import('@/components/ConsentModa
 
 const authStore = useAuthStore();
 const { roarfirekit, ssoProvider, userClaims, userData } = storeToRefs(authStore);
-const { hasRole } = usePermissions();
+const { hasRole, permissionsLoaded } = usePermissions();
 
 const router = useRouter();
 const i18n = useI18n();
@@ -73,7 +73,7 @@ const isLoading = computed(() => {
   // @NOTE: In addition to the loading states, we also check if user data and user claims are loaded as due to the
   // current application initialization flow, the userData and userClaims queries initially reset. Once this is improved
   // these additional checks can be removed.
-  return !initialized.value || !userData.value || !userClaims.value;
+  return !initialized.value || !userData.value || !userClaims.value || !permissionsLoaded.value;
 });
 
 const showConsent = ref(false);

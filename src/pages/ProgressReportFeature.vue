@@ -1,14 +1,14 @@
 <template>
   <main class="container main">
     <section class="main-body">
-      <div v-if="isLoading" class="loading-wrapper">
+      <div v-if="isPageLoading" class="loading-wrapper">
         <LevanteSpinner fullscreen />
         <div class="uppercase text-sm text-gray-600 font-light">Loading Progress Datatable</div>
       </div>
 
       <template v-else>
         <div
-          v-if="isAssignmentsError"
+          v-if="loadError"
           class="flex justify-content-center align-items-center"
           style="min-height: calc(100vh - 8rem)"
         >
@@ -24,7 +24,7 @@
               <div>
                 <div class="uppercase font-light text-gray-500 text-md">{{ displayOrgType }} Progress Report</div>
                 <div class="report-title">
-                  {{ orgData?.name }}
+                  {{ orgDoc?.name }}
                 </div>
               </div>
               <div>
@@ -56,10 +56,10 @@
             </div>
           </div>
 
-          <div v-if="!assignmentData?.length || !adminStats?.assignment" class="empty-user-list">
-            <div class="text-lg font-semibold text-gray-700">Could not find users for {{ orgData?.name }}.</div>
+          <div v-if="!progressUsers?.length || !totalChartStats" class="empty-user-list">
+            <div class="text-lg font-semibold text-gray-700">Could not find users for {{ orgDoc?.name }}.</div>
             <div class="mt-2 text-sm text-gray-500">
-              <a href="/add-users">Add users</a> to <span class="font-bold">{{ orgData?.name }}</span> to see the
+              <a href="/add-users">Add users</a> to <span class="font-bold">{{ orgDoc?.name }}</span> to see the
               progress report.
             </div>
           </div>
@@ -69,17 +69,17 @@
               <div class="flex flex-column gap-1 mx-5 mb-5">
                 <div class="text-sm uppercase text-gray-500">Progress by Task</div>
                 <div
-                  v-for="{ taskId } of administrationData.assessments"
+                  v-for="taskId of orderedTaskIds"
                   :key="taskId"
                   class="flex justify-content-between align-items-center"
                 >
                   <div class="text-lg font-bold text-gray-600 w-full">
-                    {{ tasksDictionary[taskId]?.name || taskId }}
+                    {{ taskLabel(taskId) }}
                   </div>
                   <PvChart
                     type="bar"
-                    :data="setBarChartData(adminStats[taskId])"
-                    :options="setBarChartOptions(adminStats[taskId])"
+                    :data="setBarChartData(taskChartStats[taskId])"
+                    :options="setBarChartOptions(taskChartStats[taskId])"
                     class="h-2rem lg:w-full"
                   />
                 </div>
@@ -89,12 +89,12 @@
                 <div class="flex justify-content-between align-items-center">
                   <div class="text-xl font-bold text-gray-600 w-full">
                     Total
-                    <span class="font-light text-sm"> (Assigned to {{ adminStats?.assignment?.assigned }} users) </span>
+                    <span class="font-light text-sm"> (Assigned to {{ totalAssignedCount }} users) </span>
                   </div>
                   <PvChart
                     type="bar"
-                    :data="setBarChartData(adminStats.assignment)"
-                    :options="setBarChartOptions(adminStats.assignment)"
+                    :data="setBarChartData(totalChartStats)"
+                    :options="setBarChartOptions(totalChartStats)"
                     class="h-3rem lg:w-full"
                   />
                 </div>
@@ -125,11 +125,11 @@
             </div>
 
             <RoarDataTable
-              v-if="progressReportColumns?.length ?? 0 > 0"
+              v-if="(progressReportColumns?.length ?? 0) > 0"
               :data="filteredTableData"
               :columns="progressReportColumns"
               :total-records="filteredTableData?.length"
-              :loading="isLoadingAssignments || isFetchingAssignments"
+              :loading="false"
               :page-limit="pageLimit"
               data-cy="roar-data-table"
               :allow-filtering="!isLevante"
@@ -146,7 +146,7 @@
                   <div class="w-8">
                     <PvFloatLabel>
                       <PvInputText v-model="searchInput" class="w-full" :maxlength="50" />
-                      <label>Search UID...</label>
+                      <label>Search login...</label>
                     </PvFloatLabel>
                   </div>
                   <div class="w-5">
@@ -176,9 +176,9 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import _get from 'lodash/get';
 import _kebabCase from 'lodash/kebabCase';
 import _map from 'lodash/map';
@@ -187,13 +187,11 @@ import PvChart from 'primevue/chart';
 import PvMultiSelect from 'primevue/multiselect';
 import PvSelectButton from 'primevue/selectbutton';
 import { useAuthStore } from '@/store/auth';
-import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
-import useAdministrationsStatsQuery from '@/firestore/queries/administrations/useAdministrationsStatsQuery';
-import useOrgQuery from '@/composables/queries/useOrgQuery';
-import useAdministrationAssignmentsQuery from '@/composables/queries/useAdministrationAssignmentsQuery';
+import { useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
 import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
 import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
 import { exportCsv } from '@/helpers/query/utils';
+import { normalizeUserTypeForDisplay } from '@/helpers/userType';
 import { taskDisplayNames } from '@/helpers/reports';
 import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
 import { isLevante, getTooltip, normalizeToLowercase } from '@/helpers';
@@ -203,11 +201,8 @@ import PvFloatLabel from 'primevue/floatlabel';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import PvInputText from 'primevue/inputtext';
 import _capitalize from 'lodash/capitalize';
-
-const router = useRouter();
-const authStore = useAuthStore();
-
-const { roarfirekit } = storeToRefs(authStore);
+import { administrationsRepository } from '@/firebase/repositories/AdministrationsRepository';
+import { usersRepository } from '@/firebase/repositories/UsersRepository';
 
 const props = defineProps({
   administrationId: {
@@ -224,7 +219,18 @@ const props = defineProps({
   },
 });
 
+const router = useRouter();
+const route = useRoute();
+const authStore = useAuthStore();
+const { roarfirekit } = storeToRefs(authStore);
+
 const initialized = ref(false);
+const isFetchingProgress = ref(false);
+const loadError = ref(null);
+const administration = ref(null);
+const orgDoc = ref(null);
+const progressPayload = ref(null);
+
 const userTypeOptions = ref([]);
 const selectedUserTypes = ref([]);
 const searchInput = ref('');
@@ -233,41 +239,159 @@ const { data: tasksDictionary, isLoading: isLoadingTasksDictionary } = useTasksD
   enabled: initialized,
 });
 
-const { data: administrationData, isLoading: isLoadingAdministration } = useAdministrationsQuery(
-  [props.administrationId],
-  {
-    enabled: initialized,
-    select: (data) => data[0],
+const { displayedSyncStatus } = useAdministrationSyncStatus(administration, {
+  defaultStatus: undefined,
+});
+
+watch(
+  [isFetchingProgress, displayedSyncStatus],
+  ([loading, status]) => {
+    if (!loading && administration.value && (status === 'pending' || status === 'failed')) {
+      router.replace({ name: 'Administrator' });
+    }
   },
+  { immediate: true },
 );
 
-const { data: adminStats, isLoading: isLoadingAdministrationsStats } = useAdministrationsStatsQuery({
-  administrationIds: [props.administrationId],
-  queryOptions: { select: (data) => data[0] },
+const routeOrgTypeToCollectionKey = (orgType) => {
+  const m = {
+    district: 'districts',
+    school: 'schools',
+    class: 'classes',
+    group: 'groups',
+  };
+  return m[orgType];
+};
+
+const statsFromExclusiveCounts = (notStarted, started, completed) => ({
+  assigned: notStarted + started + completed,
+  started: started + completed,
+  completed,
 });
 
-const { data: orgData, isLoading: isLoadingOrg } = useOrgQuery(props.orgType, [props.orgId], {
-  enabled: initialized,
-  select: (data) => data[0],
+const aggregateTaskProgressByTaskId = (taskProgress) => {
+  const map = {};
+  for (const row of taskProgress ?? []) {
+    const key = row.taskId.toLowerCase();
+    if (!map[key]) {
+      map[key] = { notStarted: 0, started: 0, completed: 0 };
+    }
+    map[key].notStarted += row.counts.notStarted;
+    map[key].started += row.counts.started;
+    map[key].completed += row.counts.completed;
+  }
+  return map;
+};
+
+const statusForUserOnTask = (userId, taskId, taskProgress) => {
+  const tid = taskId.toLowerCase();
+  for (const row of taskProgress ?? []) {
+    if (row.taskId.toLowerCase() !== tid) continue;
+    if (row.userIds.completed.includes(userId)) return 'completed';
+  }
+  for (const row of taskProgress ?? []) {
+    if (row.taskId.toLowerCase() !== tid) continue;
+    if (row.userIds.started.includes(userId)) return 'started';
+  }
+  return 'notStarted';
+};
+
+const progressCellFromStatus = (status) => {
+  if (status === 'completed') {
+    return {
+      value: 'Completed',
+      icon: 'pi pi-check-circle',
+      severity: 'success',
+      tags: ' Completed ',
+    };
+  }
+  if (status === 'started') {
+    return {
+      value: 'Started',
+      icon: 'pi pi-clock',
+      severity: 'warn',
+      tags: ' Started ',
+    };
+  }
+  return {
+    value: 'Not Started',
+    icon: 'pi pi-minus-circle',
+    severity: 'warning',
+    tags: ' Not Started ',
+  };
+};
+
+const fetchProgressData = async () => {
+  if (!initialized.value) return;
+  isFetchingProgress.value = true;
+  loadError.value = null;
+  try {
+    const orgTypeKey = routeOrgTypeToCollectionKey(props.orgType);
+    if (!orgTypeKey) {
+      throw new Error(`Unsupported org type: ${props.orgType}`);
+    }
+    const [admin, org, progress] = await Promise.all([
+      administrationsRepository.fetchAdministrationById(props.administrationId),
+      administrationsRepository.fetchOrgBySingularRouteType(props.orgType, props.orgId),
+      usersRepository.getAdministrationOrgProgress({
+        administrationId: props.administrationId,
+        orgId: props.orgId,
+        orgType: orgTypeKey,
+      }),
+    ]);
+    administration.value = admin;
+    orgDoc.value = org;
+    progressPayload.value = progress;
+  } catch (e) {
+    loadError.value = e;
+  } finally {
+    isFetchingProgress.value = false;
+  }
+};
+
+watch(
+  [initialized, () => props.administrationId, () => props.orgType, () => props.orgId],
+  () => {
+    if (initialized.value) fetchProgressData();
+  },
+  { immediate: true },
+);
+
+const progressUsers = computed(() => progressPayload.value?.users ?? []);
+
+const orderedTaskIds = computed(() => {
+  const fromAdmin = administration.value?.assessments?.map((a) => a.taskId.toLowerCase());
+  if (fromAdmin?.length) {
+    return [...fromAdmin].sort((a, b) => (taskDisplayNames[a]?.order ?? 0) - (taskDisplayNames[b]?.order ?? 0));
+  }
+  const fromProgress = [...new Set((progressPayload.value?.taskProgress ?? []).map((r) => r.taskId.toLowerCase()))];
+  return fromProgress.sort((a, b) => (taskDisplayNames[a]?.order ?? 0) - (taskDisplayNames[b]?.order ?? 0));
 });
 
-const hasSurveyInAssignment = computed(() => {
-  const assessments = administrationData.value?.assessments ?? [];
-  return assessments.some(({ taskId }) => taskId === 'survey');
+const taskChartStats = computed(() => {
+  const aggregated = aggregateTaskProgressByTaskId(progressPayload.value?.taskProgress);
+  const out = {};
+  for (const taskId of orderedTaskIds.value) {
+    const c = aggregated[taskId] ?? { notStarted: 0, started: 0, completed: 0 };
+    out[taskId] = statsFromExclusiveCounts(c.notStarted, c.started, c.completed);
+  }
+  return out;
 });
 
-const {
-  isLoading: isLoadingAssignments,
-  isFetching: isFetchingAssignments,
-  isError: isAssignmentsError,
-  data: assignmentData,
-} = useAdministrationAssignmentsQuery(props.administrationId, props.orgType, props.orgId, hasSurveyInAssignment, {
-  enabled: initialized,
+const totalChartStats = computed(() => {
+  const users = progressUsers.value;
+  if (!users.length) return null;
+
+  const assignedTotal = users.length;
+  const completed = users.filter((u) => u.status === 'completed').length;
+  const startedOnly = users.filter((u) => u.status === 'started').length;
+  const notStarted = Math.max(0, assignedTotal - completed - startedOnly);
+  return statsFromExclusiveCounts(notStarted, startedOnly, completed);
 });
 
-const creatorName = computed(() => {
-  return administrationData.value.creatorName;
-});
+const totalAssignedCount = computed(() => progressUsers.value.length);
+
+const creatorName = computed(() => administration.value?.creatorName ?? '');
 
 const displayOrgType = computed(() => {
   switch (props.orgType) {
@@ -280,15 +404,7 @@ const displayOrgType = computed(() => {
   }
 });
 
-const isLoading = computed(
-  () =>
-    !initialized.value ||
-    isLoadingAssignments.value ||
-    isLoadingTasksDictionary.value ||
-    isLoadingAdministration.value ||
-    isLoadingAdministrationsStats.value ||
-    isLoadingOrg.value,
-);
+const isPageLoading = computed(() => !initialized.value || isFetchingProgress.value || isLoadingTasksDictionary.value);
 
 const reportView = ref({ name: 'Progress Report', constant: true });
 const reportViews = [
@@ -296,7 +412,7 @@ const reportViews = [
   { name: 'Score Report', constant: false },
 ];
 
-const assignmentDisplayName = computed(() => administrationData.value.name);
+const assignmentDisplayName = computed(() => administration.value?.name ?? '');
 
 const handleViewChange = () => {
   const { administrationId, orgType, orgId } = props;
@@ -306,6 +422,7 @@ const handleViewChange = () => {
       orgType,
       orgId,
     }),
+    query: route.query,
   });
 };
 
@@ -320,7 +437,6 @@ const orderBy = ref([
   },
 ]);
 
-// If this is a district report, make the schools column first sorted.
 if (props.orgType === 'district') {
   orderBy.value.unshift({
     order: '1',
@@ -334,11 +450,17 @@ const pageLimit = ref(10);
 
 const CSV_NOT_ASSIGNED_VALUE = 'Not Assigned';
 
-const orderedTaskIds = computed(() =>
-  administrationData.value?.assessments
-    ?.map((assessment) => assessment.taskId.toLowerCase())
-    .sort((a, b) => (taskDisplayNames[a]?.order ?? 0) - (taskDisplayNames[b]?.order ?? 0)),
-);
+const taskLabel = (taskId) => {
+  if (tasksDictionary.value?.[taskId]?.publicName) {
+    return tasksDictionary.value[taskId].publicName;
+  }
+  if (tasksDictionary.value?.[taskId]?.name) {
+    return tasksDictionary.value[taskId].name;
+  }
+  const fromProgress = progressPayload.value?.taskProgress?.find((r) => r.taskId.toLowerCase() === taskId);
+  if (fromProgress?.variantName) return fromProgress.variantName;
+  return _startCase(taskId);
+};
 
 const getTaskColumnLabel = (taskId) => {
   if (tasksDictionary.value?.[taskId]?.publicName) {
@@ -361,8 +483,8 @@ const appendTaskProgressColumns = (row, progress = {}) => {
 
 const buildProgressExportRow = (user, progress = {}) => {
   const tableRow = {
-    Username: _get(user, 'username') ?? '',
-    'User Type': _startCase(_get(user, 'userType') ?? ''),
+    'User Login': _get(user, 'username') ?? '',
+    'User Type': _startCase(normalizeUserTypeForDisplay(_get(user, 'userType') ?? '')),
   };
 
   if (props.orgType === 'district') {
@@ -380,68 +502,30 @@ const buildExportData = (rows) => {
 };
 
 const computedProgressData = computed(() => {
-  if (!assignmentData.value) return [];
-  // assignmentTableData is an array of objects, each representing a row in the table
-  const assignmentTableDataAcc = [];
+  if (!progressPayload.value) return [];
+  const taskProgress = progressPayload.value.taskProgress ?? [];
+  const rows = [];
 
-  for (const { assignment, user } of assignmentData.value) {
-    const currRow = {
-      user: {
-        username: user?.username || assignment?.userData?.username || '',
-        userType: user.userType === 'parent' ? 'caregiver' : user.userType,
-        userId: user.userId,
-        grade: user.studentData?.grade,
-        assessmentPid: user.assessmentPid,
-      },
-      // compute and add progress data in next step
-    };
-
+  for (const u of progressUsers.value) {
     const currRowProgress = {};
-
-    for (const assessment of assignment.assessments) {
-      // General Logic to grab support level, scores, etc
-      let progressFilterTags = '';
-      const taskId = assessment.taskId;
-
-      if (assessment?.optional) {
-        currRowProgress[taskId] = {
-          value: 'Optional',
-          icon: 'pi pi-question',
-          severity: 'info',
-        };
-        progressFilterTags += ' Optional ';
-      } else if (assessment?.completedOn !== undefined) {
-        currRowProgress[taskId] = {
-          value: 'Completed',
-          icon: 'pi pi-check-circle',
-          severity: 'success',
-        };
-        progressFilterTags += ' Completed ';
-      } else if (assessment?.startedOn !== undefined) {
-        currRowProgress[taskId] = {
-          value: 'Started',
-          icon: 'pi pi-clock',
-          severity: 'warn',
-        };
-        progressFilterTags += ' Started ';
-      } else {
-        currRowProgress[taskId] = {
-          value: 'Not Started',
-          icon: 'pi pi-minus-circle',
-          severity: 'warning',
-        };
-        progressFilterTags += ' Not Started ';
-      }
-      currRowProgress[taskId].tags = progressFilterTags;
+    for (const taskId of orderedTaskIds.value) {
+      const st = statusForUserOnTask(u.userId, taskId, taskProgress);
+      currRowProgress[taskId] = progressCellFromStatus(st);
     }
 
-    // update progress for current row with computed object
-    currRow.progress = currRowProgress;
-    // push currRow to assignmentTableDataAcc
-    assignmentTableDataAcc.push(currRow);
+    rows.push({
+      user: {
+        username: u.email || u.userId,
+        userType: normalizeUserTypeForDisplay(u.userType),
+        userId: u.userId,
+        grade: undefined,
+        assessmentPid: undefined,
+      },
+      progress: currRowProgress,
+    });
   }
 
-  return assignmentTableDataAcc;
+  return rows;
 });
 
 const resetFilters = () => {
@@ -456,17 +540,18 @@ const exportSelected = (selectedRows) => {
 
 const exportAll = async () => {
   const computedExportData = buildExportData(computedProgressData.value);
-  const administrationTitle = administrationData.value?.name ?? 'progress';
-  const orgName = orgData.value?.name ?? 'organization';
+  const administrationTitle = administration.value?.name ?? 'progress';
+  const orgName = orgDoc.value?.name ?? 'organization';
   const formattedFileName = `progress-report-${_kebabCase(administrationTitle)}-${_kebabCase(orgName) || 'org'}.csv`;
   exportCsv(computedExportData, formattedFileName);
 };
 
 const progressReportColumns = computed(() => {
-  if (isLoadingTasksDictionary.value || assignmentData.value === undefined) return [];
+  if (isLoadingTasksDictionary.value || progressPayload.value === undefined) return [];
 
   const tableColumns = [
-    { field: 'user.username', header: 'Username', dataType: 'text', sort: true, filter: true },
+    { field: 'user.userId', header: 'UID', dataType: 'text', sort: true, filter: true },
+    { field: 'user.username', header: 'User Login', dataType: 'text', sort: true, filter: true },
     { field: 'user.userType', header: 'User Type', dataType: 'text', sort: true, filter: true },
   ];
 
@@ -474,7 +559,7 @@ const progressReportColumns = computed(() => {
     tableColumns.push({
       field: `progress.${taskId}.value`,
       filterField: `progress.${taskId}.tags`,
-      header: tasksDictionary.value[taskId]?.name ?? taskId,
+      header: tasksDictionary.value[taskId]?.name ?? getTaskColumnLabel(taskId),
       dataType: 'progress',
       tag: true,
       severityField: `progress.${taskId}.severity`,
@@ -486,10 +571,9 @@ const progressReportColumns = computed(() => {
   return tableColumns;
 });
 
-const filteredTableData = ref(computedProgressData.value);
+const filteredTableData = ref([]);
 
 watch(computedProgressData, (newValue) => {
-  // Update filteredTableData when computedProgressData changes
   filteredTableData.value = newValue;
 
   userTypeOptions.value = Array.from(new Set(newValue?.map((item) => item?.user?.userType))).map((userType) => ({
@@ -502,7 +586,6 @@ watch(computedProgressData, (newValue) => {
 
 watch([filterSchools, filterGrades], ([newSchools, newGrades]) => {
   if (newSchools.length > 0 || newGrades.length > 0) {
-    //set scoresTableData to filtered data if filter is added
     let filteredData = computedProgressData.value;
     if (newSchools.length > 0) {
       filteredData = filteredData.filter((item) => {
@@ -539,12 +622,9 @@ watch([searchInput, selectedUserTypes], ([newSearchInput, newSelectedUserTypes])
 });
 
 let unsubscribe;
-const refreshing = ref(false);
 const refresh = () => {
-  refreshing.value = true;
   if (unsubscribe) unsubscribe();
 
-  refreshing.value = false;
   initialized.value = true;
 };
 
@@ -580,21 +660,6 @@ onMounted(async () => {
   }
 }
 
-.no-scores-container {
-  display: flex;
-  flex-direction: column;
-  padding: 2rem;
-
-  h3 {
-    font-weight: bold;
-  }
-
-  span {
-    display: flex;
-    align-items: center;
-  }
-}
-
 .administration-name {
   font-size: 1.8rem;
   font-weight: light;
@@ -603,12 +668,6 @@ onMounted(async () => {
 .administration-creator {
   font-size: 1.2rem;
   font-weight: light;
-}
-
-.report-subheader {
-  font-size: 1.3rem;
-  font-weight: light;
-  margin-top: 0;
 }
 
 .legend-entry {

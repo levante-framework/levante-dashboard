@@ -11,14 +11,17 @@ if (import.meta.env.VITE_FIREBASE_PROJECT === 'DEV') {
     appId: '1:46792247600:web:ea20e1fe94e0541dd5a0f5',
   };
 
-  adminConfig = {
-    apiKey: 'AIzaSyCOzRA9a2sDHtVlX7qnszxrgsRCBLyf5p0',
-    authDomain: 'hs-levante-admin-dev.firebaseapp.com',
-    projectId: 'hs-levante-admin-dev',
-    storageBucket: 'hs-levante-admin-dev.appspot.com',
-    messagingSenderId: '41590333418',
-    appId: '1:41590333418:web:3468a7caadab802d6e5c93',
-  };
+  adminConfig =
+    import.meta.env.VITE_ADMIN_AS_APP === 'TRUE'
+      ? appConfig
+      : {
+          apiKey: 'AIzaSyCOzRA9a2sDHtVlX7qnszxrgsRCBLyf5p0',
+          authDomain: 'hs-levante-admin-dev.firebaseapp.com',
+          projectId: 'hs-levante-admin-dev',
+          storageBucket: 'hs-levante-admin-dev.appspot.com',
+          messagingSenderId: '41590333418',
+          appId: '1:41590333418:web:3468a7caadab802d6e5c93',
+        };
 } else {
   // production
   appConfig = {

@@ -6,7 +6,7 @@
           <div class="flex justify-content-between">
             <div class="flex align-items-center gap-3">
               <i class="pi pi-users text-gray-400 rounded" style="font-size: 1.6rem"></i>
-              <div class="admin-page-header">List Users</div>
+              <div class="admin-page-header">User List</div>
             </div>
             <div class="bg-gray-100 px-5 py-2 rounded flex flex-column gap-3">
               <div class="flex flex-wrap align-items-center gap-2 justify-content-between">
@@ -60,16 +60,21 @@
           </div>
           <div class="text-md text-gray-500 ml-6">View users for {{ displayOrgType }} {{ orgName }}.</div>
         </div>
-
         <RoarDataTable
           v-if="users"
           :columns="columns"
           :data="transformedUsers"
           :loading="isLoading || isFetching"
-          :allow-export="false"
+          :allow-export="true"
           :allow-filtering="false"
-          :allow-row-selection="false"
+          :allow-column-selection="false"
+          :allow-row-selection="true"
+          :show-options-control="true"
           :show-options="false"
+          :export-filename="`${orgName}-users`"
+          @selection="onSelectionChange"
+          @export-all="downloadAllListedUsers"
+          @export-selected="downloadSelectedUsers"
           @sort="onSort($event)"
           @edit-button="onEditButtonClick($event)"
         />
@@ -167,14 +172,18 @@ import { required, sameAs, minLength } from '@vuelidate/validators';
 import { useToast } from 'primevue/usetoast';
 import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
+import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
 import { singularizeFirestoreCollection } from '@/helpers';
+import { normalizeUserTypeForDisplay } from '@/helpers/userType';
+import { exportCsv } from '@/helpers/query/utils';
 import { useAuthStore } from '@/store/auth';
 import useOrgUsersQuery from '@/composables/queries/useOrgUsersQuery';
 import AppSpinner from '@/components/AppSpinner.vue';
 import EditUsersForm from '@/components/EditUsersForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
+import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 
 const props = defineProps({
   orgType: {
@@ -211,6 +220,7 @@ onMounted(() => {
 });
 
 const toast = useToast();
+const selectedRows = ref([]);
 
 const page = ref(0);
 const orderBy = ref(null);
@@ -250,17 +260,17 @@ const transformedUsers = computed(() => {
   if (!users.value) return [];
   return users.value.map((user) => ({
     ...user,
-    userType: user.userType === 'student' ? 'child' : user.userType === 'parent' ? 'caregiver' : user.userType,
+    userType: normalizeUserTypeForDisplay(user.userType),
   }));
 });
 
 const columns = ref([
-  //{
-  //  field: 'id',
-  //  header: 'UID',
-  //  dataType: 'string',
-  //  sort: false,
-  //},
+  {
+    field: 'id',
+    header: 'UID',
+    dataType: 'string',
+    sort: false,
+  },
   {
     field: 'email',
     header: 'User login',
@@ -293,6 +303,41 @@ const columns = ref([
   //   sort: false,
   // },
 ]);
+
+const csvExportColumns = computed(() => columns.value.filter((column) => !column.button));
+
+const exportRowsToCsv = (rows, filename) => {
+  if (!rows.length) {
+    toast.add({
+      severity: TOAST_SEVERITIES.WARN,
+      summary: 'No users to export',
+      detail: 'There are no users available for this export.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    return;
+  }
+
+  const exportRows = rows.map((row) => {
+    return csvExportColumns.value.reduce((acc, column) => {
+      acc[column.header] = _get(row, column.field);
+      return acc;
+    }, {});
+  });
+
+  exportCsv(exportRows, `${filename}.csv`);
+};
+
+const downloadAllListedUsers = () => {
+  exportRowsToCsv(transformedUsers.value, `${props.orgName}-users`);
+};
+
+const downloadSelectedUsers = () => {
+  exportRowsToCsv(selectedRows.value, `${props.orgName}-selected-users`);
+};
+
+const onSelectionChange = (selection) => {
+  selectedRows.value = selection ?? [];
+};
 
 const displayOrgType = computed(() => {
   if (props.orgType === 'districts') {

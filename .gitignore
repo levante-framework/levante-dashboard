@@ -41,6 +41,7 @@ coverage
 # Other
 .vite/*
 .firebase/
+process/
 
 # Sentry Config File
 .env.sentry-build-plugin
@@ -48,4 +49,4 @@ coverage
 cypress/screenshots
 
 # Intl Hash
-.cache
+.cache/

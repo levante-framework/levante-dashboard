@@ -2,6 +2,8 @@
   "adminAction": "here",
   "adminInfoPrompt": "If you registered with a Google email or your email provider uses Google SSO.",
   "adminPrompt": "Are you an Admin? Click {action} to Sign in.",
+  "googleSignInGenericError": "Sign-in failed. Something went wrong. Please contact your administrator.",
+  "googleSignInUserNotFound": "No account exists for this sign-in. Contact your administrator if you need access.",
   "havingTrouble": "Having trouble?",
   "login": "Log in to access your dashboard",
   "loginWith": "Log in with",

@@ -50,7 +50,7 @@ async function playAudio(name) {
     v-if="
       surveyStore.survey &&
       !surveyStore.isSavingSurveyResponses &&
-      (!surveyStore.surveyAudioLoading || authStore.userData.userType === 'student')
+      (authStore.userData?.userType !== 'student' || !surveyStore.surveyAudioLoading)
     "
   >
     <h1
@@ -87,7 +87,11 @@ async function playAudio(name) {
   </div>
 
   <LevanteSpinner
-    v-if="!surveyStore.survey || surveyStore.isSavingSurveyResponses || surveyStore.surveyAudioLoading"
+    v-if="
+      !surveyStore.survey ||
+      surveyStore.isSavingSurveyResponses ||
+      (authStore.userData?.userType === 'student' && surveyStore.surveyAudioLoading)
+    "
     fullscreen
   />
 </template>
@@ -105,6 +109,6 @@ async function playAudio(name) {
   border-radius: 25%;
 }
 .play-button-visible:hover {
-  background-color: var(--primary-color-hover);
+  background-color: var(--secondary-color);
 }
 </style>

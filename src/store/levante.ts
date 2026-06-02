@@ -7,11 +7,15 @@ export const useLevanteStore = defineStore(
     // State
     const assignmentsSelectedFilter: Ref<any> = ref(null);
     const assignmentsSelectedSorting: Ref<any> = ref(null);
+    const hasUserConfirmed: Ref<boolean> = ref(false);
+    const shouldUserConfirm: Ref<boolean> = ref(false);
 
     // Actions
     function $reset(): void {
       assignmentsSelectedFilter.value = null;
       assignmentsSelectedSorting.value = null;
+      hasUserConfirmed.value = false;
+      shouldUserConfirm.value = false;
     }
 
     function setAssignmentsSelectedFilter(filter: any): void {
@@ -22,15 +26,28 @@ export const useLevanteStore = defineStore(
       assignmentsSelectedSorting.value = sorting;
     }
 
+    function setHasUserConfirmed(confirmed: boolean): void {
+      if (confirmed) shouldUserConfirm.value = false; // Reset if user confirmed
+      hasUserConfirmed.value = confirmed;
+    }
+
+    function setShouldUserConfirm(should: boolean): void {
+      shouldUserConfirm.value = should;
+    }
+
     return {
       // State
       assignmentsSelectedFilter,
       assignmentsSelectedSorting,
+      hasUserConfirmed,
+      shouldUserConfirm,
 
       // Actions
       $reset,
       setAssignmentsSelectedFilter,
       setAssignmentsSelectedSorting,
+      setHasUserConfirmed,
+      setShouldUserConfirm,
     };
   },
   {

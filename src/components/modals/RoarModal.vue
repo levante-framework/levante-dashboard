@@ -107,17 +107,4 @@ onMounted(() => {
   margin-top: 0;
   margin-bottom: 0.5rem;
 }
-.modal-footer {
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-  width: 100%;
-  gap: 1rem;
-  padding: 1.5rem;
-  background-color: #e6e7eb;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-}
-.p-dialog .p-dialog-footer {
-  padding: 0;
-}
 </style>

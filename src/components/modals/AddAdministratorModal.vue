@@ -9,7 +9,9 @@
     <template #header>
       <div class="flex flex-column gap-1">
         <h2 class="m-0 font-bold" data-testid="modalTitle">{{ modalTitle }}</h2>
+        <DocsButton href="https://researcher.levante-network.org/dashboard/permissions" label="Documentation" />
         <p v-if="isEditMode" class="m-0 pt-2 text-md text-gray-600">Updating roles for <span class="font-bold">{{ administratorName }}</span>.</p>
+
       </div>
     </template>
 
@@ -48,7 +50,7 @@
       </div>
     </div>
 
-    <div class="w-full m-0 mt-5">
+    <div v-if="!isSuperAdminVariant" class="w-full m-0 mt-5">
       <div class="flex flex-column gap-1 w-full">
         <PvFloatLabel>
           <PvSelect
@@ -80,8 +82,11 @@
 </template>
 
 <script lang="ts" setup>
+import DocsButton from '@/components/DocsButton.vue';
+import useCreateUpdateAdministratorMutation from '@/composables/mutations/useCreateUpdateAdministratorMutation';
+import useCreateUpdateSuperAdminMutation from '@/composables/mutations/useCreateUpdateSuperAdminMutation';
 import { usePermissions } from '@/composables/usePermissions';
-import { ROLES } from '@/constants/roles';
+import { ROLES, SUPER_ADMIN_PLATFORM_SCOPE } from '@/constants/roles';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { useAuthStore } from '@/store/auth';
 import { Name } from '@levante-framework/firekit/lib/interfaces';
@@ -127,6 +132,7 @@ interface Emits {
 interface Props {
   data?: AdministratorData | null;
   isVisible?: boolean;
+  variant?: 'researcher' | 'super-admin';
 }
 
 const emit = defineEmits<Emits>();
@@ -134,42 +140,56 @@ const emit = defineEmits<Emits>();
 const props = withDefaults(defineProps<Props>(), {
   data: null,
   isVisible: false,
+  variant: 'researcher',
 });
 
 const authStore = useAuthStore();
-const { roarfirekit, currentSite, currentSiteName } = storeToRefs(authStore);
-const { isUserSuperAdmin } = authStore;
-const { can } = usePermissions();
+const { currentSite, currentSiteName } = storeToRefs(authStore);
+const { can, canGlobal } = usePermissions();
 const toast = useToast();
 
+const { mutateAsync: createUpdateSuperAdmin } = useCreateUpdateSuperAdminMutation();
+const { mutateAsync: createUpdateAdministrator } = useCreateUpdateAdministratorMutation();
+
+const isSuperAdminVariant = computed(() => props.variant === 'super-admin');
 
 const isEditMode = computed(() => Boolean(props?.data));
 const administratorName = computed(() => [props.data?.name?.first, props.data?.name?.middle, props.data?.name?.last].filter(Boolean).join(' ').trim());
-const modalTitle = computed(() => (isEditMode.value ? 'Update Researcher Roles' : 'Add Researcher'));
-const submitBtnLabel = computed(() => (isEditMode.value ? 'Update Researcher' : 'Add Researcher'));
-const submittingBtnLabel = computed(() => (isEditMode.value ? 'Updating Researcher' : 'Adding Researcher'));
+const modalTitle = computed(() => {
+  if (isSuperAdminVariant.value) {
+    return isEditMode.value ? 'Update Super Admin' : 'Add Super Admin';
+  }
+  return isEditMode.value ? 'Update Researcher Roles' : 'Add Researcher';
+});
+const submitBtnLabel = computed(() => {
+  if (isSuperAdminVariant.value) {
+    return isEditMode.value ? 'Update Super Admin' : 'Add Super Admin';
+  }
+  return isEditMode.value ? 'Update Researcher' : 'Add Researcher';
+});
+const submittingBtnLabel = computed(() => {
+  if (isSuperAdminVariant.value) {
+    return isEditMode.value ? 'Updating Super Admin' : 'Adding Super Admin';
+  }
+  return isEditMode.value ? 'Updating Researcher' : 'Adding Researcher';
+});
 const roleOptions = computed(() => {
-  // Always use 'create' permission - the question is "can I assign this role to someone?"
-  // The edit button visibility already gates who we can edit (based on their current role)
   const action = 'create';
+
+  const canAssignRole = (role: AdminSubResource) =>
+    can('admins', action, role) || canGlobal('admins', action, role);
 
   return Object.values(ROLES)
     .map((role) => {
       switch (role) {
         case ROLES.SUPER_ADMIN:
-          return isUserSuperAdmin() ? { value: role, label: 'Super Admin' } : null;
+          return null;
         case ROLES.SITE_ADMIN:
-          return can('admins', action, role as AdminSubResource)
-            ? { value: role, label: 'Site Admin' }
-            : null;
+          return canAssignRole(role as AdminSubResource) ? { value: role, label: 'Site Admin' } : null;
         case ROLES.ADMIN:
-          return can('admins', action, role as AdminSubResource)
-            ? { value: role, label: 'Admin' }
-            : null;
+          return canAssignRole(role as AdminSubResource) ? { value: role, label: 'Admin' } : null;
         case ROLES.RESEARCH_ASSISTANT:
-          return can('admins', action, role as AdminSubResource)
-            ? { value: role, label: 'Research Assistant' }
-            : null;
+          return canAssignRole(role as AdminSubResource) ? { value: role, label: 'Research Assistant' } : null;
         default:
           return null;
       }
@@ -220,8 +240,8 @@ const isSubmitDisabled = computed(() => {
 });
 
 watch(
-  () => props.data,
-  (newData) => {
+  () => ({ data: props.data, variant: props.variant }),
+  ({ data: newData, variant }) => {
     if (newData) {
       const newFirstName = newData?.name?.first;
       const newMiddleName = newData?.name?.middle;
@@ -232,14 +252,32 @@ watch(
       lastName.value = newLastName ?? '';
       middleName.value = newMiddleName ?? '';
 
-      const currentSiteRole = newData.roles?.find((roleData) => roleData.siteId === currentSite.value);
-      selectedRole.value = currentSiteRole?.role ?? '';
-      initialRole.value = currentSiteRole?.role ?? '';
+      if (variant === 'super-admin') {
+        const superRole = newData.roles?.find((roleData) => roleData.role === ROLES.SUPER_ADMIN);
+        selectedRole.value = superRole?.role ?? ROLES.SUPER_ADMIN;
+        initialRole.value = superRole?.role ?? ROLES.SUPER_ADMIN;
+      } else {
+        const currentSiteRole = newData.roles?.find((roleData) => roleData.siteId === currentSite.value);
+        selectedRole.value = currentSiteRole?.role ?? '';
+        initialRole.value = currentSiteRole?.role ?? '';
+      }
     } else {
       resetForm();
     }
   },
   { immediate: true },
+);
+
+watch(
+  () => [props.isVisible, props.variant] as const,
+  ([visible, variant]) => {
+    if (visible && variant === 'super-admin') {
+      selectedRole.value = ROLES.SUPER_ADMIN;
+      if (!props.data) {
+        initialRole.value = ROLES.SUPER_ADMIN;
+      }
+    }
+  },
 );
 
 function handleOnClose() {
@@ -292,7 +330,7 @@ async function submit() {
     last: lastName.value,
   };
 
-  const roles: { role: string; siteId: string; siteName: string }[] = [
+  const siteScopedRoles: { role: string; siteId: string; siteName: string }[] = [
     {
       role: selectedRole.value,
       siteId: currentSite.value!,
@@ -300,65 +338,82 @@ async function submit() {
     },
   ];
 
-  // If props.data, we are updating an existing administrator.
-  if (props?.data?.id) {
-    return await roarfirekit
-      .value!.updateAdministrator({ adminUid: props.data.id, email: email.value, name, roles, isTestData: isTestData.value })
-      .then(() => {
-        isSubmitting.value = false;
+  if (selectedRole.value === ROLES.SUPER_ADMIN) {
+    const superAdminRoles = isSuperAdminVariant.value
+      ? [
+          {
+            role: ROLES.SUPER_ADMIN,
+            siteId: SUPER_ADMIN_PLATFORM_SCOPE.siteId,
+            siteName: SUPER_ADMIN_PLATFORM_SCOPE.siteName,
+          },
+        ]
+      : siteScopedRoles;
+    const payload = {
+      email: email.value,
+      name,
+      roles: superAdminRoles,
+      isTestData: isTestData.value,
+      ...(props?.data?.id ? { adminUid: props.data.id } : {}),
+    };
 
-        toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'Researcher account updated successfully',
-          life: TOAST_DEFAULT_LIFE_DURATION,
-        });
-
-        emit('refetch');
-
-        handleOnClose();
-      })
-      .catch((error) => {
-        isSubmitting.value = false;
-
-        toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: error.message,
-          life: TOAST_DEFAULT_LIFE_DURATION,
-        });
-
-        console.error('Error updating researcher', error);
-      });
-  }
-
-  return await roarfirekit
-    .value!.createNewPermissionsAdmin({ email: email.value, name, roles, isTestData: isTestData.value })
-    .then(() => {
-      isSubmitting.value = false;
-
+    try {
+      await createUpdateSuperAdmin(payload);
       toast.add({
         severity: 'success',
         summary: 'Success',
-        detail: 'Researcher account created successfully',
+        detail: props?.data?.id
+          ? 'Super admin updated successfully'
+          : 'Super admin created successfully',
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
-
       emit('refetch');
-
       handleOnClose();
-    })
-    .catch((error) => {
-      isSubmitting.value = false;
-
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unexpected error';
       toast.add({
         severity: 'error',
         summary: 'Error',
-        detail: error.message,
+        detail: message,
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
+      console.error('Error creating or updating super admin', error);
+    } finally {
+      isSubmitting.value = false;
+    }
+    return;
+  }
 
-      console.error('Error creating researcher', error);
+  const researcherPayload = {
+    email: email.value,
+    name,
+    roles: siteScopedRoles,
+    isTestData: isTestData.value,
+    ...(props?.data?.id ? { adminUid: props.data.id } : {}),
+  };
+
+  try {
+    await createUpdateAdministrator(researcherPayload);
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: props?.data?.id
+        ? 'Researcher account updated successfully'
+        : 'Researcher account created successfully',
+      life: TOAST_DEFAULT_LIFE_DURATION,
     });
+    emit('refetch');
+    handleOnClose();
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unexpected error';
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: message,
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    console.error('Error creating or updating researcher', error);
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 </script>

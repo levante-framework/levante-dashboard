@@ -5,7 +5,7 @@ import { initNewFirekit } from '../firebaseInit';
 import { AUTH_SSO_PROVIDERS } from '../constants/auth';
 import posthogInstance from '@/plugins/posthog';
 import { logger } from '@/logger';
-import { RoarFirekit } from '@levante-framework/firekit';
+import type { RoarFirekit } from '@levante-framework/firekit';
 import { ref, type Ref } from 'vue';
 import { ROLES } from '@levante-framework/permissions-core';
 
@@ -13,7 +13,7 @@ interface FirebaseUser {
   adminFirebaseUser: User | null;
 }
 
-interface UserClaims {
+export interface UserClaims {
   claims: {
     roarUid?: string;
     super_admin?: boolean;
@@ -34,7 +34,7 @@ interface EmailLinkCredentials {
   emailLink: string;
 }
 
-interface UserData {
+export interface UserData {
   roles: { siteId: string; role: string; siteName: string }[];
   [key: string]: unknown;
 }
@@ -65,8 +65,8 @@ export const useAuthStore = defineStore(
 
     // Reset function
     function $reset(): void {
-      adminAuthStateListener.value = null;
       adminAuthStateListener.value?.();
+      adminAuthStateListener.value = null;
       adminOrgs.value = null;
       currentSite.value = null;
       currentSiteName.value = null;
@@ -231,10 +231,6 @@ export const useAuthStore = defineStore(
       return false;
     }
 
-    async function createUsers(userData: unknown): Promise<unknown> {
-      return roarfirekit.value?.createUsers(userData as any);
-    }
-
     async function signOut(): Promise<void> {
       console.log('PostHog Reset (explicit signOut)');
       posthogInstance.reset();
@@ -302,7 +298,6 @@ export const useAuthStore = defineStore(
       // Actions
       $reset,
       completeAssessment,
-      createUsers,
       forceIdTokenRefresh,
       getLegalDoc,
       initFirekit,

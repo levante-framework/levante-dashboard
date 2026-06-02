@@ -43,15 +43,20 @@ interface SurveyData {
   pages: PageModel[];
 }
 
-interface InitializeSurveyParams {
+/** Restore persisted/server data, SurveyJS locale, and page metadata (no audio). */
+interface BootstrapSurveyInstanceParams {
   surveyInstance: SurveyModel;
   userType: string;
   specificSurveyData?: SurveyData;
   userData: UserData;
   surveyStore: SurveyStore;
-  locale: string | undefined | null;
-  audioLinkMap: AudioLinkMap;
   generalSurveyData: SurveyData;
+  /** Dashboard i18n locale → SurveyJS / audio locale via `getParsedLocale`. */
+  locale: string | undefined | null;
+}
+
+interface InitializeSurveyParams extends BootstrapSurveyInstanceParams {
+  audioLinkMap: AudioLinkMap;
 }
 
 interface SetupSurveyEventHandlersParams {
@@ -68,16 +73,17 @@ interface SetupSurveyEventHandlersParams {
   assignmentsStore: typeof useAssignmentsStore;
 }
 
-export async function initializeSurvey({
+export function bootstrapSurveyInstance({
   surveyInstance,
   userType,
   specificSurveyData,
   userData,
   surveyStore,
-  locale,
-  audioLinkMap,
   generalSurveyData,
-}: InitializeSurveyParams): Promise<void> {
+  locale,
+}: BootstrapSurveyInstanceParams): void {
+  surveyInstance.locale = getParsedLocale(locale);
+
   restoreSurveyData({
     surveyInstance,
     uid: userData.id,
@@ -94,6 +100,27 @@ export async function initializeSurvey({
   const numGeneralPages = allGeneralPages.length;
   const numSpecificPages = allSpecificPages.length;
   surveyStore.setNumberOfSurveyPages(numGeneralPages, numSpecificPages);
+}
+
+export async function initializeSurvey({
+  surveyInstance,
+  userType,
+  specificSurveyData,
+  userData,
+  surveyStore,
+  locale,
+  audioLinkMap,
+  generalSurveyData,
+}: InitializeSurveyParams): Promise<void> {
+  bootstrapSurveyInstance({
+    surveyInstance,
+    userType,
+    specificSurveyData,
+    userData,
+    surveyStore,
+    generalSurveyData,
+    locale,
+  });
 
   if (userType === 'student') {
     await setupStudentAudio(surveyInstance, locale, audioLinkMap, surveyStore as any);
@@ -106,7 +133,7 @@ export async function setupStudentAudio(
   audioLinkMap: AudioLinkMap,
   surveyStore: SurveyStore,
 ): Promise<void> {
-  const parsedLocale = getParsedLocale(locale)
+  const parsedLocale = getParsedLocale(locale);
   await fetchBuffer({
     parsedLocale,
     setSurveyAudioLoading: surveyStore.setSurveyAudioLoading,

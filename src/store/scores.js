@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
-import { csvFileToJson, standardDeviation } from '@/helpers';
+import { standardDeviation } from '@/helpers';
+import { csvFileToJson } from '@/helpers/csv';
 import { ref } from 'vue';
 
 const standardizeTaskId = (taskId) => {

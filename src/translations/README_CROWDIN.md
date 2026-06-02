@@ -234,7 +234,7 @@ Defaults (override via env):
 
 Workflow: [`.github/workflows/i18n-ci.yml`](../../.github/workflows/i18n-ci.yml)
 
-- Node 20 LTS
+- Node 24
 - Steps:
   - Install deps
   - (Optional) `i18n:crowdin:download` if `CROWDIN_API_TOKEN` secret is provided
@@ -257,7 +257,7 @@ Secrets/Env to configure in the repository:
   - HTTPS via `vite-plugin-mkcert`
   - Prefers port 5173 but will auto-switch if in use
 - Node version
-  - [`.nvmrc`](../../.nvmrc) recommends Node 20 LTS
+  - [`.nvmrc`](../../.nvmrc) recommends Node 24
   - Use `nvm use` to match CI and avoid npm warnings
 
 ---
@@ -283,7 +283,7 @@ This section documents the complete workflow for updating translations when they
 ### Prerequisites
 
 - Ensure you have `CROWDIN_API_TOKEN` environment variable set
-- Node.js 20 LTS (use `nvm use` to match [`.nvmrc`](../../.nvmrc))
+- Node.js 24 (use `nvm use` to match [`.nvmrc`](../../.nvmrc))
 - Crowdin CLI installed (`npm install -g @crowdin/cli`)
 
 ### Step 1: Download Latest Translations from Crowdin

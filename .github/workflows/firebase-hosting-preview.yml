@@ -1,7 +1,7 @@
 name: Preview Deploy
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, synchronize, labeled]
   workflow_dispatch:
     inputs:
       pr_branch:
@@ -23,6 +23,7 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize' || (github.event.action == 'labeled' && github.event.label.name == 'preview-assessment')
     env:
       VITE_LEVANTE: 'TRUE'
     steps:
@@ -67,6 +68,7 @@ jobs:
     name: Deploy Preview
     needs: test
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize' || (github.event.action == 'labeled' && github.event.label.name == 'preview-assessment')
 
     steps:
       # For workflows triggered by pull requests
@@ -90,13 +92,27 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
+      - name: Check for preview-assessment label
+        id: preview-label
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "has_preview_assessment=false" >> $GITHUB_OUTPUT
+          else
+            LABELS='${{ toJSON(github.event.pull_request.labels) }}'
+            echo "has_preview_assessment=$([[ "$LABELS" == *"preview-assessment"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build (ROAR)
         if: ${{ contains(github.repository, 'roar') }}
         run: npm ci && npm run build
 
-      - name: Build (LEVANTE)
-        if: ${{ contains(github.repository, 'levante') }}
+      - name: Build (LEVANTE - admin dev)
+        if: ${{ contains(github.repository, 'levante') && steps.preview-label.outputs.has_preview_assessment != 'true' }}
         run: npm ci && npm run build:dev
+
+      - name: Build (LEVANTE - assessment dev)
+        if: ${{ contains(github.repository, 'levante') && steps.preview-label.outputs.has_preview_assessment == 'true' }}
+        run: npm ci && npm run build:dev:assessment
 
       - name: Deploy to Firebase Hosting Channel
         id: firebase-deploy

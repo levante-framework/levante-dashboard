@@ -60,6 +60,7 @@ vi.mock('@/store/auth', () => ({
       },
       displayName: 'Test Display Name',
     }),
+    isUserSuperAdmin: vi.fn(() => true),
   })),
 }));
 
