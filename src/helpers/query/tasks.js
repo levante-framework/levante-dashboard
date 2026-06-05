@@ -2,99 +2,22 @@ import { toValue } from 'vue';
 import _mapValues from 'lodash/mapValues';
 import _uniq from 'lodash/uniq';
 import _without from 'lodash/without';
-import { convertValues, getAxiosInstance, mapFields, fetchDocsById, getBaseDocumentPath } from './utils';
-import { FIRESTORE_DATABASES, FIRESTORE_COLLECTIONS } from '../../constants/firebase';
-import { taskVariantFunctionsClient } from '@/services/TaskVariantFunctionsClient';
+import { convertValues, getAxiosInstance, mapFields, getBaseDocumentPath } from './utils';
+import { tasksRepository } from '@/firebase/repositories/TasksRepository';
 
-export const getTasksRequestBody = ({
-  registered = true,
-  allData = false,
-  orderBy,
-  aggregationQuery,
-  pageLimit,
-  page,
-  paginate = false,
-  select = ['name'],
-}) => {
-  const requestBody = { structuredQuery: {} };
-
-  if (orderBy) {
-    requestBody.structuredQuery.orderBy = orderBy;
-  }
-
-  if (!aggregationQuery) {
-    if (paginate) {
-      requestBody.structuredQuery.limit = pageLimit;
-      requestBody.structuredQuery.offset = page * pageLimit;
-    }
-
-    if (!allData) {
-      requestBody.structuredQuery.select = {
-        fields: select.map((field) => ({ fieldPath: field })),
-      };
-    }
-  }
-
-  requestBody.structuredQuery.from = [
-    {
-      collectionId: 'tasks',
-      allDescendants: false,
-    },
-  ];
-
-  if (registered) {
-    requestBody.structuredQuery.where = {
-      fieldFilter: {
-        field: { fieldPath: 'registered' },
-        op: 'EQUAL',
-        value: { booleanValue: true },
-      },
-    };
-  }
-
-  if (aggregationQuery) {
-    return {
-      structuredAggregationQuery: {
-        ...requestBody,
-        aggregations: [
-          {
-            alias: 'count',
-            count: {},
-          },
-        ],
-      },
-    };
-  }
-
-  return requestBody;
-};
-
-export const taskFetcher = async (registered = true, allData = false, select = ['name', 'testData', 'demoData']) => {
-  const axiosInstance = getAxiosInstance();
-  const requestBody = getTasksRequestBody({
-    registered,
-    allData,
-    aggregationQuery: false,
-    paginate: false,
-    select: allData ? '' : select,
-  });
-
-  return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
+export const taskFetcher = async (registered = true, siteId) => {
+  return tasksRepository.getTasks({ siteId, registered });
 };
 
 /**
  * Fetch task documents by their IDs.
  *
  * @param {Array<String>} taskIds – The array of task IDs to fetch.
+ * @param {String} siteId – The current site ID.
  * @returns {Promise<Array<Object>>} The array of task documents.
  */
-export const fetchByTaskId = async (taskIds) => {
-  const taskDocs = toValue(taskIds).map((taskId) => ({
-    collection: FIRESTORE_COLLECTIONS.TASKS,
-    docId: taskId,
-  }));
-
-  return fetchDocsById(taskDocs, FIRESTORE_DATABASES.ADMIN);
+export const fetchByTaskId = async (taskIds, siteId) => {
+  return tasksRepository.getTasks({ siteId, taskIds: toValue(taskIds) });
 };
 
 export const getVariantsRequestBody = ({ registered = false, aggregationQuery, pageLimit, page, paginate = false }) => {
@@ -217,7 +140,3 @@ export const variantsFetcher = async (registered = false) => {
     });
 };
 
-export const registerTaskVariant = async (variant) => {
-  const result = await taskVariantFunctionsClient.upsertTaskVariant(variant);
-  return result;
-};

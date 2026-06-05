@@ -1007,13 +1007,12 @@ const syncSchemaFromCurrentConfig = async () => {
       taskId: selectedTask.value,
       variantId: selectedVariant.value.id,
       siteId: authStore.currentSite,
-      data: {
-        ...updatedVariantData,
-        ...convertedFields,
-        schemaVersion: newVersion,
-        params: { ...mergedParams },
-      },
+      ...updatedVariantData,
+      ...convertedFields,
+      schemaVersion: newVersion,
+      params: { ...mergedParams },
     };
+    console.log('mark://variantData', variantData);
     await updateVariant(variantData, {
       onSuccess: () => {
         toast.add({
@@ -1119,14 +1118,12 @@ const handleUpdateVariant = async () => {
     taskId: selectedTask.value,
     variantId: selectedVariant.value.id,
     siteId: authStore.currentSite,
-    data: {
-      ...updatedVariantData,
-      ...convertedFields,
-      ...(latestSchemaVersion != null && { schemaVersion: latestSchemaVersion }),
-      params: { ...(updatedVariantData.params ?? {}) },
-    },
+    ...updatedVariantData,
+    ...convertedFields,
+    ...(latestSchemaVersion != null && { schemaVersion: latestSchemaVersion }),
+    params: { ...(updatedVariantData.params ?? {}) },
   };
-
+  console.log('mark://variantData2', variantData);
   await updateVariant(variantData, {
     onSuccess: () => {
       toast.add({

@@ -1,23 +1,23 @@
 import { RoarFirekit } from '@levante-framework/firekit';
-import { getFunctions } from 'firebase/functions';
 import { AuthPersistence } from '@levante-framework/firekit/lib/firestore/util';
 import levanteFirebaseConfig from './config/firebaseLevante';
 import { isLevante } from './helpers';
 import firebaseJSON from '../firebase.json';
-import { FirebaseFunctionsClient } from './services/FirebaseFunctionsClient';
+import { FirebaseService } from '@/firebase/Service';
 
-const emulatorConfig = import.meta.env.VITE_EMULATOR ? firebaseJSON.emulators : undefined;
+const emulatorConfig = firebaseJSON.emulators;
 
 const roarConfig = levanteFirebaseConfig;
 
 export function getAdminFunctions() {
-  return getFunctions(FirebaseFunctionsClient.getAdminApp());
+  FirebaseService.initialize(levanteFirebaseConfig.admin, emulatorConfig);
+  return FirebaseService.functions;
 }
 
 export async function initNewFirekit(): Promise<RoarFirekit> {
   const firekit = new RoarFirekit({
     roarConfig,
-    emulatorConfig,
+    emulatorConfig: import.meta.env.VITE_EMULATOR ? firebaseJSON.emulators : undefined,
     dbPersistence: false,
     authPersistence: AuthPersistence.session,
     markRawConfig: {
@@ -28,13 +28,7 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
     verboseLogging: isLevante ? false : true,
   });
 
-  FirebaseFunctionsClient.initAdminApp(
-    {
-      projectId: 'demo-emulator',
-      apiKey: roarConfig.admin.apiKey,
-    },
-    emulatorConfig,
-  );
+  FirebaseService.initialize(levanteFirebaseConfig.admin, emulatorConfig);
 
   return await firekit.init();
 }
