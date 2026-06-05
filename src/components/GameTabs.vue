@@ -34,8 +34,9 @@
           <span
             class="tabview-nav-link-label"
             :data-game-status="`${isTaskComplete(game.completedOn, game.taskId) ? 'complete' : 'incomplete'}`"
-            >{{ getTaskName(game.taskId, game.taskData.name) }}</span
           >
+            {{ getTaskName(game.taskId, game.taskData.name) }}
+          </span>
         </PvTab>
       </PvTabList>
       <PvTabPanels style="width: 100%; margin-top: 0.5rem; padding: 0">
@@ -50,7 +51,7 @@
           :value="String(index)"
           class="p-0"
         >
-          <div class="roar-tabview-game flex flex-row align-items-center p-5 surface-100 w-full">
+          <div class="roar-tabview-game flex flex-row p-5 surface-100 w-full">
             <div class="roar-game-image">
               <div>
                 <img
@@ -68,19 +69,18 @@
 
             <div class="roar-game-content flex flex-column">
               <div class="flex flex-column h-full">
-                <div class="roar-game-title font-bold">
+                <div class="font-bold">
                   {{ getTaskName(game.taskId, game.taskData.name) }}
                 </div>
+
                 <div class="roar-game-description">
-                  <p>
-                    {{ getTaskDescription(game.taskId, game.taskData.description) }}
-                  </p>
+                  {{ getTaskDescription(game.taskId, game.taskData.description) }}
                 </div>
 
                 <div v-if="isAdultSurveyTask(game.taskId)" class="mt-4 mb-4">
-                  <div class="flex align-items-center mb-2">
-                    <span class="mr-2 w-4"
-                      ><b>{{ $t('gameTabs.surveyProgressGeneral') }} </b> -
+                  <div class="flex flex-column mb-3">
+                    <span class="mb-1">
+                      <b>{{ $t('gameTabs.surveyProgressGeneral') }}:</b>
                       {{
                         props.userData.userType === 'teacher' || props.userData.userType === 'parent'
                           ? props.userData.userType === 'teacher'
@@ -93,16 +93,12 @@
                   </div>
 
                   <div v-if="props.userData.userType === 'parent'">
-                    <div
-                      v-for="(child, i) in props.userData?.childIds"
-                      :key="child"
-                      class="flex flex-wrap align-items-center mb-2"
-                    >
-                      <span class="mr-2 w-full sm:w-4 mb-1 sm:mb-0">
-                        <b>{{ $t('gameTabs.surveyProgressSpecificParent') }} - </b>
+                    <div v-for="(child, i) in props.userData?.childIds" :key="child" class="flex flex-column mb-3">
+                      <span class="mb-1">
+                        <b>{{ $t('gameTabs.surveyProgressSpecificParent') }}:</b>
                         {{ $t('gameTabs.surveyProgressSpecificParentMonth') }}:
                         {{ surveyStore.specificSurveyRelationData[i]?.birthMonth }}
-                        <br class="sm:hidden" />
+                        <span>-</span>
                         {{ $t('gameTabs.surveyProgressSpecificParentYear') }}:
                         {{ surveyStore.specificSurveyRelationData[i]?.birthYear }}
                       </span>
@@ -528,7 +524,7 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
 }
 
 .roar-game-description {
-  margin-bottom: 0.5rem;
+  margin: 0.5rem 0;
 }
 
 .roar-game-footer {
