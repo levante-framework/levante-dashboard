@@ -303,6 +303,16 @@
       </section>
 
       <section v-if="selectedVariant && selectedTask" class="flex flex-column gap-3 mt-4 p-4">
+        <div class="flex justify-content-end">
+          <PvButton
+            label="Reset"
+            icon="pi pi-refresh"
+            severity="secondary"
+            text
+            :disabled="!hasUpdateVariantChanges"
+            @click="resetUpdateVariantChanges"
+          />
+        </div>
         <div
           v-if="
             schemaForUpdateTask &&
@@ -323,7 +333,7 @@
             selectedVariant.params &&
             Object.keys(selectedVariant.params).length > 0 &&
             !schemaForUpdateTask &&
-            !isSchemaLoading
+            !isUpdateSchemaLoading
           "
           class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-blue-500 flex-wrap"
         >
@@ -531,7 +541,13 @@
                 option-value="value"
                 class="flex-grow-1"
               />
-              <PvButton type="button" @click="deleteParam(item.paramName)">Delete</PvButton>
+              <PvButton
+                type="button"
+                :disabled="item.isRequired"
+                @click="deleteParam(item.paramName)"
+              >
+                Delete
+              </PvButton>
             </div>
           </div>
         </div>
@@ -550,7 +566,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { required } from '@vuelidate/validators';
 import { useVuelidate } from '@vuelidate/core';
 import { storeToRefs } from 'pinia';
@@ -562,7 +578,7 @@ import PvInputNumber from 'primevue/inputnumber';
 import PvInputText from 'primevue/inputtext';
 import PvSelectButton from 'primevue/selectbutton';
 import PvToast from 'primevue/toast';
-import { cloneDeep, camelCase } from 'lodash';
+import { cloneDeep, camelCase, isEqual } from 'lodash';
 import { useAuthStore } from '@/store/auth';
 import useTasksQuery from '@/composables/queries/useTasksQuery';
 import useTaskVariantsQuery from '@/composables/queries/useTaskVariantsQuery';
@@ -587,6 +603,7 @@ const { mutateAsync: upsertSchema, isPending: isSyncingSchemaFromConfig } = useU
 const selectedTask = ref(null);
 const selectedVariant = ref(null);
 const showSchemaDetails = ref(false);
+const originalUpdateVariantSnapshot = ref(null);
 // Reactive clone for holding changes made to variantData without affecting the original variantData and avoiding reactivity issues
 let updatedVariantData = reactive(cloneDeep(selectedVariant.value));
 // Array of objects which models the new fields added to the variant
@@ -645,6 +662,8 @@ const languageDropdownOptions = computed(() => {
 watch(selectedVariant, (newVal) => {
   updatedVariantData = reactive(cloneDeep(newVal));
   deletedUpdateParamNames.value = new Set();
+  addedFields.splice(0, addedFields.length);
+  originalUpdateVariantSnapshot.value = null;
   if (updatedVariantData.params && typeof updatedVariantData.params === 'object') {
     for (const k of Object.keys(updatedVariantData.params)) {
       if (updatedVariantData.params[k] == null) {
@@ -703,26 +722,64 @@ const { schema: schemaForSelectedTask, isFetching: isSchemaLoading } = useTaskSc
   { enabled: computed(() => initialized.value) },
 );
 
-const { schema: schemaForUpdateTask } = useTaskSchemasQuery(
+const { schema: schemaForUpdateTask, isFetching: isUpdateSchemaLoading } = useTaskSchemasQuery(
   computed(() => selectedTask.value ?? null),
   { enabled: computed(() => initialized.value) },
 );
 
+function applySchemaDefaultsToUpdateParams() {
+  const schema = schemaForUpdateTask.value;
+  if (!schema?.paramDefinitions || !selectedVariant.value || !updatedVariantData) return;
+  if (!updatedVariantData.params || typeof updatedVariantData.params !== 'object') {
+    updatedVariantData.params = {};
+  }
+  for (const [key, def] of Object.entries(schema.paramDefinitions)) {
+    if (updatedVariantData.params[key] === undefined) {
+      updatedVariantData.params[key] =
+        def.type === 'number' ? 0 : def.type === 'boolean' ? false : '';
+    }
+  }
+}
+
+function captureOriginalUpdateVariantState() {
+  if (!selectedVariant.value?.id) {
+    originalUpdateVariantSnapshot.value = null;
+    return;
+  }
+  originalUpdateVariantSnapshot.value = {
+    variantId: selectedVariant.value.id,
+    variantData: cloneDeep(updatedVariantData),
+    deletedParamNames: [...deletedUpdateParamNames.value],
+    addedFields: cloneDeep([...addedFields]),
+  };
+}
+
+function resetUpdateVariantChanges() {
+  if (!originalUpdateVariantSnapshot.value) return;
+  const snapshot = cloneDeep(originalUpdateVariantSnapshot.value);
+  updatedVariantData = reactive(cloneDeep(snapshot.variantData));
+  deletedUpdateParamNames.value = new Set(snapshot.deletedParamNames);
+  addedFields.splice(0, addedFields.length, ...snapshot.addedFields);
+}
+
+const hasUpdateVariantChanges = computed(() => {
+  const snapshot = originalUpdateVariantSnapshot.value;
+  if (!snapshot || selectedVariant.value?.id !== snapshot.variantId) return false;
+  return (
+    !isEqual(updatedVariantData, snapshot.variantData) ||
+    !isEqual([...deletedUpdateParamNames.value].sort(), [...snapshot.deletedParamNames].sort()) ||
+    !isEqual([...addedFields], snapshot.addedFields)
+  );
+});
+
 watch(
-  () => [selectedVariant.value, schemaForUpdateTask.value],
+  () => [selectedVariant.value?.id, schemaForUpdateTask.value, isUpdateSchemaLoading.value],
   () => {
-    const schema = schemaForUpdateTask.value;
-    if (!schema?.paramDefinitions || !selectedVariant.value || !updatedVariantData) return;
-    if (!updatedVariantData.params || typeof updatedVariantData.params !== 'object') {
-      updatedVariantData.params = {};
-    }
-    for (const [key, def] of Object.entries(schema.paramDefinitions)) {
-      if (updatedVariantData.params[key] === undefined) {
-        const defaultVal =
-          def.type === 'number' ? 0 : def.type === 'boolean' ? false : '';
-        updatedVariantData.params[key] = defaultVal;
-      }
-    }
+    if (!selectedVariant.value?.id) return;
+    applySchemaDefaultsToUpdateParams();
+    if (isUpdateSchemaLoading.value) return;
+    if (originalUpdateVariantSnapshot.value?.variantId === selectedVariant.value.id) return;
+    nextTick(() => captureOriginalUpdateVariantState());
   },
   { immediate: true },
 );
@@ -845,6 +902,8 @@ const moveToDeletedParams = (paramName) => {
 };
 
 const deleteParam = (paramName) => {
+  if (schemaForUpdateTask.value?.paramDefinitions?.[paramName]?.required) return;
+
   if (updatedVariantData.params && updatedVariantData.params[paramName] !== undefined) {
     delete updatedVariantData.params[paramName];
   }
@@ -1241,6 +1300,7 @@ const resetUpdateVariantForm = () => {
   selectedVariant.value = null;
   updatedVariantData = {};
   deletedUpdateParamNames.value = new Set();
+  originalUpdateVariantSnapshot.value = null;
   clearFieldParamArrays();
 };
 
