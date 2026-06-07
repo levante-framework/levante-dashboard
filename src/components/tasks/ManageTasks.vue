@@ -215,7 +215,7 @@
     <form @submit.prevent="handleUpdateTask()">
       <section class="flex flex-column gap-2 mb-4 p-4">
         <label for="variant-fields" class="my-2">
-          <small class="text-gray-400 font-bold">Select an Existing Task </small>
+          <small class="text-gray-400 font-bold">Select task</small>
           <span class="required">*</span></label
         >
         <PvDropdown
@@ -223,7 +223,7 @@
           :options="formattedTasks"
           option-label="name"
           option-value="id"
-          placeholder="Select a Task"
+          placeholder="Select task"
         />
       </section>
 
@@ -444,6 +444,7 @@ import {
   buildUpsertTaskPayload,
   createEmptyDynamicField,
   createEmptyTaskData,
+  formatTasksForDropdown,
   getFieldTypePlaceholder,
   hasRequiredUserTypes,
   inferArrayItemType,
@@ -541,12 +542,7 @@ const { data: tasks } = useTasksQuery(registeredTasksOnly, null, {
 
 const formattedTasks = computed(() => {
   if (!tasks.value) return [];
-  return tasks.value.map((task) => {
-    return {
-      name: task.name ?? task.taskName ?? task.id,
-      ...task,
-    };
-  });
+  return formatTasksForDropdown(tasks.value);
 });
 
 const createRules = {

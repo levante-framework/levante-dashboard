@@ -20,6 +20,20 @@ export const TASK_IGNORED_FIELD_KEYS = [
 
 export const TASK_RESERVED_FIELD_NAMES = ['id', 'taskId', ...EXPLICIT_TASK_FIELD_KEYS] as const;
 
+export const TASK_SELECT_PLACEHOLDER = 'Select task';
+
+export function formatTaskDropdownLabel(task: { id: string; name?: string; taskName?: string }) {
+  const displayName = String(task.name ?? task.taskName ?? task.id);
+  return `${displayName} (${task.id})`;
+}
+
+export function formatTasksForDropdown<T extends { id: string; name?: string; taskName?: string }>(tasks: T[]) {
+  return tasks.map((task) => ({
+    ...task,
+    name: formatTaskDropdownLabel(task),
+  }));
+}
+
 export function createEmptyTaskData() {
   return {
     taskName: '',

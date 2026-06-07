@@ -3,6 +3,8 @@ import {
   buildUpsertTaskPayload,
   createEmptyDynamicField,
   createEmptyTaskData,
+  formatTaskDropdownLabel,
+  formatTasksForDropdown,
   getFieldTypePlaceholder,
   hasRequiredUserTypes,
   inferArrayItemType,
@@ -13,6 +15,15 @@ import {
 } from '@/helpers/taskFields';
 
 describe('taskFields helpers', () => {
+  it('formats task dropdown labels with doc id', () => {
+    expect(formatTaskDropdownLabel({ id: 'hearts-flowers', name: 'Hearts and Flowers' })).toBe(
+      'Hearts and Flowers (hearts-flowers)',
+    );
+    expect(formatTasksForDropdown([{ id: 'task-1', taskName: 'My Task' }])).toEqual([
+      { id: 'task-1', taskName: 'My Task', name: 'My Task (task-1)' },
+    ]);
+  });
+
   it('creates empty task data with default values', () => {
     expect(createEmptyTaskData()).toEqual({
       taskName: '',

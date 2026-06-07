@@ -15,7 +15,7 @@
           <section class="form-section">
             <div class="flex justify-content-between align-items-center">
               <label for="variant-fields">
-                <small class="text-gray-400 font-bold">Select an Existing Task </small>
+                <small class="text-gray-400 font-bold">Select task</small>
                 <span class="required">*</span></label
               >
               <div class="flex flex-column gap-2 align-items-end">
@@ -30,7 +30,7 @@
               v-model="v$.selectedGame.$model"
               :options="formattedTasks"
               option-label="name"
-              placeholder="Select a Game"
+              placeholder="Select task"
               :loading="isFetchingTasks"
               :class="['w-full', { 'p-invalid': v$.variantName.$invalid && submitted }]"
               name="variant-fields"
@@ -277,7 +277,7 @@
     <form @submit.prevent="handleUpdateVariant()">
       <section class="flex flex-column gap-2 mb-4 p-4">
         <label for="task-select" class="my-2">
-          <small class="text-gray-400 font-bold">Select an Existing Task </small>
+          <small class="text-gray-400 font-bold">Select task</small>
           <span class="required">*</span></label
         >
         <PvDropdown
@@ -285,7 +285,7 @@
           :options="formattedTasks"
           option-label="name"
           option-value="id"
-          placeholder="Select a Game"
+          placeholder="Select task"
           @click="clearFieldParamArrays()"
         />
         <label for="variant-select" class="my-2">
@@ -570,6 +570,7 @@ import useTaskSchemasQuery from '@/composables/queries/useTaskSchemasQuery';
 import useAddTaskVariantMutation from '@/composables/mutations/useAddTaskVariantMutation';
 import useUpdateTaskVariantMutation from '@/composables/mutations/useUpdateTaskVariantMutation';
 import useUpsertTaskSchemaMutation from '@/composables/mutations/useUpsertTaskSchemaMutation';
+import { formatTasksForDropdown } from '@/helpers/taskFields';
 import { getAllLanguageOptions, getPrimaryLanguageOptions, getLanguageInfo } from '@/helpers/languageDiscovery';
 
 const toast = useToast();
@@ -677,12 +678,7 @@ const { data: variants } = useTaskVariantsQuery(registeredTasksOnly, {
 
 const formattedTasks = computed(() => {
   if (!tasks.value) return [];
-  return tasks.value.map((task) => {
-    return {
-      name: task.taskName ?? task.id,
-      ...task,
-    };
-  });
+  return formatTasksForDropdown(tasks.value);
 });
 
 // Filter variants based on selected task

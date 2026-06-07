@@ -17,7 +17,7 @@
         :options="formattedTasks"
         option-label="name"
         option-value="id"
-        placeholder="Select a task"
+        placeholder="Select task"
         :loading="isFetchingTasks"
         class="w-full max-w-md"
         @change="onTaskChange"
@@ -116,6 +116,7 @@ import { useAuthStore } from '@/store/auth';
 import useTasksQuery from '@/composables/queries/useTasksQuery';
 import useTaskSchemasQuery from '@/composables/queries/useTaskSchemasQuery';
 import useUpsertTaskSchemaMutation from '@/composables/mutations/useUpsertTaskSchemaMutation';
+import { formatTasksForDropdown } from '@/helpers/taskFields';
 import type { ParamDefinitionType, ParamDefinitions, TaskSchemaResultItem } from '@/types/taskSchema';
 
 const toast = useToast();
@@ -162,7 +163,7 @@ const paramTypes = [
 
 const formattedTasks = computed(() => {
   if (!tasks.value) return [];
-  return tasks.value.map((t: { id: string; taskName?: string }) => ({ name: t.taskName ?? t.id, id: t.id }));
+  return formatTasksForDropdown(tasks.value);
 });
 
 function buildParamDefinitions(): Record<string, ParamDefinitionType> {
