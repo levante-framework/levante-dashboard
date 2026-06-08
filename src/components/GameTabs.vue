@@ -18,7 +18,9 @@
           class="game-tile__info"
           type="button"
           :aria-label="getTaskDescription(game)"
-          :aria-expanded="game.surveyPart ? descriptionModal?.gameCardId === game.gameCardId : describedGameCardId === game.gameCardId"
+          :aria-expanded="
+            game.surveyPart ? descriptionModal?.gameCardId === game.gameCardId : describedGameCardId === game.gameCardId
+          "
           @click="onInfoClick(game)"
         >
           <i class="pi pi-info"></i>
@@ -34,7 +36,11 @@
           @click="onGameCardClick($event, game)"
         >
           <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
-          <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" :alt="getTaskImageAlt(game)" />
+          <img
+            v-else
+            src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png"
+            :alt="getTaskImageAlt(game)"
+          />
           <span v-if="!game.surveyPart" class="game-tile__play game-tile__play--active" aria-hidden="true">
             <i class="pi pi-play"></i>
           </span>
@@ -42,8 +48,16 @@
 
         <div v-else class="game-tile__square --disabled">
           <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
-          <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" :alt="getTaskImageAlt(game)" />
-          <span v-if="!isTaskComplete(game) && !game.surveyPart" class="game-tile__play game-tile__play--locked" aria-hidden="true">
+          <img
+            v-else
+            src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png"
+            :alt="getTaskImageAlt(game)"
+          />
+          <span
+            v-if="!isTaskComplete(game) && !game.surveyPart"
+            class="game-tile__play game-tile__play--locked"
+            aria-hidden="true"
+          >
             <i class="pi pi-lock"></i>
           </span>
         </div>
@@ -182,8 +196,7 @@ const relationIds = computed((): (string | number)[] => {
 
 const surveyResponseDoc = computed((): SurveyResponseDoc | null => {
   const responses =
-    surveyResponsesData.value ??
-    queryClient.getQueryData<SurveyResponseDoc[]>([SURVEY_RESPONSES_QUERY_KEY]);
+    surveyResponsesData.value ?? queryClient.getQueryData<SurveyResponseDoc[]>([SURVEY_RESPONSES_QUERY_KEY]);
 
   if (!responses) return null;
 
