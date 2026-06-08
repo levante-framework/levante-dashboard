@@ -1067,7 +1067,6 @@ const syncSchemaFromCurrentConfig = async () => {
       schemaVersion: newVersion,
       params: { ...mergedParams },
     };
-    console.log('mark://variantData', variantData);
     await updateVariant(variantData, {
       onSuccess: () => {
         toast.add({
@@ -1178,7 +1177,6 @@ const handleUpdateVariant = async () => {
     ...(latestSchemaVersion != null && { schemaVersion: latestSchemaVersion }),
     params: { ...(updatedVariantData.params ?? {}) },
   };
-  console.log('mark://variantData2', variantData);
   await updateVariant(variantData, {
     onSuccess: () => {
       toast.add({

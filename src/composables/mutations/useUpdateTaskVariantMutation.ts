@@ -11,7 +11,6 @@ const useUpdateTaskVariantMutation = (): UseMutationReturnType<void, Error, Task
   return useMutation({
     mutationKey: TASK_VARIANT_UPDATE_MUTATION_KEY,
     mutationFn: async (variant: TaskVariantPayload): Promise<void> => {
-      console.log('mark://variantmutation', variant);
       await tasksRepository.upsertTaskVariant(variant);
     },
     onSuccess: (): void => {
