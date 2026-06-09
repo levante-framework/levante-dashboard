@@ -51,7 +51,7 @@
           </div>
 
           <div class="assignment__main">
-            <ParticipantSidebar :total-games="totalGames" :completed-games="completeGames" />
+            <ParticipantSidebar v-if="isUserChild" :total-games="totalGames" :completed-games="completeGames" />
 
             <div class="tabs-container">
               <Transition name="fade" mode="out-in">
@@ -148,6 +148,10 @@ const init = () => {
 
 const authStore = useAuthStore();
 const { roarfirekit, showOptionalAssessments, userData: currentUserData } = storeToRefs(authStore);
+
+const isUserChild = computed(
+  () => currentUserData.value.userType === 'child' || currentUserData.value.userType === 'student',
+);
 
 const assignmentsStore = useAssignmentsStore();
 const { selectedAssignment, selectedStatus, userAssignments } = storeToRefs(assignmentsStore);
@@ -718,8 +722,7 @@ watch(
 
 .tabs-container {
   display: block;
-  // 100% - (side chart width) - (parent gap)
-  width: calc(100% - 200px - 2rem);
+  flex: 1;
   min-width: 0;
   height: auto;
   margin: 0;
