@@ -1,83 +1,77 @@
 <template>
   <div id="games">
-    <div class="game-grid" role="list">
-      <div
-        v-for="game in displayGames"
-        :key="game.gameCardId"
-        class="game-tile"
-        :class="{
-          '--available': isTaskAvailable(game),
-          '--completed': isTaskComplete(game),
-          '--locked': !isTaskAvailable(game) && !isTaskComplete(game),
-          '--described': !game.surveyPart && describedGameCardId === game.gameCardId,
-          '--survey-part': Boolean(game.surveyPart),
-        }"
-        role="listitem"
-      >
-        <button
-          class="game-tile__info"
-          type="button"
-          :aria-label="getTaskDescription(game)"
-          :aria-expanded="
-            game.surveyPart ? descriptionModal?.gameCardId === game.gameCardId : describedGameCardId === game.gameCardId
-          "
-          @click="onInfoClick(game)"
-        >
-          <i class="pi pi-info"></i>
-        </button>
-
-        <i v-if="isTaskComplete(game)" class="game-tile__complete pi pi-check"></i>
-
+    <div class="game-cards">
+      <div v-for="game in displayGames" :key="game.gameCardId">
         <router-link
           v-if="isTaskAvailable(game)"
-          class="game-tile__square"
+          class="game-card game-card--available"
           :to="{ path: getRoutePath(game) }"
-          :aria-label="`${$t('gameTabs.clickToStart')}: ${getTaskName(game)}`"
           @click="onGameCardClick($event, game)"
         >
-          <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
-          <img
-            v-else
-            src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png"
-            :alt="getTaskImageAlt(game)"
-          />
-          <span v-if="!game.surveyPart" class="game-tile__play game-tile__play--active" aria-hidden="true">
-            <i class="pi pi-play"></i>
-          </span>
+          <div class="game-card__thumbnail" :style="{ backgroundImage: `url(${game.taskData.image})` }">
+            <div class="game-card__btn game-card__btn--play">
+              <i v-if="getSurveyPartProgressValue(game) <= 0" class="pi pi-play"></i>
+              <i v-else class="pi pi-angle-double-right"></i>
+            </div>
+          </div>
+
+          <div class="game-card__content">
+            <p class="game-card__name">{{ getTaskName(game) }}</p>
+
+            <div v-if="game.surveyPart" class="game-card__progress">
+              <div class="game-card__progress-header">
+                <small class="game-card__progress-label">Progress</small>
+                <small class="game-card__progress-value">{{ getSurveyPartProgressValue(game) }}%</small>
+              </div>
+
+              <div class="game-card__progress-trail">
+                <div class="game-card__progress-bar" :style="{ width: `${getSurveyPartProgressValue(game)}%` }"></div>
+              </div>
+            </div>
+
+            <p v-else class="game-card__description">{{ getTaskDescription(game) }}</p>
+          </div>
         </router-link>
-
-        <div v-else class="game-tile__square --disabled">
-          <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
-          <img
-            v-else
-            src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png"
-            :alt="getTaskImageAlt(game)"
-          />
-          <span
-            v-if="!isTaskComplete(game) && !game.surveyPart"
-            class="game-tile__play game-tile__play--locked"
-            aria-hidden="true"
-          >
-            <i class="pi pi-lock"></i>
-          </span>
-        </div>
-
-        <p v-if="!game.surveyPart" class="game-tile__description">
-          {{ getTaskDescription(game) }}
-        </p>
 
         <div
           v-else
-          class="game-tile__progress-wheel"
-          :style="{ '--survey-progress': `${getSurveyPartProgressValue(game) * 3.6}deg` }"
-          :aria-label="`${getTaskName(game)}: ${getSurveyPartProgressValue(game)}%`"
+          class="game-card"
+          :class="{
+            'game-card--complete': isTaskComplete(game),
+            'game-card--locked': !isTaskComplete(game) && !isTaskAvailable(game),
+          }"
         >
-          <span class="game-tile__progress-wheel-value">{{ getSurveyPartProgressValue(game) }}%</span>
-        </div>
+          <div class="game-card__thumbnail" :style="{ backgroundImage: `url(${game.taskData.image})` }">
+            <div v-if="isTaskComplete(game)" class="game-card__btn game-card__btn--complete">
+              <i class="pi pi-check"></i>
+            </div>
 
-        <h3 class="game-tile__name">
-          {{ getTaskName(game) }}
-        </h3>
+            <div v-else class="game-card__btn game-card__btn--locked">
+              <i class="pi pi-lock"></i>
+            </div>
+          </div>
+
+          <div class="game-card__content">
+            <p class="game-card__name">{{ getTaskName(game) }}</p>
+
+            <div v-if="game.surveyPart" class="game-card__progress">
+              <div class="game-card__progress-header">
+                <small class="game-card__progress-label">Progress</small>
+                <small class="game-card__progress-value">{{ getSurveyPartProgressValue(game) }}%</small>
+              </div>
+
+              <div class="game-card__progress-trail">
+                <div
+                  class="game-card__progress-bar"
+                  :class="{ 'game-card__progress-bar--complete': isTaskComplete(game) }"
+                  :style="{ width: `${getSurveyPartProgressValue(game)}%` }"
+                ></div>
+              </div>
+            </div>
+
+            <p v-else class="game-card__description">{{ getTaskDescription(game) }}</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -453,328 +447,171 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   min-width: 0;
 }
 
-.game-grid {
-  --game-tile-size: clamp(150px, 9vw, 200px);
-  --game-tile-radius: 26px;
-
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--game-tile-size)), var(--game-tile-size)));
-  justify-content: start;
-  justify-items: center;
-  gap: 2.5rem clamp(1rem, 2.5vw, 3rem);
+.game-cards {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 1.25rem;
   width: 100%;
-  max-width: 100%;
-  overflow-x: clip;
+  height: auto;
+  margin: 0;
+  padding: 0 0.25rem;
 }
 
-.game-tile {
-  position: relative;
+.game-card {
+  display: flex;
+  gap: 1rem;
+  width: 300px;
+  height: auto;
+  margin: 0;
+  padding: 0.75rem 1rem 0.75rem 0.75rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  color: var(--text-color);
+
+  &.game-card--available {
+    transition: box-shadow 0.2s ease-out;
+    box-shadow:
+      rgba(0, 0, 0, 0.07) 0px 1px 2px,
+      rgba(0, 0, 0, 0.07) 0px 2px 4px,
+      rgba(0, 0, 0, 0.07) 0px 4px 8px;
+
+    &:hover {
+      box-shadow:
+        rgba(0, 0, 0, 0.07) 0px 1px 2px,
+        rgba(0, 0, 0, 0.07) 0px 2px 4px,
+        rgba(0, 0, 0, 0.07) 0px 4px 8px,
+        rgba(0, 0, 0, 0.07) 0px 8px 16px,
+        rgba(0, 0, 0, 0.07) 0px 16px 32px;
+    }
+  }
+
+  &.game-card--complete {
+    background-color: #def6e5;
+  }
+
+  &.game-card--locked {
+    background-color: #e5e7eb;
+    opacity: 0.33;
+  }
+
+  @media screen and (max-width: 768px) {
+    width: 100%;
+    max-width: 270px;
+  }
+
+  @media screen and (max-width: 480px) {
+    max-width: 100%;
+  }
+}
+
+.game-card__thumbnail {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 88px;
+  height: 88px;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+  border-radius: 0.5rem;
+}
+
+.game-card__btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  background-color: rgba(#217af4, 0.8);
+  border-radius: 9999px;
+  box-shadow: 0 3px 5px rgba(black, 0.8);
+
+  .pi {
+    color: white;
+  }
+
+  &.game-card__btn--complete {
+    background-color: rgba(var(--bright-green-rgb), 0.8);
+  }
+
+  &.game-card__btn--locked {
+    background-color: rgba(white, 0.8);
+
+    .pi {
+      color: var(--text-color);
+    }
+  }
+}
+
+.game-card__content {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  width: var(--game-tile-size);
-  min-width: 0;
+  flex: 1;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0.5rem 0;
 }
 
-.game-tile::after {
+.game-card__name {
+  display: block;
+  margin: 0;
+  font-weight: 600;
+}
+
+.game-card__description {
+  display: block;
+  margin: 0.25rem 0 0;
+  font-size: 12px;
+}
+
+.game-card__progress {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: auto 0 0;
+}
+
+.game-card__progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.game-card__progress-label,
+.game-card__progress-value {
+  display: block;
+  margin: 0;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  text-transform: uppercase;
+}
+
+.game-card__progress-trail {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin: 0.25rem 0 0;
+  position: relative;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.game-card__progress-bar {
+  display: block;
+  height: 100%;
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 7;
-  display: none;
-  box-sizing: border-box;
-  width: var(--game-tile-size);
-  height: var(--game-tile-size);
-  border: 2px solid #fcd7b8;
-  border-radius: var(--game-tile-radius);
-  pointer-events: none;
-  content: '';
-}
+  background-color: var(--bright-yellow);
+  border-radius: 10px;
 
-.game-tile.--available:hover::after,
-.game-tile.--available.--described::after {
-  display: block;
-}
-
-.game-tile__square {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--game-tile-size);
-  height: var(--game-tile-size);
-  overflow: visible;
-  border: 0;
-  border-radius: var(--game-tile-radius);
-  background: var(--surface-100);
-  color: inherit;
-  text-decoration: none;
-  transition:
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
-}
-
-.game-tile__square img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  border-radius: var(--game-tile-radius);
-  object-fit: contain;
-}
-
-.game-tile__square > .pi {
-  font-size: 2.5rem;
-  color: var(--primary-color);
-}
-
-.game-tile.--available:hover .game-tile__square,
-.game-tile.--available.--described .game-tile__square,
-.game-tile.--available .game-tile__square:focus-visible {
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
-}
-
-.game-tile__square.--disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.game-tile__info,
-.game-tile__complete,
-.game-tile__play--locked {
-  position: absolute;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-}
-
-.game-tile__play--active {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: clamp(3rem, 3.25vw, 3.75rem);
-  height: clamp(3rem, 3.25vw, 3.75rem);
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12);
-  color: var(--text-color);
-  font-size: clamp(1.125rem, 1.15vw, 1.375rem);
-  line-height: 1;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-
-.game-tile__play--active .pi {
-  margin-left: 0.12em;
-}
-
-.game-tile__info {
-  top: 0.625rem;
-  left: 0.625rem;
-  width: clamp(1.25rem, 1.35vw, 1.5rem);
-  height: clamp(1.25rem, 1.35vw, 1.5rem);
-  padding: 0.25rem;
-  border: 1px solid var(--surface-600);
-  background: var(--surface-0);
-  box-sizing: border-box;
-  color: var(--surface-600);
-  cursor: pointer;
-  font-size: 0.375rem;
-  line-height: 1;
-}
-
-.game-tile__info .pi {
-  font-size: clamp(0.5625rem, 0.65vw, 0.75rem);
-}
-
-.game-tile__complete {
-  top: 0.625rem;
-  right: 0.625rem;
-  width: clamp(1.75rem, 1.8vw, 2.125rem);
-  height: clamp(1.75rem, 1.8vw, 2.125rem);
-  background: var(--bright-green);
-  color: white;
-  font-size: clamp(0.9375rem, 1vw, 1.125rem);
-}
-
-.game-tile__play--locked {
-  z-index: 5;
-  top: calc(var(--game-tile-size) - 3rem);
-  right: 0.75rem;
-  bottom: auto;
-  width: clamp(2rem, 2vw, 2.375rem);
-  height: clamp(2rem, 2vw, 2.375rem);
-  box-sizing: border-box;
-  border: 2px solid var(--surface-500);
-  background: rgba(255, 255, 255, 0.55);
-  color: var(--surface-600);
-  font-size: clamp(0.75rem, 0.8vw, 0.9375rem);
-  pointer-events: none;
-}
-
-.game-tile__description {
-  position: absolute;
-  inset: 0 auto auto 0;
-  z-index: 4;
-  display: none;
-  width: var(--game-tile-size);
-  height: var(--game-tile-size);
-  margin: 0;
-  padding: clamp(1.75rem, 2vw, 2.25rem) clamp(0.625rem, 1vw, 1rem) 0.75rem;
-  overflow: hidden;
-  border: 0;
-  border-radius: var(--game-tile-radius);
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--text-color);
-  font-size: clamp(0.875rem, 0.85vw, 1.0625rem);
-  line-height: 1.2;
-  text-align: center;
-  pointer-events: none;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 6;
-  line-clamp: 6;
-  align-content: center;
-}
-
-.game-tile__progress-wheel {
-  --wheel-size: clamp(4.5rem, 4.8vw, 5.5rem);
-
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--game-tile-size);
-  height: var(--game-tile-size);
-  border-radius: var(--game-tile-radius);
-  background: rgba(255, 255, 255, 0.94);
-  pointer-events: none;
-}
-
-.game-tile__progress-wheel::before {
-  position: absolute;
-  width: var(--wheel-size);
-  height: var(--wheel-size);
-  border-radius: 999px;
-  background: conic-gradient(from 0deg, var(--bright-green) var(--survey-progress), var(--surface-300) 0);
-  content: '';
-}
-
-.game-tile__progress-wheel::after {
-  position: absolute;
-  width: calc(var(--wheel-size) - 10px);
-  height: calc(var(--wheel-size) - 10px);
-  border-radius: 999px;
-  background: var(--surface-0);
-  content: '';
-}
-
-.game-tile__progress-wheel-value {
-  position: relative;
-  z-index: 1;
-  color: var(--text-color);
-  font-size: clamp(0.875rem, 0.85vw, 1rem);
-  font-weight: 600;
-  line-height: 1;
-}
-
-.game-tile.--described .game-tile__info,
-.game-tile:hover .game-tile__info,
-.game-tile.--described .game-tile__complete,
-.game-tile:hover .game-tile__complete {
-  z-index: 6;
-}
-
-.game-tile.--described .game-tile__description {
-  display: -webkit-box;
-}
-
-@media (hover: hover) {
-  .game-tile:hover .game-tile__description {
-    display: -webkit-box;
-  }
-}
-
-.game-tile.--survey-part .game-tile__progress-wheel {
-  display: none;
-  background: rgba(255, 255, 255, 0.88);
-}
-
-.game-tile.--survey-part.--locked .game-tile__progress-wheel {
-  opacity: 0.72;
-}
-
-@media (hover: hover) {
-  .game-tile.--survey-part:hover .game-tile__progress-wheel {
-    display: flex;
-  }
-}
-
-@media (hover: none) {
-  .game-tile.--survey-part .game-tile__progress-wheel {
-    display: flex;
-    background: rgba(255, 255, 255, 0.55);
-  }
-}
-
-.game-tile__name {
-  width: 100%;
-  margin: 1rem 0 0;
-  color: var(--text-color);
-  font-size: clamp(1rem, 1vw, 1.25rem);
-  font-weight: 500;
-  line-height: 1.35;
-  text-align: center;
-}
-
-.game-tile.--locked .game-tile__name {
-  color: var(--text-color-secondary);
-}
-
-.game-tile__modal-description {
-  margin: 0;
-  color: var(--text-color);
-  font-size: 1rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-@media screen and (max-width: 820px) {
-  .game-grid {
-    --game-tile-size: 128px;
-
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--game-tile-size)), var(--game-tile-size)));
-    gap: 2rem 2rem;
-    padding-bottom: 2rem;
-  }
-
-  .game-tile__description {
-    padding: 1.625rem 0.5rem 0.5rem;
-    font-size: 0.875rem;
-    line-height: 1.15;
-    -webkit-line-clamp: 5;
-    line-clamp: 5;
-  }
-
-  .game-tile__play--active {
-    width: 2.5rem;
-    height: 2.5rem;
-    font-size: 0.9375rem;
-  }
-}
-
-@media screen and (max-width: 340px) {
-  .game-grid {
-    --game-tile-size: min(112px, 100%);
+  &.game-card__progress-bar--complete {
+    background-color: var(--bright-green);
   }
 }
 </style>
