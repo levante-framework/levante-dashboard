@@ -1,229 +1,118 @@
 <template>
   <div id="games">
-    <PvTabs v-model:active-index="displayGameIndex" scrollable value="0">
-      <PvTabList>
-        <PvTab
-          v-for="(game, index) in games"
-          :key="game.taskId"
-          :disabled="
-            sequential &&
-            ((index > 0 && !games[index - 1].completedOn) ||
-              (allGamesComplete && currentGameId !== game.taskId && !game.completedOn))
-          "
-          :value="String(index)"
-          :class="[
-            'p3 mr-1 text-base hover:bg-black-alpha-10',
-            { 'text-green-500': isTaskComplete(game.completedOn, game.taskId) },
-          ]"
-          style="border: solid 2px #00000014 !important; border-radius: 10px"
+    <div class="game-grid" role="list">
+      <div
+        v-for="game in displayGames"
+        :key="game.gameCardId"
+        class="game-tile"
+        :class="{
+          '--available': isTaskAvailable(game),
+          '--completed': isTaskComplete(game),
+          '--locked': !isTaskAvailable(game) && !isTaskComplete(game),
+          '--described': !game.surveyPart && describedGameCardId === game.gameCardId,
+          '--survey-part': Boolean(game.surveyPart),
+        }"
+        role="listitem"
+      >
+        <button
+          class="game-tile__info"
+          type="button"
+          :aria-label="getTaskDescription(game)"
+          :aria-expanded="game.surveyPart ? descriptionModal?.gameCardId === game.gameCardId : describedGameCardId === game.gameCardId"
+          @click="onInfoClick(game)"
         >
-          <!--Complete Game-->
-          <i
-            v-if="isTaskComplete(game.completedOn, game.taskId)"
-            class="pi pi-check-circle mr-2"
-            data-game-status="complete"
-          />
-          <!--Current Game-->
-          <i
-            v-else-if="game.taskId == currentGameId || !sequential"
-            class="pi pi-circle mr-2"
-            data-game-status="current"
-          />
-          <!--Locked Game-->
-          <i v-if="sequential" class="pi pi-lock mr-2" data-game-status="incomplete" />
-          <span
-            class="tabview-nav-link-label"
-            :data-game-status="`${isTaskComplete(game.completedOn, game.taskId) ? 'complete' : 'incomplete'}`"
-            >{{ getTaskName(game.taskId, game.taskData.name) }}</span
-          >
-        </PvTab>
-      </PvTabList>
-      <PvTabPanels style="width: 100%; margin-top: 0.5rem; padding: 0">
-        <PvTabPanel
-          v-for="(game, index) in games"
-          :key="game.taskId"
-          :disabled="
-            sequential &&
-            ((index > 0 && !games[index - 1].completedOn) ||
-              (allGamesComplete && currentGameId !== game.taskId && !game.completedOn))
-          "
-          :value="String(index)"
-          class="p-0"
+          <i class="pi pi-info"></i>
+        </button>
+
+        <i v-if="isTaskComplete(game)" class="game-tile__complete pi pi-check"></i>
+
+        <router-link
+          v-if="isTaskAvailable(game)"
+          class="game-tile__square"
+          :to="{ path: getRoutePath(game) }"
+          :aria-label="`${$t('gameTabs.clickToStart')}: ${getTaskName(game)}`"
+          @click="onGameCardClick($event, game)"
         >
-          <div class="roar-tabview-game flex flex-row align-items-center p-5 surface-100 w-full">
-            <div class="roar-game-image">
-              <div>
-                <img
-                  v-if="game.taskData.image"
-                  :src="game.taskData.image"
-                  style="width: 100%; object-fit: contain; height: auto"
-                />
-                <img
-                  v-else
-                  src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png"
-                  style="width: 100%; object-fit: contain; height: auto"
-                />
-              </div>
-            </div>
+          <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
+          <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" :alt="getTaskImageAlt(game)" />
+          <span v-if="!game.surveyPart" class="game-tile__play game-tile__play--active" aria-hidden="true">
+            <i class="pi pi-play"></i>
+          </span>
+        </router-link>
 
-            <div class="roar-game-content flex flex-column">
-              <div class="flex flex-column h-full">
-                <div class="roar-game-title font-bold">
-                  {{ getTaskName(game.taskId, game.taskData.name) }}
-                </div>
-                <div class="roar-game-description">
-                  <p>
-                    {{ getTaskDescription(game.taskId, game.taskData.description) }}
-                  </p>
-                </div>
+        <div v-else class="game-tile__square --disabled">
+          <img v-if="game.taskData.image" :src="game.taskData.image" :alt="getTaskImageAlt(game)" />
+          <img v-else src="https://reading.stanford.edu/wp-content/uploads/2021/10/PA-1024x512.png" :alt="getTaskImageAlt(game)" />
+          <span v-if="!isTaskComplete(game) && !game.surveyPart" class="game-tile__play game-tile__play--locked" aria-hidden="true">
+            <i class="pi pi-lock"></i>
+          </span>
+        </div>
 
-                <div v-if="isAdultSurveyTask(game.taskId)" class="mt-4 mb-4">
-                  <div class="flex align-items-center mb-2">
-                    <span class="mr-2 w-4"
-                      ><b>{{ $t('gameTabs.surveyProgressGeneral') }} </b> -
-                      {{
-                        props.userData.userType === 'teacher' || props.userData.userType === 'parent'
-                          ? props.userData.userType === 'teacher'
-                            ? $t('gameTabs.surveyProgressGeneralTeacher')
-                            : $t('gameTabs.surveyProgressGeneralParent')
-                          : ''
-                      }}
-                    </span>
-                    <PvProgressBar :value="getGeneralSurveyProgress" :class="getGeneralSurveyProgressClass" />
-                  </div>
+        <p v-if="!game.surveyPart" class="game-tile__description">
+          {{ getTaskDescription(game) }}
+        </p>
 
-                  <div v-if="props.userData.userType === 'parent'">
-                    <div
-                      v-for="(child, i) in props.userData?.childIds"
-                      :key="child"
-                      class="flex flex-wrap align-items-center mb-2"
-                    >
-                      <span class="mr-2 w-full sm:w-4 mb-1 sm:mb-0">
-                        <b>{{ $t('gameTabs.surveyProgressSpecificParent') }} - </b>
-                        {{ $t('gameTabs.surveyProgressSpecificParentMonth') }}:
-                        {{ surveyStore.specificSurveyRelationData[i]?.birthMonth }}
-                        <br class="sm:hidden" />
-                        {{ $t('gameTabs.surveyProgressSpecificParentYear') }}:
-                        {{ surveyStore.specificSurveyRelationData[i]?.birthYear }}
-                      </span>
-                      <PvProgressBar :value="getSpecificSurveyProgress(i)" :class="getSpecificSurveyProgressClass(i)" />
-                    </div>
-                  </div>
+        <div
+          v-else
+          class="game-tile__progress-wheel"
+          :style="{ '--survey-progress': `${getSurveyPartProgressValue(game) * 3.6}deg` }"
+          :aria-label="`${getTaskName(game)}: ${getSurveyPartProgressValue(game)}%`"
+        >
+          <span class="game-tile__progress-wheel-value">{{ getSurveyPartProgressValue(game) }}%</span>
+        </div>
 
-                  <div v-if="props.userData.userType === 'teacher'">
-                    <div
-                      v-for="(classroom, i) in props.userData?.classes?.current"
-                      :key="classroom"
-                      class="flex flex-wrap align-items-center mb-2"
-                    >
-                      <span class="mr-2 w-full sm:w-4 mb-1 sm:mb-0">
-                        <b>Classroom - </b>
-                        {{ surveyStore.specificSurveyRelationData[i]?.name }}
-                      </span>
-                      <PvProgressBar :value="getSpecificSurveyProgress(i)" :class="getSpecificSurveyProgressClass(i)" />
-                    </div>
-                  </div>
-                </div>
+        <h3 class="game-tile__name">
+          {{ getTaskName(game) }}
+        </h3>
+      </div>
+    </div>
 
-                <div class="flex flex-column">
-                  <div class="roar-game-meta">
-                    <PvTag
-                      v-for="(items, metaIndex) in game.taskData.meta"
-                      :key="metaIndex"
-                      :value="metaIndex + ': ' + items"
-                    />
-                  </div>
-
-                  <div v-if="getAssignmentStatus(selectedAssignment) === ASSIGNMENT_STATUSES.CURRENT">
-                    <button
-                      v-if="isTaskComplete(game?.completedOn, game?.taskId)"
-                      class="game-btn --completed"
-                      disabled
-                    >
-                      <i class="pi pi-check-circle"></i>
-                      <span>{{ $t('gameTabs.taskCompleted') }}</span>
-                    </button>
-
-                    <router-link
-                      v-else
-                      class="game-btn"
-                      :to="{
-                        path: getRoutePath(game.taskId, game.taskData?.variantURL, game.taskData?.taskURL),
-                      }"
-                      @click="routeExternalTask(game)"
-                    >
-                      <img src="@/assets/arrow-circle.svg" alt="arrow-circle" />
-                      <span>{{ $t('gameTabs.clickToStart') }}</span>
-                    </router-link>
-                  </div>
-
-                  <div v-if="getAssignmentStatus(selectedAssignment) === ASSIGNMENT_STATUSES.UPCOMING">
-                    <div class="game-btn --disabled">
-                      <i class="pi pi-hourglass"></i>
-                      <span>{{ $t('gameTabs.taskNotYetAvailable') }}</span>
-                    </div>
-                  </div>
-
-                  <div v-if="getAssignmentStatus(selectedAssignment) === ASSIGNMENT_STATUSES.PAST">
-                    <div v-if="isTaskComplete(game?.completedOn, game?.taskId)" class="game-btn --disabled --completed">
-                      <i class="pi pi-check-circle"></i>
-                      <span>{{ $t('gameTabs.taskCompleted') }}</span>
-                    </div>
-
-                    <div v-else class="game-btn --disabled --incomplete">
-                      <i class="pi pi-ban"></i>
-                      <span>{{ $t('gameTabs.taskNoLongerAvailable') }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </PvTabPanel>
-      </PvTabPanels>
-    </PvTabs>
+    <PvDialog
+      v-model:visible="isDescriptionModalOpen"
+      modal
+      :header="descriptionModal?.title"
+      :style="{ width: 'min(90vw, 32rem)' }"
+      :draggable="false"
+    >
+      <p class="game-tile__modal-description">{{ descriptionModal?.description }}</p>
+    </PvDialog>
   </div>
 </template>
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
-import _get from 'lodash/get';
 import _find from 'lodash/find';
-import _findIndex from 'lodash/findIndex';
+// @ts-expect-error - @bdelab/roar-utils has no type declarations
 import { getAgeData } from '@bdelab/roar-utils';
-import PvTabPanel from 'primevue/tabpanel';
-import PvTabs from 'primevue/tabs';
-import PvTabList from 'primevue/tablist';
-import PvTab from 'primevue/tab';
-import PvTabPanels from 'primevue/tabpanels';
-import PvTag from 'primevue/tag';
+import { useRouter } from 'vue-router';
+import { useQueryClient } from '@tanstack/vue-query';
+import useSurveyResponsesQuery from '@/composables/queries/useSurveyResponsesQuery';
+import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
+import PvDialog from 'primevue/dialog';
 import { useAuthStore } from '@/store/auth';
 import { useSurveyStore } from '@/store/survey';
-import _capitalize from 'lodash/capitalize';
-import { useQueryClient } from '@tanstack/vue-query';
-import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
-import PvProgressBar from 'primevue/progressbar';
 import { useAssignmentsStore } from '@/store/assignments';
 import { ASSIGNMENT_STATUSES } from '@/constants';
 import { getAssignmentStatus } from '@/helpers/assignments';
 import { LEVANTE_TASK_IDS, ROAR_TASK_IDS } from '@/constants/coreTasks';
 import { logger } from '@/logger';
+import type { AdministrationType } from '@levante-framework/levante-zod';
+import type { DisplayGame, Game, SurveyResponseDoc } from '@/types/surveyGameCards';
+import {
+  expandGamesForDisplay,
+  getSurveyPartProgress,
+  isSurveyPartComplete,
+  isSurveyPartLocked,
+} from '@/helpers/surveyGameCards';
 
-interface TaskData {
-  name: string;
-  description: string;
-  image?: string;
-  tutorialVideo?: string;
-  variantURL?: string;
-  taskURL?: string;
-  meta?: Record<string, any>;
+interface SelectedAssignment extends AdministrationType {
+  id: string;
 }
 
-interface Game {
-  taskId: string;
-  completedOn?: string | Date;
-  taskData: TaskData;
+interface SurveyInstance {
+  data: Record<string, unknown>;
+  currentPageNo: number;
 }
 
 interface UserData {
@@ -247,15 +136,10 @@ interface Props {
   userData: UserData;
 }
 
-interface VideoOptions {
-  autoplay: boolean;
-  controls: boolean;
-  preload: boolean;
-  fluid: boolean;
-  sources: Array<{
-    src: string;
-    type: string;
-  }>;
+interface DescriptionModalState {
+  gameCardId: string;
+  title: string;
+  description: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -266,73 +150,23 @@ const authStore = useAuthStore();
 const surveyStore = useSurveyStore();
 const assignmentsStore = useAssignmentsStore();
 const { selectedAssignment } = storeToRefs(assignmentsStore);
+const activeAssignment = computed(
+  (): SelectedAssignment | null => selectedAssignment.value as SelectedAssignment | null,
+);
 const queryClient = useQueryClient();
-const surveyData = queryClient.getQueryData(['surveyResponses', props.userData.id]);
-
-const getGeneralSurveyProgress = computed((): number => {
-  if (surveyStore.isGeneralSurveyComplete) return 100;
-  if (!surveyStore.survey) return 0;
-  return Math.round(((surveyStore.survey.currentPageNo - 1) / (surveyStore.numGeneralPages - 1)) * 100);
-});
-
-const getGeneralSurveyProgressClass = computed((): string => {
-  if (getGeneralSurveyProgress.value > 0 && getGeneralSurveyProgress.value < 100) {
-    return 'p-progressbar--started';
-  }
-  if (getGeneralSurveyProgress.value === 100) {
-    return 'p-progressbar--completed';
-  }
-  return 'p-progressbar--empty';
-});
-
-const getSpecificSurveyProgress = computed(() => (loopIndex: number): number => {
-  if (surveyStore.isSpecificSurveyComplete) return 100;
-
-  const localStorageKey = `${LEVANTE_SURVEY_RESPONSES_KEY}-${props.userData.id}`;
-  const localStorageData = JSON.parse(localStorage.getItem(localStorageKey) || '{}');
-
-  if (localStorageData && surveyStore.specificSurveyRelationData[loopIndex]) {
-    const specificIdFromServer = surveyStore.specificSurveyRelationData[loopIndex].id;
-
-    if (specificIdFromServer === localStorageData.specificId) {
-      if (localStorageData.isComplete) return 100;
-
-      const currentPage = localStorageData.pageNo || 0;
-      const totalPages = surveyStore.numSpecificPages || 1;
-
-      return Math.round((currentPage / totalPages) * 100);
-    }
-  }
-
-  // If data is not found in localStorage, use surveyData from server
-  if (!surveyData || !Array.isArray(surveyData)) return 0;
-
-  const currentSurvey = (surveyData as any[]).find((doc) => doc.administrationId === selectedAssignment.value.id);
-  if (!currentSurvey || !currentSurvey.specific || !currentSurvey.specific[loopIndex]) return 0;
-
-  // Specific survey is complete
-  const specificSurvey = currentSurvey.specific[loopIndex];
-  if (specificSurvey.isComplete) return 100;
-
-  // Specific survey is incomplete
-  const currentPage = currentSurvey.pageNo || 0;
-  const totalPages = surveyStore.numSpecificPages || 1;
-
-  return Math.round((currentPage / totalPages) * 100);
-});
-
-const getSpecificSurveyProgressClass = computed(() => (loopIndex: number): string => {
-  const value = getSpecificSurveyProgress.value(loopIndex);
-  if (value > 0 && value < 100) {
-    return 'p-progressbar--started';
-  }
-  if (value === 100) {
-    return 'p-progressbar--completed';
-  }
-  return 'p-progressbar--empty';
-});
+const { data: surveyResponsesData } = useSurveyResponsesQuery();
+const router = useRouter();
+const describedGameCardId = ref<string | null>(null);
+const descriptionModal = ref<DescriptionModalState | null>(null);
 
 const { t, locale } = useI18n();
+
+const isDescriptionModalOpen = computed({
+  get: () => descriptionModal.value !== null,
+  set: (visible: boolean) => {
+    if (!visible) descriptionModal.value = null;
+  },
+});
 
 const toCamelCase = (taskId: string): string => taskId.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
 const normalizedLevanteTaskIds = new Set(LEVANTE_TASK_IDS.map((taskId) => toCamelCase(taskId)));
@@ -340,92 +174,240 @@ const normalizedRoarTaskIds = new Set(ROAR_TASK_IDS.map((taskId) => toCamelCase(
 
 const isLevanteTask = (taskId: string): boolean => normalizedLevanteTaskIds.has(toCamelCase(taskId));
 const isRoarTask = (taskId: string): boolean => normalizedRoarTaskIds.has(toCamelCase(taskId));
-const isSurveyTask = (taskId: string): boolean => taskId.toLowerCase().includes('survey');
-const isAdultSurveyTask = (taskId: string): boolean =>
-  isSurveyTask(taskId) && (props.userData.userType === 'teacher' || props.userData.userType === 'parent');
 
-const getTaskName = (taskId: string, taskName: string): string => {
-  // Translate Levante task names. The task name is not the same as the taskId.
-  const taskIdLowercased = taskId.toLowerCase();
-  const normalizedTaskId = toCamelCase(taskIdLowercased);
+const relationIds = computed((): (string | number)[] => {
+  if (props.userData.userType === 'teacher') return props.userData.classes?.current ?? [];
+  return props.userData.childIds ?? [];
+});
 
-  if (taskIdLowercased.includes('survey')) {
-    if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
-      return t(`gameTabs.surveyName${_capitalize(props.userData.userType)}Part1`);
-    } else {
-      // child
-      return t('gameTabs.surveyNameChild');
-    }
+const surveyResponseDoc = computed((): SurveyResponseDoc | null => {
+  const responses =
+    surveyResponsesData.value ??
+    queryClient.getQueryData<SurveyResponseDoc[]>([SURVEY_RESPONSES_QUERY_KEY]);
+
+  if (!responses) return null;
+
+  const assignmentId = activeAssignment.value?.id;
+  if (!assignmentId) return null;
+
+  return responses.find((doc: SurveyResponseDoc) => doc?.administrationId === assignmentId) ?? null;
+});
+
+const displayGames = computed((): DisplayGame[] =>
+  expandGamesForDisplay(
+    props.games,
+    props.userData.userType,
+    surveyStore.specificSurveyRelationData,
+    relationIds.value,
+  ),
+);
+
+const getSurveyPartName = (game: DisplayGame): string => {
+  const part = game.surveyPart;
+  if (!part) return game.taskData.name;
+
+  if (part.type === 'general') {
+    if (props.userData.userType === 'teacher') return t('gameTabs.surveyNameTeacherPart1');
+    return `Survey - ${t('gameTabs.surveyProgressGeneral')}`;
   }
 
-  if (isLevanteTask(taskIdLowercased)) {
-    return t(`gameTabs.${normalizedTaskId}Name`);
+  if (props.userData.userType === 'teacher') {
+    const relation = surveyStore.specificSurveyRelationData[part.index] as Record<string, unknown> | undefined;
+    const classroomName = relation?.name as string | undefined;
+    return classroomName
+      ? `${t('gameTabs.surveyNameTeacherPart2')}: ${classroomName}`
+      : t('gameTabs.surveyNameTeacherPart2');
   }
 
-  if (isRoarTask(taskIdLowercased)) {
-    return t(`gameTabs.${normalizedTaskId}`);
+  const relation = surveyStore.specificSurveyRelationData[part.index] as Record<string, unknown> | undefined;
+  const childNumber = part.index + 1;
+  if (relation?.birthMonth || relation?.birthYear) {
+    return `Survey - ${t('gameTabs.surveyProgressSpecificParent')} ${childNumber} (${relation.birthMonth ?? ''}/${
+      relation.birthYear ?? ''
+    })`;
   }
 
-  return taskName;
+  return `Survey - ${t('gameTabs.surveyProgressSpecificParent')} ${childNumber}`;
 };
 
-const getTaskDescription = (taskId: string, taskDescription: string): string => {
-  // Translate Levante task descriptions if not in English
-  const taskIdLowercased = taskId.toLowerCase();
+const getSurveyPartDescription = (game: DisplayGame): string => {
+  const part = game.surveyPart;
+  if (!part) return game.taskData.description;
+
+  if (props.userData.userType === 'teacher') {
+    return part.type === 'general'
+      ? t('gameTabs.surveyDescriptionTeacherPart1')
+      : t('gameTabs.surveyDescriptionTeacherPart2');
+  }
+
+  return part.type === 'general'
+    ? t('gameTabs.surveyDescriptionParentPart2')
+    : t('gameTabs.surveyDescriptionParentPart1');
+};
+
+const getTaskName = (game: DisplayGame): string => {
+  if (game.surveyPart) return getSurveyPartName(game);
+
+  const taskIdLowercased = game.taskId.toLowerCase();
   const normalizedTaskId = toCamelCase(taskIdLowercased);
 
   if (taskIdLowercased.includes('survey')) {
-    if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
-      return t(`gameTabs.surveyDescription${_capitalize(props.userData.userType)}Part1`);
-    } else {
-      // child
-      return t('gameTabs.surveyDescriptionChild');
-    }
+    return t('gameTabs.surveyNameChild');
+  }
+
+  if (isLevanteTask(taskIdLowercased)) return t(`gameTabs.${normalizedTaskId}Name`);
+  if (isRoarTask(taskIdLowercased)) return t(`gameTabs.${normalizedTaskId}`);
+
+  return game.taskData.name;
+};
+
+const getTaskImageAlt = (game: DisplayGame): string => `${getTaskName(game)} thumbnail`;
+
+const getTaskDescription = (game: DisplayGame): string => {
+  if (game.surveyPart) return getSurveyPartDescription(game);
+
+  const taskIdLowercased = game.taskId.toLowerCase();
+  const normalizedTaskId = toCamelCase(taskIdLowercased);
+
+  if (taskIdLowercased.includes('survey')) {
+    return t('gameTabs.surveyDescriptionChild');
   }
 
   if (isLevanteTask(taskIdLowercased) || isRoarTask(taskIdLowercased)) {
     return t(`gameTabs.${normalizedTaskId}Description`);
   }
 
-  return taskDescription;
+  return game.taskData.description;
 };
 
-const getRoutePath = (taskId: string, variantURL?: string, taskURL?: string): string => {
-  // do not navigate if the task is external
-  if (variantURL || taskURL) return '/';
+const getRoutePath = (game: DisplayGame): string => {
+  const { taskId, taskData } = game;
+  if (taskData?.variantURL || taskData?.taskURL) return '/';
 
   const camelizedTaskId = toCamelCase(taskId.toLowerCase());
 
   if (camelizedTaskId === 'teacherSurvey' || camelizedTaskId === 'caregiverSurvey' || camelizedTaskId === 'survey') {
     return '/survey';
-  } else if (normalizedLevanteTaskIds.has(camelizedTaskId)) {
-    return '/game/core-tasks/' + taskId;
+  }
+
+  if (normalizedLevanteTaskIds.has(camelizedTaskId)) return '/game/core-tasks/' + taskId;
+
+  logger.capture(`Task ${camelizedTaskId} is not a core task`, { taskId });
+  return '/game/' + taskId;
+};
+
+const getSurveyPartProgressValue = (game: DisplayGame): number => {
+  if (!game.surveyPart) return 0;
+
+  return getSurveyPartProgress(
+    game.surveyPart,
+    props.userData.id,
+    surveyStore,
+    surveyResponseDoc.value,
+    relationIds.value,
+  );
+};
+
+const currentGameCardId = computed((): string | undefined => {
+  return _find(displayGames.value, (game) => !isTaskComplete(game))?.gameCardId;
+});
+
+const isCurrentAssignment = computed((): boolean => {
+  const assignment = activeAssignment.value;
+  if (!assignment) return false;
+  return getAssignmentStatus(assignment) === ASSIGNMENT_STATUSES.CURRENT;
+});
+
+const getSurveyInstance = (): SurveyInstance | null => surveyStore.survey as SurveyInstance | null;
+
+const isSurveyPartGameCardComplete = (game: DisplayGame): boolean => {
+  if (!game.surveyPart) return false;
+  return isSurveyPartComplete(game.surveyPart, surveyStore, surveyResponseDoc.value);
+};
+
+const isSurveyPartGameCardLocked = (game: DisplayGame): boolean => {
+  if (!game.surveyPart) return false;
+  return isSurveyPartLocked(game.surveyPart, surveyStore, surveyResponseDoc.value);
+};
+
+const isTaskComplete = (game: DisplayGame): boolean => {
+  if (game.surveyPart) return isSurveyPartGameCardComplete(game);
+
+  return Boolean(game.completedOn);
+};
+
+const isTaskAvailable = (game: DisplayGame): boolean => {
+  if (!isCurrentAssignment.value || isTaskComplete(game)) return false;
+  if (game.surveyPart && isSurveyPartGameCardLocked(game)) return false;
+  if (!props.sequential) return true;
+  return game.gameCardId === currentGameCardId.value;
+};
+
+const onInfoClick = (game: DisplayGame): void => {
+  if (game.surveyPart) {
+    descriptionModal.value = {
+      gameCardId: game.gameCardId,
+      title: getTaskName(game),
+      description: getTaskDescription(game),
+    };
+    return;
+  }
+
+  describedGameCardId.value = describedGameCardId.value === game.gameCardId ? null : game.gameCardId;
+};
+
+const setSurveyResponses = (responses?: Record<string, { responseValue?: unknown } | unknown>): void => {
+  const surveyInstance = getSurveyInstance();
+  if (!surveyInstance || !responses) return;
+
+  surveyInstance.data = Object.fromEntries(
+    Object.entries(responses).map(([key, value]) => [
+      key,
+      (value as { responseValue?: unknown })?.responseValue ?? value,
+    ]),
+  );
+};
+
+const launchSurveyPart = (game: DisplayGame): void => {
+  const part = game.surveyPart;
+  if (!part || isSurveyPartGameCardComplete(game) || isSurveyPartGameCardLocked(game)) return;
+
+  if (part.type === 'general') {
+    surveyStore.setIsGeneralSurveyComplete(false);
+    surveyStore.setSpecificSurveyRelationIndex(0);
+    setSurveyResponses(surveyResponseDoc.value?.general?.responses);
   } else {
-    logger.capture(`Task ${camelizedTaskId} is not a core task`, { taskId });
-    return '/game/' + taskId;
+    surveyStore.setIsGeneralSurveyComplete(true);
+    surveyStore.setSpecificSurveyRelationIndex(part.index);
+    setSurveyResponses(surveyResponseDoc.value?.specific?.[part.index]?.responses);
+  }
+
+  const progress = getSurveyPartProgressValue(game);
+  const surveyInstance = getSurveyInstance();
+  if (surveyInstance) {
+    surveyInstance.currentPageNo = progress > 0 && progress < 100 ? surveyResponseDoc.value?.pageNo || 0 : 0;
+  }
+
+  router.push({ path: '/survey' });
+};
+
+const onGameCardClick = async (event: MouseEvent, game: DisplayGame): Promise<void> => {
+  if (game.taskData?.variantURL || game.taskData?.taskURL) {
+    event.preventDefault();
+    await routeExternalTask(game);
+    return;
+  }
+
+  if (game.surveyPart) {
+    event.preventDefault();
+    launchSurveyPart(game);
   }
 };
 
-const currentGameId = computed((): string | undefined => {
-  return _get(
-    _find(props.games, (game) => {
-      return game.completedOn === undefined;
-    }),
-    'taskId',
-  );
-});
+async function routeExternalTask(game: DisplayGame): Promise<void> {
+  const assignment = activeAssignment.value;
+  if (!assignment?.id) return;
 
-const gameIndex = computed((): number =>
-  _findIndex(props.games, (game) => {
-    return game.taskId === currentGameId.value;
-  }),
-);
-
-const displayGameIndex = computed((): number => (gameIndex.value === -1 ? 0 : gameIndex.value));
-
-const allGamesComplete = computed((): boolean => gameIndex.value === -1);
-
-async function routeExternalTask(game: Game): Promise<void> {
   let url: string;
 
   if (game.taskData?.variantURL) {
@@ -433,7 +415,6 @@ async function routeExternalTask(game: Game): Promise<void> {
   } else if (game.taskData?.taskURL) {
     url = game.taskData.taskURL;
   } else {
-    // Not an external task
     return;
   }
 
@@ -441,233 +422,346 @@ async function routeExternalTask(game: Game): Promise<void> {
     const ageInMonths = getAgeData(props.userData.birthMonth, props.userData.birthYear).ageMonths;
     url += `participantID=${props.userData.id}&participantAgeInMonths=${ageInMonths}&lng=${locale.value}`;
     window.open(url, '_blank')?.focus();
-    await (authStore as any).completeAssessment(selectedAssignment.value.id, game.taskId);
+    await authStore.completeAssessment(assignment.id, game.taskId);
   } else {
     url += `&participant=${props.userData.assessmentPid}${
       props.userData.schools?.current?.length ? '&schoolId=' + props.userData.schools.current.join('"%2C"') : ''
     }${props.userData.classes?.current?.length ? '&classId=' + props.userData.classes.current.join('"%2C"') : ''}`;
 
-    await (authStore as any).completeAssessment(selectedAssignment.value.id, game.taskId);
+    await authStore.completeAssessment(assignment.id, game.taskId);
     window.location.href = url;
   }
 }
-
-const returnVideoOptions = (videoURL: string): VideoOptions => {
-  return {
-    autoplay: false,
-    controls: true,
-    preload: true,
-    fluid: true,
-    sources: [
-      {
-        src: videoURL,
-        type: 'video/mp4',
-      },
-    ],
-  };
-};
-
-const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: string): boolean => {
-  if (isSurveyTask(taskId)) {
-    if (props.userData.userType === 'teacher' || props.userData.userType === 'parent') {
-      if (!surveyStore.isGeneralSurveyComplete) {
-        return false;
-      } else if (surveyStore.specificSurveyRelationData.length > 0 && !surveyStore.isSpecificSurveyComplete) {
-        return false;
-      } else {
-        return true;
-      }
-    } else {
-      // child
-      return surveyStore.isGeneralSurveyComplete;
-    }
-  }
-
-  return gameCompletedTime ? true : false;
-};
 </script>
 
 <style scoped lang="scss">
-.game-tab-container {
-  width: 80vw;
-  min-width: 800px;
-  max-width: 1200px;
-}
-
-.pointer {
-  cursor: pointer;
-}
-
-.video-player-wrapper {
+#games {
   width: 100%;
-  height: 300px;
+  min-width: 0;
+}
+
+.game-grid {
+  --game-tile-size: clamp(150px, 9vw, 200px);
+  --game-tile-radius: 26px;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--game-tile-size)), var(--game-tile-size)));
+  justify-content: start;
+  justify-items: center;
+  gap: 2.5rem clamp(1rem, 2.5vw, 3rem);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.game-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: var(--game-tile-size);
+  min-width: 0;
+}
+
+.game-tile::after {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 7;
+  display: none;
+  box-sizing: border-box;
+  width: var(--game-tile-size);
+  height: var(--game-tile-size);
+  border: 2px solid #fcd7b8;
+  border-radius: var(--game-tile-radius);
+  pointer-events: none;
+  content: '';
+}
+
+.game-tile.--available:hover::after,
+.game-tile.--available.--described::after {
+  display: block;
+}
+
+.game-tile__square {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--game-tile-size);
+  height: var(--game-tile-size);
+  overflow: visible;
+  border: 0;
+  border-radius: var(--game-tile-radius);
+  background: var(--surface-100);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.game-tile__square img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--game-tile-radius);
+  object-fit: contain;
+}
+
+.game-tile__square > .pi {
+  font-size: 2.5rem;
+  color: var(--primary-color);
+}
+
+.game-tile.--available:hover .game-tile__square,
+.game-tile.--available.--described .game-tile__square,
+.game-tile.--available .game-tile__square:focus-visible {
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+}
+
+.game-tile__square.--disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.game-tile__info,
+.game-tile__complete,
+.game-tile__play--locked {
+  position: absolute;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+}
+
+.game-tile__play--active {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(3rem, 3.25vw, 3.75rem);
+  height: clamp(3rem, 3.25vw, 3.75rem);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12);
+  color: var(--text-color);
+  font-size: clamp(1.125rem, 1.15vw, 1.375rem);
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.game-tile__play--active .pi {
+  margin-left: 0.12em;
+}
+
+.game-tile__info {
+  top: 0.625rem;
+  left: 0.625rem;
+  width: clamp(1.25rem, 1.35vw, 1.5rem);
+  height: clamp(1.25rem, 1.35vw, 1.5rem);
+  padding: 0.25rem;
+  border: 1px solid var(--surface-600);
+  background: var(--surface-0);
+  box-sizing: border-box;
+  color: var(--surface-600);
+  cursor: pointer;
+  font-size: 0.375rem;
+  line-height: 1;
+}
+
+.game-tile__info .pi {
+  font-size: clamp(0.5625rem, 0.65vw, 0.75rem);
+}
+
+.game-tile__complete {
+  top: 0.625rem;
+  right: 0.625rem;
+  width: clamp(1.75rem, 1.8vw, 2.125rem);
+  height: clamp(1.75rem, 1.8vw, 2.125rem);
+  background: var(--bright-green);
+  color: white;
+  font-size: clamp(0.9375rem, 1vw, 1.125rem);
+}
+
+.game-tile__play--locked {
+  z-index: 5;
+  top: calc(var(--game-tile-size) - 3rem);
+  right: 0.75rem;
+  bottom: auto;
+  width: clamp(2rem, 2vw, 2.375rem);
+  height: clamp(2rem, 2vw, 2.375rem);
+  box-sizing: border-box;
+  border: 2px solid var(--surface-500);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--surface-600);
+  font-size: clamp(0.75rem, 0.8vw, 0.9375rem);
+  pointer-events: none;
+}
+
+.game-tile__description {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: 4;
+  display: none;
+  width: var(--game-tile-size);
+  height: var(--game-tile-size);
+  margin: 0;
+  padding: clamp(1.75rem, 2vw, 2.25rem) clamp(0.625rem, 1vw, 1rem) 0.75rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--game-tile-radius);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text-color);
+  font-size: clamp(0.875rem, 0.85vw, 1.0625rem);
+  line-height: 1.2;
+  text-align: center;
+  pointer-events: none;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
+  align-content: center;
+}
+
+.game-tile__progress-wheel {
+  --wheel-size: clamp(4.5rem, 4.8vw, 5.5rem);
+
+  position: absolute;
+  inset: 0;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: var(--game-tile-size);
+  height: var(--game-tile-size);
+  border-radius: var(--game-tile-radius);
+  background: rgba(255, 255, 255, 0.94);
+  pointer-events: none;
 }
 
-.roar-tabview-game {
-  display: flex;
-  flex-direction: row;
-  gap: 2rem;
+.game-tile__progress-wheel::before {
+  position: absolute;
+  width: var(--wheel-size);
+  height: var(--wheel-size);
+  border-radius: 999px;
+  background: conic-gradient(from 0deg, var(--bright-green) var(--survey-progress), var(--surface-300) 0);
+  content: '';
+}
+
+.game-tile__progress-wheel::after {
+  position: absolute;
+  width: calc(var(--wheel-size) - 10px);
+  height: calc(var(--wheel-size) - 10px);
+  border-radius: 999px;
+  background: var(--surface-0);
+  content: '';
+}
+
+.game-tile__progress-wheel-value {
+  position: relative;
+  z-index: 1;
+  color: var(--text-color);
+  font-size: clamp(0.875rem, 0.85vw, 1rem);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.game-tile.--described .game-tile__info,
+.game-tile:hover .game-tile__info,
+.game-tile.--described .game-tile__complete,
+.game-tile:hover .game-tile__complete {
+  z-index: 6;
+}
+
+.game-tile.--described .game-tile__description {
+  display: -webkit-box;
+}
+
+@media (hover: hover) {
+  .game-tile:hover .game-tile__description {
+    display: -webkit-box;
+  }
+}
+
+.game-tile.--survey-part .game-tile__progress-wheel {
+  display: none;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.game-tile.--survey-part.--locked .game-tile__progress-wheel {
+  opacity: 0.72;
+}
+
+@media (hover: hover) {
+  .game-tile.--survey-part:hover .game-tile__progress-wheel {
+    display: flex;
+  }
+}
+
+@media (hover: none) {
+  .game-tile.--survey-part .game-tile__progress-wheel {
+    display: flex;
+    background: rgba(255, 255, 255, 0.55);
+  }
+}
+
+.game-tile__name {
   width: 100%;
-  border-radius: 10px;
-}
-
-.roar-game-image {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  max-width: 200px;
-}
-
-.roar-game-content {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-}
-
-.roar-game-description {
-  margin-bottom: 0.5rem;
-}
-
-.roar-game-footer {
-  margin-top: auto;
-  width: 100%;
+  margin: 1rem 0 0;
+  color: var(--text-color);
+  font-size: clamp(1rem, 1vw, 1.25rem);
+  font-weight: 500;
+  line-height: 1.35;
   text-align: center;
 }
 
-.game-btn {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.75rem;
+.game-tile.--locked .game-tile__name {
+  color: var(--text-color-secondary);
+}
+
+.game-tile__modal-description {
   margin: 0;
-  padding: 1rem;
-  background: white;
-  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
-  border-radius: 0.5rem;
-  font-weight: 700;
-  font-size: 1.125rem;
-  color: inherit;
-  text-decoration: none;
-  user-select: none;
-  min-width: 300px;
-  box-sizing: border-box;
-  transition: box-shadow 0.2s ease-in-out;
+  color: var(--text-color);
+  font-size: 1rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
 
-  // Reset native <button> when .game-btn is used on `<button>` (e.g. completed task)
-  border: none;
-  cursor: pointer;
-  font: inherit;
-  appearance: none;
+@media screen and (max-width: 820px) {
+  .game-grid {
+    --game-tile-size: 128px;
 
-  &[disabled] {
-    cursor: not-allowed;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--game-tile-size)), var(--game-tile-size)));
+    gap: 2rem 2rem;
+    padding-bottom: 2rem;
   }
 
-  .pi {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 24px;
-    height: 24px;
-    margin: 0;
-    padding: 0;
-    border-radius: 100%;
-    background: transparent;
-    font-weight: 900;
-    font-size: 12px;
-    color: white;
+  .game-tile__description {
+    padding: 1.625rem 0.5rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.15;
+    -webkit-line-clamp: 5;
+    line-clamp: 5;
   }
 
-  &:hover {
-    box-shadow: 3px 3px 7px rgba(0, 0, 0, 0.2);
-  }
-
-  &.--disabled {
-    cursor: not-allowed;
-    box-shadow: none;
-    border: 2px solid rgba(var(--bright-yellow-rgb), 0.3);
-    background: rgba(var(--bright-yellow-rgb), 0.2);
-
-    .pi {
-      background: var(--bright-yellow);
-    }
-
-    &:hover {
-      background: rgba(var(--bright-yellow-rgb), 0.2);
-    }
-  }
-
-  &.--completed {
-    box-shadow: none;
-    border: 2px solid rgba(var(--bright-green-rgb), 0.2);
-    background: rgba(var(--bright-green-rgb), 0.1);
-
-    .pi {
-      background: var(--bright-green);
-    }
-
-    &:hover {
-      background: rgba(var(--bright-green-rgb), 0.1);
-    }
-  }
-
-  &.--incomplete {
-    cursor: not-allowed;
-    box-shadow: none;
-    border: 2px solid rgba(var(--bright-red-rgb), 0.2);
-    background: rgba(var(--bright-red-rgb), 0.1);
-
-    .pi {
-      background: var(--bright-red);
-    }
-
-    &:hover {
-      background: rgba(var(--bright-red-rgb), 0.1);
-    }
+  .game-tile__play--active {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.9375rem;
   }
 }
 
-.p-progressbar {
-  flex-grow: 1;
-  width: 100%;
-
-  &.p-progressbar--started :deep(.p-progressbar-value) {
-    background-color: var(--yellow-400);
-  }
-
-  &.p-progressbar--completed :deep(.p-progressbar-value) {
-    background-color: var(--green-500);
-  }
-}
-
-@media screen and (max-width: 800px) {
-  .game-tab-container {
-    width: 100%;
-    min-width: 100%;
-  }
-
-  .roar-tabview-game {
-    flex-direction: column;
-    min-height: auto;
-  }
-
-  .roar-game-image,
-  .roar-game-content {
-    flex: 0 0 100%;
-    width: 100%;
-    padding-right: 0;
-  }
-
-  .roar-game-image {
-    margin-top: 1rem;
-  }
-
-  .video-player-wrapper {
-    width: 100%;
-    height: 250px;
+@media screen and (max-width: 340px) {
+  .game-grid {
+    --game-tile-size: min(112px, 100%);
   }
 }
 </style>

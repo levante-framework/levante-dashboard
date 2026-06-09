@@ -722,8 +722,10 @@ watch(
 
 .assignment__main {
   display: flex;
+  align-items: flex-start;
   gap: 2rem;
   width: 100%;
+  min-width: 0;
   height: auto;
   margin: 2rem 0 0;
 }
@@ -732,9 +734,11 @@ watch(
   display: block;
   // 100% - (side chart width) - (parent gap)
   width: calc(100% - 200px - 2rem);
+  min-width: 0;
   height: auto;
   margin: 0;
   padding: 0;
+  overflow-x: clip;
 }
 
 .assignment-select-container {
@@ -743,5 +747,38 @@ watch(
 
 .switch-container {
   min-width: 24%;
+}
+
+@media screen and (max-width: 820px) {
+  .assignment {
+    padding: 1rem;
+  }
+
+  .assignment__dates {
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+  }
+
+  .assignment__main {
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .tabs-container {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+}
+
+@media screen and (max-width: 520px) {
+  .assignment {
+    padding: 0.75rem;
+  }
+
+  .assignment__name {
+    font-size: 1.25rem;
+  }
 }
 </style>
