@@ -20,8 +20,8 @@
 
   <div class="mobile-participant-sidebar">
     <div class="mobile-participant-sidebar__header">
-      <p class="mobile-participant-sidebar__label">{{ $t('participantSidebar.tasksCompleted') }}</p>
       <div class="mobile-participant-sidebar__value">{{ completedGames }}/{{ totalGames }}</div>
+      <p class="mobile-participant-sidebar__label">{{ $t('participantSidebar.tasksCompleted') }}</p>
     </div>
 
     <div class="mobile-participant-sidebar__progress-trail">
@@ -169,8 +169,9 @@ const setChartData = (completed: number, incomplete: number): ChartData => {
 
 .mobile-participant-sidebar__header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .mobile-participant-sidebar__label,
