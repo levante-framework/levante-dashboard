@@ -23,59 +23,58 @@
 
       <div v-else>
         <div class="assignment">
-        <div class="assignment__header">
-          <PvTag
-            :value="t(`participantSidebar.status${capitalize(getAssignmentStatus(selectedAssignment))}`)"
-            class="text-xs uppercase"
-            :class="`assignment__status --${getAssignmentStatus(selectedAssignment)}`"
-          />
+          <div class="assignment__header">
+            <PvTag
+              :value="t(`participantSidebar.status${capitalize(getAssignmentStatus(selectedAssignment))}`)"
+              class="text-xs uppercase"
+              :class="`assignment__status --${getAssignmentStatus(selectedAssignment)}`"
+            />
 
+            <h2 class="assignment__name">
+              {{ selectedAssignment?.publicName || selectedAssignment?.name }}
+            </h2>
 
-          <h2 class="assignment__name">
-            {{ selectedAssignment?.publicName || selectedAssignment?.name }}
-          </h2>
-
-          <div v-if="selectedAssignment?.dateOpened && selectedAssignment?.dateClosed" class="assignment__dates">
-            <div class="assignment__date">
-              <i class="pi pi-calendar"></i>
-              <small
-                ><span class="font-bold">{{ assignmentStartDateLabel }}</span>
-                {{ formattedStartDate }}</small
-              >
-            </div>
-            <div class="assignment__date">
-              <i class="pi pi-calendar"></i>
-              <small
-                ><span class="font-bold">{{ assignmentEndDateLabel }}</span>
-                {{ formattedEndDate }}</small
-              >
+            <div v-if="selectedAssignment?.dateOpened && selectedAssignment?.dateClosed" class="assignment__dates">
+              <div class="assignment__date">
+                <i class="pi pi-calendar"></i>
+                <small
+                  ><span class="font-bold">{{ assignmentStartDateLabel }}</span> {{ formattedStartDate }}</small
+                >
+              </div>
+              <div class="assignment__date">
+                <i class="pi pi-calendar"></i>
+                <small
+                  ><span class="font-bold">{{ assignmentEndDateLabel }}</span> {{ formattedEndDate }}</small
+                >
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="assignment__main">
-          <ParticipantSidebar :total-games="totalGames" :completed-games="completeGames" />
+          <div class="assignment__main">
+            <ParticipantSidebar :total-games="totalGames" :completed-games="completeGames" />
 
-          <div class="tabs-container">
-            <Transition name="fade" mode="out-in">
-              <!-- TODO: Pass in data conditionally to one instance of GameTabs. -->
-              <GameTabs
-                v-if="showOptionalAssessments && userData"
-                :games="optionalAssessments"
-                :sequential="isSequential"
-                :user-data="userData"
-              />
-              <GameTabs
-                v-else-if="requiredAssessments && userData"
-                :games="requiredAssessments"
-                :sequential="isSequential"
-                :user-data="userData"
-              />
-            </Transition>
+            <div class="tabs-container">
+              <Transition name="fade" mode="out-in">
+                <!-- TODO: Pass in data conditionally to one instance of GameTabs. -->
+                <GameTabs
+                  v-if="showOptionalAssessments && userData"
+                  :games="optionalAssessments"
+                  :sequential="isSequential"
+                  :survey-responses="surveyResponsesData"
+                  :user-data="userData"
+                />
+                <GameTabs
+                  v-else-if="requiredAssessments && userData"
+                  :games="requiredAssessments"
+                  :sequential="isSequential"
+                  :survey-responses="surveyResponsesData"
+                  :user-data="userData"
+                />
+              </Transition>
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </div>
   </div>
   <ConsentModal
@@ -117,11 +116,7 @@ import { fetchAudioLinks } from '@/helpers/survey';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useQueryClient, useQuery } from '@tanstack/vue-query';
-import {
-  bootstrapSurveyInstance,
-  setupSurveyEventHandlers,
-  setupStudentAudio,
-} from '@/helpers/surveyInitialization';
+import { bootstrapSurveyInstance, setupSurveyEventHandlers, setupStudentAudio } from '@/helpers/surveyInitialization';
 import { useSurveyStore } from '@/store/survey';
 import { fetchDocsById } from '@/helpers/query/utils';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
@@ -131,7 +126,6 @@ import PvTag from 'primevue/tag';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { capitalize } from 'lodash';
 import 'survey-core/survey.i18n';
-
 
 const showConsent = ref(false);
 const consentVersion = ref('');
@@ -212,14 +206,12 @@ const assignmentEndDateLabel = computed(() => {
   return new Date(dateClosed) < now.value ? t('participantSidebar.statusClosed') : t('participantSidebar.statusClose');
 });
 
-
 const formattedStartDate = ref('');
 const formattedEndDate = ref('');
 
-
 watch(
-  [selectedAssignment,locale],
-  async ([currentAssignment,currentLocale]) => {
+  [selectedAssignment, locale],
+  async ([currentAssignment, currentLocale]) => {
     if (currentAssignment?.dateOpened && currentLocale) {
       formattedStartDate.value = await formatDateWithLocale(currentAssignment.dateOpened, 'MMM d, yyyy', currentLocale);
     }
@@ -227,7 +219,7 @@ watch(
       formattedEndDate.value = await formatDateWithLocale(currentAssignment.dateClosed, 'MMM d, yyyy', currentLocale);
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const taskIds = computed(() => {
@@ -310,7 +302,6 @@ async function updateConsent() {
     consentParams,
   });
 }
-
 
 const userType = computed(() => {
   return toRaw(userData.value)?.userType?.toLowerCase();
@@ -517,6 +508,35 @@ function setupMarkdownConverter(surveyInstance) {
   });
 }
 
+async function fetchSpecificSurveyRelationData() {
+  if (userType.value !== 'parent' && userType.value !== 'teacher') return;
+
+  try {
+    let fetchConfig = [];
+    // Only fetch docs if the user has children or classes. It's possible the user has no children or classes linked yet.
+    if (userType.value === 'parent' && userData.value.childIds) {
+      fetchConfig = userData.value.childIds.map((childId) => ({
+        collection: 'users',
+        docId: childId,
+        select: ['birthMonth', 'birthYear'],
+      }));
+    } else if (userType.value === 'teacher' && userData.value.classes?.current) {
+      fetchConfig = userData.value.classes.current.map((classId) => ({
+        collection: 'classes',
+        docId: classId,
+        select: ['name'],
+      }));
+    }
+
+    if (fetchConfig.length > 0) {
+      const res = await fetchDocsById(fetchConfig);
+      surveyStore.setSpecificSurveyRelationData(res);
+    }
+  } catch (error) {
+    console.error('Error fetching relation data:', error);
+  }
+}
+
 watch(
   [surveyDependenciesLoaded, selectedAssignment],
   async ([isLoaded]) => {
@@ -526,7 +546,9 @@ watch(
       return;
     }
 
-    const isAssessment = selectedAssignment.value.assessments.some((task) => task.taskId.toLowerCase().includes('survey'));
+    const isAssessment = selectedAssignment.value.assessments.some((task) =>
+      task.taskId.toLowerCase().includes('survey'),
+    );
     if (!isLoaded || !isAssessment || surveyStore.survey) return;
 
     const surveyResponseDoc = (surveyResponsesData.value || []).find(
@@ -576,35 +598,9 @@ watch(
       }
     }
 
+    await fetchSpecificSurveyRelationData();
+
     if (!shouldInitializeSurvey) return;
-
-    // Fetch child docs for parent or class docs for teacher
-    if (userType.value === 'parent' || userType.value === 'teacher') {
-      try {
-        let fetchConfig = [];
-        // Only fetch docs if the user has children or classes. It's possible the user has no children or classes linked yet.
-        if (userType.value === 'parent' && userData.value.childIds) {
-          fetchConfig = userData.value.childIds.map((childId) => ({
-            collection: 'users',
-            docId: childId,
-            select: ['birthMonth', 'birthYear'],
-          }));
-        } else if (userType.value === 'teacher' && userData.value.classes?.current) {
-          fetchConfig = userData.value.classes.current.map((classId) => ({
-            collection: 'classes',
-            docId: classId,
-            select: ['name'],
-          }));
-        }
-
-        if (fetchConfig.length > 0) {
-          const res = await fetchDocsById(fetchConfig);
-          surveyStore.setSpecificSurveyRelationData(res);
-        }
-      } catch (error) {
-        console.error('Error fetching relation data:', error);
-      }
-    }
 
     const surveyDataToStartAt =
       userType.value === 'student' || !surveyStore.isGeneralSurveyComplete
@@ -641,12 +637,7 @@ watch(
     surveyStore.setSurvey(surveyInstance);
 
     if (userType.value === 'student') {
-      await setupStudentAudio(
-        surveyInstance,
-        locale.value,
-        surveyStore.audioLinkMap,
-        surveyStore,
-      );
+      await setupStudentAudio(surveyInstance, locale.value, surveyStore.audioLinkMap, surveyStore);
     }
   },
   { immediate: true },

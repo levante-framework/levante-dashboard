@@ -34,8 +34,9 @@
           <span
             class="tabview-nav-link-label"
             :data-game-status="`${isTaskComplete(game.completedOn, game.taskId) ? 'complete' : 'incomplete'}`"
-            >{{ getTaskName(game.taskId, game.taskData.name) }}</span
           >
+            {{ getTaskName(game.taskId, game.taskData.name) }}
+          </span>
         </PvTab>
       </PvTabList>
       <PvTabPanels style="width: 100%; margin-top: 0.5rem; padding: 0">
@@ -50,7 +51,7 @@
           :value="String(index)"
           class="p-0"
         >
-          <div class="roar-tabview-game flex flex-row align-items-center p-5 surface-100 w-full">
+          <div class="roar-tabview-game flex flex-row p-5 surface-100 w-full">
             <div class="roar-game-image">
               <div>
                 <img
@@ -68,19 +69,18 @@
 
             <div class="roar-game-content flex flex-column">
               <div class="flex flex-column h-full">
-                <div class="roar-game-title font-bold">
+                <div class="font-bold">
                   {{ getTaskName(game.taskId, game.taskData.name) }}
                 </div>
+
                 <div class="roar-game-description">
-                  <p>
-                    {{ getTaskDescription(game.taskId, game.taskData.description) }}
-                  </p>
+                  {{ getTaskDescription(game.taskId, game.taskData.description) }}
                 </div>
 
                 <div v-if="isAdultSurveyTask(game.taskId)" class="mt-4 mb-4">
-                  <div class="flex align-items-center mb-2">
-                    <span class="mr-2 w-4"
-                      ><b>{{ $t('gameTabs.surveyProgressGeneral') }} </b> -
+                  <div class="flex flex-column mb-3">
+                    <span class="mb-1">
+                      <b>{{ $t('gameTabs.surveyProgressGeneral') }}:</b>
                       {{
                         props.userData.userType === 'teacher' || props.userData.userType === 'parent'
                           ? props.userData.userType === 'teacher'
@@ -93,16 +93,12 @@
                   </div>
 
                   <div v-if="props.userData.userType === 'parent'">
-                    <div
-                      v-for="(child, i) in props.userData?.childIds"
-                      :key="child"
-                      class="flex flex-wrap align-items-center mb-2"
-                    >
-                      <span class="mr-2 w-full sm:w-4 mb-1 sm:mb-0">
-                        <b>{{ $t('gameTabs.surveyProgressSpecificParent') }} - </b>
+                    <div v-for="(child, i) in props.userData?.childIds" :key="child" class="flex flex-column mb-3">
+                      <span class="mb-1">
+                        <b>{{ $t('gameTabs.surveyProgressSpecificParent') }}:</b>
                         {{ $t('gameTabs.surveyProgressSpecificParentMonth') }}:
                         {{ surveyStore.specificSurveyRelationData[i]?.birthMonth }}
-                        <br class="sm:hidden" />
+                        <span>-</span>
                         {{ $t('gameTabs.surveyProgressSpecificParentYear') }}:
                         {{ surveyStore.specificSurveyRelationData[i]?.birthYear }}
                       </span>
@@ -201,7 +197,6 @@ import PvTag from 'primevue/tag';
 import { useAuthStore } from '@/store/auth';
 import { useSurveyStore } from '@/store/survey';
 import _capitalize from 'lodash/capitalize';
-import { useQueryClient } from '@tanstack/vue-query';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 import PvProgressBar from 'primevue/progressbar';
 import { useAssignmentsStore } from '@/store/assignments';
@@ -241,9 +236,22 @@ interface UserData {
   };
 }
 
+interface SpecificSurveyResponse {
+  childId?: string;
+  classId?: string;
+  isComplete?: boolean;
+}
+
+interface SurveyResponse {
+  administrationId?: string;
+  pageNo?: number;
+  specific?: SpecificSurveyResponse[];
+}
+
 interface Props {
   games: Game[];
   sequential?: boolean;
+  surveyResponses?: SurveyResponse[] | null;
   userData: UserData;
 }
 
@@ -260,14 +268,13 @@ interface VideoOptions {
 
 const props = withDefaults(defineProps<Props>(), {
   sequential: true,
+  surveyResponses: null,
 });
 
 const authStore = useAuthStore();
 const surveyStore = useSurveyStore();
 const assignmentsStore = useAssignmentsStore();
 const { selectedAssignment } = storeToRefs(assignmentsStore);
-const queryClient = useQueryClient();
-const surveyData = queryClient.getQueryData(['surveyResponses', props.userData.id]);
 
 const getGeneralSurveyProgress = computed((): number => {
   if (surveyStore.isGeneralSurveyComplete) return 100;
@@ -285,36 +292,47 @@ const getGeneralSurveyProgressClass = computed((): string => {
   return 'p-progressbar--empty';
 });
 
+const getSpecificRelationId = (loopIndex: number): string | undefined => {
+  if (props.userData.userType === 'parent' || props.userData.userType === 'caregiver')
+    return props.userData.childIds?.[loopIndex];
+  if (props.userData.userType === 'teacher') return props.userData.classes?.current?.[loopIndex];
+  return undefined;
+};
+
+const getSpecificResponseId = (specificSurvey: SpecificSurveyResponse): string | undefined => {
+  return props.userData.userType === 'parent' || props.userData.userType === 'caregiver'
+    ? specificSurvey.childId
+    : specificSurvey.classId;
+};
+
 const getSpecificSurveyProgress = computed(() => (loopIndex: number): number => {
   if (surveyStore.isSpecificSurveyComplete) return 100;
+
+  const specificRelationId = getSpecificRelationId(loopIndex);
+  if (!specificRelationId) return 0;
 
   const localStorageKey = `${LEVANTE_SURVEY_RESPONSES_KEY}-${props.userData.id}`;
   const localStorageData = JSON.parse(localStorage.getItem(localStorageKey) || '{}');
 
-  if (localStorageData && surveyStore.specificSurveyRelationData[loopIndex]) {
-    const specificIdFromServer = surveyStore.specificSurveyRelationData[loopIndex].id;
+  if (!localStorageData.isGeneral && String(localStorageData.specificId) === String(specificRelationId)) {
+    if (localStorageData.isComplete) return 100;
 
-    if (specificIdFromServer === localStorageData.specificId) {
-      if (localStorageData.isComplete) return 100;
+    const currentPage = localStorageData.pageNo || 0;
+    const totalPages = surveyStore.numSpecificPages || 1;
 
-      const currentPage = localStorageData.pageNo || 0;
-      const totalPages = surveyStore.numSpecificPages || 1;
-
-      return Math.round((currentPage / totalPages) * 100);
-    }
+    return Math.round((currentPage / totalPages) * 100);
   }
 
-  // If data is not found in localStorage, use surveyData from server
-  if (!surveyData || !Array.isArray(surveyData)) return 0;
+  if (!props.surveyResponses || !Array.isArray(props.surveyResponses)) return 0;
 
-  const currentSurvey = (surveyData as any[]).find((doc) => doc.administrationId === selectedAssignment.value.id);
-  if (!currentSurvey || !currentSurvey.specific || !currentSurvey.specific[loopIndex]) return 0;
+  const selectedAssignmentId = (selectedAssignment.value as { id?: string } | null)?.id;
+  const currentSurvey = props.surveyResponses.find((doc) => doc.administrationId === selectedAssignmentId);
+  if (!currentSurvey?.specific) return 0;
 
-  // Specific survey is complete
-  const specificSurvey = currentSurvey.specific[loopIndex];
+  const specificSurvey = currentSurvey.specific.find((survey) => getSpecificResponseId(survey) === specificRelationId);
+  if (!specificSurvey) return 0;
   if (specificSurvey.isComplete) return 100;
 
-  // Specific survey is incomplete
   const currentPage = currentSurvey.pageNo || 0;
   const totalPages = surveyStore.numSpecificPages || 1;
 
@@ -528,7 +546,7 @@ const isTaskComplete = (gameCompletedTime: string | Date | undefined, taskId: st
 }
 
 .roar-game-description {
-  margin-bottom: 0.5rem;
+  margin: 0.5rem 0;
 }
 
 .roar-game-footer {
