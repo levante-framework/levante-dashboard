@@ -1,17 +1,16 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import { createTestingPinia } from '@pinia/testing';
 import { withSetup } from '@/test-support/withSetup.js';
 import * as VueQuery from '@tanstack/vue-query';
 import { type QueryClient } from '@tanstack/vue-query';
+import { flushPromises } from '@vue/test-utils';
+import { type RoarFirekit } from '@levante-framework/firekit';
 import { nanoid } from 'nanoid';
-import { fetchUsersByOrg } from '@/helpers/query/users';
+import { useAuthStore } from '@/store/auth';
 import useOrgUsersQuery from './useOrgUsersQuery';
 
-vi.mock('@/helpers/query/users', () => ({
-  fetchUsersByOrg: vi.fn().mockImplementation(() => [{ name: 'mock-user' }]),
-}));
-
-vi.mock('@tanstack/vue-query', async (getModule) => {
-  const original = await getModule();
+vi.mock('@tanstack/vue-query', async () => {
+  const original = await vi.importActual<typeof import('@tanstack/vue-query')>('@tanstack/vue-query');
   return {
     ...original,
     useQuery: vi.fn().mockImplementation(original.useQuery),
@@ -19,22 +18,30 @@ vi.mock('@tanstack/vue-query', async (getModule) => {
 });
 
 describe('useOrgUsersQuery', () => {
+  let piniaInstance: ReturnType<typeof createTestingPinia>;
   let queryClient: QueryClient;
+  let getOrgUsers: Mock;
 
   beforeEach(() => {
+    piniaInstance = createTestingPinia();
     queryClient = new VueQuery.QueryClient();
+    getOrgUsers = vi.fn().mockResolvedValue({ users: [{ name: 'mock-user' }] });
+
+    const authStore = useAuthStore(piniaInstance);
+    authStore.roarfirekit = { getOrgUsers } as unknown as RoarFirekit;
   });
 
   afterEach(() => {
     queryClient?.clear();
+    vi.clearAllMocks();
   });
 
-  it('should call query with correct parameters', () => {
+  it('should call query with correct parameters', async () => {
     const mockOrgType = 'org';
     const mockOrgId = nanoid();
     const mockPageNumber = 1;
     const mockOrderBy = 'name';
-    const queryOptions = { enabled: true };
+    const queryOptions = { enabled: true } as Parameters<typeof useOrgUsersQuery>[4];
 
     vi.spyOn(VueQuery, 'useQuery');
 
@@ -48,13 +55,15 @@ describe('useOrgUsersQuery', () => {
       enabled: true,
     });
 
-    expect(fetchUsersByOrg).toHaveBeenCalledWith(
-      mockOrgType,
-      mockOrgId,
-      expect.anything(),
-      mockPageNumber,
-      mockOrderBy,
-    );
+    await flushPromises();
+
+    expect(getOrgUsers).toHaveBeenCalledWith({
+      orgType: mockOrgType,
+      orgId: mockOrgId,
+      itemsPerPage: 1000000,
+      page: mockPageNumber,
+      orderBy: mockOrderBy,
+    });
   });
 
   it('should allow the query to be disabled via the passed query options', () => {
@@ -62,7 +71,7 @@ describe('useOrgUsersQuery', () => {
     const mockOrgId = nanoid();
     const mockPageNumber = 1;
     const mockOrderBy = 'name';
-    const queryOptions = { enabled: false };
+    const queryOptions = { enabled: false } as Parameters<typeof useOrgUsersQuery>[4];
 
     vi.spyOn(VueQuery, 'useQuery');
 
@@ -76,6 +85,6 @@ describe('useOrgUsersQuery', () => {
       enabled: false,
     });
 
-    expect(fetchUsersByOrg).not.toHaveBeenCalled();
+    expect(getOrgUsers).not.toHaveBeenCalled();
   });
 });
