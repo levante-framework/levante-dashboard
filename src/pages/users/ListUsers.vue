@@ -287,7 +287,7 @@ const columns = ref([
   },
   {
     field: 'email',
-    header: 'User login',
+    header: 'User Login',
     dataType: 'string',
     sort: false,
   },
