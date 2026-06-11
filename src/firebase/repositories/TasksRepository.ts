@@ -20,7 +20,7 @@ interface UpsertTaskSchemaResult {
   taskSchema?: TaskSchema;
 }
 
-function pickLatestSchema(result: TaskSchemaResultItem[]): TaskSchemaResultItem | null {
+export function pickLatestSchema(result: TaskSchemaResultItem[]): TaskSchemaResultItem | null {
   if (!result?.length) return null;
   const first = result[0] as TaskSchemaResultItem;
   return result.reduce<TaskSchemaResultItem>(
@@ -49,12 +49,16 @@ class TasksRepository extends Repository {
     return await this.call<UpsertTaskPayload, unknown>('upsertTask', payload);
   }
 
-  async getTaskSchemas(taskId: string, siteId: string): Promise<TaskSchemaResultItem | null> {
+  async getTaskSchemaVersions(taskId: string, siteId: string): Promise<TaskSchemaResultItem[]> {
     const response = await this.call<GetTaskSchemasPayload, GetTaskSchemasResponse>('getTaskSchemas', {
       taskId,
       siteId,
     });
-    const result = normalizeSchemaResults(response);
+    return normalizeSchemaResults(response);
+  }
+
+  async getTaskSchemas(taskId: string, siteId: string): Promise<TaskSchemaResultItem | null> {
+    const result = await this.getTaskSchemaVersions(taskId, siteId);
     return pickLatestSchema(result);
   }
 

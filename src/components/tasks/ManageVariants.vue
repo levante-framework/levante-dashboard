@@ -51,13 +51,23 @@
 
           <template v-if="variantFields.selectedGame?.id">
             <div
-              v-if="!schemaForSelectedTask && !isSchemaLoading"
-              class="flex align-items-center gap-2 p-3 mt-2 surface-100 border-round border-1 border-blue-500"
+              v-if="schemaForSelectedTask && !isSchemaLoading"
+              class="flex align-items-center gap-2 p-3 mt-2 surface-100 border-round border-1 border-green-500"
             >
-              <i class="pi pi-info-circle text-blue-600" />
-              <span class="text-blue-800">
-                No schema exists for this task yet. You can still create the config below; an inferred schema will be
-                created from it when you save.
+              <i class="pi pi-check-circle text-green-600" />
+              <span class="text-green-800">
+                Latest schema version: <strong>{{ schemaForSelectedTask.version }}</strong>. Variant params must match
+                this schema.
+              </span>
+            </div>
+            <div
+              v-else-if="!schemaForSelectedTask && !isSchemaLoading"
+              class="flex align-items-center gap-2 p-3 mt-2 surface-100 border-round border-1 border-amber-500"
+            >
+              <i class="pi pi-exclamation-triangle text-amber-600" />
+              <span class="text-amber-800">
+                No schema exists for this task. Create a schema in the <strong>Schemas</strong> tab before creating a
+                variant.
               </span>
             </div>
 
@@ -89,12 +99,12 @@
           </template>
         </div>
 
-        <template v-if="variantFields.selectedGame?.id">
+        <template v-if="variantFields.selectedGame?.id && schemaForSelectedTask?.paramDefinitions">
         <div class="flex flex-column align-items-center">
           <h3 class="text-center">
             <strong>Configure Parameter Values</strong>
-            <span v-if="schemaForSelectedTask?.paramDefinitions" class="text-sm text-gray-500 font-normal ml-2">
-              (from schema)
+            <span class="text-sm text-gray-500 font-normal ml-2">
+              (schema v{{ schemaForSelectedTask.version }})
             </span>
           </h3>
           <h4 class="text-center">
@@ -196,56 +206,6 @@
                 />
               </div>
             </div>
-
-            <template v-if="!schemaForSelectedTask?.paramDefinitions">
-              <div v-if="newParams.length > 0" class="w-full">
-                <div v-for="(field, index) in newParams" :key="index" class="flex align-items-center column-gap-2 mb-1">
-                  <PvInputText v-model="field.name" placeholder="Field Name" />
-                  <PvDropdown
-                    v-model="field.type"
-                    :options="['string', 'number', 'boolean']"
-                    placeholder="Field Type"
-                    class="w-fit"
-                  />
-
-                  <PvInputText
-                    v-if="field.type === 'string'"
-                    v-model="field.value"
-                    placeholder="Field Value"
-                    class="w-full"
-                  />
-                  <PvInputNumber
-                    v-if="field.type === 'number'"
-                    v-model="field.value"
-                    placeholder="Field Value"
-                    class="w-full"
-                  />
-                  <PvDropdown
-                    v-if="field.type === 'boolean'"
-                    v-model="field.value"
-                    placeholder="Field Value"
-                    :options="booleanDropDownOptions"
-                    option-label="label"
-                    option-value="value"
-                    class="w-full"
-                  />
-                  <PvButton
-                    type="button"
-                    icon="pi pi-trash"
-                    class="w-4rem bg-primary text-white border-none border-round p-2 hover:bg-red-900"
-                    text
-                    @click="removeField(field.name, newParams)"
-                  />
-                </div>
-              </div>
-              <PvButton
-                label="Add Parameter"
-                text
-                icon="pi pi-plus"
-                class="w-full my-4 bg-primary text-white border-none border-round p-2 hover:bg-red-900"
-                @click="newParam"
-              />
-            </template>
           </div>
         </div>
         <div class="flex flex-row align-items-center justify-content-center gap-2 flex-order-0 my-3">
@@ -314,18 +274,50 @@
           />
         </div>
         <div
-          v-if="
-            schemaForUpdateTask &&
-            selectedVariant.schemaVersion != null &&
-            selectedVariant.schemaVersion < schemaForUpdateTask.version
-          "
-          class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-amber-500"
+          v-if="schemaForUpdateTask"
+          class="flex flex-column gap-2 p-3 surface-100 border-round border-1 border-200"
         >
-          <i class="pi pi-info-circle text-amber-600" />
-          <span class="text-amber-800">
+          <div class="flex flex-wrap align-items-center gap-3">
+            <span class="text-sm">
+              Current schema version:
+              <strong>{{ selectedVariant.schemaVersion ?? 'None' }}</strong>
+            </span>
+            <span class="text-sm text-gray-600">
+              Latest schema version: <strong>{{ schemaForUpdateTask.version }}</strong>
+            </span>
+            <span v-if="activeUpdateSchema" class="text-sm text-gray-600">
+              Validating against: <strong>v{{ activeUpdateSchema.version }}</strong>
+            </span>
+          </div>
+        </div>
+        <div
+          v-if="shouldShowUpgradeSchemaWarning"
+          class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-amber-500 flex-wrap"
+        >
+          <i class="pi pi-exclamation-triangle text-amber-600 flex-shrink-0" />
+          <span class="text-amber-800 flex-grow-1">
             This variant uses schema version {{ selectedVariant.schemaVersion }}. The latest is
-            {{ schemaForUpdateTask.version }}. Consider updating the variant to use the latest schema (save will
-            set schema version to {{ schemaForUpdateTask.version }}).
+            {{ schemaForUpdateTask.version }}. Update to the latest schema to validate params against the current
+            definition.
+          </span>
+          <PvButton
+            label="Update to latest schema"
+            icon="pi pi-arrow-up"
+            severity="warning"
+            size="small"
+            class="flex-shrink-0"
+            @click="upgradeUpdateVariantToLatestSchema"
+          />
+        </div>
+        <div
+          v-if="selectedVariant.schemaVersion == null && schemaForUpdateTask && !isUpdateSchemaLoading"
+          class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-blue-500"
+        >
+          <i class="pi pi-info-circle text-blue-600" />
+          <span class="text-blue-800">
+            This variant has no schema version. Params will be validated against the latest schema (v{{
+              schemaForUpdateTask.version
+            }}) and the schema version will be assigned when you save.
           </span>
         </div>
         <div
@@ -440,10 +432,10 @@
           @click="addField"
         />
 
-        <div v-if="schemaForUpdateTask" class="flex flex-column gap-1 p-3 surface-100 border-round">
+        <div v-if="activeUpdateSchema" class="flex flex-column gap-1 p-3 surface-100 border-round">
           <div class="flex align-items-center gap-2 flex-wrap">
             <strong>Schema (task config definition)</strong>
-            <span class="text-sm text-gray-600">Version {{ schemaForUpdateTask.version }}</span>
+            <span class="text-sm text-gray-600">Version {{ activeUpdateSchema.version }}</span>
             <PvButton
               :label="showSchemaDetails ? 'Hide details' : 'Details'"
               :icon="showSchemaDetails ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
@@ -457,7 +449,7 @@
           </div>
           <div v-if="showSchemaDetails" class="flex flex-wrap gap-2 mt-2">
             <span
-              v-for="(def, key) in schemaForUpdateTask.paramDefinitions"
+              v-for="(def, key) in activeUpdateSchema.paramDefinitions"
               :key="key"
               class="text-sm px-2 py-1 surface-200 border-round"
             >
@@ -469,13 +461,13 @@
         <div v-if="updateVariantParamList.length > 0" class="flex flex-column w-full">
           <label for="paramsOutput">
             <strong>Game Params</strong>
-            <span v-if="schemaForUpdateTask?.paramDefinitions" class="text-sm text-gray-500 ml-2">
-              (validated against schema)
+            <span v-if="activeUpdateSchema?.paramDefinitions" class="text-sm text-gray-500 ml-2">
+              (validated against schema v{{ activeUpdateSchema.version }})
             </span>
           </label>
           <div
             v-if="
-              schemaForUpdateTask?.paramDefinitions &&
+              activeUpdateSchema?.paramDefinitions &&
               hasParamsNotInSchema
             "
             class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-red-500 mb-2 flex-wrap"
@@ -505,13 +497,13 @@
             <div
               class="flex align-items-center justify-content-end column-gap-2 p-2 border-round border-1"
               :class="
-                schemaForUpdateTask?.paramDefinitions && !item.isInSchema
+                activeUpdateSchema?.paramDefinitions && !item.isInSchema
                   ? 'border-red-500 bg-red-50'
                   : 'border-transparent'
               "
             >
               <label :for="item.paramName" class="w-2">
-                <em :class="{ 'text-red-600': schemaForUpdateTask?.paramDefinitions && !item.isInSchema }">
+                <em :class="{ 'text-red-600': activeUpdateSchema?.paramDefinitions && !item.isInSchema }">
                   {{ item.paramName }}
                   <span v-if="item.isRequired" class="text-red-500">*</span>
                 </em>
@@ -603,6 +595,7 @@ const { mutateAsync: upsertSchema, isPending: isSyncingSchemaFromConfig } = useU
 const selectedTask = ref(null);
 const selectedVariant = ref(null);
 const showSchemaDetails = ref(false);
+const useLatestSchemaForUpdate = ref(false);
 const originalUpdateVariantSnapshot = ref(null);
 // Reactive clone for holding changes made to variantData without affecting the original variantData and avoiding reactivity issues
 let updatedVariantData = reactive(cloneDeep(selectedVariant.value));
@@ -664,6 +657,7 @@ watch(selectedVariant, (newVal) => {
   deletedUpdateParamNames.value = new Set();
   addedFields.splice(0, addedFields.length);
   originalUpdateVariantSnapshot.value = null;
+  useLatestSchemaForUpdate.value = false;
   if (updatedVariantData.params && typeof updatedVariantData.params === 'object') {
     for (const k of Object.keys(updatedVariantData.params)) {
       if (updatedVariantData.params[k] == null) {
@@ -722,13 +716,37 @@ const { schema: schemaForSelectedTask, isFetching: isSchemaLoading } = useTaskSc
   { enabled: computed(() => initialized.value) },
 );
 
-const { schema: schemaForUpdateTask, isFetching: isUpdateSchemaLoading } = useTaskSchemasQuery(
-  computed(() => selectedTask.value ?? null),
-  { enabled: computed(() => initialized.value) },
-);
+const { schema: schemaForUpdateTask, schemas: schemasForUpdateTask, isFetching: isUpdateSchemaLoading } =
+  useTaskSchemasQuery(computed(() => selectedTask.value ?? null), { enabled: computed(() => initialized.value) });
+
+const currentVariantSchema = computed(() => {
+  const version = selectedVariant.value?.schemaVersion;
+  if (version == null || !schemasForUpdateTask.value.length) return null;
+  return schemasForUpdateTask.value.find((item) => item.version === version) ?? null;
+});
+
+const activeUpdateSchema = computed(() => {
+  const latest = schemaForUpdateTask.value;
+  const variantVersion = selectedVariant.value?.schemaVersion;
+  if (!latest) return null;
+  if (variantVersion == null || useLatestSchemaForUpdate.value) return latest;
+  return currentVariantSchema.value ?? latest;
+});
+
+const shouldShowUpgradeSchemaWarning = computed(() => {
+  const latest = schemaForUpdateTask.value;
+  const variantVersion = selectedVariant.value?.schemaVersion;
+  if (!latest || variantVersion == null) return false;
+  return variantVersion < latest.version && !useLatestSchemaForUpdate.value;
+});
+
+function upgradeUpdateVariantToLatestSchema() {
+  useLatestSchemaForUpdate.value = true;
+  applySchemaDefaultsToUpdateParams();
+}
 
 function applySchemaDefaultsToUpdateParams() {
-  const schema = schemaForUpdateTask.value;
+  const schema = activeUpdateSchema.value;
   if (!schema?.paramDefinitions || !selectedVariant.value || !updatedVariantData) return;
   if (!updatedVariantData.params || typeof updatedVariantData.params !== 'object') {
     updatedVariantData.params = {};
@@ -785,7 +803,7 @@ watch(
 );
 
 const hasParamsNotInSchema = computed(() => {
-  const schema = schemaForUpdateTask.value;
+  const schema = activeUpdateSchema.value;
   const params = updatedVariantData.params;
   if (!schema?.paramDefinitions || !params || typeof params !== 'object') return false;
   return Object.keys(params).some((key) => !(key in schema.paramDefinitions));
@@ -794,7 +812,7 @@ const hasParamsNotInSchema = computed(() => {
 const deletedUpdateParamNames = ref(new Set());
 
 const updateVariantParamList = computed(() => {
-  const schema = schemaForUpdateTask.value;
+  const schema = activeUpdateSchema.value;
   const paramDefs = schema?.paramDefinitions ?? {};
   const configParams = updatedVariantData.params ?? {};
   const schemaKeys = Object.keys(paramDefs);
@@ -859,9 +877,9 @@ const mappedGameConfig = computed(() => {
 
 const createVariantParamList = computed(() => {
   const schema = schemaForSelectedTask.value;
+  if (!schema?.paramDefinitions) return [];
   const gameConfig = variantFields.selectedGame?.gameConfig;
-  if (schema?.paramDefinitions) {
-    return Object.entries(schema.paramDefinitions).map(([name, def]) => {
+  return Object.entries(schema.paramDefinitions).map(([name, def]) => {
       const existing = gameConfig?.[name];
       const value =
         existing !== undefined && existing !== null
@@ -873,8 +891,6 @@ const createVariantParamList = computed(() => {
               : '';
       return { name, type: def.type, value };
     });
-  }
-  return mappedGameConfig.value;
 });
 
 const createVariantParamsValues = reactive({});
@@ -902,7 +918,7 @@ const moveToDeletedParams = (paramName) => {
 };
 
 const deleteParam = (paramName) => {
-  if (schemaForUpdateTask.value?.paramDefinitions?.[paramName]?.required) return;
+  if (activeUpdateSchema.value?.paramDefinitions?.[paramName]?.required) return;
 
   if (updatedVariantData.params && updatedVariantData.params[paramName] !== undefined) {
     delete updatedVariantData.params[paramName];
@@ -1125,7 +1141,7 @@ const handleUpdateVariant = async () => {
 
   const hasGameParams =
     selectedVariant.value.params && Object.keys(selectedVariant.value.params).length > 0;
-  const schema = schemaForUpdateTask.value;
+  const schema = activeUpdateSchema.value;
   if (hasGameParams && !schema) {
     toast.add({
       severity: 'error',
@@ -1167,14 +1183,14 @@ const handleUpdateVariant = async () => {
     }
   }
 
-  const latestSchemaVersion = schemaForUpdateTask.value?.version;
+  const schemaVersionToSave = activeUpdateSchema.value?.version;
   const variantData = {
     taskId: selectedTask.value,
     variantId: selectedVariant.value.id,
     siteId: authStore.currentSite,
     ...updatedVariantData,
     ...convertedFields,
-    ...(latestSchemaVersion != null && { schemaVersion: latestSchemaVersion }),
+    ...(schemaVersionToSave != null && { schemaVersion: schemaVersionToSave }),
     params: { ...(updatedVariantData.params ?? {}) },
   };
   await updateVariant(variantData, {
@@ -1208,35 +1224,34 @@ const handleVariantSubmit = async (isFormValid) => {
 
   submitted.value = true;
   const isRegisteredVariant = !!variantCheckboxData.value?.find((item) => item === 'isRegisteredVariant');
-  const convertedParams = convertParamsToObj(newParams) ?? {};
-  const hasSchema = !!schemaForSelectedTask.value?.paramDefinitions;
-  const combinedParams = hasSchema
-    ? { ...createVariantParamsValues }
-    : { ...createVariantParamsValues, ...convertedParams };
+  const schema = schemaForSelectedTask.value;
 
-  let schemaVersion = schemaForSelectedTask.value?.version;
-  let schemaCreatedAt = schemaForSelectedTask.value?.createdAt;
-  if (variantFields.selectedGame?.id && schemaVersion == null && Object.keys(combinedParams).length > 0) {
-    const paramDefinitions = buildParamDefinitionsFromParams(combinedParams);
-    try {
-      const result = await upsertSchema({
-        taskId: variantFields.selectedGame.id,
-        paramDefinitions,
-      });
-      schemaVersion = result?.version ?? undefined;
-      if (result?.createdAt != null) schemaCreatedAt = result.createdAt;
-    } catch (err) {
-      toast.add({
-        severity: 'error',
-        summary: 'Schema creation failed',
-        detail: 'Could not create inferred schema. Try again or create a schema in the Schemas tab first.',
-        life: 5000,
-      });
-      console.error(err);
-      submitted.value = false;
-      return;
-    }
+  if (!schema?.paramDefinitions) {
+    toast.add({
+      severity: 'error',
+      summary: 'Schema required',
+      detail: 'Create a schema in the Schemas tab before creating a variant.',
+      life: 5000,
+    });
+    submitted.value = false;
+    return;
   }
+
+  const combinedParams = { ...createVariantParamsValues };
+  const validation = validateGameParamsAgainstSchema(combinedParams, schema.paramDefinitions);
+  if (!validation.valid) {
+    toast.add({
+      severity: 'error',
+      summary: 'Game params validation',
+      detail: validation.message,
+      life: 5000,
+    });
+    submitted.value = false;
+    return;
+  }
+
+  const schemaVersion = schema.version;
+  const schemaCreatedAt = schema.createdAt;
 
   const newVariantObject = reactive({
     taskId: variantFields.selectedGame.id,
@@ -1254,7 +1269,7 @@ const handleVariantSubmit = async (isFormValid) => {
     },
     registered: isRegisteredVariant,
     siteId: authStore.currentSite,
-    ...(schemaVersion != null && { schemaVersion }),
+    schemaVersion,
     ...(schemaCreatedAt != null && { schemaCreatedAt }),
   });
 
@@ -1299,6 +1314,7 @@ const resetUpdateVariantForm = () => {
   updatedVariantData = {};
   deletedUpdateParamNames.value = new Set();
   originalUpdateVariantSnapshot.value = null;
+  useLatestSchemaForUpdate.value = false;
   clearFieldParamArrays();
 };
 

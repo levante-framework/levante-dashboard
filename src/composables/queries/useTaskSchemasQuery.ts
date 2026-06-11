@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/vue-query';
 import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
-import { tasksRepository } from '@/firebase/repositories/TasksRepository';
+import { pickLatestSchema, tasksRepository } from '@/firebase/repositories/TasksRepository';
 import { TASK_SCHEMAS_QUERY_KEY } from '@/constants/queryKeys';
 
 interface UseTaskSchemasQueryOptions {
@@ -16,7 +16,13 @@ const useTaskSchemasQuery = (taskId: MaybeRefOrGetter<string | null>, options?: 
   const queryKey = computed(() => [TASK_SCHEMAS_QUERY_KEY, toValue(taskId), currentSite.value] as const);
   const query = useQuery({
     queryKey,
-    queryFn: () => tasksRepository.getTaskSchemas(toValue(taskId)!, currentSite.value!),
+    queryFn: async () => {
+      const all = await tasksRepository.getTaskSchemaVersions(toValue(taskId)!, currentSite.value!);
+      return {
+        latest: pickLatestSchema(all),
+        all,
+      };
+    },
     enabled: () =>
       !!toValue(taskId) && !!currentSite.value && (enabledOption == null ? true : toValue(enabledOption)),
     ...restOptions,
@@ -24,7 +30,8 @@ const useTaskSchemasQuery = (taskId: MaybeRefOrGetter<string | null>, options?: 
 
   return {
     ...query,
-    schema: query.data,
+    schema: computed(() => query.data.value?.latest ?? null),
+    schemas: computed(() => query.data.value?.all ?? []),
   };
 };
 
