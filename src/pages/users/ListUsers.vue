@@ -28,8 +28,9 @@
                         'pi text-gray-400 transition-transform transition-duration-200',
                         isUserCountExpanded ? 'pi-chevron-down' : 'pi-chevron-right',
                       ]"
-                    ></i
-                    >User Count
+                    >
+                    </i>
+                    User Count
                   </div>
                   <div class="flex align-items-center gap-2">
                     <div class="text-xl text-gray-600">
