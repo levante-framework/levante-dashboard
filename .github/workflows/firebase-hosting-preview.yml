@@ -41,7 +41,7 @@ jobs:
           ref: ${{ github.event.inputs.pr_branch }}
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node.jsVITE_SURVEYJS_LICENSE_KEY: ${{ secrets.VITE_SURVEYJS_LICENSE_KEY }}
         uses: actions/setup-node@v3
         with:
           node-version-file: '.nvmrc'
@@ -91,6 +91,8 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
+          env:
+            VITE_SURVEYJS_LICENSE_KEY: ${{ secrets.VITE_SURVEYJS_LICENSE_KEY }}
 
       - name: Check for preview-assessment label
         id: preview-label
