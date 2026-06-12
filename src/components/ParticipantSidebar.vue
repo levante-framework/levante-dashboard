@@ -17,6 +17,17 @@
       </li>
     </ul>
   </div>
+
+  <div class="mobile-participant-sidebar">
+    <div class="mobile-participant-sidebar__header">
+      <div class="mobile-participant-sidebar__value">{{ completedGames }}/{{ totalGames }}</div>
+      <p class="mobile-participant-sidebar__label">{{ $t('participantSidebar.tasksCompleted') }}</p>
+    </div>
+
+    <div class="mobile-participant-sidebar__progress-trail">
+      <div class="mobile-participant-sidebar__progress-bar" :style="{ width: `${mobileProgressBarValue}%` }"></div>
+    </div>
+  </div>
 </template>
 <script setup lang="ts">
 import { ref, computed } from 'vue';
@@ -65,6 +76,8 @@ const chartOptions = ref({
   },
 });
 
+const mobileProgressBarValue = computed(() => Math.ceil((100 / props.totalGames) * props.completedGames));
+
 const setChartData = (completed: number, incomplete: number): ChartData => {
   const docStyle = getComputedStyle(document.documentElement);
 
@@ -91,9 +104,16 @@ const setChartData = (completed: number, incomplete: number): ChartData => {
   align-items: center;
   justify-content: center;
 }
+
 @media screen and (max-width: 1100px) {
   .sidebar-container {
     width: 150px;
+  }
+}
+
+@media screen and (max-width: 820px) {
+  .sidebar-container {
+    display: none !important;
   }
 }
 
@@ -133,5 +153,56 @@ const setChartData = (completed: number, incomplete: number): ChartData => {
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
   }
+}
+
+.mobile-participant-sidebar {
+  display: none;
+  width: 100%;
+  height: auto;
+  margin: 0 0 0.5rem;
+  padding: 0 0.25rem;
+
+  @media screen and (max-width: 820px) {
+    display: block;
+  }
+}
+
+.mobile-participant-sidebar__header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mobile-participant-sidebar__label,
+.mobile-participant-sidebar__value {
+  display: block;
+  margin: 0;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.mobile-participant-sidebar__label {
+  font-weight: 600;
+}
+
+.mobile-participant-sidebar__progress-trail {
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin: 0.5rem 0 0;
+  position: relative;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.mobile-participant-sidebar__progress-bar {
+  display: block;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--bright-green);
+  border-radius: 10px;
 }
 </style>
