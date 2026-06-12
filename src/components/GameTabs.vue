@@ -1,10 +1,10 @@
 <template>
   <div id="games">
     <div class="game-cards">
-      <div v-for="game in displayGames" :key="game.gameCardId">
+      <div v-for="game in displayGames" :key="game.gameCardId" class="game-card">
         <router-link
           v-if="isTaskAvailable(game)"
-          class="game-card game-card--available"
+          class="game-card--available"
           :to="{ path: getRoutePath(game) }"
           @click="onGameCardClick($event, game)"
         >
@@ -35,7 +35,6 @@
 
         <div
           v-else
-          class="game-card"
           :class="{
             'game-card--complete': isTaskComplete(game),
             'game-card--locked': !isTaskComplete(game) && !isTaskAvailable(game),
@@ -459,41 +458,11 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
 }
 
 .game-card {
-  display: flex;
-  gap: 1rem;
+  display: block;
   width: 300px;
   height: auto;
   margin: 0;
-  padding: 0.75rem 1rem 0.75rem 0.75rem;
-  border-radius: 0.75rem;
-  text-decoration: none;
-  color: var(--text-color);
-
-  &.game-card--available {
-    transition: box-shadow 0.2s ease-out;
-    box-shadow:
-      rgba(0, 0, 0, 0.07) 0px 1px 2px,
-      rgba(0, 0, 0, 0.07) 0px 2px 4px,
-      rgba(0, 0, 0, 0.07) 0px 4px 8px;
-
-    &:hover {
-      box-shadow:
-        rgba(0, 0, 0, 0.07) 0px 1px 2px,
-        rgba(0, 0, 0, 0.07) 0px 2px 4px,
-        rgba(0, 0, 0, 0.07) 0px 4px 8px,
-        rgba(0, 0, 0, 0.07) 0px 8px 16px,
-        rgba(0, 0, 0, 0.07) 0px 16px 32px;
-    }
-  }
-
-  &.game-card--complete {
-    background-color: #def6e5;
-  }
-
-  &.game-card--locked {
-    background-color: #e5e7eb;
-    opacity: 0.33;
-  }
+  padding: 0;
 
   @media screen and (max-width: 768px) {
     width: 100%;
@@ -503,6 +472,46 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
   @media screen and (max-width: 480px) {
     max-width: 100%;
   }
+}
+
+.game-card--available,
+.game-card--complete,
+.game-card--locked {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 0.75rem 1rem 0.75rem 0.75rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  color: var(--text-color);
+}
+
+.game-card--available {
+  transition: box-shadow 0.2s ease-out;
+  box-shadow:
+    rgba(0, 0, 0, 0.07) 0px 1px 2px,
+    rgba(0, 0, 0, 0.07) 0px 2px 4px,
+    rgba(0, 0, 0, 0.07) 0px 4px 8px;
+
+  &:hover {
+    box-shadow:
+      rgba(0, 0, 0, 0.07) 0px 1px 2px,
+      rgba(0, 0, 0, 0.07) 0px 2px 4px,
+      rgba(0, 0, 0, 0.07) 0px 4px 8px,
+      rgba(0, 0, 0, 0.07) 0px 8px 16px,
+      rgba(0, 0, 0, 0.07) 0px 16px 32px;
+  }
+}
+
+.game-card--complete {
+  background-color: #def6e5;
+}
+
+.game-card--locked {
+  background-color: #e5e7eb;
+  opacity: 0.33;
 }
 
 .game-card__thumbnail {
