@@ -88,6 +88,7 @@ vi.mock('@/constants/routes', () => ({
 vi.mock('@/helpers', () => ({
   isEmailValid: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
   isMobileBrowser: () => mobileState.isMobile,
+  getHTMLElementHeight: () => 0,
 }));
 
 vi.mock('@/helpers/assignments', () => ({
