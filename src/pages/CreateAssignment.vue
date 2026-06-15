@@ -172,6 +172,8 @@
           </div>
         </div>
       </div>
+
+      <RoarFooter />
     </section>
   </main>
 </template>
@@ -219,6 +221,7 @@ import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QU
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { useLevanteStore } from '@/store/levante';
 import { logger } from '@/logger';
+import RoarFooter from '@/components/RoarFooter.vue';
 
 const initialized = ref(false);
 const isFormPopulated = ref(false);

@@ -160,6 +160,9 @@
       </PvDialog>
     </section>
   </main>
+
+  <RoarFooter />
+
   <RoarModal
     title="Edit Group"
     subtitle="Modify or add Group information"
@@ -249,6 +252,7 @@ import _useDistrictsQuery from '@/composables/queries/_useDistrictsQuery';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
 import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import RoarFooter from '@/components/RoarFooter.vue';
 
 const initialized = ref(false);
 const selectedDistrict = ref(undefined);

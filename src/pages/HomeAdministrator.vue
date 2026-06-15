@@ -255,12 +255,15 @@
         </div>
       </div>
     </div>
+
+    <RoarFooter />
   </div>
 </template>
 
 <script setup lang="ts">
 import DocsButton from '@/components/DocsButton.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import RoarFooter from '@/components/RoarFooter.vue';
 import { useGetSiteOverviewQuery } from '@/composables/queries/useGetSiteOverviewQuery';
 import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';

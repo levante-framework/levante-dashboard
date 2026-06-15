@@ -18,24 +18,30 @@
                 </div>
               </div>
               <div class="flex flex-column gap-2">
-                <div 
+                <div
                   class="flex flex-wrap gap-2 justify-content-between align-items-center cursor-pointer"
                   @click="isUserCountExpanded = !isUserCountExpanded"
                 >
-                  <div class="uppercase font-light font-sm text-gray-400 mb-1"><i 
+                  <div class="uppercase font-light font-sm text-gray-400 mb-1">
+                    <i
                       :class="[
                         'pi text-gray-400 transition-transform transition-duration-200',
-                        isUserCountExpanded ? 'pi-chevron-down' : 'pi-chevron-right'
+                        isUserCountExpanded ? 'pi-chevron-down' : 'pi-chevron-right',
                       ]"
-                    ></i>User Count</div>
+                    ></i
+                    >User Count
+                  </div>
                   <div class="flex align-items-center gap-2">
                     <div class="text-xl text-gray-600">
                       <b> {{ users?.length }} </b>
                     </div>
-                    
                   </div>
                 </div>
-                <div v-if="isUserCountExpanded" class="flex flex-column gap-2 pl-3" style="border-left: 2px solid var(--gray-300);">
+                <div
+                  v-if="isUserCountExpanded"
+                  class="flex flex-column gap-2 pl-3"
+                  style="border-left: 2px solid var(--gray-300)"
+                >
                   <div class="flex flex-wrap gap-2 justify-content-between">
                     <div class="uppercase font-light font-sm text-gray-400 mb-1">Children</div>
                     <div class="text-l text-gray-600">
@@ -163,6 +169,8 @@
       </RoarModal>
     </section>
   </main>
+
+  <RoarFooter />
 </template>
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue';
@@ -184,6 +192,7 @@ import EditUsersForm from '@/components/EditUsersForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import RoarFooter from '@/components/RoarFooter.vue';
 
 const props = defineProps({
   orgType: {
@@ -233,14 +242,21 @@ const {
   enabled: initialized,
 });
 
-watch(users, (newUsers) => {
-  console.log('Raw users data from query:', newUsers);
-  console.log('Number of users:', newUsers?.length);
-  if (newUsers?.length > 0) {
-    console.log('First user example:', newUsers[0]);
-    console.log('User types in data:', newUsers.map(u => u.userType));
-  }
-}, { immediate: true });
+watch(
+  users,
+  (newUsers) => {
+    console.log('Raw users data from query:', newUsers);
+    console.log('Number of users:', newUsers?.length);
+    if (newUsers?.length > 0) {
+      console.log('First user example:', newUsers[0]);
+      console.log(
+        'User types in data:',
+        newUsers.map((u) => u.userType),
+      );
+    }
+  },
+  { immediate: true },
+);
 
 const isUserCountExpanded = ref(false);
 

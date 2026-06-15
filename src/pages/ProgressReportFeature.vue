@@ -173,6 +173,8 @@
       </template>
     </section>
   </main>
+
+  <RoarFooter />
 </template>
 
 <script setup>
@@ -203,6 +205,7 @@ import PvInputText from 'primevue/inputtext';
 import _capitalize from 'lodash/capitalize';
 import { administrationsRepository } from '@/firebase/repositories/AdministrationsRepository';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
+import RoarFooter from '@/components/RoarFooter.vue';
 
 const props = defineProps({
   administrationId: {

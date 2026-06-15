@@ -113,6 +113,8 @@
           </PvColumn>
         </PvDataTable>
       </div>
+
+      <RoarFooter />
     </section>
   </main>
 </template>
@@ -136,6 +138,7 @@ import PvDivider from 'primevue/divider';
 import { validateLinkUsersCsv, validateCsvHeaders } from '@levante-framework/levante-zod';
 import { useLevanteStore } from '@/store/levante';
 import { storeToRefs } from 'pinia';
+import RoarFooter from '@/components/RoarFooter.vue';
 
 const levanteStore = useLevanteStore();
 const { hasUserConfirmed } = storeToRefs(levanteStore);

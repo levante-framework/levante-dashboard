@@ -7,7 +7,7 @@
     <LanguageSelector />
   </div>
 
-  <div :class="`login login--${mode}`">
+  <div :class="`login login--${mode}`" :style="{ minHeight: `calc(100dvh - ${roarFooterHeight}px)` }">
     <img src="/levante-icon-black.svg" alt="Levante" class="levante-icon-black" />
 
     <div class="login-card">
@@ -157,6 +157,8 @@
     </div>
   </div>
 
+  <RoarFooter variant="secondary" />
+
   <RoarModal
     :is-enabled="isOpenForgotPasswordModal"
     small
@@ -188,8 +190,9 @@
 import AppSpinner from '@/components/AppSpinner.vue';
 import LanguageSelector from '@/components/LanguageSelector.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
+import RoarFooter from '@/components/RoarFooter.vue';
 import { APP_ROUTES } from '@/constants/routes';
-import { isEmailValid, isMobileBrowser } from '@/helpers';
+import { getHTMLElementHeight, isEmailValid, isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { getUserAssignments } from '@/helpers/query/assignments';
 import { fetchDocById } from '@/helpers/query/utils';
@@ -202,7 +205,7 @@ import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
 import PvMessage from 'primevue/message';
 import PvPassword from 'primevue/password';
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const MODES = {
@@ -257,6 +260,7 @@ const isOpenWarningModal = ref(false);
 const isSigningInWithEmailLink = ref(false);
 const messages = ref<Array<Message>>([]);
 const mode = ref<Mode>(MODES.participant);
+const roarFooterHeight = ref(0);
 
 const isParticipantMode = computed(() => mode.value === MODES.participant);
 
@@ -412,6 +416,10 @@ const sendResetPasswordEmail = () => {
   roarfirekit.value!.sendPasswordResetEmail(forgotEmail.value);
   closeForgotPasswordModal();
 };
+
+onMounted(() => {
+  roarFooterHeight.value = getHTMLElementHeight('#roarFooter');
+});
 </script>
 
 <style scoped lang="scss">
