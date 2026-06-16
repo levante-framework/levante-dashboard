@@ -510,13 +510,17 @@ const submitUsers = async () => {
     // Merge the created users with the validated data
     const mergedUsers = _cloneDeep(toRaw(validatedData.value));
     result.data.users.forEach((createdUser) => {
-      const validatedIdx = unregistered.find(({ user }) => user.id === createdUser.id)!.validatedIdx;
-      mergedUsers[validatedIdx] = {
-        ...mergedUsers[validatedIdx]!,
-        email: createdUser.email ?? '',
-        password: createdUser.password ?? '',
-        uid: createdUser.uid ?? '',
-      };
+      const validatedIdx = unregistered.find(({ user }) => user.id === createdUser.id)?.validatedIdx;
+      if (validatedIdx != null) {
+        mergedUsers[validatedIdx] = {
+          ...mergedUsers[validatedIdx]!,
+          email: createdUser.email ?? '',
+          password: createdUser.password ?? '',
+          uid: createdUser.uid ?? '',
+        };
+      } else {
+        logger.error('Unexpected created user', { uid: createdUser.uid });
+      }
     });
     registeredUsers.value = mergedUsers;
 
