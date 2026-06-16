@@ -1056,6 +1056,64 @@ describe('AddUsers Page', () => {
       expect(vm.showSyncPendingModal).toBe(false);
       expect(vm.registeredUsers).toBeNull();
     });
+
+    it('surfaces a failed-precondition app-error and resets submission state', async () => {
+      vi.mocked(fetchOrgByName as any)
+        .mockResolvedValueOnce([{ id: 'school-1' }])
+        .mockResolvedValueOnce([{ id: 'class-1' }]);
+
+      const createUsers = vi.fn().mockResolvedValue({
+        code: 'app-error',
+        data: {
+          name: 'FirebaseError',
+          message: 'failed precondition',
+          code: 'functions/failed-precondition',
+          details: { code: 'sync-pending' },
+        },
+      });
+      const { vm } = mountWithFirekit(createUsers);
+
+      await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
+      await vm.submitUsers();
+
+      expect(createUsers).toHaveBeenCalledOnce();
+      expect(vm.status).toEqual({
+        message: 'The server is working on other tasks. Please try again in a few minutes.',
+        severity: 'error',
+      });
+      expect(vm.isSubmitting).toBe(false);
+      expect(vm.showSyncPendingModal).toBe(false);
+      expect(vm.registeredUsers).toBeNull();
+    });
+
+    it('surfaces a permission-denied app-error and resets submission state', async () => {
+      vi.mocked(fetchOrgByName as any)
+        .mockResolvedValueOnce([{ id: 'school-1' }])
+        .mockResolvedValueOnce([{ id: 'class-1' }]);
+
+      const createUsers = vi.fn().mockResolvedValue({
+        code: 'app-error',
+        data: {
+          name: 'FirebaseError',
+          message: 'permission denied',
+          code: 'functions/permission-denied',
+          details: { code: 'auth' },
+        },
+      });
+      const { vm } = mountWithFirekit(createUsers);
+
+      await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
+      await vm.submitUsers();
+
+      expect(createUsers).toHaveBeenCalledOnce();
+      expect(vm.status).toEqual({
+        message: 'You do not have permission to add users to this site. Please contact support.',
+        severity: 'error',
+      });
+      expect(vm.isSubmitting).toBe(false);
+      expect(vm.showSyncPendingModal).toBe(false);
+      expect(vm.registeredUsers).toBeNull();
+    });
   });
 
   describe('createOrgIdResolver', () => {
