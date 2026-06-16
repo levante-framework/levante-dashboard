@@ -1,12 +1,12 @@
 import * as Papa from 'papaparse';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
+import ToastService from 'primevue/toastservice';
 import Tooltip from 'primevue/tooltip';
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { ref } from 'vue';
 import { mount } from '@vue/test-utils';
-import { usersRepository } from '@/firebase/repositories/UsersRepository';
 import { fetchOrgByName } from '@/helpers/query/orgs';
 import { useAuthStore } from '@/store/auth';
 import AddUsers from './AddUsers.vue';
@@ -19,14 +19,6 @@ const mockRouter = {
 
 vi.mock('vue-router', () => ({
   useRouter: () => mockRouter,
-}));
-
-// ─── Firebase / repositories ──────────────────────────────────────────────────
-
-vi.mock('@/firebase/repositories/UsersRepository', () => ({
-  usersRepository: {
-    createUsers: vi.fn(),
-  },
 }));
 
 // ─── Org query helper ─────────────────────────────────────────────────────────
@@ -56,16 +48,16 @@ vi.mock('@/logger', () => ({
 // recognise them and pass them through unchanged. Without real refs,
 // storeToRefs returns an empty object and all destructured values are
 // undefined, causing a crash during component setup.
+//
+// Beyond the site refs, the component reads `roarfirekit` (used for
+// firekit.createUsers in submitUsers) and calls `isFirekitInit()` from the
+// sync-status query's `enabled` guard, so both must be present or setup throws.
+// createAuthStoreMock() supplies a sensible default; the beforeEach below wires
+// it up as the default return and individual tests override fields as needed.
 
-vi.mock('@/store/auth', async () => {
-  const { ref } = await import('vue');
-  return {
-    useAuthStore: vi.fn(() => ({
-      currentSite: ref('site-id-123'),
-      currentSiteName: ref('site-id-123'),
-    })),
-  };
-});
+vi.mock('@/store/auth', () => ({
+  useAuthStore: vi.fn(),
+}));
 
 // Hoisted so the spy can be referenced both inside the factory below and
 // from within individual tests via the imported store mock.
@@ -80,6 +72,16 @@ vi.mock('@/store/levante', () => ({
 }));
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
+
+// Builds the auth-store shape the component expects. Pass overrides to vary the
+// selected site or to supply a roarfirekit whose createUsers is stubbed.
+const createAuthStoreMock = (overrides: Record<string, unknown> = {}) => ({
+  currentSite: ref('site-id-123'),
+  currentSiteName: ref('site-id-123'),
+  roarfirekit: ref(null),
+  isFirekitInit: () => false,
+  ...overrides,
+});
 
 const createMockFile = (content: string, filename = 'test.csv', type = 'text/csv') => {
   return new File([content], filename, { type });
@@ -96,6 +98,7 @@ const mountAddUsers = () =>
     global: {
       plugins: [
         PrimeVue,
+        ToastService,
         [VueQueryPlugin, { queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }],
       ],
       directives: { tooltip: Tooltip },
@@ -130,6 +133,8 @@ describe('AddUsers Page', () => {
     setActivePinia(createPinia());
     mockRouter.push.mockReset();
     setShouldUserConfirmMock.mockReset();
+    vi.mocked(useAuthStore).mockReset();
+    vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock() as any);
   });
 
   describe('onFileUpload', () => {
@@ -336,10 +341,9 @@ describe('AddUsers Page', () => {
       // whitespace so the comparison can't pass via raw equality.
       // normalizeToLowercase (used on both sides) trims, lowercases, and
       // strips combining diacritics, so every row below should match.
-      vi.mocked(useAuthStore).mockReturnValueOnce({
-        currentSite: ref('site-id-123'),
-        currentSiteName: ref('  My Sïte  '),
-      } as any);
+      vi.mocked(useAuthStore).mockReturnValueOnce(
+        createAuthStoreMock({ currentSiteName: ref('  My Sïte  ') }) as any,
+      );
 
       const csv = [
         'id,userType,month,year,caregiverId,teacherId,school,class,cohort,site',
@@ -697,17 +701,50 @@ describe('AddUsers Page', () => {
       '1,child,5,2018,,,"Test School","Class A",',
     ].join('\n');
 
+    // Mounts AddUsers with an auth store whose roarfirekit.createUsers is the
+    // supplied stub, so submitUsers' firekit call is observable. Returns the
+    // component vm alongside the createUsers mock for assertions.
+    const mountWithFirekit = (createUsers: Mock = vi.fn()) => {
+      vi.mocked(useAuthStore).mockReturnValueOnce(
+        createAuthStoreMock({ roarfirekit: ref({ createUsers }) }) as any,
+      );
+      return { vm: mountAddUsers().vm as any, createUsers };
+    };
+
+    // The success path calls downloadRegisteredUsers(), which touches DOM/URL
+    // APIs JSDOM doesn't implement. Stub them for the duration of `run` and
+    // restore afterwards so other tests see the real implementations.
+    const withDownloadStubs = async (run: () => Promise<void>) => {
+      const originalCreateElement = document.createElement.bind(document);
+      const originalAppendChild = document.body.appendChild.bind(document.body);
+      const originalRemoveChild = document.body.removeChild.bind(document.body);
+      global.URL.createObjectURL = vi.fn(() => 'mock-blob-url');
+      document.createElement = vi.fn((tag: string) => {
+        const el = originalCreateElement(tag);
+        if (tag === 'a') el.click = vi.fn();
+        return el;
+      });
+      document.body.appendChild = vi.fn();
+      document.body.removeChild = vi.fn();
+      try {
+        await run();
+      } finally {
+        document.createElement = originalCreateElement;
+        document.body.appendChild = originalAppendChild;
+        document.body.removeChild = originalRemoveChild;
+      }
+    };
+
     beforeEach(() => {
       vi.mocked(fetchOrgByName as any).mockReset();
-      vi.mocked(usersRepository.createUsers as any).mockReset();
     });
 
     it('returns early when there is no clean validated data to submit', async () => {
-      const vm = mountAddUsers().vm as any;
+      const { vm, createUsers } = mountWithFirekit();
 
       // Fresh mount: validatedData is null. The `!validatedData.value`
       // half of the guard fires and submission is aborted before any
-      // org lookup or repository call is attempted.
+      // org lookup or firekit call is attempted.
       await vm.submitUsers();
 
       expect(vm.status).toEqual({
@@ -716,22 +753,23 @@ describe('AddUsers Page', () => {
       });
       expect(vm.isSubmitting).toBe(false);
       expect(fetchOrgByName).not.toHaveBeenCalled();
-      expect(usersRepository.createUsers).not.toHaveBeenCalled();
+      expect(createUsers).not.toHaveBeenCalled();
     });
 
     it('returns early when no specific site is selected', async () => {
-      // Override the auth store for this single mount so isAllSitesSelected
-      // is true. mockReturnValueOnce keeps the override scoped to the next
-      // useAuthStore() call, which is what mountAddUsers triggers.
-      vi.mocked(useAuthStore).mockReturnValueOnce({
-        currentSite: ref('any'),
-        currentSiteName: ref('Test Site'),
-      } as any);
+      // Override the auth store so isAllSitesSelected is true. SUBMIT_CSV has
+      // no 'site' column, so onFileUpload's site-mismatch check is skipped and
+      // validatedData populates cleanly even though the all-sites view is active.
+      const createUsers = vi.fn();
+      vi.mocked(useAuthStore).mockReturnValueOnce(
+        createAuthStoreMock({
+          currentSite: ref('any'),
+          currentSiteName: ref('Test Site'),
+          roarfirekit: ref({ createUsers }),
+        }) as any,
+      );
 
       const vm = mountAddUsers().vm as any;
-      // SUBMIT_CSV has no 'site' column, so onFileUpload's site-mismatch
-      // check is skipped and validatedData populates cleanly even though
-      // the all-sites view is active.
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
       expect(vm.validatedData).not.toBeNull();
 
@@ -742,14 +780,14 @@ describe('AddUsers Page', () => {
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);
-      expect(usersRepository.createUsers).not.toHaveBeenCalled();
+      expect(createUsers).not.toHaveBeenCalled();
     });
 
     it('skips submission when every user already has a uid', async () => {
       // The 'uid' header is recognised by NORMALIZED_USER_CSV_HEADERS
       // and accepted by the schema, so a row with a populated uid is
       // treated as already-registered. onFileUpload filters these out
-      // up front: when the resulting newUsers list is empty, it sets an
+      // up front: when the resulting unregistered list is empty, it sets an
       // 'info' status and returns before populating validatedData, so
       // submitUsers never has anything to send to the backend.
       const csv = [
@@ -757,26 +795,26 @@ describe('AddUsers Page', () => {
         '1,child,5,2018,,,"Test School","Class A",,existing-uid',
       ].join('\n');
 
-      const vm = mountAddUsers().vm as any;
+      const { vm, createUsers } = mountWithFirekit();
       await vm.onFileUpload(mockFileUploadEvent(csv));
 
-      // The all-already-registered case is now caught at upload time:
-      // onFileUpload sets the info status and returns before populating
-      // either newUsers or validatedData.
+      // The all-already-registered case is caught at upload time: onFileUpload
+      // sets the info status and returns before populating either
+      // unregisteredUsers or validatedData.
       expect(vm.validatedData).toBeNull();
-      expect(vm.newUsers).toBeNull();
+      expect(vm.unregisteredUsers).toBeNull();
       expect(vm.status).toEqual({
         message: 'All users in the file have already been registered.',
         severity: 'info',
       });
 
-      // Calling submitUsers in this state hits the !validatedData guard
-      // and bails out before any org lookup or repository call.
+      // Calling submitUsers in this state hits the guard and bails out before
+      // any org lookup or firekit call.
       await vm.submitUsers();
 
       expect(vm.isSubmitting).toBe(false);
       expect(fetchOrgByName).not.toHaveBeenCalled();
-      expect(usersRepository.createUsers).not.toHaveBeenCalled();
+      expect(createUsers).not.toHaveBeenCalled();
     });
 
     it('reports a school error and skips class lookup when a school cannot be resolved', async () => {
@@ -792,7 +830,6 @@ describe('AddUsers Page', () => {
 
       await vm.submitUsers();
 
-      expect(usersRepository.createUsers).not.toHaveBeenCalled();
       expect(vm.status).toEqual({
         message: 'Please fix the errors in your CSV file before submitting.',
         severity: 'error',
@@ -825,7 +862,6 @@ describe('AddUsers Page', () => {
 
       await vm.submitUsers();
 
-      expect(usersRepository.createUsers).not.toHaveBeenCalled();
       expect(vm.validationErrors).not.toBeNull();
       expect(vm.validationErrors.rows).toEqual([
         { message: 'school: Does not exist in selected site', rowNums: [2, 3, 4] },
@@ -846,7 +882,6 @@ describe('AddUsers Page', () => {
 
       await vm.submitUsers();
 
-      expect(usersRepository.createUsers).not.toHaveBeenCalled();
       expect(vm.validationErrors).not.toBeNull();
       expect(vm.validationErrors.rows).toEqual([{ message: 'class: Does not exist in selected site', rowNums: [2] }]);
     });
@@ -871,12 +906,11 @@ describe('AddUsers Page', () => {
 
       await vm.submitUsers();
 
-      expect(usersRepository.createUsers).not.toHaveBeenCalled();
       expect(vm.validationErrors).not.toBeNull();
       expect(vm.validationErrors.rows).toEqual([{ message: 'school: Does not exist in selected site', rowNums: [2] }]);
     });
 
-    it('submits with normalized userType and resolved orgIds, then merges createUsers results', async () => {
+    it('calls firekit with resolved orgIds (userType verbatim) and merges the returned credentials', async () => {
       // Two sequential resolves: first the school, then the class scoped
       // to that school. createOrgIdResolver caches by (orgType, name +
       // parents) so each is called exactly once for our single user.
@@ -884,89 +918,102 @@ describe('AddUsers Page', () => {
         .mockResolvedValueOnce([{ id: 'school-1' }])
         .mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      vi.mocked(usersRepository.createUsers as any).mockResolvedValueOnce([
-        { uid: 'uid-1', email: 'a@b.com', password: 'pw' },
-      ]);
-
-      // Stub DOM/URL APIs that downloadRegisteredUsers touches on the success
-      // path so the test doesn't trip over JSDOM's missing
-      // URL.createObjectURL or trigger a real link click.
-      global.URL.createObjectURL = vi.fn(() => 'mock-blob-url');
-      const originalCreateElement = document.createElement.bind(document);
-      const originalAppendChild = document.body.appendChild.bind(document.body);
-      const originalRemoveChild = document.body.removeChild.bind(document.body);
-      document.createElement = vi.fn((tag: string) => {
-        const el = originalCreateElement(tag);
-        if (tag === 'a') el.click = vi.fn();
-        return el;
+      const createUsers = vi.fn().mockResolvedValue({
+        code: 'success',
+        data: { users: [{ id: '1', email: 'a@b.com', password: 'pw', uid: 'uid-1' }] },
       });
-      document.body.appendChild = vi.fn();
-      document.body.removeChild = vi.fn();
+      const { vm } = mountWithFirekit(createUsers);
 
-      try {
-        const vm = mountAddUsers().vm as any;
+      await withDownloadStubs(async () => {
         await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
-
         await vm.submitUsers();
+      });
 
-        // createUsers was called once with the canonical payload shape.
-        expect(usersRepository.createUsers).toHaveBeenCalledOnce();
-        const [payload] = vi.mocked(usersRepository.createUsers as any).mock.calls[0]!;
-        expect(payload.siteId).toBe('site-id-123');
-        expect(payload.users).toHaveLength(1);
+      // createUsers was called once with the params CreateUsersParamsSchema
+      // produces. userType is forwarded verbatim — 'child' is a valid backend
+      // literal, so there is no 'student' normalization in this component.
+      expect(createUsers).toHaveBeenCalledOnce();
+      const [payload] = createUsers.mock.calls[0]!;
+      expect(payload.siteId).toBe('site-id-123');
+      expect(payload.users).toHaveLength(1);
+      expect(payload.users[0]).toMatchObject({
+        id: '1',
+        userType: 'child',
+        month: 5,
+        year: 2018,
+        orgIds: { schools: ['school-1'], classes: ['class-1'], cohorts: [] },
+      });
 
-        // userType is normalised for the backend ('child' → 'student'),
-        // and orgIds reflects the resolved firestore IDs with the
-        // 'cohort' → 'groups' rename applied.
-        expect(payload.users[0]).toMatchObject({
-          userType: 'student',
-          orgIds: {
-            districts: ['site-id-123'],
-            schools: ['school-1'],
-            classes: ['class-1'],
-            groups: [],
-          },
-        });
+      // The site is conveyed via the top-level siteId; CreateUsersParamsSchema
+      // strips the transient `sites` array the component builds per user.
+      expect(payload.users[0].orgIds).not.toHaveProperty('sites');
 
-        // Successful merge: registeredUsers carries the credentials that
-        // came back from createUsers, indexed by userIdx.
-        expect(vm.registeredUsers).toHaveLength(1);
-        expect(vm.registeredUsers[0]).toMatchObject({
-          email: 'a@b.com',
-          password: 'pw',
-          uid: 'uid-1',
-        });
+      // Successful merge: registeredUsers carries the credentials returned by
+      // createUsers, merged back into the originally uploaded row by id.
+      expect(vm.registeredUsers).toHaveLength(1);
+      expect(vm.registeredUsers[0]).toMatchObject({
+        id: '1',
+        email: 'a@b.com',
+        password: 'pw',
+        uid: 'uid-1',
+      });
 
-        expect(vm.status).toEqual({
-          message: 'Users created successfully.',
-          severity: 'success',
-        });
-        expect(vm.isSubmitting).toBe(false);
-        expect(vm.showBulkCreateUsersModal).toBe(false);
-      } finally {
-        document.createElement = originalCreateElement;
-        document.body.appendChild = originalAppendChild;
-        document.body.removeChild = originalRemoveChild;
-      }
+      expect(vm.status).toEqual({ message: 'Users created successfully.', severity: 'success' });
+      expect(vm.isSubmitting).toBe(false);
+      expect(vm.showBulkCreateUsersModal).toBe(false);
     });
 
-    it('surfaces createUsers errors and resets submission state', async () => {
-      // Org resolution succeeds; the failure happens at the create call.
+    it('maps an already-exists app-error to per-row validation errors', async () => {
       vi.mocked(fetchOrgByName as any)
         .mockResolvedValueOnce([{ id: 'school-1' }])
         .mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      vi.mocked(usersRepository.createUsers as any).mockRejectedValueOnce(new Error('boom'));
+      const createUsers = vi.fn().mockResolvedValue({
+        code: 'app-error',
+        data: {
+          name: 'FirebaseError',
+          message: 'already exists',
+          code: 'functions/already-exists',
+          details: { code: 'users', ids: ['1'] },
+        },
+      });
+      const { vm } = mountWithFirekit(createUsers);
 
-      const vm = mountAddUsers().vm as any;
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
-
       await vm.submitUsers();
 
-      // The catch block formats the error and the finally block
-      // unconditionally resets the submission state.
       expect(vm.status).toEqual({
-        message: 'Error creating users: boom',
+        message: 'One or more users already exist. Please try again with a different file.',
+        severity: 'error',
+      });
+
+      // The returned ids are mapped back to CSV row numbers (+2 for the header
+      // row and 1-indexing) for display in the errors table.
+      expect(vm.validationErrors.rows).toEqual([{ message: 'User already exists', rowNums: [2] }]);
+      expect(vm.isSubmitting).toBe(false);
+      expect(vm.showBulkCreateUsersModal).toBe(false);
+      expect(vm.registeredUsers).toBeNull();
+    });
+
+    it('surfaces an unexpected createUsers failure and resets submission state', async () => {
+      // Org resolution succeeds; createUsers resolves with a generic 'error'
+      // result (an exception the firekit wrapper caught and normalized).
+      vi.mocked(fetchOrgByName as any)
+        .mockResolvedValueOnce([{ id: 'school-1' }])
+        .mockResolvedValueOnce([{ id: 'class-1' }]);
+
+      const createUsers = vi.fn().mockResolvedValue({
+        code: 'error',
+        error: new Error('boom'),
+      });
+      const { vm } = mountWithFirekit(createUsers);
+
+      await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
+      await vm.submitUsers();
+
+      expect(createUsers).toHaveBeenCalledOnce();
+      expect(vm.status).toEqual({
+        message: 'An unexpected error occurred. Please contact support.',
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);
@@ -1147,103 +1194,6 @@ describe('AddUsers Page', () => {
     });
   });
 
-  describe('runWithConcurrency', () => {
-    it('returns an empty array when given no chunks', async () => {
-      const vm = mountAddUsers().vm as any;
-
-      const worker = vi.fn(async (n: number) => n * 2);
-      const results = await vm.runWithConcurrency([], worker);
-
-      expect(results).toEqual([]);
-      expect(worker).not.toHaveBeenCalled();
-    });
-
-    it('invokes the worker once per chunk and preserves input order in results', async () => {
-      const vm = mountAddUsers().vm as any;
-
-      // Resolve out of order to prove ordering comes from the input index, not
-      // completion order. Larger numbers settle first.
-      const worker = vi.fn((n: number) => new Promise<number>((resolve) => setTimeout(() => resolve(n * 10), 20 - n)));
-
-      const results = await vm.runWithConcurrency([1, 2, 3, 4], worker, 2);
-
-      expect(results).toEqual([10, 20, 30, 40]);
-      expect(worker).toHaveBeenCalledTimes(4);
-      // Each chunk should have been forwarded verbatim to the worker.
-      expect(worker.mock.calls.map((c) => c[0])).toEqual([1, 2, 3, 4]);
-    });
-
-    it('limits in-flight workers to the provided concurrency', async () => {
-      const vm = mountAddUsers().vm as any;
-
-      let inFlight = 0;
-      let maxInFlight = 0;
-      // Each worker sleeps so that several can overlap if the limit allows it.
-      const worker = vi.fn(async (n: number) => {
-        inFlight += 1;
-        maxInFlight = Math.max(maxInFlight, inFlight);
-        await new Promise((resolve) => setTimeout(resolve, 5));
-        inFlight -= 1;
-        return n;
-      });
-
-      await vm.runWithConcurrency([1, 2, 3, 4, 5, 6], worker, 3);
-
-      expect(maxInFlight).toBe(3);
-      expect(worker).toHaveBeenCalledTimes(6);
-    });
-
-    it('defaults the concurrency limit to 2', async () => {
-      const vm = mountAddUsers().vm as any;
-
-      let inFlight = 0;
-      let maxInFlight = 0;
-      const worker = vi.fn(async (n: number) => {
-        inFlight += 1;
-        maxInFlight = Math.max(maxInFlight, inFlight);
-        await new Promise((resolve) => setTimeout(resolve, 5));
-        inFlight -= 1;
-        return n;
-      });
-
-      await vm.runWithConcurrency([1, 2, 3, 4], worker);
-
-      expect(maxInFlight).toBe(2);
-    });
-
-    it('clamps the runner count to the number of chunks when limit exceeds it', async () => {
-      const vm = mountAddUsers().vm as any;
-
-      // With limit > chunks.length, runWithConcurrency only spawns chunks.length
-      // runners; max concurrency therefore can't exceed chunks.length.
-      let inFlight = 0;
-      let maxInFlight = 0;
-      const worker = vi.fn(async (n: number) => {
-        inFlight += 1;
-        maxInFlight = Math.max(maxInFlight, inFlight);
-        await new Promise((resolve) => setTimeout(resolve, 5));
-        inFlight -= 1;
-        return n;
-      });
-
-      const results = await vm.runWithConcurrency([1, 2], worker, 10);
-
-      expect(results).toEqual([1, 2]);
-      expect(maxInFlight).toBeLessThanOrEqual(2);
-    });
-
-    it('propagates worker errors via the returned promise', async () => {
-      const vm = mountAddUsers().vm as any;
-
-      const worker = vi.fn(async (n: number) => {
-        if (n === 2) throw new Error('boom');
-        return n;
-      });
-
-      await expect(vm.runWithConcurrency([1, 2, 3], worker, 2)).rejects.toThrow('boom');
-    });
-  });
-
   describe('downloadRegisteredUsers', () => {
     it('does nothing when registeredUsers is null', () => {
       const createObjectURL = vi.spyOn(URL, 'createObjectURL');
@@ -1361,10 +1311,9 @@ describe('AddUsers Page', () => {
     it('"Choose CSV File" button is disabled when all sites are selected', () => {
       // Override the default 'site-id-123' with 'any' for this one mount so
       // that isAllSitesSelected computes to true.
-      vi.mocked(useAuthStore).mockReturnValueOnce({
-        currentSite: ref('any'),
-        currentSiteName: ref(''),
-      } as any);
+      vi.mocked(useAuthStore).mockReturnValueOnce(
+        createAuthStoreMock({ currentSite: ref('any'), currentSiteName: ref('') }) as any,
+      );
 
       const wrapper = mountAddUsers();
       const vm = wrapper.vm as any;
@@ -1380,9 +1329,8 @@ describe('AddUsers Page', () => {
     it('rows datatable shows only users without a uid', async () => {
       // Mixed upload: rows 1 and 3 are new (uid empty) and row 2 is
       // already registered (uid populated). onFileUpload populates
-      // newUsers as a list of { user, userIdx } entries, omitting the
-      // already-registered row, and CsvTable receives that filtered
-      // list as its rows prop.
+      // unregisteredUsers with the new rows, omitting the already-registered
+      // one, and CsvTable receives that filtered list as its rows prop.
       const csv = [
         'id,userType,month,year,caregiverId,teacherId,school,class,cohort,uid',
         '1,child,5,2018,,,"Test School","Class A",,',
@@ -1399,29 +1347,29 @@ describe('AddUsers Page', () => {
       // validatedData carries every row from the file…
       expect(vm.validatedData).toHaveLength(3);
 
-      // …but newUsers excludes the already-registered row, preserving
-      // input order for the remaining two. newUsersMap is a parallel
-      // array carrying each row's original index into validatedData,
-      // which submitUsers needs to merge createUsers results back in.
-      expect(vm.newUsers).toHaveLength(2);
-      expect(vm.newUsers.map((u: { id: string }) => u.id)).toEqual(['1', '3']);
-      expect(vm.newUsers.every((u: { uid?: string }) => !u.uid)).toBe(true);
-      expect(vm.newUsersMap).toEqual([0, 2]);
+      // …but unregisteredUsers excludes the already-registered row, preserving
+      // input order for the remaining two. unregisteredToValidated is a parallel
+      // array carrying each row's original index into validatedData, which
+      // submitUsers needs to merge createUsers results back in.
+      expect(vm.unregisteredUsers).toHaveLength(2);
+      expect(vm.unregisteredUsers.map((u: { id: string }) => u.id)).toEqual(['1', '3']);
+      expect(vm.unregisteredUsers.every((u: { uid?: string }) => !u.uid)).toBe(true);
+      expect(vm.unregisteredToValidated).toEqual([0, 2]);
 
       // The rows datatable receives the filtered list, not validatedData.
       // The errors datatable's CsvTable is not rendered (validationErrors
       // is null), so findComponent uniquely resolves to the rows table.
       const csvTable = wrapper.findComponent({ name: 'CsvTable' });
       expect(csvTable.exists()).toBe(true);
-      expect(csvTable.props('rows')).toEqual(vm.newUsers);
+      expect(csvTable.props('rows')).toEqual(vm.unregisteredUsers);
     });
 
     it('sets info status and hides rows datatable when every uploaded user already has a uid', async () => {
       // Every row carries a populated uid, so onFileUpload's filter
       // produces an empty list. The component then surfaces an
       // info-level status to explain why nothing will be added and
-      // returns *before* assigning newUsers or validatedData, so the
-      // rows-datatable's `v-if="newUsers && !validationErrors"` keeps
+      // returns *before* assigning unregisteredUsers or validatedData, so the
+      // rows-datatable's `v-if="unregisteredUsers && !validationErrors"` keeps
       // CsvTable from rendering at all.
       const csv = [
         'id,userType,month,year,caregiverId,teacherId,school,class,cohort,uid',
@@ -1438,7 +1386,7 @@ describe('AddUsers Page', () => {
       // Both refs stay at their initial null because onFileUpload
       // returns immediately after detecting that nothing needs adding.
       expect(vm.validatedData).toBeNull();
-      expect(vm.newUsers).toBeNull();
+      expect(vm.unregisteredUsers).toBeNull();
       expect(vm.status).toEqual({
         message: 'All users in the file have already been registered.',
         severity: 'info',
@@ -1446,7 +1394,7 @@ describe('AddUsers Page', () => {
 
       // No CsvTable should render: the errors table is gated by
       // validationErrors (null here) and the rows table is gated by
-      // newUsers (null here).
+      // unregisteredUsers (null here).
       const csvTable = wrapper.findComponent({ name: 'CsvTable' });
       expect(csvTable.exists()).toBe(false);
     });
