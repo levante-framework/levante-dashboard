@@ -135,11 +135,13 @@ const { currentSite, currentSiteName, roarfirekit } = storeToRefs(authStore);
 const isAllSitesSelected = computed(() => currentSite.value === 'any');
 const selectedSiteId = computed(() => currentSite.value ?? '');
 
-const {
-  data: syncStatus,
-  isLoading: isLoadingSyncStatus,
-} = useGetSyncStatusQuery(selectedSiteId, () => !isAllSitesSelected.value);
-const hasPendingSyncStatus = computed(() => syncStatus.value && (syncStatus.value.assignments.pending > 0 || syncStatus.value.users.pending > 0));
+const { data: syncStatus, isLoading: isLoadingSyncStatus } = useGetSyncStatusQuery(
+  selectedSiteId,
+  () => !isAllSitesSelected.value,
+);
+const hasPendingSyncStatus = computed(
+  () => syncStatus.value && (syncStatus.value.assignments.pending > 0 || syncStatus.value.users.pending > 0),
+);
 
 const levanteStore = useLevanteStore();
 const { setShouldUserConfirm } = levanteStore;
@@ -526,25 +528,39 @@ const submitUsers = async () => {
   } else if (result.code === 'app-error') {
     const error = result.data;
     if (error.code === 'functions/already-exists') {
-      status.value = { message: 'One or more users already exist. Please try again with a different file.', severity: 'error' };
-      const rowNumMap = validatedData.value!.reduce((acc, user, idx) => {
-        acc[user.id] = idx + 2; // +2 for header row and 1-indexing
-        return acc;
-      }, {} as Record<string, number>);
+      status.value = {
+        message: 'One or more users already exist. Please try again with a different file.',
+        severity: 'error',
+      };
+      const rowNumMap = validatedData.value!.reduce(
+        (acc, user, idx) => {
+          acc[user.id] = idx + 2; // +2 for header row and 1-indexing
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
       validationErrors.value = {
         headers: ['Validation Errors', 'Affected Rows'],
         keys: ['message', 'rowNums'],
-        rows: [{
-          message: 'User already exists',
-          rowNums: error.details.ids.map((id) => rowNumMap[id]),
-        }],
+        rows: [
+          {
+            message: 'User already exists',
+            rowNums: error.details.ids.map((id) => rowNumMap[id]),
+          },
+        ],
         showDownloadButton: true,
       };
     } else if (error.code === 'functions/failed-precondition') {
-      status.value = { message: 'The server is working on other tasks. Please try again in a few minutes.', severity: 'error' };
+      status.value = {
+        message: 'The server is working on other tasks. Please try again in a few minutes.',
+        severity: 'error',
+      };
       await invalidateSyncStatus();
     } else if (error.code === 'functions/permission-denied') {
-      status.value = { message: 'You do not have permission to add users to this site. Please contact support.', severity: 'error' };
+      status.value = {
+        message: 'You do not have permission to add users to this site. Please contact support.',
+        severity: 'error',
+      };
     } else if (error.code === 'functions/unauthenticated') {
       toast.add({
         severity: TOAST_SEVERITIES.WARN,
@@ -559,13 +575,19 @@ const submitUsers = async () => {
       // - functions/invalid-argument/org-site-mismatch
       // - functions/not-found/orgs
       logger.error(new Error(`Unexpected createUsers app-error: ${error.code}/${error.details.code}`), error);
-      status.value = { message: 'An unexpected error occurred. Please refresh the page and try again. If the problem persists, contact support.', severity: 'error' };
+      status.value = {
+        message:
+          'An unexpected error occurred. Please refresh the page and try again. If the problem persists, contact support.',
+        severity: 'error',
+      };
     }
   } else {
     if (result.code === 'functions-error' || result.code === 'firebase-error') {
       logger.error(new Error(`Unexpected createUsers ${result.code}: ${result.data.code}`), result.data);
     } else if (result.code === 'error') {
-      logger.error(`Unexpected createUsers error: ${result.error.message}`, { error: JSON.stringify(result.error, null, 2) });
+      logger.error(`Unexpected createUsers error: ${result.error.message}`, {
+        error: JSON.stringify(result.error, null, 2),
+      });
     }
     status.value = { message: 'An unexpected error occurred. Please contact support.', severity: 'error' };
   }

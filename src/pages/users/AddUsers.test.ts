@@ -341,9 +341,7 @@ describe('AddUsers Page', () => {
       // whitespace so the comparison can't pass via raw equality.
       // normalizeToLowercase (used on both sides) trims, lowercases, and
       // strips combining diacritics, so every row below should match.
-      vi.mocked(useAuthStore).mockReturnValueOnce(
-        createAuthStoreMock({ currentSiteName: ref('  My Sïte  ') }) as any,
-      );
+      vi.mocked(useAuthStore).mockReturnValueOnce(createAuthStoreMock({ currentSiteName: ref('  My Sïte  ') }) as any);
 
       const csv = [
         'id,userType,month,year,caregiverId,teacherId,school,class,cohort,site',
@@ -705,9 +703,7 @@ describe('AddUsers Page', () => {
     // supplied stub, so submitUsers' firekit call is observable. Returns the
     // component vm alongside the createUsers mock for assertions.
     const mountWithFirekit = (createUsers: Mock = vi.fn()) => {
-      vi.mocked(useAuthStore).mockReturnValueOnce(
-        createAuthStoreMock({ roarfirekit: ref({ createUsers }) }) as any,
-      );
+      vi.mocked(useAuthStore).mockReturnValueOnce(createAuthStoreMock({ roarfirekit: ref({ createUsers }) }) as any);
       return { vm: mountAddUsers().vm as any, createUsers };
     };
 
