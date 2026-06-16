@@ -6,6 +6,7 @@ import {
   ADMINISTRATIONS_QUERY_KEY,
   ADMINISTRATIONS_LIST_QUERY_KEY,
   ADMINISTRATION_ASSIGNMENTS_QUERY_KEY,
+  SYNC_STATUS_QUERY_KEY,
 } from '@/constants/queryKeys';
 import { logger } from '@/logger';
 
@@ -42,6 +43,7 @@ const useUpsertAdministrationMutation = (): UseMutationReturnType<void, Error, A
       queryClient.invalidateQueries({
         queryKey: [ADMINISTRATION_ASSIGNMENTS_QUERY_KEY],
       });
+      queryClient.invalidateQueries({ queryKey: [SYNC_STATUS_QUERY_KEY] });
       logger.capture('Admin: Create Administration', { data });
     },
     onError: (error: Error, data: AdministrationData): void => {
