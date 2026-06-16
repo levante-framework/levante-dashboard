@@ -117,12 +117,12 @@ import AppSpinner from '@/components/AppSpinner.vue';
 import CsvTable from '@/components/CsvTable.vue';
 import CsvUploader from '@/components/CsvUploader.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
+import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import { useGetSyncStatusQuery } from '@/composables/queries/useGetSyncStatusQuery';
 import { NORMALIZED_USER_CSV_HEADERS, USER_CSV_HEADERS } from '@/constants/csv';
-import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { SITE_OVERVIEW_QUERY_KEY, SYNC_STATUS_QUERY_KEY } from '@/constants/queryKeys';
+import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { normalizeToLowercase } from '@/helpers';
 import { deriveNextCsvFilename, downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
 import { fetchOrgByName } from '@/helpers/query/orgs';
@@ -140,7 +140,7 @@ const { data: syncStatus, isLoading: isLoadingSyncStatus } = useGetSyncStatusQue
   () => !isAllSitesSelected.value,
 );
 const hasPendingSyncStatus = computed(
-  () => syncStatus.value && (syncStatus.value.assignments.pending > 0 || syncStatus.value.users.pending > 0),
+  () => !!syncStatus.value && (syncStatus.value.assignments.pending > 0 || syncStatus.value.users.pending > 0),
 );
 
 const levanteStore = useLevanteStore();
@@ -528,7 +528,7 @@ const submitUsers = async () => {
     setShouldUserConfirm(false);
     downloadRegisteredUsers();
     await invalidateSyncStatus();
-    await queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY, selectedSiteId] });
+    await queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY, siteId] });
   } else if (result.code === 'app-error') {
     const error = result.data;
     if (error.code === 'functions/already-exists') {
