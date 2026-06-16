@@ -146,9 +146,9 @@ const hasPendingSyncStatus = computed(
 const levanteStore = useLevanteStore();
 const { setShouldUserConfirm } = levanteStore;
 
-// @TODO: createUsers is called directly on usersRepository rather than through a mutation composable (unlike
-// useUpsertAdministrationMutation etc.), so cache invalidation has to be done manually here instead of in onSuccess.
-// Consider wrapping usersRepository.createUsers in a useCreateUsersMutation composable for consistency.
+// @TODO: createUsers is called directly rather than through a mutation composable (unlike
+// useUpsertAdministrationMutation etc.), so cache invalidation has to be done manually here
+// instead of in onSuccess. Consider implementing useCreateUsersMutation composable.
 const queryClient = useQueryClient();
 
 const router = useRouter();
