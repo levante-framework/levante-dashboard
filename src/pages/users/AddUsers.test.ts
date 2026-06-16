@@ -71,6 +71,19 @@ vi.mock('@/store/levante', () => ({
   })),
 }));
 
+// ─── Sign-out mutation ────────────────────────────────────────────────────────
+//
+// The unauthenticated createUsers branch signs the user out. Hoisted so the spy
+// can be asserted from within individual tests.
+
+const { signOutMock } = vi.hoisted(() => ({
+  signOutMock: vi.fn(),
+}));
+
+vi.mock('@/composables/mutations/useSignOutMutation', () => ({
+  default: () => ({ mutate: signOutMock }),
+}));
+
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
 // Builds the auth-store shape the component expects. Pass overrides to vary the
@@ -133,6 +146,7 @@ describe('AddUsers Page', () => {
     setActivePinia(createPinia());
     mockRouter.push.mockReset();
     setShouldUserConfirmMock.mockReset();
+    signOutMock.mockReset();
     vi.mocked(useAuthStore).mockReset();
     vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock() as any);
   });
@@ -1012,6 +1026,32 @@ describe('AddUsers Page', () => {
         message: 'An unexpected error occurred. Please contact support.',
         severity: 'error',
       });
+      expect(vm.isSubmitting).toBe(false);
+      expect(vm.showSyncPendingModal).toBe(false);
+      expect(vm.registeredUsers).toBeNull();
+    });
+
+    it('signs the user out on an unauthenticated app-error', async () => {
+      vi.mocked(fetchOrgByName as any)
+        .mockResolvedValueOnce([{ id: 'school-1' }])
+        .mockResolvedValueOnce([{ id: 'class-1' }]);
+
+      const createUsers = vi.fn().mockResolvedValue({
+        code: 'app-error',
+        data: {
+          name: 'FirebaseError',
+          message: 'unauthenticated',
+          code: 'functions/unauthenticated',
+          details: { code: 'auth' },
+        },
+      });
+      const { vm } = mountWithFirekit(createUsers);
+
+      await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
+      await vm.submitUsers();
+
+      expect(createUsers).toHaveBeenCalledOnce();
+      expect(signOutMock).toHaveBeenCalledOnce();
       expect(vm.isSubmitting).toBe(false);
       expect(vm.showSyncPendingModal).toBe(false);
       expect(vm.registeredUsers).toBeNull();
