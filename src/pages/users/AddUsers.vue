@@ -488,8 +488,8 @@ const submitUsers = async () => {
     })),
   });
   if (!params.success) {
-    console.error('CreateUsersParamsSchema parse failed:', params.error.issues);
-    status.value = { message: 'An unexpected error occurred. Please try again or contact support.', severity: 'error' };
+    logger.error('CreateUsersParamsSchema parse failed unexpectedly', { issues: params.error.issues });
+    status.value = { message: 'An unexpected error occurred. Please contact support.', severity: 'error' };
     isSubmitting.value = false;
     return;
   }
