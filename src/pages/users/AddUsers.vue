@@ -70,9 +70,9 @@
       </div>
     </section>
 
-    <!-- Bulk create users modal -->
+    <!-- Sync pending modal -->
     <PvDialog
-      :visible="showBulkCreateUsersModal || hasPendingSyncStatus"
+      :visible="showSyncPendingModal || hasPendingSyncStatus"
       modal
       header="Updating users..."
       :closable="false"
@@ -158,7 +158,7 @@ const toast = useToast();
 const isSubmitting = ref(false);
 const parsedData = ref<Record<string, string>[] | null>(null);
 const registeredUsers = ref<UserCsvType | null>(null);
-const showBulkCreateUsersModal = ref(false);
+const showSyncPendingModal = ref(false);
 const status = ref<{ message: string; severity: string } | null>(null);
 const statusRef = ref<HTMLElement | null>(null);
 const unregisteredToValidated = ref<number[] | null>(null);
@@ -176,7 +176,7 @@ const resetUserProgress = () => {
   isSubmitting.value = false;
   parsedData.value = null;
   registeredUsers.value = null;
-  showBulkCreateUsersModal.value = false;
+  showSyncPendingModal.value = false;
   status.value = null;
   unregisteredToValidated.value = null;
   unregisteredUsers.value = null;
@@ -198,7 +198,7 @@ watch(currentSite, () => {
 });
 
 watch(hasPendingSyncStatus, (isPending) => {
-  if (!isPending) showBulkCreateUsersModal.value = false;
+  if (!isPending) showSyncPendingModal.value = false;
 });
 
 watch(status, () => {
@@ -499,7 +499,7 @@ const submitUsers = async () => {
     isSubmitting.value = false;
     return;
   }
-  showBulkCreateUsersModal.value = true;
+  showSyncPendingModal.value = true;
 
   // Call createUsers firebase function
   const result = await firekit.createUsers(params.data);
@@ -571,7 +571,7 @@ const submitUsers = async () => {
   }
 
   isSubmitting.value = false;
-  showBulkCreateUsersModal.value = false;
+  showSyncPendingModal.value = false;
 };
 
 /**

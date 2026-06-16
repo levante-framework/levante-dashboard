@@ -960,7 +960,7 @@ describe('AddUsers Page', () => {
 
       expect(vm.status).toEqual({ message: 'Users created successfully.', severity: 'success' });
       expect(vm.isSubmitting).toBe(false);
-      expect(vm.showBulkCreateUsersModal).toBe(false);
+      expect(vm.showSyncPendingModal).toBe(false);
     });
 
     it('maps an already-exists app-error to per-row validation errors', async () => {
@@ -991,7 +991,7 @@ describe('AddUsers Page', () => {
       // row and 1-indexing) for display in the errors table.
       expect(vm.validationErrors.rows).toEqual([{ message: 'User already exists', rowNums: [2] }]);
       expect(vm.isSubmitting).toBe(false);
-      expect(vm.showBulkCreateUsersModal).toBe(false);
+      expect(vm.showSyncPendingModal).toBe(false);
       expect(vm.registeredUsers).toBeNull();
     });
 
@@ -1017,7 +1017,7 @@ describe('AddUsers Page', () => {
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);
-      expect(vm.showBulkCreateUsersModal).toBe(false);
+      expect(vm.showSyncPendingModal).toBe(false);
       expect(vm.registeredUsers).toBeNull();
     });
   });
