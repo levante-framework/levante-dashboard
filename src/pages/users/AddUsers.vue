@@ -497,7 +497,7 @@ const submitUsers = async () => {
   // Make the create users request
   const firekit = roarfirekit.value;
   if (!firekit) {
-    status.value = { message: 'Authentication error. Please refresh the page and try again.', severity: 'error' };
+    status.value = { message: 'Unable to create users. Please refresh the page and try again.', severity: 'error' };
     isSubmitting.value = false;
     return;
   }
