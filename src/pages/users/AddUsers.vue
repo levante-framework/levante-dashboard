@@ -92,7 +92,6 @@
 </template>
 
 <script setup lang="ts">
-import { useQueryClient } from '@tanstack/vue-query';
 import _chunk from 'lodash/chunk';
 import _cloneDeep from 'lodash/cloneDeep';
 import { storeToRefs } from 'pinia';
@@ -102,9 +101,9 @@ import PvDivider from 'primevue/divider';
 import type { FileUploadUploaderEvent } from 'primevue/fileupload';
 import PvMessage from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
+import { useQueryClient } from '@tanstack/vue-query';
 import { computed, nextTick, ref, toRaw, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useQueryClient } from '@tanstack/vue-query';
 import {
   AddUserCsvHeaderSchema,
   CreateUsersParamsSchema,
@@ -145,13 +144,12 @@ const hasPendingSyncStatus = computed(() => syncStatus.value && (syncStatus.valu
 const levanteStore = useLevanteStore();
 const { setShouldUserConfirm } = levanteStore;
 
-const queryClient = useQueryClient();
-
-const router = useRouter();
 // @TODO: createUsers is called directly on usersRepository rather than through a mutation composable (unlike
 // useUpsertAdministrationMutation etc.), so cache invalidation has to be done manually here instead of in onSuccess.
 // Consider wrapping usersRepository.createUsers in a useCreateUsersMutation composable for consistency.
 const queryClient = useQueryClient();
+
+const router = useRouter();
 
 const { mutate: signOut } = useSignOutMutation();
 
