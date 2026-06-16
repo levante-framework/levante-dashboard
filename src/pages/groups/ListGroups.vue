@@ -16,8 +16,9 @@
               href="https://researcher.levante-network.org/dashboard/create-a-group"
               target="_blank"
               rel="noopener noreferrer"
-              >documentation on creating groups</a
             >
+              documentation on creating groups
+            </a>
             for guidance on creating and naming groups.
           </div>
         </div>
@@ -31,8 +32,9 @@
                 data-cy="add-group-btn"
                 :disabled="currentSite === 'any' && activeIndex != 0"
                 @click="isAddGroupModalVisible = true"
-                >Create Group</PvButton
               >
+                Create Group
+              </PvButton>
             </PermissionGuard>
           </div>
           <div class="flex align-items-center justify-content-end w-full md:w-auto">
@@ -151,8 +153,9 @@
           <PvButton
             class="mt-3 bg-primary border-none border-round p-3 text-white hover:bg-red-900"
             @click="closeDialog"
-            >Close</PvButton
           >
+            Close
+          </PvButton>
         </div>
       </PvDialog>
     </section>
@@ -174,14 +177,15 @@
             label="Cancel"
             outlined
             @click="closeEditModal"
-          ></PvButton>
+          />
           <PvButton
             tabindex="0"
             class="border-none border-round bg-primary text-white p-2 hover:surface-400"
             label="Save"
             @click="updateOrgData"
-            ><i v-if="isSubmitting" class="pi pi-spinner pi-spin"></i
-          ></PvButton>
+          >
+            <i v-if="isSubmitting" class="pi pi-spinner pi-spin"></i>
+          </PvButton>
         </div>
       </div>
     </template>
@@ -209,7 +213,6 @@ import { ref, computed, onMounted, onUnmounted, watch, watchEffect } from 'vue';
 import * as Sentry from '@sentry/vue';
 import { storeToRefs } from 'pinia';
 import { useToast } from 'primevue/usetoast';
-import { useRouter } from 'vue-router';
 import PvButton from 'primevue/button';
 import PvDialog from 'primevue/dialog';
 import PvSelect from 'primevue/select';
@@ -244,11 +247,9 @@ import { ROLES } from '@/constants/roles';
 import { normalizeToLowercase } from '@/helpers';
 import _useDistrictsQuery from '@/composables/queries/_useDistrictsQuery';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
-import { usePermissions } from '@/composables/usePermissions';
 import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 
-const router = useRouter();
 const initialized = ref(false);
 const selectedDistrict = ref(undefined);
 const selectedSchoolId = ref(undefined);
@@ -302,11 +303,15 @@ const activeIndex = ref(0);
 
 const activeOrgType = computed({
   get() {
-    return Object.keys(orgHeaders.value)[activeIndex.value];
+    const keys = Object.keys(orgHeaders.value);
+    const tab = history.state?.tab;
+    if (typeof tab === 'string' && keys.includes(tab)) return tab;
+    return keys[activeIndex.value];
   },
   set(value) {
     const keys = Object.keys(orgHeaders.value);
-    activeIndex.value = keys.indexOf(value);
+    const index = keys.indexOf(value);
+    if (index !== -1) activeIndex.value = index;
   },
 });
 
@@ -352,10 +357,6 @@ watch(districtsData, (newDistrictsData) => {
 const { data: schoolsData, isLoading: isLoadingSchools } = _useSchoolsQuery(selectedSite);
 
 watch([selectedSchoolId, schoolsData], ([newSelectedSchoolId, newSchoolsData]) => {
-  if (newSchoolsData && !isUserSuperAdmin()) {
-    selectedSchoolId.value = _get(_head(newSchoolsData), 'id');
-  }
-
   const school = newSchoolsData?.find((s) => s.id === newSelectedSchoolId);
   selectedSchool.value = school;
 });
@@ -676,6 +677,7 @@ unsubscribe = authStore.$subscribe(async (mutation, state) => {
 
 onMounted(() => {
   if (roarfirekit.value.restConfig) initTable();
+  history.replaceState({}, '');
 });
 
 onUnmounted(() => {

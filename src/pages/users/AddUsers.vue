@@ -92,6 +92,7 @@
 </template>
 
 <script setup lang="ts">
+import { useQueryClient } from '@tanstack/vue-query';
 import _chunk from 'lodash/chunk';
 import _cloneDeep from 'lodash/cloneDeep';
 import { storeToRefs } from 'pinia';
@@ -122,7 +123,7 @@ import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
 import { useGetSyncStatusQuery } from '@/composables/queries/useGetSyncStatusQuery';
 import { NORMALIZED_USER_CSV_HEADERS, USER_CSV_HEADERS } from '@/constants/csv';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
-import { SYNC_STATUS_QUERY_KEY } from '@/constants/queryKeys';
+import { SITE_OVERVIEW_QUERY_KEY, SYNC_STATUS_QUERY_KEY } from '@/constants/queryKeys';
 import { normalizeToLowercase } from '@/helpers';
 import { deriveNextCsvFilename, downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
 import { fetchOrgByName } from '@/helpers/query/orgs';
@@ -147,6 +148,10 @@ const { setShouldUserConfirm } = levanteStore;
 const queryClient = useQueryClient();
 
 const router = useRouter();
+// @TODO: createUsers is called directly on usersRepository rather than through a mutation composable (unlike
+// useUpsertAdministrationMutation etc.), so cache invalidation has to be done manually here instead of in onSuccess.
+// Consider wrapping usersRepository.createUsers in a useCreateUsersMutation composable for consistency.
+const queryClient = useQueryClient();
 
 const { mutate: signOut } = useSignOutMutation();
 
@@ -519,6 +524,7 @@ const submitUsers = async () => {
     setShouldUserConfirm(false);
     downloadRegisteredUsers();
     await invalidateSyncStatus();
+    await queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY, selectedSiteId] });
   } else if (result.code === 'app-error') {
     const error = result.data;
     if (error.code === 'functions/already-exists') {
