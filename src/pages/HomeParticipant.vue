@@ -23,59 +23,56 @@
 
       <div v-else>
         <div class="assignment">
-        <div class="assignment__header">
-          <PvTag
-            :value="t(`participantSidebar.status${capitalize(getAssignmentStatus(selectedAssignment))}`)"
-            class="text-xs uppercase"
-            :class="`assignment__status --${getAssignmentStatus(selectedAssignment)}`"
-          />
+          <div class="assignment__header">
+            <PvTag
+              :value="t(`participantSidebar.status${capitalize(getAssignmentStatus(selectedAssignment))}`)"
+              class="text-xs uppercase"
+              :class="`assignment__status --${getAssignmentStatus(selectedAssignment)}`"
+            />
 
+            <h2 class="assignment__name">
+              {{ selectedAssignment?.publicName || selectedAssignment?.name }}
+            </h2>
 
-          <h2 class="assignment__name">
-            {{ selectedAssignment?.publicName || selectedAssignment?.name }}
-          </h2>
-
-          <div v-if="selectedAssignment?.dateOpened && selectedAssignment?.dateClosed" class="assignment__dates">
-            <div class="assignment__date">
-              <i class="pi pi-calendar"></i>
-              <small
-                ><span class="font-bold">{{ assignmentStartDateLabel }}</span>
-                {{ formattedStartDate }}</small
-              >
-            </div>
-            <div class="assignment__date">
-              <i class="pi pi-calendar"></i>
-              <small
-                ><span class="font-bold">{{ assignmentEndDateLabel }}</span>
-                {{ formattedEndDate }}</small
-              >
+            <div v-if="selectedAssignment?.dateOpened && selectedAssignment?.dateClosed" class="assignment__dates">
+              <div class="assignment__date">
+                <i class="pi pi-calendar"></i>
+                <small
+                  ><span class="font-bold">{{ assignmentStartDateLabel }}</span> {{ formattedStartDate }}</small
+                >
+              </div>
+              <div class="assignment__date">
+                <i class="pi pi-calendar"></i>
+                <small
+                  ><span class="font-bold">{{ assignmentEndDateLabel }}</span> {{ formattedEndDate }}</small
+                >
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="assignment__main">
-          <ParticipantSidebar :total-games="totalGames" :completed-games="completeGames" />
+          <div class="assignment__main">
+            <ParticipantSidebar v-if="isUserChild" :total-games="totalGames" :completed-games="completeGames" />
 
-          <div class="tabs-container">
-            <Transition name="fade" mode="out-in">
-              <!-- TODO: Pass in data conditionally to one instance of GameTabs. -->
-              <GameTabs
-                v-if="showOptionalAssessments && userData"
-                :games="optionalAssessments"
-                :sequential="isSequential"
-                :user-data="userData"
-              />
-              <GameTabs
-                v-else-if="requiredAssessments && userData"
-                :games="requiredAssessments"
-                :sequential="isSequential"
-                :user-data="userData"
-              />
-            </Transition>
+            <div class="tabs-container">
+              <Transition name="fade" mode="out-in">
+                <!-- TODO: Pass in data conditionally to one instance of GameTabs. -->
+                <GameTabs
+                  v-if="showOptionalAssessments && userData"
+                  :games="optionalAssessments"
+                  :sequential="isSequential"
+                  :user-data="userData"
+                />
+                <GameTabs
+                  v-else-if="requiredAssessments && userData"
+                  :games="requiredAssessments"
+                  :sequential="isSequential"
+                  :user-data="userData"
+                />
+              </Transition>
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </div>
   </div>
   <ConsentModal
@@ -117,11 +114,7 @@ import { fetchAudioLinks } from '@/helpers/survey';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useQueryClient, useQuery } from '@tanstack/vue-query';
-import {
-  bootstrapSurveyInstance,
-  setupSurveyEventHandlers,
-  setupStudentAudio,
-} from '@/helpers/surveyInitialization';
+import { bootstrapSurveyInstance, setupSurveyEventHandlers, setupStudentAudio } from '@/helpers/surveyInitialization';
 import { useSurveyStore } from '@/store/survey';
 import { fetchDocsById } from '@/helpers/query/utils';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
@@ -131,7 +124,6 @@ import PvTag from 'primevue/tag';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { capitalize } from 'lodash';
 import 'survey-core/survey.i18n';
-
 
 const showConsent = ref(false);
 const consentVersion = ref('');
@@ -156,6 +148,10 @@ const init = () => {
 
 const authStore = useAuthStore();
 const { roarfirekit, showOptionalAssessments, userData: currentUserData } = storeToRefs(authStore);
+
+const isUserChild = computed(
+  () => currentUserData.value.userType === 'child' || currentUserData.value.userType === 'student',
+);
 
 const assignmentsStore = useAssignmentsStore();
 const { selectedAssignment, selectedStatus, userAssignments } = storeToRefs(assignmentsStore);
@@ -212,14 +208,12 @@ const assignmentEndDateLabel = computed(() => {
   return new Date(dateClosed) < now.value ? t('participantSidebar.statusClosed') : t('participantSidebar.statusClose');
 });
 
-
 const formattedStartDate = ref('');
 const formattedEndDate = ref('');
 
-
 watch(
-  [selectedAssignment,locale],
-  async ([currentAssignment,currentLocale]) => {
+  [selectedAssignment, locale],
+  async ([currentAssignment, currentLocale]) => {
     if (currentAssignment?.dateOpened && currentLocale) {
       formattedStartDate.value = await formatDateWithLocale(currentAssignment.dateOpened, 'MMM d, yyyy', currentLocale);
     }
@@ -227,7 +221,7 @@ watch(
       formattedEndDate.value = await formatDateWithLocale(currentAssignment.dateClosed, 'MMM d, yyyy', currentLocale);
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const taskIds = computed(() => {
@@ -310,7 +304,6 @@ async function updateConsent() {
     consentParams,
   });
 }
-
 
 const userType = computed(() => {
   return toRaw(userData.value)?.userType?.toLowerCase();
@@ -526,7 +519,9 @@ watch(
       return;
     }
 
-    const isAssessment = selectedAssignment.value.assessments.some((task) => task.taskId.toLowerCase().includes('survey'));
+    const isAssessment = selectedAssignment.value.assessments.some((task) =>
+      task.taskId.toLowerCase().includes('survey'),
+    );
     if (!isLoaded || !isAssessment || surveyStore.survey) return;
 
     const surveyResponseDoc = (surveyResponsesData.value || []).find(
@@ -641,12 +636,7 @@ watch(
     surveyStore.setSurvey(surveyInstance);
 
     if (userType.value === 'student') {
-      await setupStudentAudio(
-        surveyInstance,
-        locale.value,
-        surveyStore.audioLinkMap,
-        surveyStore,
-      );
+      await setupStudentAudio(surveyInstance, locale.value, surveyStore.audioLinkMap, surveyStore);
     }
   },
   { immediate: true },
@@ -722,19 +712,22 @@ watch(
 
 .assignment__main {
   display: flex;
+  align-items: flex-start;
   gap: 2rem;
   width: 100%;
+  min-width: 0;
   height: auto;
   margin: 2rem 0 0;
 }
 
 .tabs-container {
   display: block;
-  // 100% - (side chart width) - (parent gap)
-  width: calc(100% - 200px - 2rem);
+  flex: 1;
+  min-width: 0;
   height: auto;
   margin: 0;
   padding: 0;
+  overflow-x: clip;
 }
 
 .assignment-select-container {
@@ -743,5 +736,38 @@ watch(
 
 .switch-container {
   min-width: 24%;
+}
+
+@media screen and (max-width: 820px) {
+  .assignment {
+    padding: 1rem;
+  }
+
+  .assignment__dates {
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+  }
+
+  .assignment__main {
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .tabs-container {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+}
+
+@media screen and (max-width: 520px) {
+  .assignment {
+    padding: 0.75rem;
+  }
+
+  .assignment__name {
+    font-size: 1.25rem;
+  }
 }
 </style>
