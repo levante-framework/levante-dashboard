@@ -1,24 +1,47 @@
-import { type MaybeRefOrGetter } from 'vue';
-import { toValue } from 'vue';
+import { computed, type MaybeRefOrGetter, toValue } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { variantsFetcher } from '@/helpers/query/tasks';
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from '@/store/auth';
+import { tasksRepository } from '@/firebase/repositories/TasksRepository';
 import { TASK_VARIANTS_QUERY_KEY } from '@/constants/queryKeys';
+
+interface UseTaskVariantsQueryOptions {
+  enabled?: MaybeRefOrGetter<boolean>;
+}
 
 /**
  * Tasks Variants query.
  *
- * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
- * @returns {UseQueryResult} The TanStack query result.
+ * @param registeredVariantsOnly – When true, only registered variants are returned.
+ * @param queryOptions – Optional TanStack query options.
  */
-const useTaskVariantsQuery = (registeredVariantsOnly = false, queryOptions?: UseQueryOptions): UseQueryReturnType => {
-  const queryKey = toValue(registeredVariantsOnly)
-    ? [TASK_VARIANTS_QUERY_KEY, 'registered']
-    : [TASK_VARIANTS_QUERY_KEY];
+const useTaskVariantsQuery = (
+  registeredVariantsOnly: MaybeRefOrGetter<boolean> = false,
+  queryOptions?: UseTaskVariantsQueryOptions,
+) => {
+  const authStore = useAuthStore();
+  const { currentSite } = storeToRefs(authStore);
+  const { enabled: enabledOption, ...restOptions } = queryOptions ?? {};
+
+  const queryKey = computed(() => {
+    if (toValue(registeredVariantsOnly)) {
+      return [TASK_VARIANTS_QUERY_KEY, 'registered', currentSite.value] as const;
+    }
+    return [TASK_VARIANTS_QUERY_KEY, currentSite.value] as const;
+  });
 
   return useQuery({
     queryKey,
-    queryFn: () => variantsFetcher(registeredVariantsOnly),
-    ...queryOptions,
+    queryFn: () => {
+      const siteId = currentSite.value;
+      if (!siteId) throw new Error('Current site is required to fetch variants');
+      return tasksRepository.getVariants({
+        siteId,
+        registeredVariantsOnly: toValue(registeredVariantsOnly),
+      });
+    },
+    ...restOptions,
+    enabled: () => !!currentSite.value && (enabledOption == null ? true : toValue(enabledOption)),
   });
 };
 

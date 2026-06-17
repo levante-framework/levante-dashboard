@@ -30,3 +30,34 @@ export interface UpsertTaskPayload {
 export interface TaskVariantPayload {
   [key: string]: unknown;
 }
+
+export interface GetVariantsParams {
+  siteId: string;
+  taskId?: string;
+  registeredVariantsOnly?: boolean;
+}
+
+export interface VariantSummary {
+  id: string;
+  taskId: string;
+  taskName: string;
+  name?: string;
+  params?: Record<string, unknown>;
+  registered?: boolean;
+  schemaVersion?: number;
+  lastUpdated?: unknown;
+  taskURL?: string;
+  variantURL?: string;
+  conditions?: unknown;
+  [key: string]: unknown;
+}
+
+export interface TaskVariantListItem {
+  id: string;
+  variant: VariantSummary & { id: string };
+  task: {
+    id: string;
+    name?: string;
+    [key: string]: unknown;
+  };
+}
