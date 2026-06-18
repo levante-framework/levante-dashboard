@@ -12,10 +12,20 @@ export interface SurveyFormField {
   kind: 'text' | 'number' | 'single-select' | 'multi-select';
   required: boolean;
   questionText: string;
+  sectionId?: string;
   options?: { value: string; label: string }[];
   displayLogic?: { field: string; includes: string };
   infoExample?: string;
   notes?: string;
+}
+
+/**
+ * Title and description shown at the start of a section, identified by `sectionId`.
+ */
+export interface SurveyFormSection {
+  sectionId: string;
+  title?: string;
+  description?: string;
 }
 
 /**
@@ -26,6 +36,8 @@ export interface SurveyFormDefinition {
   versionId: string;
   versionNumber: number;
   formDescription: string;
+  generalPrompt?: string;
+  sectionInfo?: SurveyFormSection[];
   fieldsDescription: Record<string, string>;
   fullFields: SurveyFormField[];
 }
