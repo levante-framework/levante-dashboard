@@ -5,8 +5,9 @@ import ToastService from 'primevue/toastservice';
 import Tooltip from 'primevue/tooltip';
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import { mount } from '@vue/test-utils';
+import { useGetSyncStatusQuery } from '@/composables/queries/useGetSyncStatusQuery';
 import { fetchOrgByName } from '@/helpers/query/orgs';
 import { useAuthStore } from '@/store/auth';
 import AddUsers from './AddUsers.vue';
@@ -84,6 +85,10 @@ vi.mock('@/composables/mutations/useSignOutMutation', () => ({
   default: () => ({ mutate: signOutMock }),
 }));
 
+vi.mock('@/composables/queries/useGetSyncStatusQuery', () => ({
+  useGetSyncStatusQuery: vi.fn(),
+}));
+
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
 // Builds the auth-store shape the component expects. Pass overrides to vary the
@@ -120,6 +125,7 @@ const mountAddUsers = () =>
         CsvUploader: true,
         CsvTable: true,
         AppSpinner: true,
+        LevanteSpinner: true,
         PvDivider: true,
         // PrimeVue's dialog component is registered as "Dialog"; stub key must match
         // or the real Dialog+Portal mount and can throw during updates in JSDOM.
@@ -149,6 +155,11 @@ describe('AddUsers Page', () => {
     signOutMock.mockReset();
     vi.mocked(useAuthStore).mockReset();
     vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock() as any);
+    vi.mocked(useGetSyncStatusQuery).mockReturnValue({
+      data: ref(undefined),
+      isLoading: ref(false),
+      isError: ref(false),
+    } as any);
   });
 
   describe('onFileUpload', () => {
@@ -713,6 +724,13 @@ describe('AddUsers Page', () => {
       '1,child,5,2018,,,"Test School","Class A",',
     ].join('\n');
 
+    // Like SUBMIT_CSV but cohort-only (no school/class), so the cohort
+    // resolution loop runs. The schema enforces school+class XOR cohort.
+    const COHORT_CSV = [
+      'id,userType,month,year,caregiverId,teacherId,school,class,cohort',
+      '1,child,5,2018,,,,,"Cohort A"',
+    ].join('\n');
+
     // Mounts AddUsers with an auth store whose roarfirekit.createUsers is the
     // supplied stub, so submitUsers' firekit call is observable. Returns the
     // component vm alongside the createUsers mock for assertions.
@@ -1014,7 +1032,7 @@ describe('AddUsers Page', () => {
 
       const createUsers = vi.fn().mockResolvedValue({
         code: 'error',
-        error: new Error('boom'),
+        data: new Error('boom'),
       });
       const { vm } = mountWithFirekit(createUsers);
 
@@ -1114,17 +1132,71 @@ describe('AddUsers Page', () => {
       expect(vm.showSyncPendingModal).toBe(false);
       expect(vm.registeredUsers).toBeNull();
     });
+
+    it('resolves cohorts and includes them in the firekit payload', async () => {
+      // Cohort-only row: school/class are empty, so only the cohort loop runs.
+      vi.mocked(fetchOrgByName as any).mockResolvedValueOnce([{ id: 'cohort-1' }]);
+
+      const createUsers = vi.fn().mockResolvedValue({
+        code: 'success',
+        data: { users: [{ id: '1', email: 'a@b.com', password: 'pw', uid: 'uid-1' }] },
+      });
+      const { vm } = mountWithFirekit(createUsers);
+
+      await withDownloadStubs(async () => {
+        await vm.onFileUpload(mockFileUploadEvent(COHORT_CSV));
+        await vm.submitUsers();
+      });
+
+      expect(createUsers).toHaveBeenCalledOnce();
+      const [payload] = createUsers.mock.calls[0]!;
+      expect(payload.users[0].orgIds).toMatchObject({
+        schools: [],
+        classes: [],
+        cohorts: ['cohort-1'],
+      });
+      // Cohort is resolved via the 'groups' org type, scoped to the site
+      expect(fetchOrgByName).toHaveBeenCalledWith('groups', 'cohort a', 'site-id-123', undefined);
+    });
+
+    it('reports a cohort error when the cohort cannot be resolved', async () => {
+      vi.mocked(fetchOrgByName as any).mockResolvedValueOnce([]); // cohort not found
+
+      const vm = mountAddUsers().vm as any;
+      await vm.onFileUpload(mockFileUploadEvent(COHORT_CSV));
+      await vm.submitUsers();
+
+      expect(vm.status).toEqual({
+        message: 'Please fix the errors in your CSV file before submitting.',
+        severity: 'error',
+      });
+      expect(vm.validationErrors.rows).toEqual([{ message: 'cohort: Does not exist in selected site', rowNums: [2] }]);
+      expect(vm.isSubmitting).toBe(false);
+    });
+
+    it('shows error when roarfirekit is unavailable at submission time', async () => {
+      // Org resolution succeeds but the firekit ref is null (default auth store
+      // mock), so submitUsers hits the null-firekit guard after org resolution.
+      vi.mocked(fetchOrgByName as any)
+        .mockResolvedValueOnce([{ id: 'school-1' }])
+        .mockResolvedValueOnce([{ id: 'class-1' }]);
+
+      const vm = mountAddUsers().vm as any;
+      await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
+      await vm.submitUsers();
+
+      expect(vm.status).toEqual({
+        message: 'Unable to create users. Please refresh the page and try again.',
+        severity: 'error',
+      });
+      expect(vm.isSubmitting).toBe(false);
+      expect(vm.showSyncPendingModal).toBe(false);
+    });
   });
 
   describe('createOrgIdResolver', () => {
     beforeEach(() => {
       vi.mocked(fetchOrgByName as any).mockReset();
-    });
-
-    it('returns a getOrgId function', () => {
-      const vm = mountAddUsers().vm as any;
-      const getOrgId = vm.createOrgIdResolver();
-      expect(typeof getOrgId).toBe('function');
     });
 
     it('fetches an org by normalized name and returns the first result id', async () => {
@@ -1458,6 +1530,66 @@ describe('AddUsers Page', () => {
       expect(csvTable.props('rows')).toEqual(vm.unregisteredUsers);
     });
 
+    it('shows loading spinner while sync status is loading', () => {
+      vi.mocked(useGetSyncStatusQuery).mockReturnValueOnce({
+        data: ref(undefined),
+        isLoading: ref(true),
+        isError: ref(false),
+      } as any);
+
+      const wrapper = mountAddUsers();
+
+      expect(wrapper.findComponent({ name: 'LevanteSpinner' }).exists()).toBe(true);
+      // Neither main branch renders while the spinner is up
+      expect(wrapper.findComponent({ name: 'CsvUploader' }).exists()).toBe(false);
+    });
+
+    it('shows an error message when the sync status query fails', () => {
+      vi.mocked(useGetSyncStatusQuery).mockReturnValueOnce({
+        data: ref(undefined),
+        isLoading: ref(false),
+        isError: ref(true),
+      } as any);
+
+      const wrapper = mountAddUsers();
+
+      // The three-way v-if/v-else-if/v-else means: no spinner + no CsvUploader
+      // can only be true when the isSyncStatusError branch is active.
+      expect(wrapper.findComponent({ name: 'LevanteSpinner' }).exists()).toBe(false);
+      expect(wrapper.findComponent({ name: 'CsvUploader' }).exists()).toBe(false);
+    });
+
+    it('opens the sync-pending modal when the server reports a pending sync', () => {
+      // The dialog's visibility is `showSyncPendingModal || hasPendingSyncStatus`.
+      // A non-zero pending count from the query alone must open it, even with no
+      // submission in flight (showSyncPendingModal stays false here).
+      vi.mocked(useGetSyncStatusQuery).mockReturnValueOnce({
+        data: ref({ assignments: { pending: 1 }, users: { pending: 0 } }),
+        isLoading: ref(false),
+        isError: ref(false),
+      } as any);
+
+      const vm = mountAddUsers().vm as any;
+
+      expect(vm.showSyncPendingModal).toBe(false);
+      expect(vm.hasPendingSyncStatus).toBe(true);
+    });
+
+    it('keeps the sync-pending modal closed when nothing is pending', () => {
+      // Idle sync status: neither showSyncPendingModal nor hasPendingSyncStatus
+      // is truthy, so the dialog stays hidden.
+      vi.mocked(useGetSyncStatusQuery).mockReturnValueOnce({
+        data: ref({ assignments: { pending: 0 }, users: { pending: 0 } }),
+        isLoading: ref(false),
+        isError: ref(false),
+      } as any);
+
+      const vm = mountAddUsers().vm as any;
+
+      expect(vm.showSyncPendingModal).toBe(false);
+      expect(vm.hasPendingSyncStatus).toBe(false);
+    });
+
     it('sets info status and hides rows datatable when every uploaded user already has a uid', async () => {
       // Every row carries a populated uid, so onFileUpload's filter
       // produces an empty list. The component then surfaces an
@@ -1491,6 +1623,51 @@ describe('AddUsers Page', () => {
       // unregisteredUsers (null here).
       const csvTable = wrapper.findComponent({ name: 'CsvTable' });
       expect(csvTable.exists()).toBe(false);
+    });
+  });
+
+  describe('watchers', () => {
+    const SUBMIT_CSV = [
+      'id,userType,month,year,caregiverId,teacherId,school,class,cohort',
+      '1,child,5,2018,,,"Test School","Class A",',
+    ].join('\n');
+
+    it('resets progress when the selected site changes', async () => {
+      const currentSite = ref('site-id-123');
+      vi.mocked(useAuthStore).mockReturnValueOnce(createAuthStoreMock({ currentSite }) as any);
+
+      const wrapper = mountAddUsers();
+      const vm = wrapper.vm as any;
+
+      await vm.onFileUpload({ files: [new File([SUBMIT_CSV], 'test.csv', { type: 'text/csv' })] });
+      expect(vm.validatedData).not.toBeNull();
+      expect(vm.uploadedFile).not.toBeNull();
+
+      currentSite.value = 'different-site';
+      await nextTick();
+
+      expect(vm.validatedData).toBeNull();
+      expect(vm.uploadedFile).toBeNull();
+      expect(vm.status).toBeNull();
+    });
+
+    it('does not reset progress when the site changes during submission', async () => {
+      const currentSite = ref('site-id-123');
+      vi.mocked(useAuthStore).mockReturnValueOnce(createAuthStoreMock({ currentSite }) as any);
+
+      const wrapper = mountAddUsers();
+      const vm = wrapper.vm as any;
+
+      await vm.onFileUpload({ files: [new File([SUBMIT_CSV], 'test.csv', { type: 'text/csv' })] });
+      expect(vm.validatedData).not.toBeNull();
+
+      // Simulate an in-flight submission
+      vm.isSubmitting = true;
+      currentSite.value = 'different-site';
+      await nextTick();
+
+      // State must be preserved because the watcher returns early when isSubmitting
+      expect(vm.validatedData).not.toBeNull();
     });
   });
 });

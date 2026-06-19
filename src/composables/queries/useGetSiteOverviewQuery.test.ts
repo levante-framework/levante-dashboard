@@ -31,7 +31,7 @@ describe('useGetSiteOverviewQuery', () => {
   beforeEach(() => {
     pinia = createTestingPinia({ stubActions: false });
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    getSiteOverview = vi.fn().mockResolvedValue({ siteName: 'default' });
+    getSiteOverview = vi.fn().mockResolvedValue({ code: 'success', data: { siteName: 'default' } });
     setFirekit({ getSiteOverview });
   });
 
@@ -42,7 +42,7 @@ describe('useGetSiteOverviewQuery', () => {
 
   it('fetches the site overview for the given siteId and exposes the result', async () => {
     const payload = { siteName: 'Acme School' };
-    getSiteOverview.mockResolvedValueOnce(payload);
+    getSiteOverview.mockResolvedValueOnce({ code: 'success', data: payload });
 
     const { data, isSuccess } = mountQuery('site-1');
     await flushPromises();
@@ -55,7 +55,9 @@ describe('useGetSiteOverviewQuery', () => {
 
   it('refetches when siteId changes and serves the new payload (not stale cache)', async () => {
     const siteId = ref('site-1');
-    getSiteOverview.mockResolvedValueOnce({ siteName: 'one' }).mockResolvedValueOnce({ siteName: 'two' });
+    getSiteOverview
+      .mockResolvedValueOnce({ code: 'success', data: { siteName: 'one' } })
+      .mockResolvedValueOnce({ code: 'success', data: { siteName: 'two' } });
 
     const { data } = mountQuery(siteId);
     await flushPromises();
@@ -122,7 +124,7 @@ describe('useGetSiteOverviewQuery', () => {
     expect(data.value).toBeUndefined();
   });
 
-  it('surfaces firekit errors through the query state', async () => {
+  it('surfaces a rejected firekit call through the query state', async () => {
     const error = new Error('firekit boom');
     getSiteOverview.mockRejectedValueOnce(error);
 
@@ -131,5 +133,17 @@ describe('useGetSiteOverviewQuery', () => {
 
     expect(isError.value).toBe(true);
     expect(queryError.value).toBe(error);
+  });
+
+  it('treats a non-success response code as a query error and does not expose data', async () => {
+    const failure = { code: 'not-found', message: 'no such site' };
+    getSiteOverview.mockResolvedValueOnce(failure);
+
+    const { isError, error: queryError, data } = mountQuery('site-1');
+    await flushPromises();
+
+    expect(isError.value).toBe(true);
+    expect(queryError.value).toEqual(failure);
+    expect(data.value).toBeUndefined();
   });
 });

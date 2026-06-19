@@ -10,11 +10,16 @@ export const useGetSiteOverviewQuery = (
   const authStore = useAuthStore();
 
   return useQuery({
+    meta: {
+      composable: 'useGetSiteOverviewQuery',
+    },
     queryKey: computed(() => [SITE_OVERVIEW_QUERY_KEY, toValue(siteId)]),
-    queryFn: () => {
+    queryFn: async () => {
       const firekit = authStore.roarfirekit;
       if (!firekit) throw new Error('Firekit not initialized');
-      return firekit.getSiteOverview({ siteId: toValue(siteId) });
+      const result = await firekit.getSiteOverview({ siteId: toValue(siteId) });
+      if (result.code !== 'success') throw result;
+      return result.data;
     },
     enabled: () => !!toValue(siteId) && authStore.isFirekitInit() && toValue(enabled),
   });

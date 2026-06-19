@@ -1,5 +1,12 @@
 <template>
   <LevanteSpinner v-if="isLoadingSyncStatus" fullscreen />
+  <main v-else-if="isSyncStatusError" class="container main">
+    <section class="main-body">
+      <PvMessage :closable="false" severity="error" icon="pi pi-exclamation-circle">
+        Unable to load sync status. Please refresh the page. If the problem persists, contact support.
+      </PvMessage>
+    </section>
+  </main>
   <main v-else class="container main">
     <section class="main-body">
       <AddUsersInfo />
@@ -135,10 +142,11 @@ const { currentSite, currentSiteName, roarfirekit } = storeToRefs(authStore);
 const isAllSitesSelected = computed(() => currentSite.value === 'any');
 const selectedSiteId = computed(() => currentSite.value ?? '');
 
-const { data: syncStatus, isLoading: isLoadingSyncStatus } = useGetSyncStatusQuery(
-  selectedSiteId,
-  () => !isAllSitesSelected.value,
-);
+const {
+  data: syncStatus,
+  isLoading: isLoadingSyncStatus,
+  isError: isSyncStatusError,
+} = useGetSyncStatusQuery(selectedSiteId, () => !isAllSitesSelected.value);
 const hasPendingSyncStatus = computed(
   () => !!syncStatus.value && (syncStatus.value.assignments.pending > 0 || syncStatus.value.users.pending > 0),
 );
@@ -589,8 +597,8 @@ const submitUsers = async () => {
     if (result.code === 'functions-error' || result.code === 'firebase-error') {
       logger.error(new Error(`Unexpected createUsers ${result.code}: ${result.data.code}`), result.data);
     } else if (result.code === 'error') {
-      logger.error(`Unexpected createUsers error: ${result.error.message}`, {
-        error: JSON.stringify(result.error, null, 2),
+      logger.error(`Unexpected createUsers error: ${result.data.message}`, {
+        error: JSON.stringify(result.data, null, 2),
       });
     }
     status.value = { message: 'An unexpected error occurred. Please contact support.', severity: 'error' };

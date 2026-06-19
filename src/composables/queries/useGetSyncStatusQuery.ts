@@ -7,11 +7,16 @@ export const useGetSyncStatusQuery = (siteId: MaybeRefOrGetter<string>, enabled:
   const authStore = useAuthStore();
 
   return useQuery({
+    meta: {
+      composable: 'useGetSyncStatusQuery',
+    },
     queryKey: computed(() => [SYNC_STATUS_QUERY_KEY, toValue(siteId)]),
-    queryFn: () => {
+    queryFn: async () => {
       const firekit = authStore.roarfirekit;
       if (!firekit) throw new Error('Firekit not initialized');
-      return firekit.getSyncStatus({ siteId: toValue(siteId) });
+      const result = await firekit.getSyncStatus({ siteId: toValue(siteId) });
+      if (result.code !== 'success') throw result;
+      return result.data;
     },
     enabled: () => !!toValue(siteId) && authStore.isFirekitInit() && toValue(enabled),
     refetchInterval: (query) =>
