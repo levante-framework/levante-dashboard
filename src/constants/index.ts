@@ -1,3 +1,5 @@
+export const APP_NAME = 'LEVANTE';
+
 export const ASSIGNMENT_STATUSES = {
   CURRENT: 'current',
   PAST: 'past',
