@@ -20,7 +20,7 @@
         </div>
 
         <div class="docs-button-wrapper">
-          <DocsButton href="https://researcher.levante-network.org/dashboard/add-users" label="Documentation" />
+          <DocsButton href="https://researcher.levante-network.org/dashboard" label="Documentation" />
         </div>
       </div>
     </div>
