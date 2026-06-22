@@ -42,43 +42,59 @@
           {{ schemaForTask ? 'Update schema' : 'Create schema' }}
         </h3>
         <p class="text-sm text-gray-500 m-0">
-          Add parameter definitions: key, type (string, number, or boolean), and whether the parameter is required.
+          Add parameter definitions: key, type, description, and whether the parameter is required.
         </p>
 
-        <div class="flex flex-column gap-2">
+        <div class="flex flex-column gap-3">
           <div
             v-for="(entry, index) in paramEntries"
             :key="index"
-            class="flex align-items-center gap-2 flex-wrap"
+            class="surface-50 border-1 border-200 border-round p-3 flex flex-column gap-3"
           >
-            <PvInputText
-              v-model="entry.key"
-              placeholder="Param key"
-              class="flex-1 min-w-10rem"
-            />
-            <PvDropdown
-              v-model="entry.type"
-              :options="paramTypes"
-              option-label="label"
-              option-value="value"
-              placeholder="Type"
-              class="w-8rem"
-            />
-            <div class="flex align-items-center gap-1">
-              <PvCheckbox
-                v-model="entry.required"
-                :input-id="`param-required-${index}`"
-                :binary="true"
+            <div class="flex align-items-center gap-2 flex-wrap">
+              <PvInputText
+                v-model="entry.key"
+                placeholder="Param key"
+                class="flex-1 min-w-10rem"
               />
-              <label :for="`param-required-${index}`" class="text-sm whitespace-nowrap">Required</label>
+              <PvDropdown
+                v-model="entry.type"
+                :options="paramTypes"
+                option-label="label"
+                option-value="value"
+                placeholder="Type"
+                class="w-8rem"
+              />
+              <div class="flex align-items-center gap-1">
+                <PvCheckbox
+                  v-model="entry.required"
+                  :input-id="`param-required-${index}`"
+                  :binary="true"
+                />
+                <label :for="`param-required-${index}`" class="text-sm whitespace-nowrap">Required</label>
+              </div>
+              <PvButton
+                icon="pi pi-trash"
+                severity="secondary"
+                text
+                rounded
+                :disabled="paramEntries.length === 1"
+                @click="removeParam(index)"
+              />
             </div>
-            <PvButton
-              icon="pi pi-trash"
-              severity="secondary"
-              text
-              rounded
-              @click="removeParam(index)"
-            />
+            <div class="flex flex-column gap-1">
+              <label :for="`param-description-${index}`" class="text-sm text-gray-500 font-medium">
+                Description
+              </label>
+              <PvTextarea
+                :id="`param-description-${index}`"
+                v-model="entry.description"
+                placeholder="Describe what this parameter controls for researchers and admins"
+                rows="2"
+                auto-resize
+                class="w-full"
+              />
+            </div>
           </div>
           <PvButton
             label="Add parameter"
@@ -111,6 +127,7 @@ import PvButton from 'primevue/button';
 import PvCheckbox from 'primevue/checkbox';
 import PvDropdown from 'primevue/dropdown';
 import PvInputText from 'primevue/inputtext';
+import PvTextarea from 'primevue/textarea';
 import PvToast from 'primevue/toast';
 import { useAuthStore } from '@/store/auth';
 import useTasksQuery from '@/composables/queries/useTasksQuery';
@@ -151,9 +168,10 @@ interface ParamEntry {
   key: string;
   type: 'string' | 'number' | 'boolean';
   required: boolean;
+  description: string;
 }
 
-const paramEntries = ref<ParamEntry[]>([{ key: '', type: 'string', required: false }]);
+const paramEntries = ref<ParamEntry[]>([{ key: '', type: 'string', required: false, description: '' }]);
 
 const paramTypes = [
   { label: 'String', value: 'string' },
@@ -170,7 +188,7 @@ function buildParamDefinitions(): Record<string, ParamDefinitionType> {
   const defs: Record<string, ParamDefinitionType> = {};
   paramEntries.value.forEach((e) => {
     const k = e.key?.trim();
-    if (k) defs[k] = { type: e.type, required: e.required };
+    if (k) defs[k] = { type: e.type, required: e.required, description: e.description.trim() };
   });
   return defs;
 }
@@ -181,9 +199,10 @@ function loadSchemaIntoForm(schema: TaskSchemaResultItem | { paramDefinitions: P
         key,
         type: def.type,
         required: def.required ?? false,
+        description: def.description ?? '',
       }))
-    : [{ key: '', type: 'string', required: false }];
-  paramEntries.value = entries.length ? entries : [{ key: '', type: 'string', required: false }];
+    : [{ key: '', type: 'string', required: false, description: '' }];
+  paramEntries.value = entries.length ? entries : [{ key: '', type: 'string', required: false, description: '' }];
 }
 
 const onTaskChange = () => {
@@ -195,12 +214,14 @@ watch(schemaForTask, (s) => {
 }, { immediate: true });
 
 const addParam = () => {
-  paramEntries.value = [...paramEntries.value, { key: '', type: 'string', required: false }];
+  paramEntries.value = [...paramEntries.value, { key: '', type: 'string', required: false, description: '' }];
 };
 
 const removeParam = (index: number) => {
   paramEntries.value = paramEntries.value.filter((_, i) => i !== index);
-  if (paramEntries.value.length === 0) paramEntries.value = [{ key: '', type: 'string', required: false }];
+  if (paramEntries.value.length === 0) {
+    paramEntries.value = [{ key: '', type: 'string', required: false, description: '' }];
+  }
 };
 
 const saveSchema = async () => {

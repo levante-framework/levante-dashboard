@@ -1047,7 +1047,7 @@ function buildParamDefinitionsFromParams(params) {
   for (const [key, value] of Object.entries(params)) {
     const t = typeof value;
     if (t === 'string' || t === 'number' || t === 'boolean') {
-      defs[key] = { type: t, required: false };
+      defs[key] = { type: t, required: false, description: '' };
     }
   }
   return defs;

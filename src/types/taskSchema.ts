@@ -1,6 +1,7 @@
 export type ParamDefinitionType = {
   type: 'string' | 'number' | 'boolean';
   required?: boolean;
+  description: string;
 };
 
 export interface ParamDefinitions {
