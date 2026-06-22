@@ -349,10 +349,3 @@ export const isEmailValid = (email: string): boolean => {
     /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   return re.test(email);
 };
-
-export const getHTMLElementHeight = (selector: string): number => {
-  if (!selector.length) return 0;
-  const el = document.querySelector(selector);
-  if (!el) return 0;
-  return el.clientHeight;
-};
