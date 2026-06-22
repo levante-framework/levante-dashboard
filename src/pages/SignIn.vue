@@ -2,7 +2,6 @@
   <div v-if="spinner" class="loading-blur">
     <AppSpinner />
   </div>
-
   <div id="signin-container">
     <section id="signin">
       <header>
@@ -63,7 +62,6 @@
       </footer>
     </section>
   </div>
-
   <RoarModal
     :is-enabled="warningModalOpen"
     title="Email is already associated with an account"

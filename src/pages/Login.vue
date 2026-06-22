@@ -7,7 +7,7 @@
     <LanguageSelector />
   </div>
 
-  <div :class="`login login--${mode}`" :style="{ minHeight: `calc(100dvh - ${footerHeight}px)` }">
+  <div :class="`login login--${mode}`">
     <img src="/levante-icon-black.svg" alt="Levante" class="levante-icon-black" />
 
     <div class="login-card">
@@ -257,7 +257,6 @@ const isOpenWarningModal = ref(false);
 const isSigningInWithEmailLink = ref(false);
 const messages = ref<Array<Message>>([]);
 const mode = ref<Mode>(MODES.participant);
-const footerHeight = ref(0);
 
 const isParticipantMode = computed(() => mode.value === MODES.participant);
 

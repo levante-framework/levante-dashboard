@@ -75,7 +75,6 @@
       </div>
     </div>
   </div>
-
   <ConsentModal
     v-if="showConsent"
     :consent-text="confirmText"
