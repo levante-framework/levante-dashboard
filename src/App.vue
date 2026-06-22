@@ -14,7 +14,7 @@
     <!-- Dynamic Favicon -->
     <link rel="icon" :href="`/favicon-levante.ico`" />
   </Head>
-  <div v-if="isAuthStoreReady" class="app">
+  <div v-if="isAuthStoreReady" class="app" :style="{ paddingBottom: `${footerHeight}px` }">
     <PvToast position="bottom-center" />
 
     <NavBar v-if="typeof $route.name === 'string' && !NAVBAR_BLACKLIST.includes($route.name)" />
@@ -23,7 +23,7 @@
 
     <SessionTimer v-if="loadSessionTimeoutHandler" />
 
-    <Footer v-if="shouldShowFooter" :variant="footerVariant" />
+    <Footer v-if="shouldShowFooter" ref="footerRef" :variant="footerVariant" />
   </div>
   <div v-else data-cy="app-initializing">
     <LevanteSpinner fullscreen />
@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeMount, onMounted, ref, defineAsyncComponent } from 'vue';
+import { nextTick, computed, onBeforeMount, onMounted, ref, defineAsyncComponent, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
@@ -54,6 +54,8 @@ const VueQueryDevtools = defineAsyncComponent(() =>
   import('@tanstack/vue-query-devtools').then((module) => module.VueQueryDevtools),
 );
 
+const footerHeight = ref(0);
+const footerRef = ref(null);
 const isAuthStoreReady = ref(false);
 const showDevtools = ref(false);
 
@@ -103,6 +105,20 @@ const pageTitle = computed(() => {
   const key = title.translationKey;
   return key && i18n.global.te(key) ? `${prefix} — ${t(key)}` : prefix;
 });
+
+watch(
+  [isAuthStoreReady, shouldShowFooter, footerVariant],
+  async ([newIsAuthStoreReady, newShouldShowFooter, newFooterVariant]) => {
+    if (!newIsAuthStoreReady || !newShouldShowFooter || newFooterVariant === 'secondary') {
+      footerHeight.value = 0;
+      return;
+    }
+
+    await nextTick();
+    footerHeight.value = footerRef.value?.getFooterHeight() ?? 0;
+  },
+  { immediate: true },
+);
 
 onBeforeMount(async () => {
   await getLanguages();

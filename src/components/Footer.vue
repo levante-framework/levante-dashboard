@@ -1,5 +1,5 @@
 <template>
-  <footer id="footer" :class="`footer footer--${props.variant}`">
+  <footer ref="footer" :class="`footer footer--${props.variant}`">
     <div class="footer__copyright">
       &copy; {{ fullYear }}
       <a href="https://levante-network.org/" target="_blank" class="footer__link">{{ APP_NAME }}</a> — Dashboard adapted
@@ -15,17 +15,24 @@
 
 <script setup lang="ts">
 import { APP_NAME } from '@/constants';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 interface Props {
   variant?: 'primary' | 'secondary';
 }
 
 const fullYear = computed(() => new Date().getFullYear());
+const footer = ref<HTMLElement | null>(null);
 
 const props = withDefaults(defineProps<Props>(), {
   variant: 'primary',
 });
+
+function getFooterHeight() {
+  return footer.value?.getBoundingClientRect().height ?? 0;
+}
+
+defineExpose({ getFooterHeight });
 </script>
 
 <style lang="scss" scoped>

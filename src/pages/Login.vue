@@ -189,7 +189,7 @@ import AppSpinner from '@/components/AppSpinner.vue';
 import LanguageSelector from '@/components/LanguageSelector.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import { APP_ROUTES } from '@/constants/routes';
-import { getHTMLElementHeight, isEmailValid, isMobileBrowser } from '@/helpers';
+import { isEmailValid, isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { getUserAssignments } from '@/helpers/query/assignments';
 import { fetchDocById } from '@/helpers/query/utils';
@@ -202,7 +202,7 @@ import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
 import PvMessage from 'primevue/message';
 import PvPassword from 'primevue/password';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const MODES = {
@@ -413,10 +413,6 @@ const sendResetPasswordEmail = () => {
   roarfirekit.value!.sendPasswordResetEmail(forgotEmail.value);
   closeForgotPasswordModal();
 };
-
-onMounted(() => {
-  footerHeight.value = getHTMLElementHeight('#footer');
-});
 </script>
 
 <style scoped lang="scss">
