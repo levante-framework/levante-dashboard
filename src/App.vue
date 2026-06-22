@@ -22,6 +22,8 @@
     <router-view :key="$route.fullPath" />
 
     <SessionTimer v-if="loadSessionTimeoutHandler" />
+
+    <Footer :variant="footerVariant" />
   </div>
   <div v-else data-cy="app-initializing">
     <LevanteSpinner fullscreen />
@@ -45,6 +47,7 @@ import { usePageEventTracking } from '@/composables/usePageEventTracking';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 import { useI18n } from 'vue-i18n';
 import { slk } from 'survey-core';
+import Footer from './components/Footer.vue';
 
 const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>
@@ -58,6 +61,12 @@ const authStore = useAuthStore();
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+
+const footerVariant = computed(() => {
+  const alternativeStylePages = ['Login', 'SignIn'];
+  if (alternativeStylePages.includes(route.name)) return 'secondary';
+  return 'primary';
+});
 
 async function recoverFromProfileFetchFailure(error) {
   console.error('Error fetching user claims or user data', error);
@@ -127,11 +136,12 @@ onBeforeMount(async () => {
 
 onMounted(() => {
   const isLocal = import.meta.env.MODE === 'development';
+  const shouldShowDevTools = import.meta.env.VITE_SHOW_DEV_TOOLS === 'true';
   const isDevToolsEnabled = import.meta.env.VITE_QUERY_DEVTOOLS_ENABLED === 'true';
 
   slk(import.meta.env.VITE_SURVEYJS_LICENSE_KEY ?? '');
 
-  if (isLocal) {
+  if (isLocal && shouldShowDevTools) {
     showDevtools.value = true;
   } else if (isDevToolsEnabled) {
     window.toggleDevtools = () => {
