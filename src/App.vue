@@ -23,7 +23,7 @@
 
     <SessionTimer v-if="loadSessionTimeoutHandler" />
 
-    <Footer :variant="footerVariant" />
+    <Footer v-if="shouldShowFooter" :variant="footerVariant" />
   </div>
   <div v-else data-cy="app-initializing">
     <LevanteSpinner fullscreen />
@@ -42,7 +42,7 @@ import { fetchDocById } from '@/helpers/query/utils';
 import { i18n, getTranslations, getLanguages } from '@/translations/i18n';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import NavBar from '@/components/NavBar.vue';
-import { NAVBAR_BLACKLIST } from './constants';
+import { FOOTER_BLACKLIST, NAVBAR_BLACKLIST } from './constants';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 import { useI18n } from 'vue-i18n';
@@ -62,6 +62,7 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
+const shouldShowFooter = computed(() => !FOOTER_BLACKLIST.includes(route.name));
 const footerVariant = computed(() => {
   const alternativeStylePages = ['Login', 'SignIn'];
   if (alternativeStylePages.includes(route.name)) return 'secondary';
