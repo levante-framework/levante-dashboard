@@ -64,8 +64,6 @@
     </section>
   </div>
 
-  <RoarFooter variant="secondary" />
-
   <RoarModal
     :is-enabled="warningModalOpen"
     title="Email is already associated with an account"
@@ -140,7 +138,6 @@ import LanguageSelector from '@/components/LanguageSelector.vue';
 import { getUserAssignments } from '@/helpers/query/assignments';
 import { useAssignmentsStore } from '@/store/assignments';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
-import RoarFooter from '@/components/RoarFooter.vue';
 
 const incorrect = ref(false);
 const googleSignInErrorKey = ref('');

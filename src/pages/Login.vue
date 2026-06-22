@@ -7,7 +7,7 @@
     <LanguageSelector />
   </div>
 
-  <div :class="`login login--${mode}`" :style="{ minHeight: `calc(100dvh - ${roarFooterHeight}px)` }">
+  <div :class="`login login--${mode}`" :style="{ minHeight: `calc(100dvh - ${footerHeight}px)` }">
     <img src="/levante-icon-black.svg" alt="Levante" class="levante-icon-black" />
 
     <div class="login-card">
@@ -157,8 +157,6 @@
     </div>
   </div>
 
-  <RoarFooter variant="secondary" />
-
   <RoarModal
     :is-enabled="isOpenForgotPasswordModal"
     small
@@ -190,7 +188,6 @@
 import AppSpinner from '@/components/AppSpinner.vue';
 import LanguageSelector from '@/components/LanguageSelector.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
-import RoarFooter from '@/components/RoarFooter.vue';
 import { APP_ROUTES } from '@/constants/routes';
 import { getHTMLElementHeight, isEmailValid, isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
@@ -260,7 +257,7 @@ const isOpenWarningModal = ref(false);
 const isSigningInWithEmailLink = ref(false);
 const messages = ref<Array<Message>>([]);
 const mode = ref<Mode>(MODES.participant);
-const roarFooterHeight = ref(0);
+const footerHeight = ref(0);
 
 const isParticipantMode = computed(() => mode.value === MODES.participant);
 
@@ -418,7 +415,7 @@ const sendResetPasswordEmail = () => {
 };
 
 onMounted(() => {
-  roarFooterHeight.value = getHTMLElementHeight('#roarFooter');
+  footerHeight.value = getHTMLElementHeight('#footer');
 });
 </script>
 

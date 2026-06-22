@@ -64,8 +64,6 @@
           </div>
         </div>
       </div>
-
-      <RoarFooter />
     </section>
 
     <!-- Bulk create users modal -->
@@ -123,7 +121,6 @@ import { normalizeUserTypeForBackend } from '@/helpers/userType';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { useLevanteStore } from '@/store/levante';
-import RoarFooter from '@/components/RoarFooter.vue';
 
 const authStore = useAuthStore();
 const { currentSite, currentSiteName } = storeToRefs(authStore);

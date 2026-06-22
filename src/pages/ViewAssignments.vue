@@ -165,8 +165,6 @@
       </div>
     </section>
   </main>
-
-  <RoarFooter />
 </template>
 
 <script setup>
@@ -187,7 +185,6 @@ import DocsButton from '@/components/DocsButton.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { useLevanteStore } from '@/store/levante';
 import { isCurrent, isPast, isUpcoming } from '@/helpers/assignments';
-import RoarFooter from '@/components/RoarFooter.vue';
 
 const initialized = ref(false);
 const pageLimit = ref(10);

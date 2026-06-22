@@ -76,8 +76,6 @@
     </div>
   </div>
 
-  <RoarFooter />
-
   <ConsentModal
     v-if="showConsent"
     :consent-text="confirmText"
@@ -127,7 +125,6 @@ import PvTag from 'primevue/tag';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { capitalize } from 'lodash';
 import 'survey-core/survey.i18n';
-import RoarFooter from '@/components/RoarFooter.vue';
 
 const showConsent = ref(false);
 const consentVersion = ref('');

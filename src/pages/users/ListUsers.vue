@@ -169,8 +169,6 @@
       </RoarModal>
     </section>
   </main>
-
-  <RoarFooter />
 </template>
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue';
@@ -192,7 +190,6 @@ import EditUsersForm from '@/components/EditUsersForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
-import RoarFooter from '@/components/RoarFooter.vue';
 
 const props = defineProps({
   orgType: {
