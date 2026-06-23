@@ -56,7 +56,7 @@ defineExpose({ getFooterHeight });
   top: auto;
   bottom: 0;
   left: 0;
-  z-index: 1;
+  z-index: 1000;
 
   &.footer--secondary {
     background-color: var(--secondary-color);
