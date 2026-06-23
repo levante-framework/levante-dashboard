@@ -14,7 +14,7 @@
     <!-- Dynamic Favicon -->
     <link rel="icon" :href="`/favicon-levante.ico`" />
   </Head>
-  <div v-if="isAuthStoreReady" class="app">
+  <div v-if="isAuthStoreReady" class="app" :style="{ paddingBottom: `${footerHeight}px` }">
     <PvToast position="bottom-center" />
 
     <NavBar v-if="typeof $route.name === 'string' && !NAVBAR_BLACKLIST.includes($route.name)" />
@@ -22,6 +22,8 @@
     <router-view :key="$route.fullPath" />
 
     <SessionTimer v-if="loadSessionTimeoutHandler" />
+
+    <Footer v-if="shouldShowFooter" ref="footerRef" :variant="footerVariant" />
   </div>
   <div v-else data-cy="app-initializing">
     <LevanteSpinner fullscreen />
@@ -31,7 +33,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeMount, onMounted, ref, defineAsyncComponent } from 'vue';
+import { nextTick, computed, onBeforeMount, onMounted, ref, defineAsyncComponent, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
@@ -40,17 +42,20 @@ import { fetchDocById } from '@/helpers/query/utils';
 import { i18n, getTranslations, getLanguages } from '@/translations/i18n';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import NavBar from '@/components/NavBar.vue';
-import { NAVBAR_BLACKLIST } from './constants';
+import { FOOTER_BLACKLIST, NAVBAR_BLACKLIST } from './constants';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 import { useI18n } from 'vue-i18n';
 import { slk } from 'survey-core';
+import Footer from './components/Footer.vue';
 
 const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>
   import('@tanstack/vue-query-devtools').then((module) => module.VueQueryDevtools),
 );
 
+const footerHeight = ref(0);
+const footerRef = ref(null);
 const isAuthStoreReady = ref(false);
 const showDevtools = ref(false);
 
@@ -58,6 +63,13 @@ const authStore = useAuthStore();
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+
+const shouldShowFooter = computed(() => !FOOTER_BLACKLIST.includes(route.name));
+const footerVariant = computed(() => {
+  const alternativeStylePages = ['Login', 'SignIn'];
+  if (alternativeStylePages.includes(route.name)) return 'secondary';
+  return 'primary';
+});
 
 async function recoverFromProfileFetchFailure(error) {
   console.error('Error fetching user claims or user data', error);
@@ -94,6 +106,20 @@ const pageTitle = computed(() => {
   return key && i18n.global.te(key) ? `${prefix} — ${t(key)}` : prefix;
 });
 
+watch(
+  [isAuthStoreReady, shouldShowFooter, footerVariant],
+  async ([newIsAuthStoreReady, newShouldShowFooter, newFooterVariant]) => {
+    if (!newIsAuthStoreReady || !newShouldShowFooter || newFooterVariant === 'secondary') {
+      footerHeight.value = 0;
+      return;
+    }
+
+    await nextTick();
+    footerHeight.value = footerRef.value?.getFooterHeight() ?? 0;
+  },
+  { immediate: true },
+);
+
 onBeforeMount(async () => {
   await getLanguages();
   await getTranslations();
@@ -127,11 +153,12 @@ onBeforeMount(async () => {
 
 onMounted(() => {
   const isLocal = import.meta.env.MODE === 'development';
+  const shouldShowDevTools = import.meta.env.VITE_SHOW_DEV_TOOLS === 'true';
   const isDevToolsEnabled = import.meta.env.VITE_QUERY_DEVTOOLS_ENABLED === 'true';
 
   slk(import.meta.env.VITE_SURVEYJS_LICENSE_KEY ?? '');
 
-  if (isLocal) {
+  if (isLocal && shouldShowDevTools) {
     showDevtools.value = true;
   } else if (isDevToolsEnabled) {
     window.toggleDevtools = () => {
