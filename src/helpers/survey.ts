@@ -2,6 +2,7 @@ import axios from 'axios';
 import _merge from 'lodash/merge';
 import { BufferLoader, AudioContext, type BufferList } from '@/helpers/audio';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
+import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
 import type { SurveyModel, Question } from 'survey-core';
 import type { Router } from 'vue-router';
 import type { QueryClient } from '@tanstack/vue-query';
@@ -16,6 +17,7 @@ import {
   LEVANTE_BUCKET_URL,
 } from '@/constants/bucket';
 import { findBestMatchingLocale } from '@/translations/i18n';
+import { toRaw } from 'vue';
 
 export interface AudioLinkMap {
   [locale: string]: {
@@ -179,10 +181,7 @@ export function getParsedLocale(locale: string | undefined | null): string {
  * Maps dashboard locale to the `audio/<folder>/` prefix used in levante-assets-*.
  * Exceptions: German → `de`; English → `en`; otherwise the folder name matches the full locale (e.g. `es-CO`).
  */
-export function resolveAudioLinksForLocale(
-  audioLinks: AudioLinkMap,
-  parsedLocale: string,
-): Record<string, string> {
+export function resolveAudioLinksForLocale(audioLinks: AudioLinkMap, parsedLocale: string): Record<string, string> {
   const mapFor = (folderKey: string): Record<string, string> => audioLinks[folderKey] ?? {};
 
   if (!parsedLocale) {
@@ -228,10 +227,10 @@ export const fetchBuffer = ({
 
   const urlMap = resolveAudioLinksForLocale(audioLinks, parsedLocale);
   if (Object.keys(urlMap).length === 0) {
-    console.warn(
-      '[survey audio] No files for locale; check bucket folders vs app locale.',
-      { parsedLocale, bucketLocales: Object.keys(audioLinks) },
-    );
+    console.warn('[survey audio] No files for locale; check bucket folders vs app locale.', {
+      parsedLocale,
+      bucketLocales: Object.keys(audioLinks),
+    });
     setSurveyAudioLoading(false);
     return;
   }
@@ -455,7 +454,7 @@ export async function saveFinalSurveyData({
 
     surveyStore.setSpecificSurveyRelationIndex(surveyStore.specificSurveyRelationIndex + 1);
 
-    queryClient.invalidateQueries({ queryKey: ['surveyResponses', uid] });
+    queryClient.invalidateQueries({ queryKey: [SURVEY_RESPONSES_QUERY_KEY] });
 
     assignmentsStore.setHomeRefresh();
     router.push({ name: 'Home' });
@@ -474,3 +473,7 @@ export async function saveFinalSurveyData({
 }
 
 export type { RoarFirekit as RoarfirekitType } from '@bdelab/roar-firekit';
+
+export const getPlainSurveyData = (raw: unknown) => {
+  return typeof structuredClone === 'function' ? structuredClone(toRaw(raw)) : JSON.parse(JSON.stringify(toRaw(raw)));
+};

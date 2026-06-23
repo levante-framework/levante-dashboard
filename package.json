@@ -1,7 +1,7 @@
 {
   "name": "roar-dashboard",
   "private": true,
-  "version": "3.6.1-dev",
+  "version": "3.7.0-dev",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"
@@ -88,6 +88,7 @@
     "sharp": "^0.33.3",
     "showdown": "^2.1.0",
     "survey-core": "^2.5.16",
+    "survey-creator-vue": "^2.5.23",
     "survey-pdf": "^2.5.16",
     "survey-vue3-ui": "^2.5.16",
     "vega": "^5.26.1",
