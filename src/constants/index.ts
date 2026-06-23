@@ -20,12 +20,4 @@ export const NAVBAR_BLACKLIST = [
   'Translations',
 ] as const;
 
-export const FOOTER_BLACKLIST = [
-  'Maintenance',
-  'PA',
-  'PlayApp',
-  'SRE',
-  'SurveyManager',
-  'SWR',
-  'Translations',
-] as const;
+export const FOOTER_BLACKLIST = ['Maintenance', 'PA', 'PlayApp', 'SRE', 'SWR'] as const;
