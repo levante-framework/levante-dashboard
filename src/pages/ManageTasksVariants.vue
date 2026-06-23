@@ -14,6 +14,8 @@
             <PvTab value="tasks">Tasks</PvTab>
             <PvTab value="variants">Variants</PvTab>
             <PvTab value="schemas">Schemas</PvTab>
+            <PvTab value="parameter-summary">Parameter Summary</PvTab>
+            <PvTab value="parameter-keys">Parameter Keys</PvTab>
           </PvTabList>
           <PvTabPanels>
             <PvTabPanel value="tasks">
@@ -26,6 +28,14 @@
 
             <PvTabPanel value="schemas">
               <ManageSchemas />
+            </PvTabPanel>
+
+            <PvTabPanel value="parameter-summary">
+              <ManageParameterSummary />
+            </PvTabPanel>
+
+            <PvTabPanel value="parameter-keys">
+              <ManageParameterKeys />
             </PvTabPanel>
           </PvTabPanels>
         </PvTabs>
@@ -43,6 +53,8 @@ import PvTabs from 'primevue/tabs';
 import ManageTasks from '@/components/tasks/ManageTasks.vue';
 import ManageVariants from '@/components/tasks/ManageVariants.vue';
 import ManageSchemas from '@/components/tasks/ManageSchemas.vue';
+import ManageParameterSummary from '@/components/tasks/ManageParameterSummary.vue';
+import ManageParameterKeys from '@/components/tasks/ManageParameterKeys.vue';
 </script>
 
 <style scoped>

@@ -95,12 +95,17 @@ class TasksRepository extends Repository {
     return pickLatestSchema(result);
   }
 
-  async getVariants(params: GetVariantsParams): Promise<TaskVariantListItem[]> {
+  async getVariantSummaries(params: GetVariantsParams): Promise<VariantSummary[]> {
     const response = await this.call<GetVariantsParams, VariantSummary[] | { data?: VariantSummary[] }>(
       'getVariants',
       params,
     );
-    return normalizeVariantsResponse(response).map(mapVariantSummaryToListItem);
+    return normalizeVariantsResponse(response);
+  }
+
+  async getVariants(params: GetVariantsParams): Promise<TaskVariantListItem[]> {
+    const summaries = await this.getVariantSummaries(params);
+    return summaries.map(mapVariantSummaryToListItem);
   }
 
   async upsertTaskSchema(payload: UpsertTaskSchemaPayload): Promise<UpsertTaskSchemaResult | undefined> {
