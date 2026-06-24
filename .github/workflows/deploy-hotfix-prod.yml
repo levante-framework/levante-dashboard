@@ -45,7 +45,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24.x'
+          node-version: '24.18.0' # fixes intermittent OAuth "Premature close" auth failures (nodejs/node#63989)
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
@@ -79,6 +79,7 @@ jobs:
       - name: Deploy to Firebase Production
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
+          firebaseToolsVersion: ^15.22.2 # includes node-fetch "Premature close" retry fix (firebase-tools#10697)
           repoToken: ${{ steps.generate_token.outputs.token }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD_ADMIN }}
           channelId: live
