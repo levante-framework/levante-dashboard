@@ -554,12 +554,10 @@ const submitUsers = async () => {
       validationErrors.value = {
         headers: ['Validation Errors', 'Affected Rows'],
         keys: ['message', 'rowNums'],
-        rows: [
-          {
-            message: 'User already exists',
-            rowNums: error.details.ids.map((id) => rowNumMap[id]),
-          },
-        ],
+        rows: error.details.users.map((user) => ({
+          message: `User already exists with login \`${user.email}\` and LEVANTE uid \`${user.uid}\``,
+          rowNums: [rowNumMap[user.id]],
+        })),
         showDownloadButton: true,
       };
     } else if (error.code === 'functions/failed-precondition') {

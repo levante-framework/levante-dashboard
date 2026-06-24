@@ -1002,7 +1002,7 @@ describe('AddUsers Page', () => {
           name: 'FirebaseError',
           message: 'already exists',
           code: 'functions/already-exists',
-          details: { code: 'users', ids: ['1'] },
+          details: { users: [{ id: '1', email: 'existing@example.com', uid: 'uid-abc' }] },
         },
       });
       const { vm } = mountWithFirekit(createUsers);
@@ -1015,9 +1015,11 @@ describe('AddUsers Page', () => {
         severity: 'error',
       });
 
-      // The returned ids are mapped back to CSV row numbers (+2 for the header
-      // row and 1-indexing) for display in the errors table.
-      expect(vm.validationErrors.rows).toEqual([{ message: 'User already exists', rowNums: [2] }]);
+      // The returned user objects are mapped back to CSV row numbers (+2 for the
+      // header row and 1-indexing) for display in the errors table.
+      expect(vm.validationErrors.rows).toEqual([
+        { message: 'User already exists with login `existing@example.com` and LEVANTE uid `uid-abc`', rowNums: [2] },
+      ]);
       expect(vm.isSubmitting).toBe(false);
       expect(vm.showSyncPendingModal).toBe(false);
       expect(vm.registeredUsers).toBeNull();
