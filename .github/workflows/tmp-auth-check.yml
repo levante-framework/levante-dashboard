@@ -1,0 +1,22 @@
+name: TMP Firebase auth check
+'on':
+  push:
+    branches:
+      - chore/pin-node-firebase-deploy
+jobs:
+  auth-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.18.0'
+      - name: Print Node version
+        run: node --version
+      - name: Write service account credentials
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV_ADMIN }}
+        run: printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+      - name: Exercise Firebase OAuth token exchange (same path as deploy auth)
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: npx --yes firebase-tools@15.22.2 projects:list --debug
