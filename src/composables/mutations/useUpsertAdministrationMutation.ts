@@ -6,6 +6,7 @@ import {
   ADMINISTRATIONS_LIST_QUERY_KEY,
   ADMINISTRATION_ASSIGNMENTS_QUERY_KEY,
   SITE_OVERVIEW_QUERY_KEY,
+  SYNC_STATUS_QUERY_KEY,
 } from '@/constants/queryKeys';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
@@ -45,6 +46,7 @@ const useUpsertAdministrationMutation = (): UseMutationReturnType<void, Error, A
       });
       // NB: This invalidation is too broad, but siteId is not available w/o refactoring
       queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [SYNC_STATUS_QUERY_KEY] });
       logger.capture('Admin: Create Administration', { data });
     },
     onError: (error: Error, data: AdministrationData): void => {
