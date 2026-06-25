@@ -44,7 +44,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version-file: '.nvmrc'
+          node-version: '24.18.0' # fixes intermittent OAuth "Premature close" auth failures (nodejs/node#63989)
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
@@ -90,7 +90,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version-file: '.nvmrc'
+          node-version: '24.18.0' # fixes intermittent OAuth "Premature close" auth failures (nodejs/node#63989)
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
