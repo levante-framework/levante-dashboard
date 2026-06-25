@@ -44,7 +44,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version-file: '.nvmrc'
+          node-version-file: 'package.json'
+          check-latest: true
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
@@ -83,7 +84,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version-file: '.nvmrc'
+          node-version-file: 'package.json'
+          check-latest: true
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
