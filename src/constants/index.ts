@@ -1,3 +1,5 @@
+export const APP_NAME = 'LEVANTE';
+
 export const ASSIGNMENT_STATUSES = {
   CURRENT: 'current',
   PAST: 'past',
@@ -17,3 +19,5 @@ export const NAVBAR_BLACKLIST = [
   'SWR',
   'Translations',
 ] as const;
+
+export const FOOTER_BLACKLIST = ['Maintenance', 'PA', 'PlayApp', 'SRE', 'SWR'] as const;

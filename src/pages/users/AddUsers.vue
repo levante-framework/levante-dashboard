@@ -1,5 +1,13 @@
 <template>
-  <main class="container main">
+  <LevanteSpinner v-if="isLoadingSyncStatus" fullscreen />
+  <main v-else-if="isSyncStatusError" class="container main">
+    <section class="main-body">
+      <PvMessage :closable="false" severity="error" icon="pi pi-exclamation-circle">
+        Unable to load sync status. Please refresh the page. If the problem persists, contact support.
+      </PvMessage>
+    </section>
+  </main>
+  <main v-else class="container main">
     <section class="main-body">
       <AddUsersInfo />
 
@@ -36,8 +44,11 @@
         </div>
 
         <!-- Rows datatable -->
-        <div v-if="newUsers && !validationErrors" class="mb-3">
-          <CsvTable :keys="['id', 'userType', 'month', 'year', 'school', 'class', 'cohort']" :rows="newUsers" />
+        <div v-if="unregisteredUsers && !validationErrors" class="mb-3">
+          <CsvTable
+            :keys="['id', 'userType', 'month', 'year', 'school', 'class', 'cohort']"
+            :rows="unregisteredUsers"
+          />
 
           <div class="submit-container">
             <div v-if="registeredUsers" class="button-group">
@@ -66,11 +77,11 @@
       </div>
     </section>
 
-    <!-- Bulk create users modal -->
+    <!-- Sync pending modal -->
     <PvDialog
-      v-model:visible="showBulkCreateUsersModal"
+      :visible="showSyncPendingModal || hasPendingSyncStatus"
       modal
-      header="Creating users"
+      header="Updating users..."
       :closable="false"
       :close-on-escape="false"
       :draggable="false"
@@ -80,8 +91,7 @@
       <div class="flex flex-column align-items-center gap-3 py-4">
         <AppSpinner />
         <p class="m-0 text-center text-gray-700 line-height-3">
-          This step runs on the server and can take several minutes for large files. Please keep this tab open until it
-          finishes.
+          This step runs on the server and can take several minutes for sites with many users or many assignments.
         </p>
       </div>
     </PvDialog>
@@ -89,7 +99,6 @@
 </template>
 
 <script setup lang="ts">
-import { useQueryClient } from '@tanstack/vue-query';
 import _chunk from 'lodash/chunk';
 import _cloneDeep from 'lodash/cloneDeep';
 import { storeToRefs } from 'pinia';
@@ -98,51 +107,72 @@ import PvDialog from 'primevue/dialog';
 import PvDivider from 'primevue/divider';
 import type { FileUploadUploaderEvent } from 'primevue/fileupload';
 import PvMessage from 'primevue/message';
+import { useToast } from 'primevue/usetoast';
+import { useQueryClient } from '@tanstack/vue-query';
 import { computed, nextTick, ref, toRaw, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import type { ZodIssue } from 'zod'; // @TODO: replace this w/ makeCustomIssue when published
 import {
   AddUserCsvHeaderSchema,
+  CreateUsersParamsSchema,
   UserCsvSchema,
   UserCsvType,
   combineUserCsvIssues,
+  makeCustomIssue,
+  type ZodIssue,
 } from '@levante-framework/levante-zod';
 import AppSpinner from '@/components/AppSpinner.vue';
 import CsvTable from '@/components/CsvTable.vue';
 import CsvUploader from '@/components/CsvUploader.vue';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
+import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
+import { useGetSyncStatusQuery } from '@/composables/queries/useGetSyncStatusQuery';
 import { NORMALIZED_USER_CSV_HEADERS, USER_CSV_HEADERS } from '@/constants/csv';
-import { SITE_OVERVIEW_QUERY_KEY } from '@/constants/queryKeys';
-import { CreateUsersPayload, usersRepository } from '@/firebase/repositories/UsersRepository';
+import { SITE_OVERVIEW_QUERY_KEY, SYNC_STATUS_QUERY_KEY } from '@/constants/queryKeys';
+import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { normalizeToLowercase } from '@/helpers';
 import { deriveNextCsvFilename, downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
 import { fetchOrgByName } from '@/helpers/query/orgs';
-import { normalizeUserTypeForBackend } from '@/helpers/userType';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { useLevanteStore } from '@/store/levante';
 
 const authStore = useAuthStore();
-const { currentSite, currentSiteName } = storeToRefs(authStore);
+const { currentSite, currentSiteName, roarfirekit } = storeToRefs(authStore);
 const isAllSitesSelected = computed(() => currentSite.value === 'any');
+const selectedSiteId = computed(() => currentSite.value ?? '');
+
+const {
+  data: syncStatus,
+  isLoading: isLoadingSyncStatus,
+  isError: isSyncStatusError,
+} = useGetSyncStatusQuery(selectedSiteId, () => !isAllSitesSelected.value);
+const hasPendingSyncStatus = computed(
+  () => !!syncStatus.value && (syncStatus.value.assignments.pending > 0 || syncStatus.value.users.pending > 0),
+);
 
 const levanteStore = useLevanteStore();
 const { setShouldUserConfirm } = levanteStore;
 
-const router = useRouter();
-// @TODO: createUsers is called directly on usersRepository rather than through a mutation composable (unlike
-// useUpsertAdministrationMutation etc.), so cache invalidation has to be done manually here instead of in onSuccess.
-// Consider wrapping usersRepository.createUsers in a useCreateUsersMutation composable for consistency.
+// @TODO: createUsers is called directly rather than through a mutation composable (unlike
+// useUpsertAdministrationMutation etc.), so cache invalidation has to be done manually here
+// instead of in onSuccess. Consider implementing useCreateUsersMutation composable.
 const queryClient = useQueryClient();
 
+const router = useRouter();
+
+const { mutate: signOut } = useSignOutMutation();
+
+const toast = useToast();
+
 const isSubmitting = ref(false);
-const newUsers = ref<UserCsvType | null>(null);
-const newUsersMap = ref<number[] | null>(null);
 const parsedData = ref<Record<string, string>[] | null>(null);
 const registeredUsers = ref<UserCsvType | null>(null);
-const showBulkCreateUsersModal = ref(false);
+const showSyncPendingModal = ref(false);
 const status = ref<{ message: string; severity: string } | null>(null);
 const statusRef = ref<HTMLElement | null>(null);
+const unregisteredToValidated = ref<number[] | null>(null);
+const unregisteredUsers = ref<UserCsvType | null>(null);
 const uploadedFile = ref<File | null>(null);
 const validatedData = ref<UserCsvType | null>(null);
 const validationErrors = ref<{
@@ -154,11 +184,12 @@ const validationErrors = ref<{
 
 const resetUserProgress = () => {
   isSubmitting.value = false;
-  newUsers.value = null;
   parsedData.value = null;
   registeredUsers.value = null;
-  showBulkCreateUsersModal.value = false;
+  showSyncPendingModal.value = false;
   status.value = null;
+  unregisteredToValidated.value = null;
+  unregisteredUsers.value = null;
   uploadedFile.value = null;
   validatedData.value = null;
   validationErrors.value = null;
@@ -167,9 +198,17 @@ const resetUserProgress = () => {
   setShouldUserConfirm(false);
 };
 
+async function invalidateSyncStatus() {
+  await queryClient.invalidateQueries({ queryKey: [SYNC_STATUS_QUERY_KEY, selectedSiteId.value] });
+}
+
 watch(currentSite, () => {
   if (isSubmitting.value) return;
   resetUserProgress();
+});
+
+watch(hasPendingSyncStatus, (isPending) => {
+  if (!isPending) showSyncPendingModal.value = false;
 });
 
 watch(status, () => {
@@ -194,11 +233,11 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   uploadedFile.value = file;
 
   // Parse the file
-  const _parsedData = await parseCsvFile(file, {
+  const parsed = await parseCsvFile(file, {
     normalizedHeaders: NORMALIZED_USER_CSV_HEADERS,
     omitColumns: ['errors'],
   });
-  if (!_parsedData) {
+  if (!parsed) {
     status.value = {
       message:
         'The uploaded file could not be read. If you used a spreadsheet app, please "Save as" or "Export" to CSV and upload again.',
@@ -206,24 +245,24 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
     };
     return;
   }
-  if (_parsedData.length === 0) {
+  if (parsed.length === 0) {
     status.value = {
       message: 'The uploaded file contains no users. Please add at least one user and upload again.',
       severity: 'error',
     };
     return;
   }
-  parsedData.value = _parsedData;
+  parsedData.value = parsed;
 
   // Validate all required headers are present
-  const headers = Object.keys(_parsedData[0] ?? {});
-  const headerValidation = AddUserCsvHeaderSchema.safeParse(headers);
-  if (!headerValidation.success) {
+  const headers = Object.keys(parsed[0] ?? {});
+  const validatedHeaders = AddUserCsvHeaderSchema.safeParse(headers);
+  if (!validatedHeaders.success) {
     status.value = { message: 'The uploaded file is invalid. See table for details.', severity: 'error' };
     validationErrors.value = {
       headers: ['Validation Errors'],
       keys: ['message'],
-      rows: headerValidation.error.issues.map((issue) => {
+      rows: validatedHeaders.error.issues.map((issue) => {
         return {
           message: `${issue.path.join('.')}: ${issue.message}`,
         };
@@ -237,21 +276,22 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   const siteIssues: ZodIssue[] = [];
   if (headers.includes('site')) {
     const normalizedSelectedSite = normalizeToLowercase(currentSiteName.value ?? '');
-    _parsedData.forEach((row, idx) => {
+    parsed.forEach((row, idx) => {
       // Must match the selected site
       if (row.site && normalizeToLowercase(row.site) !== normalizedSelectedSite) {
-        siteIssues.push({
-          code: 'custom',
-          message: `Must match the selected site`,
-          path: [idx, 'site'],
-          input: row.site,
-        });
+        siteIssues.push(
+          makeCustomIssue({
+            input: row.site,
+            message: `Must match the selected site`,
+            path: [idx, 'site'],
+          }),
+        );
       }
     });
   }
 
   // Validate w/ zod schema
-  const validated = UserCsvSchema.safeParse(_parsedData);
+  const validated = UserCsvSchema.safeParse(parsed);
   const issues = combineUserCsvIssues([...(validated.error?.issues ?? []), ...siteIssues]);
   if (issues.length > 0) {
     // Validation failed
@@ -266,20 +306,20 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   }
 
   // Validation succeeded, filter out users that already have a uid
-  const _newUsers = validated
+  const unregistered = validated
     .data!.map((user, idx) => ({
-      user: { ...user },
-      userIdx: idx,
+      user,
+      validatedIdx: idx,
     }))
     .filter(({ user }) => {
       return !user.uid;
     });
-  if (_newUsers.length === 0) {
+  if (unregistered.length === 0) {
     status.value = { message: 'All users in the file have already been registered.', severity: 'info' };
     return;
   }
-  newUsers.value = _newUsers.map(({ user }) => user);
-  newUsersMap.value = _newUsers.map(({ userIdx }) => userIdx);
+  unregisteredUsers.value = unregistered.map(({ user }) => user);
+  unregisteredToValidated.value = unregistered.map(({ validatedIdx }) => validatedIdx);
 
   // There are new, valid users to be added
   validatedData.value = validated.data!;
@@ -322,9 +362,9 @@ const submitUsers = async () => {
 
   // Ensure the user data is valid
   if (
-    !newUsers.value ||
-    !newUsersMap.value ||
-    newUsers.value.length !== newUsersMap.value.length ||
+    !unregisteredUsers.value ||
+    !unregisteredToValidated.value ||
+    unregisteredUsers.value.length !== unregisteredToValidated.value.length ||
     !validatedData.value
   ) {
     status.value = { message: 'Please fix the errors in your CSV file before submitting.', severity: 'error' };
@@ -333,25 +373,32 @@ const submitUsers = async () => {
   }
 
   // Ensure a site is selected
-  const selectedSiteId = currentSite.value;
-  if (!selectedSiteId || isAllSitesSelected.value) {
+  const siteId = selectedSiteId.value;
+  if (!siteId || isAllSitesSelected.value) {
     status.value = { message: 'Please select a site before adding users.', severity: 'error' };
     isSubmitting.value = false;
     return;
   }
 
-  // Ensure there are users to be registered
-  const usersToBeRegistered = _cloneDeep(toRaw(newUsers.value)).map((user, idx) => ({
+  // Clone the unregistered users and map their validated indices
+  const unregistered = _cloneDeep(toRaw(unregisteredUsers.value)).map((user, idx) => ({
     user,
-    userIdx: newUsersMap.value![idx]!,
+    validatedIdx: unregisteredToValidated.value![idx]!,
   }));
 
   // Ensure the orgs referenced in the user data exist
+  type OrgIds = {
+    sites: string[];
+    schools: string[];
+    classes: string[];
+    cohorts: string[];
+  };
+  const orgIdsPerUser: OrgIds[] = [];
+  const orgErrors: { field: string; validatedIdx: number }[] = [];
   const getOrgId = createOrgIdResolver();
-  const orgErrors: { field: string; userIdx: number }[] = [];
-  for (const { user, userIdx } of usersToBeRegistered) {
-    const orgInfo: Record<'sites' | 'schools' | 'classes' | 'cohorts', string[]> = {
-      sites: [selectedSiteId],
+  for (const { user, validatedIdx } of unregistered) {
+    const orgIds: OrgIds = {
+      sites: [siteId],
       schools: [],
       classes: [],
       cohorts: [],
@@ -361,13 +408,13 @@ const submitUsers = async () => {
     let allSchoolsFound = true;
     for (const schoolName of user.school) {
       try {
-        const schoolId = await getOrgId('schools', schoolName, selectedSiteId);
-        orgInfo.schools.push(schoolId);
+        const schoolId = await getOrgId('schools', schoolName, siteId);
+        orgIds.schools.push(schoolId);
       } catch {
         allSchoolsFound = false;
         orgErrors.push({
           field: 'school',
-          userIdx,
+          validatedIdx,
         });
       }
     }
@@ -376,10 +423,10 @@ const submitUsers = async () => {
     if (allSchoolsFound) {
       for (const className of user.class) {
         let classFound = false;
-        for (const schoolId of orgInfo.schools) {
+        for (const schoolId of orgIds.schools) {
           try {
-            const classId = await getOrgId('classes', className, selectedSiteId, schoolId);
-            orgInfo.classes.push(classId);
+            const classId = await getOrgId('classes', className, siteId, schoolId);
+            orgIds.classes.push(classId);
             classFound = true;
             break;
           } catch {
@@ -389,7 +436,7 @@ const submitUsers = async () => {
         if (!classFound) {
           orgErrors.push({
             field: 'class',
-            userIdx,
+            validatedIdx,
           });
         }
       }
@@ -401,30 +448,24 @@ const submitUsers = async () => {
         const cohortId = await getOrgId(
           'groups', // NB: the backend expects groups for cohorts
           cohortName,
-          selectedSiteId,
+          siteId,
         );
-        orgInfo.cohorts.push(cohortId);
+        orgIds.cohorts.push(cohortId);
       } catch {
         orgErrors.push({
           field: 'cohort',
-          userIdx,
+          validatedIdx,
         });
       }
     }
 
-    // The backend expects districts and groups for site and cohort respectively
-    user.orgIds = {
-      districts: orgInfo.sites,
-      schools: orgInfo.schools,
-      classes: orgInfo.classes,
-      groups: orgInfo.cohorts,
-    };
+    orgIdsPerUser.push(orgIds);
   }
   if (orgErrors.length > 0) {
     const combinedOrgErrors: Record<string, number[]> = {};
-    orgErrors.forEach(({ field, userIdx }) => {
+    orgErrors.forEach(({ field, validatedIdx }) => {
       const key = `${field}: Does not exist in selected site`;
-      const rowNum = userIdx + 2; // +2 for header row and 1-indexing
+      const rowNum = validatedIdx + 2; // +2 for header row and 1-indexing
       if (!combinedOrgErrors[key]) {
         combinedOrgErrors[key] = [];
       }
@@ -443,64 +484,126 @@ const submitUsers = async () => {
     return;
   }
 
-  // Chunk and run: Not a transactional operation so partial success is possible
-  // TODO: Add some retry operations to handle partial successes
-  // @AB: This operation MUST be a transaction. E.g., if one chunk succeeds, one fails, and then the user
-  // resubmits the file, the backend cannot know which users were successfully created and which failed
-  // because `id` is not stored.
-  showBulkCreateUsersModal.value = true;
-  try {
-    const chunkResults = (await runWithConcurrency(_chunk(usersToBeRegistered, 25), async (chunk) => {
-      // Ensure each user has the proper userType field name for the backend
-      const processedUsers = chunk.map(({ user }) => ({
-        ...user,
-        userType: normalizeUserTypeForBackend(user.userType),
-      }));
+  // Prepare the parameters for the create users request
+  const params = CreateUsersParamsSchema.safeParse({
+    siteId,
+    users: unregistered.map(({ user }, idx) => ({
+      userType: user.userType,
+      id: user.id,
+      orgIds: orgIdsPerUser[idx],
+      month: user.month,
+      year: user.year,
+    })),
+  });
+  if (!params.success) {
+    logger.error('CreateUsersParamsSchema parse failed unexpectedly', { issues: params.error.issues });
+    status.value = { message: 'An unexpected error occurred. Please contact support.', severity: 'error' };
+    isSubmitting.value = false;
+    return;
+  }
 
-      const createUsersPayload: CreateUsersPayload = {
-        users: processedUsers,
-        siteId: selectedSiteId,
-      };
+  // Make the create users request
+  const firekit = roarfirekit.value;
+  if (!firekit) {
+    status.value = { message: 'Unable to create users. Please refresh the page and try again.', severity: 'error' };
+    isSubmitting.value = false;
+    return;
+  }
+  showSyncPendingModal.value = true;
 
-      return await usersRepository.createUsers(createUsersPayload);
-    })) as { status: string; message: string; data: Record<string, string>[] }[];
+  // Call createUsers firebase function
+  const result = await firekit.createUsers(params.data);
 
-    const createUserResults = chunkResults.flatMap((result) => {
-      if (result == null || typeof result !== 'object') return [];
-      const payload = result.data !== undefined ? result.data : result;
-      if (Array.isArray(payload)) return payload;
-      if (payload && typeof payload === 'object' && Array.isArray(payload.data)) return payload.data;
-      return [];
-    });
-
-    // Merging the registered users with the validated data
-    // TODO: the response of the create user should come back with an id
-    // that can be mapped to validatedData
+  if (result.code === 'success') {
+    // Merge the created users with the validated data
     const mergedUsers = _cloneDeep(toRaw(validatedData.value));
-    createUserResults.forEach((createdUser, resultIdx) => {
-      const userIdx = usersToBeRegistered[resultIdx]!.userIdx;
-      mergedUsers[userIdx] = {
-        ...mergedUsers[userIdx]!,
-        email: createdUser.email ?? '',
-        password: createdUser.password ?? '',
-        uid: createdUser.uid ?? '',
-      };
+    result.data.users.forEach((createdUser) => {
+      const validatedIdx = unregistered.find(({ user }) => user.id === createdUser.id)?.validatedIdx;
+      if (validatedIdx != null) {
+        mergedUsers[validatedIdx] = {
+          ...mergedUsers[validatedIdx]!,
+          email: createdUser.email ?? '',
+          password: createdUser.password ?? '',
+          uid: createdUser.uid ?? '',
+        };
+      } else {
+        logger.error('Unexpected created user', { uid: createdUser.uid });
+      }
     });
     registeredUsers.value = mergedUsers;
 
-    // Success: set status, reset user confirmation, and download registered users
     status.value = { message: 'Users created successfully.', severity: 'success' };
     setShouldUserConfirm(false);
     downloadRegisteredUsers();
-    queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY, selectedSiteId] });
-  } catch (error) {
-    logger.error('Error Registering Users', { error });
-    const message = error instanceof Error ? error.message : String(error);
-    status.value = { message: `Error creating users: ${message}`, severity: 'error' };
-  } finally {
-    isSubmitting.value = false;
-    showBulkCreateUsersModal.value = false;
+    await invalidateSyncStatus();
+    await queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY, siteId] });
+  } else if (result.code === 'app-error') {
+    const error = result.data;
+    if (error.code === 'functions/already-exists') {
+      status.value = {
+        message: 'One or more users already exist. Please try again with a different file.',
+        severity: 'error',
+      };
+      const rowNumMap = validatedData.value!.reduce(
+        (acc, user, idx) => {
+          acc[user.id] = idx + 2; // +2 for header row and 1-indexing
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+      validationErrors.value = {
+        headers: ['Validation Errors', 'Affected Rows'],
+        keys: ['message', 'rowNums'],
+        rows: error.details.users.map((user) => ({
+          message: `User already exists with login \`${user.email}\` and LEVANTE uid \`${user.uid}\``,
+          rowNums: [rowNumMap[user.id]],
+        })),
+        showDownloadButton: true,
+      };
+    } else if (error.code === 'functions/failed-precondition') {
+      status.value = {
+        message: 'The server is working on other tasks. Please try again in a few minutes.',
+        severity: 'error',
+      };
+      await invalidateSyncStatus();
+    } else if (error.code === 'functions/permission-denied') {
+      status.value = {
+        message: 'You do not have permission to add users to this site. Please contact support.',
+        severity: 'error',
+      };
+    } else if (error.code === 'functions/unauthenticated') {
+      toast.add({
+        severity: TOAST_SEVERITIES.WARN,
+        summary: 'Session Expired',
+        detail: 'Your session has expired. Please sign in again.',
+        life: TOAST_DEFAULT_LIFE_DURATION,
+      });
+      signOut();
+    } else {
+      // The remaining app-error cases are unexpected due to preflight validation above.
+      // - functions/invalid-argument/schema
+      // - functions/invalid-argument/org-site-mismatch
+      // - functions/not-found/orgs
+      logger.error(new Error(`Unexpected createUsers app-error: ${error.code}/${error.details.code}`), error);
+      status.value = {
+        message:
+          'An unexpected error occurred. Please refresh the page and try again. If the problem persists, contact support.',
+        severity: 'error',
+      };
+    }
+  } else {
+    if (result.code === 'functions-error' || result.code === 'firebase-error') {
+      logger.error(new Error(`Unexpected createUsers ${result.code}: ${result.data.code}`), result.data);
+    } else if (result.code === 'error') {
+      logger.error(`Unexpected createUsers error: ${result.data.message}`, {
+        error: JSON.stringify(result.data, null, 2),
+      });
+    }
+    status.value = { message: 'An unexpected error occurred. Please contact support.', severity: 'error' };
   }
+
+  isSubmitting.value = false;
+  showSyncPendingModal.value = false;
 };
 
 /**
@@ -559,37 +662,6 @@ const createOrgIdResolver = (): GetOrgId => {
   };
 
   return getOrgId;
-};
-
-/**
- * Runs parallel workers on chunks of data.
- * @param chunks The data chunks to process.
- * @param worker The function to run on each chunk.
- * @param limit The maximum number of concurrent workers.
- * @returns The worker results.
- */
-const runWithConcurrency = async <T, R>(
-  chunks: T[],
-  worker: (chunk: T) => Promise<R>,
-  limit: number = 2,
-): Promise<R[]> => {
-  const results = new Array(chunks.length);
-  let nextIdx = 0;
-
-  async function runner() {
-    while (nextIdx < chunks.length) {
-      const currentIdx = nextIdx;
-      nextIdx = nextIdx + 1;
-      results[currentIdx] = await worker(chunks[currentIdx]!);
-    }
-  }
-
-  const runnerCount = Math.min(limit, chunks.length);
-  const runners = Array.from({ length: runnerCount }, () => runner());
-
-  await Promise.all(runners);
-
-  return results;
 };
 
 const downloadRegisteredUsers = () => {

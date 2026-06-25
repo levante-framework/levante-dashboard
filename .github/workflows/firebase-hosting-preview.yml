@@ -42,9 +42,10 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
-          node-version-file: '.nvmrc'
+          node-version-file: 'package.json'
+          check-latest: true
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
@@ -56,13 +57,6 @@ jobs:
 
       - name: Run tests
         run: npm test
-
-      - name: Update PR status
-        if: github.event_name == 'pull_request'
-        uses: ouzi-dev/commit-status-updater@v2
-        with:
-          name: 'Tests'
-          status: ${{ job.status }}
 
   build-and-preview:
     name: Deploy Preview
@@ -88,9 +82,10 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
-          node-version-file: '.nvmrc'
+          node-version-file: 'package.json'
+          check-latest: true
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
@@ -120,7 +115,6 @@ jobs:
         id: firebase-deploy
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          firebaseToolsVersion: v13.3.1 # <- Locking version because the newest (13.13.0) does not add the deploy URL to auth whitelist
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV_ADMIN }}'
           projectId: '${{ secrets.FIREBASE_PROJECT }}'
