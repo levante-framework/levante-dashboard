@@ -42,9 +42,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
-          node-version: '24.18.0' # fixes intermittent OAuth "Premature close" auth failures (nodejs/node#63989)
+          node-version-file: '.nvmrc'
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
@@ -56,13 +56,6 @@ jobs:
 
       - name: Run tests
         run: npm test
-
-      - name: Update PR status
-        if: github.event_name == 'pull_request'
-        uses: ouzi-dev/commit-status-updater@v2
-        with:
-          name: 'Tests'
-          status: ${{ job.status }}
 
   build-and-preview:
     name: Deploy Preview
@@ -88,9 +81,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
-          node-version: '24.18.0' # fixes intermittent OAuth "Premature close" auth failures (nodejs/node#63989)
+          node-version-file: '.nvmrc'
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
