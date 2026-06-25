@@ -34,6 +34,7 @@ const { selectedAssignment } = storeToRefs(assignmentsStore);
 
 const { mutateAsync: completeAssessmentMutate } = useCompleteAssessmentMutation();
 
+const isCoreTasksReady = ref(false);
 const initialized = ref(false);
 let unsubscribe;
 const init = () => {
@@ -64,8 +65,9 @@ window.addEventListener(
 
 onMounted(async () => {
   try {
-    let module = await import('@levante-framework/core-tasks');
+    const module = await import('@levante-framework/core-tasks');
     levanteTaskLauncher = module.TaskLauncher;
+    isCoreTasksReady.value = true;
   } catch (error) {
     console.error('An error occurred while importing the game module.', error);
   }
@@ -78,13 +80,20 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  [isFirekitInit, isLoadingUserData, userData],
-  async ([newFirekitInitValue, newLoadingUserData, newUserData]) => {
+  [isFirekitInit, isLoadingUserData, userData, isCoreTasksReady],
+  async ([newFirekitInitValue, newLoadingUserData, newUserData, newIsCoreTasksReady]) => {
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
     const hasAgeData = birthMonth !== undefined && birthYear !== undefined;
 
-    if (newFirekitInitValue && !newLoadingUserData && hasAgeData && !taskStarted.value) {
+    if (
+      newFirekitInitValue &&
+      !newLoadingUserData &&
+      hasAgeData &&
+      newIsCoreTasksReady &&
+      levanteTaskLauncher &&
+      !taskStarted.value
+    ) {
       taskStarted.value = true;
       await startTask(selectedAssignment);
     }
