@@ -69,7 +69,14 @@ onMounted(async () => {
     levanteTaskLauncher = module.TaskLauncher;
     isCoreTasksReady.value = true;
   } catch (error) {
-    console.error('An error occurred while importing the game module.', error);
+    alert(
+      'An error occurred while loading the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
+    );
+    logger.error('Error importing the game module', {
+      error,
+      taskId,
+      userId: getUserId(),
+    });
   }
 
   if (roarfirekit.value.restConfig) init();
