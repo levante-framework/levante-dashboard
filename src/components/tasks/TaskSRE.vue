@@ -35,6 +35,7 @@ const { getUserId } = authStore;
 
 const { mutateAsync: completeAssessmentMutate } = useCompleteAssessmentMutation();
 
+const isTaskSREReady = ref(false);
 const initialized = ref(false);
 let unsubscribe;
 const init = () => {
@@ -66,8 +67,17 @@ window.addEventListener(
 onMounted(async () => {
   try {
     TaskLauncher = (await import('@bdelab/roar-sre')).default;
+    isTaskSREReady.value = true;
   } catch (error) {
-    console.error('An error occurred while importing the game module.', error);
+    alert(
+      'An error occurred while loading the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
+    );
+
+    logger.error('Error importing the game module', {
+      error,
+      taskId,
+      userId: getUserId(),
+    });
   }
 
   if (roarfirekit.value.restConfig) init();
@@ -78,9 +88,9 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  [isFirekitInit, isLoadingUserData],
-  async ([newFirekitInitValue, newLoadingUserData]) => {
-    if (newFirekitInitValue && !newLoadingUserData && !taskStarted.value) {
+  [isFirekitInit, isLoadingUserData, isTaskSREReady],
+  async ([newFirekitInitValue, newLoadingUserData, newIsTaskSREReady]) => {
+    if (newFirekitInitValue && !newLoadingUserData && !taskStarted.value && newIsTaskSREReady) {
       taskStarted.value = true;
       await startTask(selectedAssignment);
     }
