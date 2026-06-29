@@ -8,7 +8,7 @@
     </div>
 
     <div class="footer__privacy-policy">
-      <router-link :to="{ path: '/privacy-policy' }" class="footer__link">Privacy Policy</router-link>
+      <router-link :to="{ name: 'PrivacyPolicy' }" class="footer__link">Privacy Policy</router-link>
     </div>
   </footer>
 </template>
