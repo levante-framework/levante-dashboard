@@ -15,7 +15,7 @@
           <section class="form-section">
             <div class="flex justify-content-between align-items-center">
               <label for="variant-fields">
-                <small class="text-gray-400 font-bold">Select an Existing Task </small>
+                <small class="text-gray-400 font-bold">Select task</small>
                 <span class="required">*</span></label
               >
               <div class="flex flex-column gap-2 align-items-end">
@@ -30,9 +30,9 @@
               v-model="v$.selectedGame.$model"
               :options="formattedTasks"
               option-label="name"
-              placeholder="Select a Game"
+              placeholder="Select task"
               :loading="isFetchingTasks"
-              :class="{ 'p-invalid': v$.variantName.$invalid && submitted }"
+              :class="['w-full', { 'p-invalid': v$.variantName.$invalid && submitted }]"
               name="variant-fields"
               @click="clearFieldParamArrays()"
             ></PvDropdown>
@@ -49,40 +49,67 @@
             </small>
           </section>
 
-          <section class="form-section">
-            <div class="p-input-icon-right">
-              <label for="variantName">
-                <small class="text-gray-400 font-bold">Variant Name </small>
-                <span class="required">*</span></label
-              >
-              <PvInputText
-                v-model="v$.variantName.$model"
-                name="variantName"
-                :class="{ 'p-invalid': v$.variantName.$invalid && submitted }"
-                aria-describedby="activation-code-error"
-              />
-            </div>
-            <span v-if="v$.variantName.$error && submitted">
-              <span v-for="(error, index) of v$.variantName.$errors" :key="index">
-                <small class="p-error">{{ error.$message }}</small>
-              </span>
-            </span>
-            <small
-              v-else-if="(v$.variantName.$invalid && submitted) || v$.variantName.$pending.$response"
-              class="p-error"
+          <template v-if="variantFields.selectedGame?.id">
+            <div
+              v-if="schemaForSelectedTask && !isSchemaLoading"
+              class="flex align-items-center gap-2 p-3 mt-2 surface-100 border-round border-1 border-green-500"
             >
-              {{ v$.variantName.required.$message.replace('Value', 'Variant Name') }}
-            </small>
-          </section>
+              <i class="pi pi-check-circle text-green-600" />
+              <span class="text-green-800">
+                Latest schema version: <strong>{{ schemaForSelectedTask.version }}</strong>. Variant params must match
+                this schema.
+              </span>
+            </div>
+            <div
+              v-else-if="!schemaForSelectedTask && !isSchemaLoading"
+              class="flex align-items-center gap-2 p-3 mt-2 surface-100 border-round border-1 border-amber-500"
+            >
+              <i class="pi pi-exclamation-triangle text-amber-600" />
+              <span class="text-amber-800">
+                No schema exists for this task. Create a schema in the <strong>Schemas</strong> tab before creating a
+                variant.
+              </span>
+            </div>
+
+            <section class="form-section">
+              <div class="p-input-icon-right">
+                <label for="variantName">
+                  <small class="text-gray-400 font-bold">Variant Name </small>
+                  <span class="required">*</span></label
+                >
+                <PvInputText
+                  v-model="v$.variantName.$model"
+                  name="variantName"
+                  :class="{ 'p-invalid': v$.variantName.$invalid && submitted }"
+                  aria-describedby="activation-code-error"
+                />
+              </div>
+              <span v-if="v$.variantName.$error && submitted">
+                <span v-for="(error, index) of v$.variantName.$errors" :key="index">
+                  <small class="p-error">{{ error.$message }}</small>
+                </span>
+              </span>
+              <small
+                v-else-if="(v$.variantName.$invalid && submitted) || v$.variantName.$pending.$response"
+                class="p-error"
+              >
+                {{ v$.variantName.required.$message.replace('Value', 'Variant Name') }}
+              </small>
+            </section>
+          </template>
         </div>
 
+        <template v-if="variantFields.selectedGame?.id && schemaForSelectedTask?.paramDefinitions">
         <div class="flex flex-column align-items-center">
           <h3 class="text-center">
             <strong>Configure Parameter Values</strong>
+            <span class="text-sm text-gray-500 font-normal ml-2">
+              (schema v{{ schemaForSelectedTask.version }})
+            </span>
           </h3>
           <h4 class="text-center">
             Set the game parameters for a new variant of task
-            <strong>{{ variantFields.selectedGame.id }}</strong>
+            <strong>{{ variantFields.selectedGame?.id ?? '—' }}</strong>
           </h4>
           <div class="flex flex-column">
             <!--
@@ -95,27 +122,23 @@
             variantParams[param.name] returns the value of variantParams.someParam,which is the value that we want to change for a new variant
 -->
             <div
-              v-for="(param, index) in mappedGameConfig"
-              :key="index"
+              v-for="(param, index) in createVariantParamList.filter((p) => !deletedParams.includes(p.name))"
+              :key="param.name"
               class="flex align-items-center justify-content-center dynamic-param-container gap-4"
             >
-              <div v-if="!deletedParams.includes(param.name)" class="flex align-items-center">
-                <label for="inputParamName">Parameter:</label>
-
-                <PvInputText id="inputParamName" v-model="variantParams[param.name]" :value="param.name" disabled />
+              <div class="flex align-items-center">
+                <PvInputText id="inputParamName" :model-value="param.name" disabled />
               </div>
 
               <div class="flex align-items-center">
-                <label for="inputParamType">Type:</label>
-                <PvInputText id="inputParamType" v-model="param.type" :value="param.type" disabled />
+                <PvInputText id="inputParamType" :model-value="param.type" disabled />
               </div>
 
               <div class="flex align-items-center gap-2 flex-grow-1">
-                <label for="inputParamValue">Value:</label>
                 <PvDropdown
                   v-if="param.name === 'language'"
                   id="inputParamValue"
-                  v-model="variantParams[param.name]"
+                  v-model="createVariantParamsValues[param.name]"
                   :options="languageDropdownOptions"
                   option-label="displayName"
                   option-value="variantCode"
@@ -150,14 +173,14 @@
                 <PvInputText
                   v-else-if="param.type === 'string'"
                   id="inputParamValue"
-                  v-model="variantParams[param.name]"
+                  v-model="createVariantParamsValues[param.name]"
                   placeholder="Set game parameter to desired value"
                   class="flex-grow-1"
                 />
                 <PvDropdown
                   v-else-if="param.type === 'boolean'"
                   id="inputParamValue"
-                  v-model="variantParams[param.name]"
+                  v-model="createVariantParamsValues[param.name]"
                   :options="booleanDropDownOptions"
                   option-label="label"
                   option-value="value"
@@ -167,7 +190,7 @@
                 <PvInputNumber
                   v-else-if="param.type === 'number'"
                   id="inputParamValue"
-                  v-model="variantParams[param.name]"
+                  v-model="createVariantParamsValues[param.name]"
                   placeholder="Set game parameter to desired value"
                   class="flex-grow-1"
                 />
@@ -183,85 +206,17 @@
                 />
               </div>
             </div>
-
-            <div v-if="newParams.length > 0" class="w-full">
-              <div v-for="(field, index) in newParams" :key="index" class="flex align-items-center column-gap-2 mb-1">
-                <PvInputText v-model="field.name" placeholder="Field Name" />
-                <PvDropdown
-                  v-model="field.type"
-                  :options="['string', 'number', 'boolean']"
-                  placeholder="Field Type"
-                  class="w-fit"
-                />
-
-                <PvInputText
-                  v-if="field.type === 'string'"
-                  v-model="field.value"
-                  placeholder="Field Value"
-                  class="w-full"
-                />
-                <PvInputNumber
-                  v-if="field.type === 'number'"
-                  v-model="field.value"
-                  placeholder="Field Value"
-                  class="w-full"
-                />
-                <PvDropdown
-                  v-if="field.type === 'boolean'"
-                  v-model="field.value"
-                  placeholder="Field Value"
-                  :options="booleanDropDownOptions"
-                  option-label="label"
-                  option-value="value"
-                  class="w-full"
-                />
-                <PvButton
-                  type="button"
-                  icon="pi pi-trash"
-                  class="w-4rem bg-primary text-white border-none border-round p-2 hover:bg-red-900"
-                  text
-                  @click="removeField(field.name, newParams)"
-                />
-              </div>
-            </div>
           </div>
-          <PvButton
-            label="Add Parameter"
-            text
-            icon="pi pi-plus"
-            class="w-2 my-4 bg-primary text-white border-none border-round p-2 hover:bg-red-900"
-            @click="newParam"
-          />
         </div>
         <div class="flex flex-row align-items-center justify-content-center gap-2 flex-order-0 my-3">
           <div class="flex flex-row align-items-center">
             <PvCheckbox
               v-model="variantCheckboxData"
-              input-id="chbx-demoVariant"
+              input-id="chbx-registeredVariant"
               name="variantCheckboxData"
-              value="isDemoVariant"
+              value="isRegisteredVariant"
             />
-            <label class="ml-1 mr-3" for="chbx-demoVariant">Mark as <b>Demo Variant</b></label>
-          </div>
-          <div class="flex flex-row align-items-center">
-            <PvCheckbox
-              v-model="variantCheckboxData"
-              input-id="chbx-testVariant"
-              name="variantCheckboxData"
-              value="isTestVariant"
-            />
-            <label class="ml-1 mr-3" for="chbx-testVariant">Mark as <b>Test Variant</b></label>
-          </div>
-          <div class="flex flex-row align-items-center">
-            <div class="flex flex-row align-items-center">
-              <PvCheckbox
-                v-model="variantCheckboxData"
-                input-id="chbx-registeredVariant"
-                name="variantCheckboxData"
-                value="isRegisteredVariant"
-              />
-              <label class="ml-1 mr-3" for="chbx-externalVariant">Mark as <b>Registered Variant</b></label>
-            </div>
+            <label class="ml-1 mr-3" for="chbx-registeredVariant">Mark as <b>Registered Variant</b></label>
           </div>
         </div>
         <div class="form-submit">
@@ -272,6 +227,7 @@
             severity="primary"
           />
         </div>
+        </template>
       </form>
     </div>
   </div>
@@ -281,7 +237,7 @@
     <form @submit.prevent="handleUpdateVariant()">
       <section class="flex flex-column gap-2 mb-4 p-4">
         <label for="task-select" class="my-2">
-          <small class="text-gray-400 font-bold">Select an Existing Task </small>
+          <small class="text-gray-400 font-bold">Select task</small>
           <span class="required">*</span></label
         >
         <PvDropdown
@@ -289,7 +245,7 @@
           :options="formattedTasks"
           option-label="name"
           option-value="id"
-          placeholder="Select a Game"
+          placeholder="Select task"
           @click="clearFieldParamArrays()"
         />
         <label for="variant-select" class="my-2">
@@ -306,7 +262,89 @@
         />
       </section>
 
-      <section v-if="selectedVariant" class="flex flex-column align-items-start mt-4 p-4">
+      <section v-if="selectedVariant && selectedTask" class="flex flex-column gap-3 mt-4 p-4">
+        <div class="flex justify-content-end">
+          <PvButton
+            label="Reset"
+            icon="pi pi-refresh"
+            severity="secondary"
+            text
+            :disabled="!hasUpdateVariantChanges"
+            @click="resetUpdateVariantChanges"
+          />
+        </div>
+        <div
+          v-if="schemaForUpdateTask"
+          class="flex flex-column gap-2 p-3 surface-100 border-round border-1 border-200"
+        >
+          <div class="flex flex-wrap align-items-center gap-3">
+            <span class="text-sm">
+              Current schema version:
+              <strong>{{ selectedVariant.schemaVersion ?? 'None' }}</strong>
+            </span>
+            <span class="text-sm text-gray-600">
+              Latest schema version: <strong>{{ schemaForUpdateTask.version }}</strong>
+            </span>
+            <span v-if="activeUpdateSchema" class="text-sm text-gray-600">
+              Validating against: <strong>v{{ activeUpdateSchema.version }}</strong>
+            </span>
+          </div>
+        </div>
+        <div
+          v-if="shouldShowUpgradeSchemaWarning"
+          class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-amber-500 flex-wrap"
+        >
+          <i class="pi pi-exclamation-triangle text-amber-600 flex-shrink-0" />
+          <span class="text-amber-800 flex-grow-1">
+            This variant uses schema version {{ selectedVariant.schemaVersion }}. The latest is
+            {{ schemaForUpdateTask.version }}. Update to the latest schema to validate params against the current
+            definition.
+          </span>
+          <PvButton
+            label="Update to latest schema"
+            icon="pi pi-arrow-up"
+            severity="warning"
+            size="small"
+            class="flex-shrink-0"
+            @click="upgradeUpdateVariantToLatestSchema"
+          />
+        </div>
+        <div
+          v-if="selectedVariant.schemaVersion == null && schemaForUpdateTask && !isUpdateSchemaLoading"
+          class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-blue-500"
+        >
+          <i class="pi pi-info-circle text-blue-600" />
+          <span class="text-blue-800">
+            This variant has no schema version. Params will be validated against the latest schema (v{{
+              schemaForUpdateTask.version
+            }}) and the schema version will be assigned when you save.
+          </span>
+        </div>
+        <div
+          v-if="
+            selectedVariant.params &&
+            Object.keys(selectedVariant.params).length > 0 &&
+            !schemaForUpdateTask &&
+            !isUpdateSchemaLoading
+          "
+          class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-blue-500 flex-wrap"
+        >
+          <i class="pi pi-info-circle text-blue-600 flex-shrink-0" />
+          <span class="text-blue-800 flex-grow-1">
+            No schema exists for this task yet. Create a schema from the current config below; it will be saved and
+            the variant will get the new schema version.
+          </span>
+          <PvButton
+            label="Create schema from current config"
+            icon="pi pi-plus"
+            severity="secondary"
+            size="small"
+            :loading="isSyncingSchemaFromConfig"
+            :disabled="isSyncingSchemaFromConfig"
+            class="flex-shrink-0"
+            @click="syncSchemaFromCurrentConfig"
+          />
+        </div>
         <div class="flex flex-column w-full">
           <label for="fieldsOutput">
             <strong>Fields</strong>
@@ -322,7 +360,7 @@
                 </label>
                 <PvInputText id="inputEditVariantType" :placeholder="typeof value" disabled class="w-2 text-center" />
                 <PvInputText
-                  v-if="typeof value === 'string'"
+                  v-if="typeof value === 'string' || value === null"
                   v-model="updatedVariantData[key]"
                   :placeholder="value"
                   class="flex-grow-1"
@@ -394,84 +432,133 @@
           @click="addField"
         />
 
-        <!--          **** Disabling the function to edit game params for now ****-->
+        <div v-if="activeUpdateSchema" class="flex flex-column gap-1 p-3 surface-100 border-round">
+          <div class="flex align-items-center gap-2 flex-wrap">
+            <strong>Schema (task config definition)</strong>
+            <span class="text-sm text-gray-600">Version {{ activeUpdateSchema.version }}</span>
+            <PvButton
+              :label="showSchemaDetails ? 'Hide details' : 'Details'"
+              :icon="showSchemaDetails ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+              icon-pos="right"
+              severity="secondary"
+              text
+              size="small"
+              class="p-0 text-sm"
+              @click="showSchemaDetails = !showSchemaDetails"
+            />
+          </div>
+          <div v-if="showSchemaDetails" class="flex flex-wrap gap-2 mt-2">
+            <span
+              v-for="(def, key) in activeUpdateSchema.paramDefinitions"
+              :key="key"
+              class="text-sm px-2 py-1 surface-200 border-round"
+            >
+              {{ key }}: {{ def.type }}{{ def.required ? ' (required)' : '' }}
+            </span>
+          </div>
+        </div>
 
-        <!--          <div class="flex flex-column w-8">-->
-        <!--            <label for="paramsOutput">-->
-        <!--              <strong>Game Params</strong>-->
-        <!--            </label>-->
-        <!--            <div v-for="(param, paramName) in selectedVariant.params" id="paramsOutput" :key="paramName" class="mb-1">-->
-        <!--              <div-->
-        <!--                v-if="updatedVariantData.params[paramName] !== undefined"-->
-        <!--                class="flex align-items-center justify-content-end column-gap-2"-->
-        <!--              >-->
-        <!--                <label :for="paramName" class="w-2">-->
-        <!--                  <em>{{ paramName }} </em>-->
-        <!--                </label>-->
-        <!--                <PvInputText id="inputEditParamType" :placeholder="typeof param" class="w-2" disabled />-->
-        <!--                <PvInputText-->
-        <!--                  v-if="typeof param === 'string'"-->
-        <!--                  v-model="updatedVariantData.params[paramName]"-->
-        <!--                  :placeholder="param"-->
-        <!--                  class="flex-grow-1"-->
-        <!--                />-->
-        <!--                <PvInputNumber-->
-        <!--                  v-else-if="typeof param === 'number'"-->
-        <!--                  v-model="updatedVariantData.params[paramName]"-->
-        <!--                  class="flex-grow-1"-->
-        <!--                />-->
-        <!--                <PvDropdown-->
-        <!--                  v-else-if="typeof param === 'boolean'"-->
-        <!--                  v-model="updatedVariantData.params[paramName]"-->
-        <!--                  :options="booleanDropDownOptions"-->
-        <!--                  option-label="label"-->
-        <!--                  option-value="value"-->
-        <!--                  class="flex-grow-1"-->
-        <!--                />-->
-        <!--                <PvButton type="button" @click="deleteParam(paramName)">Delete</PvButton>-->
-        <!--              </div>-->
-        <!--            </div>-->
-        <!--            <div v-if="addedParams.length > 0">-->
-        <!--              <div v-for="(field, index) in addedParams" :key="index" class="flex align-items-center column-gap-2 mb-1">-->
-        <!--                <PvInputText v-model="field.name" placeholder="Field Name" />-->
-        <!--                <PvDropdown v-model="field.type" :options="['string', 'number', 'boolean']" placeholder="Field Type" />-->
-        <!--                <PvInputText-->
-        <!--                  v-if="field.type === 'string'"-->
-        <!--                  v-model="field.value"-->
-        <!--                  placeholder="Field Value"-->
-        <!--                  class="flex-grow-1"-->
-        <!--                />-->
-        <!--                <PvInputNumber-->
-        <!--                  v-if="field.type === 'number'"-->
-        <!--                  v-model="field.value"-->
-        <!--                  placeholder="Field Value"-->
-        <!--                  class="flex-grow-1"-->
-        <!--                />-->
-        <!--                <PvDropdown-->
-        <!--                  v-if="field.type === 'boolean'"-->
-        <!--                  v-model="field.value"-->
-        <!--                  placeholder="Field Value"-->
-        <!--                  :options="booleanDropDownOptions"-->
-        <!--                  option-label="label"-->
-        <!--                  option-value="value"-->
-        <!--                  class="flex-grow-1"-->
-        <!--                />-->
-        <!--                <PvButton type="button" @click="removeField(field.name, addedParams)">Delete</PvButton>-->
-        <!--              </div>-->
-        <!--            </div>-->
-        <!--          </div>-->
-        <!--          <PvButton label="Add Param" text icon="pi pi-plus" class="my-4" @click="addParam" />-->
+        <div v-if="updateVariantParamList.length > 0" class="flex flex-column w-full">
+          <label for="paramsOutput">
+            <strong>Game Params</strong>
+            <span v-if="activeUpdateSchema?.paramDefinitions" class="text-sm text-gray-500 ml-2">
+              (validated against schema v{{ activeUpdateSchema.version }})
+            </span>
+          </label>
+          <div
+            v-if="
+              activeUpdateSchema?.paramDefinitions &&
+              hasParamsNotInSchema
+            "
+            class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-red-500 mb-2 flex-wrap"
+          >
+            <i class="pi pi-exclamation-triangle text-red-600 flex-shrink-0" />
+            <span class="text-red-800 flex-grow-1">
+              Some game params are not in the current schema. Update the schema in the <strong>Schemas</strong> tab
+              to include them, or remove these params before saving.
+            </span>
+            <PvButton
+              label="Update schema from current config"
+              icon="pi pi-sync"
+              severity="secondary"
+              size="small"
+              :loading="isSyncingSchemaFromConfig"
+              :disabled="isSyncingSchemaFromConfig"
+              class="flex-shrink-0"
+              @click="syncSchemaFromCurrentConfig"
+            />
+          </div>
+          <div
+            v-for="item in updateVariantParamList"
+            id="paramsOutput"
+            :key="item.paramName"
+            class="mb-1"
+          >
+            <div
+              class="flex align-items-center justify-content-end column-gap-2 p-2 border-round border-1"
+              :class="
+                activeUpdateSchema?.paramDefinitions && !item.isInSchema
+                  ? 'border-red-500 bg-red-50'
+                  : 'border-transparent'
+              "
+            >
+              <label :for="item.paramName" class="w-2">
+                <em :class="{ 'text-red-600': activeUpdateSchema?.paramDefinitions && !item.isInSchema }">
+                  {{ item.paramName }}
+                  <span v-if="item.isRequired" class="text-red-500">*</span>
+                </em>
+              </label>
+              <PvInputText
+                :id="`inputEditParamType-${item.paramName}`"
+                class="w-2"
+                disabled
+                :value="item.type"
+              />
+              <PvInputText
+                v-if="item.type === 'string'"
+                v-model="updatedVariantData.params[item.paramName]"
+                placeholder="Value"
+                class="flex-grow-1"
+              />
+              <PvInputNumber
+                v-else-if="item.type === 'number'"
+                v-model="updatedVariantData.params[item.paramName]"
+                class="flex-grow-1"
+              />
+              <PvDropdown
+                v-else-if="item.type === 'boolean'"
+                v-model="updatedVariantData.params[item.paramName]"
+                :options="booleanDropDownOptions"
+                option-label="label"
+                option-value="value"
+                class="flex-grow-1"
+              />
+              <PvButton
+                type="button"
+                :disabled="item.isRequired"
+                @click="deleteParam(item.paramName)"
+              >
+                Delete
+              </PvButton>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <PvButton type="submit" class="my-4 bg-primary text-white border-none border-round p-2 hover:bg-red-900"
-        >Update Variant</PvButton
-      >
+      <section class="flex flex-column gap-3 mt-4">
+        <PvButton
+          type="submit"
+          class="my-4 bg-primary text-white border-none border-round p-2 hover:bg-red-900"  
+        >
+          Update Variant
+        </PvButton>
+      </section>
     </form>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { required } from '@vuelidate/validators';
 import { useVuelidate } from '@vuelidate/core';
 import { storeToRefs } from 'pinia';
@@ -483,12 +570,15 @@ import PvInputNumber from 'primevue/inputnumber';
 import PvInputText from 'primevue/inputtext';
 import PvSelectButton from 'primevue/selectbutton';
 import PvToast from 'primevue/toast';
-import { cloneDeep, camelCase } from 'lodash';
+import { cloneDeep, camelCase, isEqual } from 'lodash';
 import { useAuthStore } from '@/store/auth';
 import useTasksQuery from '@/composables/queries/useTasksQuery';
 import useTaskVariantsQuery from '@/composables/queries/useTaskVariantsQuery';
+import useTaskSchemasQuery from '@/composables/queries/useTaskSchemasQuery';
 import useAddTaskVariantMutation from '@/composables/mutations/useAddTaskVariantMutation';
 import useUpdateTaskVariantMutation from '@/composables/mutations/useUpdateTaskVariantMutation';
+import useUpsertTaskSchemaMutation from '@/composables/mutations/useUpsertTaskSchemaMutation';
+import { formatTasksForDropdown } from '@/helpers/taskFields';
 import { getAllLanguageOptions, getPrimaryLanguageOptions, getLanguageInfo } from '@/helpers/languageDiscovery';
 
 const toast = useToast();
@@ -500,9 +590,13 @@ const { roarfirekit } = storeToRefs(authStore);
 
 const { mutate: addVariant } = useAddTaskVariantMutation();
 const { mutate: updateVariant } = useUpdateTaskVariantMutation();
+const { mutateAsync: upsertSchema, isPending: isSyncingSchemaFromConfig } = useUpsertTaskSchemaMutation();
 
 const selectedTask = ref(null);
 const selectedVariant = ref(null);
+const showSchemaDetails = ref(false);
+const useLatestSchemaForUpdate = ref(false);
+const originalUpdateVariantSnapshot = ref(null);
 // Reactive clone for holding changes made to variantData without affecting the original variantData and avoiding reactivity issues
 let updatedVariantData = reactive(cloneDeep(selectedVariant.value));
 // Array of objects which models the new fields added to the variant
@@ -510,8 +604,6 @@ let updatedVariantData = reactive(cloneDeep(selectedVariant.value));
 let addedFields = reactive([]);
 
 // Array of objects which models the new params added to the variant
-// This array of objects is later converted back into an object and spread into the updatedVariantData object
-// let addedParams = reactive([]);
 // Array of objects which models the new params added to the variant to be created
 // This array of objects is later converted back into an object and spread into the variantParams object
 
@@ -528,7 +620,7 @@ const handleViewChange = (value) => {
 };
 
 // Fields to ignore when displaying variant data
-const ignoreFields = ['id', 'lastUpdated', 'params', 'parentDoc'];
+const ignoreFields = ['id', 'lastUpdated', 'params', 'parentDoc', 'schemaVersion', 'updatedAt'];
 
 const booleanDropDownOptions = [
   { label: 'true', value: true },
@@ -562,6 +654,17 @@ const languageDropdownOptions = computed(() => {
 
 watch(selectedVariant, (newVal) => {
   updatedVariantData = reactive(cloneDeep(newVal));
+  deletedUpdateParamNames.value = new Set();
+  addedFields.splice(0, addedFields.length);
+  originalUpdateVariantSnapshot.value = null;
+  useLatestSchemaForUpdate.value = false;
+  if (updatedVariantData.params && typeof updatedVariantData.params === 'object') {
+    for (const k of Object.keys(updatedVariantData.params)) {
+      if (updatedVariantData.params[k] == null) {
+        updatedVariantData.params[k] = '';
+      }
+    }
+  }
 });
 
 let unsubscribe;
@@ -588,12 +691,7 @@ const { data: variants } = useTaskVariantsQuery(registeredTasksOnly, {
 
 const formattedTasks = computed(() => {
   if (!tasks.value) return [];
-  return tasks.value.map((task) => {
-    return {
-      name: task.taskName ?? task.id,
-      ...task,
-    };
-  });
+  return formatTasksForDropdown(tasks.value);
 });
 
 // Filter variants based on selected task
@@ -611,6 +709,134 @@ const variantFields = reactive({
   selectedGame: {},
   // Based on type of account?
   external: true,
+});
+
+const { schema: schemaForSelectedTask, isFetching: isSchemaLoading } = useTaskSchemasQuery(
+  computed(() => variantFields.selectedGame?.id ?? null),
+  { enabled: computed(() => initialized.value) },
+);
+
+const { schema: schemaForUpdateTask, schemas: schemasForUpdateTask, isFetching: isUpdateSchemaLoading } =
+  useTaskSchemasQuery(computed(() => selectedTask.value ?? null), { enabled: computed(() => initialized.value) });
+
+const currentVariantSchema = computed(() => {
+  const version = selectedVariant.value?.schemaVersion;
+  if (version == null || !schemasForUpdateTask.value.length) return null;
+  return schemasForUpdateTask.value.find((item) => item.version === version) ?? null;
+});
+
+const activeUpdateSchema = computed(() => {
+  const latest = schemaForUpdateTask.value;
+  const variantVersion = selectedVariant.value?.schemaVersion;
+  if (!latest) return null;
+  if (variantVersion == null || useLatestSchemaForUpdate.value) return latest;
+  return currentVariantSchema.value ?? latest;
+});
+
+const shouldShowUpgradeSchemaWarning = computed(() => {
+  const latest = schemaForUpdateTask.value;
+  const variantVersion = selectedVariant.value?.schemaVersion;
+  if (!latest || variantVersion == null) return false;
+  return variantVersion < latest.version && !useLatestSchemaForUpdate.value;
+});
+
+function upgradeUpdateVariantToLatestSchema() {
+  useLatestSchemaForUpdate.value = true;
+  applySchemaDefaultsToUpdateParams();
+}
+
+function applySchemaDefaultsToUpdateParams() {
+  const schema = activeUpdateSchema.value;
+  if (!schema?.paramDefinitions || !selectedVariant.value || !updatedVariantData) return;
+  if (!updatedVariantData.params || typeof updatedVariantData.params !== 'object') {
+    updatedVariantData.params = {};
+  }
+  for (const [key, def] of Object.entries(schema.paramDefinitions)) {
+    if (updatedVariantData.params[key] === undefined) {
+      updatedVariantData.params[key] =
+        def.type === 'number' ? 0 : def.type === 'boolean' ? false : '';
+    }
+  }
+}
+
+function captureOriginalUpdateVariantState() {
+  if (!selectedVariant.value?.id) {
+    originalUpdateVariantSnapshot.value = null;
+    return;
+  }
+  originalUpdateVariantSnapshot.value = {
+    variantId: selectedVariant.value.id,
+    variantData: cloneDeep(updatedVariantData),
+    deletedParamNames: [...deletedUpdateParamNames.value],
+    addedFields: cloneDeep([...addedFields]),
+  };
+}
+
+function resetUpdateVariantChanges() {
+  if (!originalUpdateVariantSnapshot.value) return;
+  const snapshot = cloneDeep(originalUpdateVariantSnapshot.value);
+  updatedVariantData = reactive(cloneDeep(snapshot.variantData));
+  deletedUpdateParamNames.value = new Set(snapshot.deletedParamNames);
+  addedFields.splice(0, addedFields.length, ...snapshot.addedFields);
+}
+
+const hasUpdateVariantChanges = computed(() => {
+  const snapshot = originalUpdateVariantSnapshot.value;
+  if (!snapshot || selectedVariant.value?.id !== snapshot.variantId) return false;
+  return (
+    !isEqual(updatedVariantData, snapshot.variantData) ||
+    !isEqual([...deletedUpdateParamNames.value].sort(), [...snapshot.deletedParamNames].sort()) ||
+    !isEqual([...addedFields], snapshot.addedFields)
+  );
+});
+
+watch(
+  () => [selectedVariant.value?.id, schemaForUpdateTask.value, isUpdateSchemaLoading.value],
+  () => {
+    if (!selectedVariant.value?.id) return;
+    applySchemaDefaultsToUpdateParams();
+    if (isUpdateSchemaLoading.value) return;
+    if (originalUpdateVariantSnapshot.value?.variantId === selectedVariant.value.id) return;
+    nextTick(() => captureOriginalUpdateVariantState());
+  },
+  { immediate: true },
+);
+
+const hasParamsNotInSchema = computed(() => {
+  const schema = activeUpdateSchema.value;
+  const params = updatedVariantData.params;
+  if (!schema?.paramDefinitions || !params || typeof params !== 'object') return false;
+  return Object.keys(params).some((key) => !(key in schema.paramDefinitions));
+});
+
+const deletedUpdateParamNames = ref(new Set());
+
+const updateVariantParamList = computed(() => {
+  const schema = activeUpdateSchema.value;
+  const paramDefs = schema?.paramDefinitions ?? {};
+  const configParams = updatedVariantData.params ?? {};
+  const schemaKeys = Object.keys(paramDefs);
+  const configKeys = Object.keys(configParams).filter(
+    (k) =>
+      configParams[k] == null || ['string', 'number', 'boolean'].includes(typeof configParams[k]),
+  );
+  const allKeys = [...new Set([...schemaKeys, ...configKeys])];
+  const deleted = deletedUpdateParamNames.value;
+  return allKeys
+    .filter((paramName) => !deleted.has(paramName))
+    .map((paramName) => {
+      const def = paramDefs[paramName];
+      const configVal = configParams[paramName];
+      const type =
+        def?.type ??
+        (configVal == null ? 'string' : typeof configVal === 'object' ? 'string' : typeof configVal);
+      return {
+        paramName,
+        type: type === 'object' ? 'string' : type,
+        isInSchema: !!def,
+        isRequired: !!def?.required,
+      };
+    });
 });
 
 // Validation rules for variantFields
@@ -640,13 +866,8 @@ const variantParams = computed(() => {
 });
 
 // Turn the gameConfig object into an array of key/value pairs [{name: 'key', value: 'value', type: 'type'}...]
-// This allows simplified editing of the gameConfig object
 const mappedGameConfig = computed(() => {
-  // Prevent any errors if selectedGame is not set
-  if (!variantFields.selectedGame?.gameConfig) {
-    return [];
-  }
-
+  if (!variantFields.selectedGame?.gameConfig) return [];
   return Object.entries(variantFields.selectedGame.gameConfig).map(([key, value]) => ({
     name: key,
     type: typeof value,
@@ -654,30 +875,58 @@ const mappedGameConfig = computed(() => {
   }));
 });
 
+const createVariantParamList = computed(() => {
+  const schema = schemaForSelectedTask.value;
+  if (!schema?.paramDefinitions) return [];
+  const gameConfig = variantFields.selectedGame?.gameConfig;
+  return Object.entries(schema.paramDefinitions).map(([name, def]) => {
+      const existing = gameConfig?.[name];
+      const value =
+        existing !== undefined && existing !== null
+          ? existing
+          : def.type === 'number'
+            ? 0
+            : def.type === 'boolean'
+              ? false
+              : '';
+      return { name, type: def.type, value };
+    });
+});
+
+const createVariantParamsValues = reactive({});
+watch(
+  createVariantParamList,
+  (list) => {
+    list.forEach((p) => {
+      if (!(p.name in createVariantParamsValues)) {
+        createVariantParamsValues[p.name] = p.value;
+      }
+    });
+    Object.keys(createVariantParamsValues).forEach((key) => {
+      if (!list.some((p) => p.name === key)) delete createVariantParamsValues[key];
+    });
+  },
+  { immediate: true },
+);
+
 // Keep track of params that are not needed for the particular variant when creating a new variant
 const deletedParams = ref([]);
 
-// Push the name of the param to the deletedParams array
-// Remove the param from the mappedGameConfig array
-// Remove the param from the variantParams object
-const moveToDeletedParams = (param) => {
-  for (const _param of mappedGameConfig.value) {
-    if (_param.name === param) {
-      console.log(mappedGameConfig.value.indexOf(_param));
-      const index = mappedGameConfig.value.indexOf(_param);
-      mappedGameConfig.value = mappedGameConfig.value.splice(index, 1);
-      delete variantParams.value[_param.name];
-    }
-  }
-  deletedParams.value.push(param);
+const moveToDeletedParams = (paramName) => {
+  deletedParams.value.push(paramName);
+  delete createVariantParamsValues[paramName];
 };
 
-// Delete the param from the updatedVariantData object when updating a variant
-const deleteParam = (param) => {
-  if (updatedVariantData['params'][param] !== undefined) {
-    delete updatedVariantData['params'][param];
+const deleteParam = (paramName) => {
+  if (activeUpdateSchema.value?.paramDefinitions?.[paramName]?.required) return;
+
+  if (updatedVariantData.params && updatedVariantData.params[paramName] !== undefined) {
+    delete updatedVariantData.params[paramName];
   }
-  delete updatedVariantData[param];
+  if (updatedVariantData[paramName] !== undefined) {
+    delete updatedVariantData[paramName];
+  }
+  deletedUpdateParamNames.value = new Set([...deletedUpdateParamNames.value, paramName]);
 };
 
 // Add a new field to the updatedVariantData object when updating a variant
@@ -690,11 +939,6 @@ const removeField = (field, array) => {
   const updatedFields = array.filter((item) => item.name !== field);
   array.splice(0, array.length, ...updatedFields);
 };
-
-// Add a new param to the updatedVariantData object when updating a variant
-// const addParam = () => {
-//   addedParams.push({ name: '', value: '', type: 'string' });
-// };
 
 // Add a new param to the newParams array when creating a new variant
 const newParam = () => {
@@ -758,7 +1002,8 @@ const checkForErrors = () => {
   }
 
   if (newParams.length > 0) {
-    const { isDuplicate, duplicateField } = checkForDuplicates(newParams, variantParams.value);
+    const currentParams = viewModel.value === 'Create Variant' ? createVariantParamsValues : variantParams.value;
+    const { isDuplicate, duplicateField } = checkForDuplicates(newParams, currentParams);
     if (isDuplicate) {
       toast.add({
         severity: 'error',
@@ -768,6 +1013,103 @@ const checkForErrors = () => {
       });
       return true;
     }
+  }
+};
+
+function validateGameParamsAgainstSchema(params, paramDefinitions) {
+  if (!paramDefinitions || typeof params !== 'object') return { valid: true };
+  const defs = paramDefinitions;
+  for (const key of Object.keys(defs)) {
+    const def = defs[key];
+    const value = params[key];
+    if (def.required && (value === undefined || value === null || value === '')) {
+      return { valid: false, message: `Game param "${key}" is required.` };
+    }
+    if (value !== undefined && value !== null && value !== '') {
+      const actualType = typeof value;
+      if (def.type === 'number' && actualType !== 'number') {
+        return { valid: false, message: `Game param "${key}" must be a number.` };
+      }
+      if (def.type === 'boolean' && actualType !== 'boolean') {
+        return { valid: false, message: `Game param "${key}" must be true or false.` };
+      }
+      if (def.type === 'string' && actualType !== 'string') {
+        return { valid: false, message: `Game param "${key}" must be a string.` };
+      }
+    }
+  }
+  return { valid: true };
+}
+
+function buildParamDefinitionsFromParams(params) {
+  if (!params || typeof params !== 'object') return {};
+  const defs = {};
+  for (const [key, value] of Object.entries(params)) {
+    const t = typeof value;
+    if (t === 'string' || t === 'number' || t === 'boolean') {
+      defs[key] = { type: t, required: false, description: '' };
+    }
+  }
+  return defs;
+}
+
+const syncSchemaFromCurrentConfig = async () => {
+  if (!selectedTask.value || !selectedVariant.value || !authStore.currentSite) return;
+  const mergedParams = updatedVariantData.params ?? {};
+  const paramDefinitions = buildParamDefinitionsFromParams(mergedParams);
+  if (Object.keys(paramDefinitions).length === 0) {
+    toast.add({
+      severity: 'warn',
+      summary: 'No params',
+      detail: 'No game params to build a schema from.',
+      life: 3000,
+    });
+    return;
+  }
+  try {
+    const result = await upsertSchema({ taskId: selectedTask.value, paramDefinitions });
+    const newVersion = result?.version;
+    if (newVersion == null) {
+      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to create schema.', life: 3000 });
+      return;
+    }
+    const convertedFields = convertParamsToObj(addedFields);
+    const variantData = {
+      taskId: selectedTask.value,
+      variantId: selectedVariant.value.id,
+      siteId: authStore.currentSite,
+      ...updatedVariantData,
+      ...convertedFields,
+      schemaVersion: newVersion,
+      params: { ...mergedParams },
+    };
+    await updateVariant(variantData, {
+      onSuccess: () => {
+        toast.add({
+          severity: 'success',
+          summary: 'Schema and variant updated',
+          detail: 'Schema was updated from current config and variant was saved with the new schema version.',
+          life: 4000,
+        });
+      },
+      onError: (err) => {
+        toast.add({
+          severity: 'error',
+          summary: 'Variant update failed',
+          detail: 'Schema was updated but saving the variant failed. Try saving again.',
+          life: 4000,
+        });
+        console.error(err);
+      },
+    });
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to update schema from config.',
+      life: 3000,
+    });
+    console.error(err);
   }
 };
 
@@ -797,22 +1139,60 @@ const handleUpdateVariant = async () => {
     return;
   }
 
-  const convertedFields = convertParamsToObj(addedFields);
-  // const convertedParams = convertParamsToObj(addedParams);
+  const hasGameParams =
+    selectedVariant.value.params && Object.keys(selectedVariant.value.params).length > 0;
+  const schema = activeUpdateSchema.value;
+  if (hasGameParams && !schema) {
+    toast.add({
+      severity: 'error',
+      summary: 'Schema required for game params',
+      detail:
+        'No schema exists for this task\'s game params. Create a schema in the Schemas tab to validate and save.',
+      life: 5000,
+    });
+    return;
+  }
 
+  const convertedFields = convertParamsToObj(addedFields);
+  const mergedParams = updatedVariantData.params ?? {};
+
+  if (schema?.paramDefinitions) {
+    const paramKeysNotInSchema = Object.keys(mergedParams).filter(
+      (key) => !(key in schema.paramDefinitions),
+    );
+    if (paramKeysNotInSchema.length > 0) {
+      toast.add({
+        severity: 'error',
+        summary: 'Game params not in schema',
+        detail:
+          'Some game params are not in the current schema. Update the schema in the Schemas tab to include them, or remove these params: ' +
+          paramKeysNotInSchema.join(', '),
+        life: 5000,
+      });
+      return;
+    }
+    const validation = validateGameParamsAgainstSchema(mergedParams, schema.paramDefinitions);
+    if (!validation.valid) {
+      toast.add({
+        severity: 'error',
+        summary: 'Game params validation',
+        detail: validation.message,
+        life: 5000,
+      });
+      return;
+    }
+  }
+
+  const schemaVersionToSave = activeUpdateSchema.value?.version;
   const variantData = {
     taskId: selectedTask.value,
     variantId: selectedVariant.value.id,
-    data: {
-      ...updatedVariantData,
-      ...convertedFields,
-      // params: {
-      //   ...updatedVariantData.params,
-      //   ...convertedParams,
-      // },
-    },
+    siteId: authStore.currentSite,
+    ...updatedVariantData,
+    ...convertedFields,
+    ...(schemaVersionToSave != null && { schemaVersion: schemaVersionToSave }),
+    params: { ...(updatedVariantData.params ?? {}) },
   };
-
   await updateVariant(variantData, {
     onSuccess: () => {
       toast.add({
@@ -840,22 +1220,38 @@ const handleVariantSubmit = async (isFormValid) => {
 
   if (checkVariantExists(variantFields.variantName)) return;
 
-  submitted.value = true;
-  const isDemoData = !!variantCheckboxData.value?.find((item) => item === 'isDemoVariant');
-  const isTestData = !!variantCheckboxData.value?.find((item) => item === 'isTestVariant');
-  // const isExternalVariant = !!variantCheckboxData.value?.find((item) => item === 'isExternalVariant');
-  const isRegisteredVariant = !!variantCheckboxData.value?.find((item) => item === 'isRegisteredVariant');
+  if (!isFormValid) return;
 
-  if (!isFormValid) {
+  submitted.value = true;
+  const isRegisteredVariant = !!variantCheckboxData.value?.find((item) => item === 'isRegisteredVariant');
+  const schema = schemaForSelectedTask.value;
+
+  if (!schema?.paramDefinitions) {
+    toast.add({
+      severity: 'error',
+      summary: 'Schema required',
+      detail: 'Create a schema in the Schemas tab before creating a variant.',
+      life: 5000,
+    });
+    submitted.value = false;
     return;
   }
 
-  const convertedParams = convertParamsToObj(newParams) ?? {};
+  const combinedParams = { ...createVariantParamsValues };
+  const validation = validateGameParamsAgainstSchema(combinedParams, schema.paramDefinitions);
+  if (!validation.valid) {
+    toast.add({
+      severity: 'error',
+      summary: 'Game params validation',
+      detail: validation.message,
+      life: 5000,
+    });
+    submitted.value = false;
+    return;
+  }
 
-  const combinedParams = {
-    ...variantParams.value,
-    ...convertedParams,
-  };
+  const schemaVersion = schema.version;
+  const schemaCreatedAt = schema.createdAt;
 
   const newVariantObject = reactive({
     taskId: variantFields.selectedGame.id,
@@ -865,13 +1261,16 @@ const handleVariantSubmit = async (isFormValid) => {
     variantParams: combinedParams,
     demoData: {
       task: !!variantFields.selectedGame?.demoData,
-      variant: isDemoData,
+      variant: false,
     },
     testData: {
       task: !!variantFields.selectedGame?.testData,
-      variant: isTestData,
+      variant: false,
     },
     registered: isRegisteredVariant,
+    siteId: authStore.currentSite,
+    schemaVersion,
+    ...(schemaCreatedAt != null && { schemaCreatedAt }),
   });
 
   await addVariant(newVariantObject, {
@@ -903,15 +1302,8 @@ function resetCreateVariantForm() {
     selectedGame: {},
     external: true,
   });
-
-  variantParams.value = [
-    {
-      name: '',
-      value: '',
-      type: 'String',
-    },
-  ];
-
+  Object.keys(createVariantParamsValues).forEach((k) => delete createVariantParamsValues[k]);
+  deletedParams.value = [];
   variantCheckboxData.value = [];
   clearFieldParamArrays();
 }
@@ -920,13 +1312,16 @@ const resetUpdateVariantForm = () => {
   selectedTask.value = null;
   selectedVariant.value = null;
   updatedVariantData = {};
+  deletedUpdateParamNames.value = new Set();
+  originalUpdateVariantSnapshot.value = null;
+  useLatestSchemaForUpdate.value = false;
   clearFieldParamArrays();
 };
 
 const clearFieldParamArrays = () => {
   addedFields = reactive([]);
-  // addedParams = reactive([]);
   newParams = reactive([]);
+  deletedParams.value = [];
 };
 </script>
 

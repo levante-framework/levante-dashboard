@@ -3,7 +3,22 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { withSetup } from '@/test-support/withSetup.js';
 import * as VueQuery from '@tanstack/vue-query';
 import { type QueryClient } from '@tanstack/vue-query';
+import { useAuthStore } from '@/store/auth';
 import useTasksDictionaryQuery from './useTasksDictionaryQuery';
+
+vi.mock('@/store/auth', () => ({
+  useAuthStore: vi.fn(),
+}));
+
+vi.mock('pinia', async (getModule) => {
+  const original = await getModule();
+  return {
+    ...original,
+    storeToRefs: vi.fn((store) => ({
+      currentSite: ref(store.currentSite),
+    })),
+  };
+});
 
 vi.mock('@/helpers/query/tasks', () => ({
   taskFetcher: vi.fn().mockImplementation(() => []),
@@ -19,13 +34,18 @@ vi.mock('@tanstack/vue-query', async (getModule) => {
 });
 describe('useTasksQuery', () => {
   let queryClient: QueryClient;
+  const mockSiteId = 'mock-site-id';
 
   beforeEach(() => {
     queryClient = new VueQuery.QueryClient();
+    useAuthStore.mockReturnValue({
+      currentSite: mockSiteId,
+    });
   });
 
   afterEach(() => {
     queryClient?.clear();
+    vi.clearAllMocks();
   });
 
   describe('useTasksDictionaryQuery', () => {
@@ -103,7 +123,12 @@ describe('useTasksQuery', () => {
         plugins: [[VueQuery.VueQueryPlugin, { queryClient }]],
       });
 
-      expect(VueQuery.useQuery).toHaveBeenCalledWith(expect.objectContaining(queryOptions));
+      expect(VueQuery.useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          refetchOnWindowFocus: false,
+          enabled: expect.any(Function),
+        }),
+      );
     });
   });
 });

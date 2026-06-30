@@ -40,6 +40,13 @@ vi.mock('@/composables/queries/useAssignmentExistsQuery', () => ({
   })),
 }));
 
+vi.mock('@/composables/queries/useTaskVariantsQuery', () => ({
+  default: vi.fn(() => ({
+    data: ref([]),
+    isFetched: ref(true),
+  })),
+}));
+
 vi.mock('primevue/usetoast', () => ({
   useToast: () => ({
     add: vi.fn(),

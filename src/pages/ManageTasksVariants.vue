@@ -8,11 +8,14 @@
         </div>
         <div class="text-md text-gray-500 ml-6">Manage tasks and variants.</div>
       </div>
-      <div class="register-container mx-auto md:flex-none">
+      <div class="flex flex-column mb-5">
         <PvTabs value="tasks">
           <PvTabList>
             <PvTab value="tasks">Tasks</PvTab>
             <PvTab value="variants">Variants</PvTab>
+            <PvTab value="schemas">Schemas</PvTab>
+            <PvTab value="parameter-summary">Parameter Summary</PvTab>
+            <PvTab value="parameter-keys">Parameter Keys</PvTab>
           </PvTabList>
           <PvTabPanels>
             <PvTabPanel value="tasks">
@@ -21,6 +24,18 @@
 
             <PvTabPanel value="variants">
               <ManageVariants />
+            </PvTabPanel>
+
+            <PvTabPanel value="schemas">
+              <ManageSchemas />
+            </PvTabPanel>
+
+            <PvTabPanel value="parameter-summary">
+              <ManageParameterSummary />
+            </PvTabPanel>
+
+            <PvTabPanel value="parameter-keys">
+              <ManageParameterKeys />
             </PvTabPanel>
           </PvTabPanels>
         </PvTabs>
@@ -37,6 +52,9 @@ import PvTabPanels from 'primevue/tabpanels';
 import PvTabs from 'primevue/tabs';
 import ManageTasks from '@/components/tasks/ManageTasks.vue';
 import ManageVariants from '@/components/tasks/ManageVariants.vue';
+import ManageSchemas from '@/components/tasks/ManageSchemas.vue';
+import ManageParameterSummary from '@/components/tasks/ManageParameterSummary.vue';
+import ManageParameterKeys from '@/components/tasks/ManageParameterKeys.vue';
 </script>
 
 <style scoped>
