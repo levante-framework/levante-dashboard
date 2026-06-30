@@ -93,14 +93,7 @@ watch(
     const birthYear = _get(userData.value, 'birthYear');
     const hasAgeData = birthMonth !== undefined && birthYear !== undefined;
 
-    if (
-      newFirekitInitValue &&
-      !newLoadingUserData &&
-      hasAgeData &&
-      newIsCoreTasksReady &&
-      levanteTaskLauncher &&
-      !taskStarted.value
-    ) {
+    if (newFirekitInitValue && !newLoadingUserData && hasAgeData && newIsCoreTasksReady && !taskStarted.value) {
       taskStarted.value = true;
       await startTask(selectedAssignment);
     }
