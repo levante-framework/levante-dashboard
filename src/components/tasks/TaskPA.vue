@@ -35,6 +35,7 @@ const { getUserId } = authStore;
 
 const { mutateAsync: completeAssessmentMutate } = useCompleteAssessmentMutation();
 
+const isTaskPAReady = ref(false);
 const initialized = ref(false);
 let unsubscribe;
 const init = () => {
@@ -66,8 +67,17 @@ window.addEventListener(
 onMounted(async () => {
   try {
     TaskLauncher = (await import('@bdelab/roar-pa')).default;
+    isTaskPAReady.value = true;
   } catch (error) {
-    console.error('An error occurred while importing the game module.', error);
+    alert(
+      'An error occurred while loading the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
+    );
+
+    logger.error('Error importing the game module', {
+      error,
+      taskId,
+      userId: getUserId(),
+    });
   }
 
   if (roarfirekit.value.restConfig) init();
@@ -78,9 +88,9 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  [isFirekitInit, isLoadingUserData],
-  async ([newFirekitInitValue, newLoadingUserData]) => {
-    if (newFirekitInitValue && !newLoadingUserData && !taskStarted.value) {
+  [isFirekitInit, isLoadingUserData, isTaskPAReady],
+  async ([newFirekitInitValue, newLoadingUserData, newIsTaskPAReady]) => {
+    if (newFirekitInitValue && !newLoadingUserData && !taskStarted.value && newIsTaskPAReady) {
       taskStarted.value = true;
       await startTask(selectedAssignment);
     }
@@ -123,11 +133,15 @@ async function startTask(selectedAdmin) {
       router.push({ name: 'Home' });
     });
   } catch (error) {
-    console.error('An error occurred while starting the task:', error);
     alert(
       'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
     );
-    logger.error('Error starting task', { error,  administrationId: selectedAdmin.value.id, taskId, userId: getUserId() });
+    logger.error('Error starting task', {
+      error,
+      administrationId: selectedAdmin.value.id,
+      taskId,
+      userId: getUserId(),
+    });
   }
 }
 </script>

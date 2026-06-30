@@ -93,14 +93,7 @@ watch(
     const birthYear = _get(userData.value, 'birthYear');
     const hasAgeData = birthMonth !== undefined && birthYear !== undefined;
 
-    if (
-      newFirekitInitValue &&
-      !newLoadingUserData &&
-      hasAgeData &&
-      newIsCoreTasksReady &&
-      levanteTaskLauncher &&
-      !taskStarted.value
-    ) {
+    if (newFirekitInitValue && !newLoadingUserData && hasAgeData && newIsCoreTasksReady && !taskStarted.value) {
       taskStarted.value = true;
       await startTask(selectedAssignment);
     }
@@ -147,7 +140,6 @@ async function startTask(selectedAdmin) {
       router.push({ name: 'Home' });
     });
   } catch (error) {
-    console.error('An error occurred while starting the task:', error);
     alert(
       'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
     );
