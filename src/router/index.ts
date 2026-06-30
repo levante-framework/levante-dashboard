@@ -321,6 +321,15 @@ const routes: Array<RouteRecordRaw> = [
       allowedRoles: ['*'],
     },
   },
+  {
+    path: '/privacy-policy',
+    name: 'PrivacyPolicy',
+    component: () => import('@/pages/PrivacyPolicy.vue'),
+    meta: {
+      pageTitle: 'Privacy Policy',
+      allowedRoles: ['*'],
+    },
+  },
 ];
 
 const scrollBehavior: RouterScrollBehavior = (to, from, savedPosition) => {
