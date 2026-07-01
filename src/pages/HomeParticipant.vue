@@ -110,11 +110,10 @@ import axios from 'axios';
 import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
 import { Model, settings } from 'survey-core';
 import { Converter } from 'showdown';
-import { fetchAudioLinks } from '@/helpers/survey';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useQueryClient, useQuery } from '@tanstack/vue-query';
-import { bootstrapSurveyInstance, setupSurveyEventHandlers, setupStudentAudio } from '@/helpers/surveyInitialization';
+import { bootstrapSurveyInstance, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
 import { useSurveyStore } from '@/store/survey';
 import { fetchDocsById } from '@/helpers/query/utils';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
@@ -454,8 +453,6 @@ const { data: surveyData } = useQuery({
 
     if (userType === 'student') {
       const resSurvey = await axios.get(`${LEVANTE_BUCKET_URL}/surveys/child_survey.json`);
-      const resAudio = await fetchAudioLinks('child-survey');
-      surveyStore.setAudioLinkMap(resAudio);
       return {
         general: resSurvey.data,
       };
@@ -634,10 +631,6 @@ watch(
     });
 
     surveyStore.setSurvey(surveyInstance);
-
-    if (userType.value === 'student') {
-      await setupStudentAudio(surveyInstance, locale.value, surveyStore.audioLinkMap, surveyStore);
-    }
   },
   { immediate: true },
 );
