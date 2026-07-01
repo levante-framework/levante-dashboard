@@ -31,6 +31,7 @@ export function initSentry(app: App) {
   Sentry.init({
     app,
     dsn,
+    environment: import.meta.env.VITE_FIREBASE_PROJECT === 'DEV' ? 'development' : 'production',
     integrations: [
       Sentry.replayIntegration({
         maskAllText: true,
