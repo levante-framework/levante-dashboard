@@ -1,5 +1,5 @@
 // composables/usePermissions.ts
-import { ref, computed, onMounted, readonly, toValue } from 'vue';
+import { ref, computed, watch, readonly } from 'vue';
 import { storeToRefs } from 'pinia';
 import { CacheService, PermissionDocument, PermissionService, type Resource, type Action, type Role, type UserRole as CoreUserRole, GroupSubResource, AdminSubResource, ROLES } from '@levante-framework/permissions-core';
 import { useAuthStore } from '@/store/auth';
@@ -14,7 +14,7 @@ interface UserData {
 const cache = new CacheService(300000); // 5 minutes
 const permissionService = new PermissionService(cache);
 const permissionsLoaded = ref(false);
-let isLoadingPermissions = false;
+let isFetchingPermissions = false;
 
 export const usePermissions = () => {
   const authStore = useAuthStore();
@@ -31,8 +31,8 @@ export const usePermissions = () => {
   });
 
   const loadPermissions = async () => {
-    if (permissionsLoaded.value || isLoadingPermissions) return;
-    isLoadingPermissions = true;
+    if (permissionsLoaded.value || isFetchingPermissions) return;
+    isFetchingPermissions = true;
 
     try {
       const axiosInstance = getAxiosInstance();
@@ -46,17 +46,25 @@ export const usePermissions = () => {
         console.error('Failed to load permissions:', errors);
       }
     } finally {
-      isLoadingPermissions = false;
+      isFetchingPermissions = false;
     }
   };
 
-  onMounted(() => {
-    if (permissionsLoaded.value) return;
+  watch(
+    [shouldUsePermissions, () => isAuthenticated()],
+    ([usePermissions, authed]) => {
+      if (permissionsLoaded.value || !authed) return;
 
-    if (shouldUsePermissions.value && isAuthenticated()) {
-      loadPermissions();
-    }
-  });
+      if (usePermissions) {
+        loadPermissions();
+      } else {
+        permissionsLoaded.value = true;
+      }
+    },
+    { immediate: true },
+  );
+
+  const isLoadingPermissions = computed(() => shouldUsePermissions.value && !permissionsLoaded.value);
 
   const userRole = computed<Role | null>(() => {
     if (!shouldUsePermissions.value || !permissionsLoaded.value || !user.value || !currentSite.value) return null;
@@ -118,5 +126,6 @@ export const usePermissions = () => {
     userRole,
     permissions,
     permissionsLoaded: readonly(permissionsLoaded),
+    isLoadingPermissions,
   };
 };
