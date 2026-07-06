@@ -147,17 +147,17 @@ const adminSignIn = ref(false);
 const { spinner, ssoProvider, routeToProfile, roarfirekit } = storeToRefs(authStore);
 const warningModalOpen = ref(false);
 
-authStore.$subscribe(() => {
-  if (authStore.getUserId()) {
-    if (ssoProvider.value) {
-      router.push({ path: APP_ROUTES.SSO });
-    } else if (routeToProfile.value) {
-      router.push({ path: APP_ROUTES.ACCOUNT_PROFILE });
-    } else {
-      router.push({ path: APP_ROUTES.HOME });
-    }
+function redirectAfterLogin() {
+  if (!authStore.getUserId()) return;
+
+  if (ssoProvider.value) {
+    router.replace({ path: APP_ROUTES.SSO });
+  } else if (routeToProfile.value) {
+    router.replace({ path: APP_ROUTES.ACCOUNT_PROFILE });
+  } else {
+    router.replace({ path: APP_ROUTES.HOME });
   }
-});
+}
 
 const toggleAdminSignIn = () => {
   adminSignIn.value = !adminSignIn.value;
@@ -188,6 +188,8 @@ const authWithGoogle = () => {
             const sortedAssignments = sortAssignmentsByDateOpened(userAssignments);
             assignmentsStore.setUserAssignments(sortedAssignments);
           }
+
+          redirectAfterLogin();
         }
       })
       .catch((e) => {
@@ -243,6 +245,8 @@ const authWithEmail = async (state) => {
             const sortedAssignments = sortAssignmentsByDateOpened(userAssignments);
             assignmentsStore.setUserAssignments(sortedAssignments);
           }
+
+          redirectAfterLogin();
         }
       })
       .catch((e) => {

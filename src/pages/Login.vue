@@ -225,7 +225,6 @@ const router = useRouter();
 const { setUserAssignments } = assignmentsStore;
 const { roarfirekit, routeToProfile, spinner, ssoProvider, userClaims } = storeToRefs(authStore);
 const {
-  $subscribe,
   getUserId,
   initiateLoginWithEmailLink,
   isUserAdmin,
@@ -237,17 +236,17 @@ const {
   signInWithGoogleRedirect,
 } = authStore;
 
-$subscribe(() => {
-  if (getUserId()) {
-    if (ssoProvider.value) {
-      router.push({ path: APP_ROUTES.SSO });
-    } else if (routeToProfile.value) {
-      router.push({ path: APP_ROUTES.ACCOUNT_PROFILE });
-    } else {
-      router.push({ path: APP_ROUTES.HOME });
-    }
+function redirectAfterLogin() {
+  if (!getUserId()) return;
+  
+  if (ssoProvider.value) {
+    router.replace({ path: APP_ROUTES.SSO });
+  } else if (routeToProfile.value) {
+    router.replace({ path: APP_ROUTES.ACCOUNT_PROFILE });
+  } else {
+    router.replace({ path: APP_ROUTES.HOME });
   }
-});
+}
 
 const forgotEmail = ref('');
 const googleSignInErrorKey = ref('');
@@ -308,6 +307,8 @@ const authWithEmailOrUsername = async () => {
       if (!isUserAdmin() && !isUserSuperAdmin()) {
         await getAuthUserAssignments();
       }
+
+      redirectAfterLogin();
     })
     .catch((e) => {
       const errorCodes = ['auth/invalid-email', 'auth/user-not-found', 'auth/wrong-password'];
@@ -340,6 +341,8 @@ const authWithGoogle = async () => {
       if (!isUserAdmin() && !isUserSuperAdmin()) {
         await getAuthUserAssignments();
       }
+
+      redirectAfterLogin();
     })
     .catch((e) => {
       console.log('ERROR', e);
