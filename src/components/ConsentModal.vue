@@ -10,7 +10,6 @@
     <template #message>
       <div class="scrolling-box">
         <!-- @TODO: Add sanitization! -->
-        <!-- eslint-disable-next-line vue/no-v-html -->
         <div v-html="markdownToHtml"></div>
       </div>
     </template>

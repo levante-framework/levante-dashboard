@@ -2,7 +2,6 @@ import 'cypress-real-events';
 
 // Ignore Firebase auth network errors when skipping login
 // Keeps locale render checks green without emulator/backend
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 // @ts-ignore
 // Cypress is available globally in spec files
 // We conditionally attach after skipLoginFlag is computed below

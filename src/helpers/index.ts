@@ -219,7 +219,6 @@ export const filterAdminOrgs = (
 };
 
 export const removeEmptyOrgs = (orgs: Record<string, any[]>): Record<string, any[]> => {
-  // eslint-disable-next-line no-unused-vars
   return _fromPairs(_toPairs(orgs).filter(([_, orgArray]) => orgArray.length > 0));
 };
 
