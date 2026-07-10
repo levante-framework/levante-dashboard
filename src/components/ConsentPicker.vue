@@ -259,7 +259,6 @@
     :style="{ width: '65vw' }"
     :breakpoints="{ '1199px': '85vw', '575px': '95vw' }"
   >
-    <!-- eslint-disable-next-line vue/no-v-html -->
     <div v-html="confirmText"></div>
   </PvDialog>
 </template>

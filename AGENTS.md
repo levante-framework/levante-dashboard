@@ -12,8 +12,7 @@ We are updating data model names. The mapping is: child/children (frontend) = st
 
 - **Development**: `npm run dev` (with emulator) or `npm run dev:db` (without emulator)
 - **Build**: `npm run build:dev` (dev) or `npm run build:prod` (production)
-- **Lint**: `npm run lint` (auto-fix) or `npm run check-format` (check only)
-- **Format**: `npm run format` (Prettier with 120 char width, single quotes, trailing commas)
+- **Lint/Format**: `npm run check:fix` (auto-fix) or `npm run check` (check only, for CI)
 - **Test All**: `npm test` (runs Vitest with coverage)
 - **Test Single**: `npm test -- path/to/test.js` or `npx vitest run path/to/test.js`
 - **Test Watch**: `npm run test:watch`

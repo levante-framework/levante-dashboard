@@ -36,7 +36,6 @@ export const createAppInstance = (): VueApp<Element> => {
   app.directive('tooltip', PvTooltip);
 
   // Register global variables.
-  // eslint-disable-next-line no-undef
   globalThis.Buffer = Buffer;
 
   if (import.meta.env.MODE === 'production') {
