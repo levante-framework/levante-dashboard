@@ -100,7 +100,6 @@ import useTasksQuery from '@/composables/queries/useTasksQuery';
 import useSurveyResponsesQuery from '@/composables/useSurveyResponses/useSurveyResponses';
 import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
 import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
-import useDistrictsQuery from '@/composables/queries/useDistrictsQuery';
 import ConsentModal from '@/components/ConsentModal.vue';
 import GameTabs from '@/components/GameTabs.vue';
 import ParticipantSidebar from '@/components/ParticipantSidebar.vue';
@@ -162,14 +161,6 @@ unsubscribe = authStore.$subscribe(async (mutation, state) => {
 
 onMounted(async () => {
   if (roarfirekit.value.restConfig) init();
-});
-
-const {
-  data: districtsData,
-  isLoading: isLoadingDistricts,
-  isFetching: isFetchingDistricts,
-} = useDistrictsQuery(currentUserData.value?.districts?.current, {
-  enabled: initialized,
 });
 
 const {
@@ -253,11 +244,11 @@ const { data: surveyResponsesData } = useSurveyResponsesQuery({
 });
 
 const isLoading = computed(() => {
-  return isLoadingUserData.value || isLoadingAssignments.value || isLoadingTasks.value || isLoadingDistricts.value;
+  return isLoadingUserData.value || isLoadingAssignments.value || isLoadingTasks.value;
 });
 
 const isFetching = computed(() => {
-  return isFetchingUserData.value || isFetchingAssignments.value || isFetchingTasks.value || isFetchingDistricts.value;
+  return isFetchingUserData.value || isFetchingAssignments.value || isFetchingTasks.value;
 });
 
 const hasAssignments = computed(() => {
@@ -309,19 +300,17 @@ const userType = computed(() => {
   return toRaw(userData.value)?.userType?.toLowerCase();
 });
 
-// Watch for when districts data changes
+// Derive site for telemetry from the user's own roles; participants cannot read district docs (403).
 watch(
-  districtsData,
-  (newDistrictsData) => {
-    if (newDistrictsData) {
-      const rawDistrictsData = toRaw(newDistrictsData)?.[0];
-      if (rawDistrictsData?.name) {
-        logger.setAdditionalProperties({
-          siteId: rawDistrictsData?.id,
-          siteName: rawDistrictsData?.name,
-        });
-      }
-    }
+  currentUserData,
+  (user) => {
+    const currentDistrictId = user?.districts?.current?.[0];
+    if (!currentDistrictId) return;
+    const roles = user?.roles ?? [];
+    const matchingRole = roles.find((role) => role?.siteId === currentDistrictId) ?? roles[0];
+    const siteId = matchingRole?.siteId ?? currentDistrictId;
+    const siteName = matchingRole?.siteName;
+    logger.setAdditionalProperties({ siteId, ...(siteName ? { siteName } : {}) });
   },
   { immediate: true },
 );
