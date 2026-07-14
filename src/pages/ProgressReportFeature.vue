@@ -197,7 +197,7 @@
                         class="w-full"
                         :maxlength="50"
                       />
-                      <label>Search login...</label>
+                      <label>Search UID or login...</label>
                     </PvFloatLabel>
                   </div>
                   <div class="w-5">
@@ -574,6 +574,7 @@ const appendTaskProgressColumns = (row, progress = {}) => {
 
 const buildProgressExportRow = (user, progress = {}) => {
   const tableRow = {
+    UID: _get(user, "userId") ?? "",
     "User Login": _get(user, "username") ?? "",
     "User Type": _startCase(
       normalizeUserTypeForDisplay(_get(user, "userType") ?? ""),
@@ -729,8 +730,13 @@ watch(
     if (newSearchInput) {
       const normalizedSearchInput = normalizeToLowercase(newSearchInput);
       filteredData = filteredData?.filter((data) => {
-        const normalizedUID = normalizeToLowercase(data?.user?.username);
-        return normalizedUID.includes(normalizedSearchInput);
+        const normalizedUID = normalizeToLowercase(data?.user?.userId);
+        const normalizedUsername = normalizeToLowercase(data?.user?.username);
+
+        return (
+          normalizedUID.includes(normalizedSearchInput) ||
+          normalizedUsername.includes(normalizedSearchInput)
+        );
       });
     }
 
