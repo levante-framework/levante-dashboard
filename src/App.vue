@@ -33,21 +33,21 @@
 </template>
 
 <script setup>
-import { nextTick, computed, onBeforeMount, onMounted, ref, defineAsyncComponent, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
 import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
-import { useAuthStore } from '@/store/auth';
-import { fetchDocById } from '@/helpers/query/utils';
-import { i18n, getTranslations, getLanguages } from '@/translations/i18n';
+import { slk } from 'survey-core';
+import { computed, defineAsyncComponent, nextTick, onBeforeMount, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import NavBar from '@/components/NavBar.vue';
-import { FOOTER_BLACKLIST, NAVBAR_BLACKLIST } from './constants';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
-import { useI18n } from 'vue-i18n';
-import { slk } from 'survey-core';
+import { fetchDocById } from '@/helpers/query/utils';
+import { useAuthStore } from '@/store/auth';
+import { getLanguages, getTranslations, i18n } from '@/translations/i18n';
 import Footer from './components/Footer.vue';
+import { FOOTER_BLACKLIST, NAVBAR_BLACKLIST } from './constants';
 
 const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>

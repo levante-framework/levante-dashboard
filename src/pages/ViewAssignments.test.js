@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ref, nextTick } from 'vue';
+import * as VueQuery from '@tanstack/vue-query';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
-import * as VueQuery from '@tanstack/vue-query';
-import ViewAssignments from '@/pages/ViewAssignments.vue';
 import PrimeVue from 'primevue/config';
 import ConfirmService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick, ref } from 'vue';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
+import ViewAssignments from '@/pages/ViewAssignments.vue';
 
 const mockAdministration = {
   id: 'DlAhRnbOFDnCF5AwEkhB',

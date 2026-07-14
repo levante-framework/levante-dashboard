@@ -1,8 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import type { UseMutationReturnType } from '@tanstack/vue-query';
-import { useAuthStore } from '@/store/auth';
-import { TASKS_QUERY_KEY, TASK_VARIANTS_QUERY_KEY } from '@/constants/queryKeys';
+import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { TASK_VARIANT_UPDATE_MUTATION_KEY } from '@/constants/mutationKeys';
+import { TASK_VARIANTS_QUERY_KEY, TASKS_QUERY_KEY } from '@/constants/queryKeys';
+import { useAuthStore } from '@/store/auth';
 
 interface TaskVariantData {
   [key: string]: any;

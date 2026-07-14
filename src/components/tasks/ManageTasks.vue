@@ -422,11 +422,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { required, requiredIf, url } from '@vuelidate/validators';
 import { useVuelidate } from '@vuelidate/core';
+import { required, requiredIf, url } from '@vuelidate/validators';
+import { camelCase, cloneDeep } from 'lodash';
 import { storeToRefs } from 'pinia';
-import { useToast } from 'primevue/usetoast';
 import PvButton from 'primevue/button';
 import PvCheckbox from 'primevue/checkbox';
 import PvDropdown from 'primevue/dropdown';
@@ -434,11 +433,12 @@ import PvInputNumber from 'primevue/inputnumber';
 import PvInputText from 'primevue/inputtext';
 import PvSelectButton from 'primevue/selectbutton';
 import PvToast from 'primevue/toast';
-import { cloneDeep, camelCase } from 'lodash';
-import { useAuthStore } from '@/store/auth';
-import useTasksQuery from '@/composables/queries/useTasksQuery';
+import { useToast } from 'primevue/usetoast';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import useAddTaskMutation from '@/composables/mutations/useAddTaskMutation';
 import useUpdateTaskMutation from '@/composables/mutations/useUpdateTaskMutation';
+import useTasksQuery from '@/composables/queries/useTasksQuery';
+import { useAuthStore } from '@/store/auth';
 
 const toast = useToast();
 const initialized = ref(false);

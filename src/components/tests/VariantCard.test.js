@@ -1,16 +1,16 @@
-import VariantCard from '@/components/VariantCard.vue';
 import { mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { nextTick } from 'vue';
+import { createPinia, setActivePinia } from 'pinia';
 import PvButton from 'primevue/button';
 import PvChip from 'primevue/chip';
 import PvColumn from 'primevue/column';
+import PrimeVue from 'primevue/config';
 import PvDataTable from 'primevue/datatable';
 import PvDialog from 'primevue/dialog';
 import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
-import PrimeVue from 'primevue/config';
-import { createPinia, setActivePinia } from 'pinia';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
+import VariantCard from '@/components/VariantCard.vue';
 import { getAllLanguageOptions, getLanguageInfo } from '@/helpers/languageDiscovery';
 
 // Mock the language discovery functions

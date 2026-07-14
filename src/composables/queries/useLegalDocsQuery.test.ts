@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { QueryClient } from '@tanstack/vue-query';
 import * as VueQuery from '@tanstack/vue-query';
-import { type QueryClient } from '@tanstack/vue-query';
-import { withSetup } from '@/test-support/withSetup.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchLegalDocs } from '@/helpers/query/legal';
+import { withSetup } from '@/test-support/withSetup.js';
 import useLegalDocsQuery from './useLegalDocsQuery';
 
 vi.mock('@/helpers/query/legal', () => ({

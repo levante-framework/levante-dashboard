@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, markRaw } from 'vue';
+import { markRaw, ref } from 'vue';
 
 export const useSurveyStore = defineStore('surveyStore', () => {
   // State

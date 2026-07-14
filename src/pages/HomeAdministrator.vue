@@ -259,14 +259,14 @@
 </template>
 
 <script setup lang="ts">
-import DocsButton from '@/components/DocsButton.vue';
-import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import { useGetSiteOverviewQuery } from '@/composables/queries/useGetSiteOverviewQuery';
-import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 import PvBadge from 'primevue/badge';
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
+import DocsButton from '@/components/DocsButton.vue';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import { useGetSiteOverviewQuery } from '@/composables/queries/useGetSiteOverviewQuery';
+import { useAuthStore } from '@/store/auth';
 
 const authStore = useAuthStore();
 const { currentSite, userData } = storeToRefs(authStore);

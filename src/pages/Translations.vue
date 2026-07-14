@@ -112,13 +112,6 @@
 </template>
 
 <script setup lang="ts">
-import LanguageSelector from '@/components/LanguageSelector.vue';
-import { useBucketAudioListQuery } from '@/composables/queries/useBucketAudioListQuery';
-import { TASK_DISPLAY_NAMES, useBucketTaskListQuery } from '@/composables/queries/useBucketTaskListQuery';
-import { useBucketTaskTranslationsQuery } from '@/composables/queries/useBucketTaskTranslationsQuery';
-import { APP_ROUTES } from '@/constants/routes';
-import { getTooltip } from '@/helpers';
-import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
 import PvButton from 'primevue/button';
 import Column from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
@@ -127,6 +120,13 @@ import PvSelect from 'primevue/select';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
+import LanguageSelector from '@/components/LanguageSelector.vue';
+import { useBucketAudioListQuery } from '@/composables/queries/useBucketAudioListQuery';
+import { TASK_DISPLAY_NAMES, useBucketTaskListQuery } from '@/composables/queries/useBucketTaskListQuery';
+import { useBucketTaskTranslationsQuery } from '@/composables/queries/useBucketTaskTranslationsQuery';
+import { APP_ROUTES } from '@/constants/routes';
+import { getTooltip } from '@/helpers';
+import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
 
 const { locale } = useI18n();
 const route = useRoute();

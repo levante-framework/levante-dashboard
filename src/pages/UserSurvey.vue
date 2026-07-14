@@ -1,16 +1,16 @@
 <script setup>
 import 'survey-core/survey-core.css';
+import PvButton from 'primevue/button';
 import { SurveyComponent } from 'survey-vue3-ui';
-import { useAuthStore } from '@/store/auth';
-import { useSurveyStore } from '@/store/survey';
+import { onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { onBeforeRouteLeave, useRouter } from 'vue-router';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import { isLevante } from '@/helpers';
 import { AudioContext } from '@/helpers/audio';
 import { getParsedLocale } from '@/helpers/survey';
-import { onBeforeRouteLeave, useRouter } from 'vue-router';
-import { isLevante } from '@/helpers';
-import PvButton from 'primevue/button';
-import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import { onMounted } from 'vue';
+import { useAuthStore } from '@/store/auth';
+import { useSurveyStore } from '@/store/survey';
 
 const authStore = useAuthStore();
 const router = useRouter();

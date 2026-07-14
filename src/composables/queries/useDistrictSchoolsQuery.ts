@@ -1,11 +1,11 @@
-import { computed, ref, Ref, toValue } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
-import { orgFetcher } from '@/helpers/query/orgs';
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
-import { DISTRICT_SCHOOLS_QUERY_KEY } from '@/constants/queryKeys';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { storeToRefs } from 'pinia';
+import { computed, type Ref, ref, toValue } from 'vue';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { DISTRICT_SCHOOLS_QUERY_KEY } from '@/constants/queryKeys';
+import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
+import { orgFetcher } from '@/helpers/query/orgs';
 import { useAuthStore } from '@/store/auth';
 
 /**

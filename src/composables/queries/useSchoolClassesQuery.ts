@@ -1,12 +1,12 @@
-import { computed, toValue } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
+import { computed, toValue } from 'vue';
+import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
+import useUserType from '@/composables/useUserType';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { SCHOOL_CLASSES_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { orgFetcher } from '@/helpers/query/orgs';
-import useUserType from '@/composables/useUserType';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import { SCHOOL_CLASSES_QUERY_KEY } from '@/constants/queryKeys';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 
 /**
  * School Classes query.

@@ -1,13 +1,13 @@
-import { useMutation, useQueryClient } from '@tanstack/vue-query';
-import type { UseMutationReturnType } from '@tanstack/vue-query';
-import { useRouter } from 'vue-router';
 import * as Sentry from '@sentry/vue';
-import { useAuthStore } from '@/store/auth';
+import type { UseMutationReturnType } from '@tanstack/vue-query';
+import { useMutation, useQueryClient } from '@tanstack/vue-query';
+import { useRouter } from 'vue-router';
 import { SIGN_OUT_MUTATION_KEY } from '@/constants/mutationKeys';
 import { APP_ROUTES } from '@/constants/routes';
+import { useAssignmentsStore } from '@/store/assignments';
+import { useAuthStore } from '@/store/auth';
 import { useLevanteStore } from '@/store/levante';
 import { useSurveyStore } from '@/store/survey';
-import { useAssignmentsStore } from '@/store/assignments';
 
 /**
  * Sign-Out mutation.

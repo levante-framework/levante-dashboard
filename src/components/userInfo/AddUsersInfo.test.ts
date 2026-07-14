@@ -1,7 +1,7 @@
+import { mount } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
 import ToastService from 'primevue/toastservice';
 import { describe, expect, it, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
 import AddUsersInfo from './AddUsersInfo.vue';
 
 const setupDownloadMocks = () => {

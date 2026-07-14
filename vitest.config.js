@@ -5,7 +5,7 @@
 // - viteConfig: Base Vite configuration to extend
 import { fileURLToPath } from 'node:url';
 import { mergeConfig } from 'vite';
-import { defineConfig, coverageConfigDefaults } from 'vitest/config';
+import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 import viteConfig from './vite.config';
 
 const isCI = process.env.CI === 'true';

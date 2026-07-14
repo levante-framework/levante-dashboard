@@ -1,5 +1,5 @@
-import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 export interface SurveyPdfOptions {
   filename?: string;
@@ -43,10 +43,10 @@ export async function generateSurveyPdfFromJson(surveyJson: any, opts: SurveyPdf
     const elements: any[] = Array.isArray(page?.elements) ? page.elements : [];
     elements.forEach((el) => {
       const name = el?.name ?? '(unnamed)';
-      const qTitle = typeof el?.title === 'string' ? el.title : el?.title?.default ?? '';
+      const qTitle = typeof el?.title === 'string' ? el.title : (el?.title?.default ?? '');
       writeWrapped(`• ${qTitle || name}`);
       if (el?.choices && Array.isArray(el.choices)) {
-        const choices = el.choices.map((c: any) => (typeof c === 'string' ? c : c?.text ?? c?.value)).filter(Boolean);
+        const choices = el.choices.map((c: any) => (typeof c === 'string' ? c : (c?.text ?? c?.value))).filter(Boolean);
         if (choices.length) writeWrapped(`  - Choices: ${choices.join(', ')}`);
       }
     });

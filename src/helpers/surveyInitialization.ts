@@ -1,19 +1,19 @@
+import type { QueryClient } from '@tanstack/vue-query';
+import type { ToastServiceMethods } from 'primevue/toastservice';
+import type { CompleteEvent, PageModel, Question, SurveyModel } from 'survey-core';
+import type { Router } from 'vue-router';
+import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 import {
-  getParsedLocale,
+  type AudioLinkMap,
   fetchBuffer,
-  showAndPlaceAudioButton,
+  getParsedLocale,
+  type LocalStorageSurveyData,
+  type RoarfirekitType,
   restoreSurveyData,
   saveFinalSurveyData,
   saveSurveyData,
-  type AudioLinkMap,
-  type RoarfirekitType,
-  type LocalStorageSurveyData,
+  showAndPlaceAudioButton,
 } from '@/helpers/survey';
-import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
-import type { SurveyModel, PageModel, Question, CompleteEvent } from 'survey-core';
-import type { Router } from 'vue-router';
-import type { ToastServiceMethods } from 'primevue/toastservice';
-import type { QueryClient } from '@tanstack/vue-query';
 import type { useAssignmentsStore } from '@/store/assignments';
 
 interface UserData {

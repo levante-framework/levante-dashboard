@@ -27,15 +27,15 @@
 import _get from 'lodash/get';
 import _lowerCase from 'lodash/lowerCase';
 import PvTag from 'primevue/tag';
+import { getTooltip } from '@/helpers';
 import {
-  tasksToDisplayPercentCorrect,
-  tasksToDisplayCorrectIncorrectDifference,
-  tasksToDisplayTotalCorrect,
+  includedValidityFlags,
   rawOnlyTasks,
   scoredTasks,
-  includedValidityFlags,
+  tasksToDisplayCorrectIncorrectDifference,
+  tasksToDisplayPercentCorrect,
+  tasksToDisplayTotalCorrect,
 } from '@/helpers/reports';
-import { getTooltip } from '@/helpers';
 
 defineProps({
   colData: {

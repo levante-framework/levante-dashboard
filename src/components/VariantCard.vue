@@ -267,7 +267,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import _toPairs from 'lodash/toPairs';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
@@ -275,6 +274,7 @@ import PvDataTable from 'primevue/datatable';
 import PvDialog from 'primevue/dialog';
 import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
+import { computed, ref } from 'vue';
 import EditVariantDialog from '@/components/EditVariantDialog.vue';
 import { formattedVariantName, getTooltip } from '@/helpers';
 import { useAuthStore } from '@/store/auth';

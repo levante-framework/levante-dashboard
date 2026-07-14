@@ -171,25 +171,25 @@
   </main>
 </template>
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from 'vue';
-import { storeToRefs } from 'pinia';
 import { useVuelidate } from '@vuelidate/core';
-import { required, sameAs, minLength } from '@vuelidate/validators';
-import { useToast } from 'primevue/usetoast';
-import PvButton from 'primevue/button';
-import PvInputText from 'primevue/inputtext';
+import { minLength, required, sameAs } from '@vuelidate/validators';
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
-import { singularizeFirestoreCollection } from '@/helpers';
-import { normalizeUserTypeForDisplay } from '@/helpers/userType';
-import { exportCsv } from '@/helpers/query/utils';
-import { useAuthStore } from '@/store/auth';
-import useOrgUsersQuery from '@/composables/queries/useOrgUsersQuery';
+import { storeToRefs } from 'pinia';
+import PvButton from 'primevue/button';
+import PvInputText from 'primevue/inputtext';
+import { useToast } from 'primevue/usetoast';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import AppSpinner from '@/components/AppSpinner.vue';
 import EditUsersForm from '@/components/EditUsersForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
-import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import useOrgUsersQuery from '@/composables/queries/useOrgUsersQuery';
+import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
+import { singularizeFirestoreCollection } from '@/helpers';
+import { exportCsv } from '@/helpers/query/utils';
+import { normalizeUserTypeForDisplay } from '@/helpers/userType';
+import { useAuthStore } from '@/store/auth';
 
 const props = defineProps({
   orgType: {

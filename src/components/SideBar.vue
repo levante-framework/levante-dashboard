@@ -108,15 +108,15 @@
 </template>
 
 <script lang="ts" setup>
+import type { AdministrationType } from '@levante-framework/levante-zod';
+import { storeToRefs } from 'pinia';
+import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { ASSIGNMENT_STATUSES } from '@/constants';
 import { getTooltip } from '@/helpers';
 import { getAssignmentStatus, isCurrent, isPast, isUpcoming } from '@/helpers/assignments';
 import { useAssignmentsStore } from '@/store/assignments';
-import { AdministrationType } from '@levante-framework/levante-zod';
-import { storeToRefs } from 'pinia';
-import { computed, ref } from 'vue';
 import AssignmentCard from './assignments/AssignmentCard.vue';
-import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
 const assignmentsStore = useAssignmentsStore();

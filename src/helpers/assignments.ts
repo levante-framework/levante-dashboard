@@ -1,6 +1,6 @@
+import type { AdministrationType } from '@levante-framework/levante-zod';
 import { ASSIGNMENT_STATUSES } from '@/constants';
 import { convertToDate } from '@/helpers';
-import { AdministrationType } from '@levante-framework/levante-zod';
 
 export const isCurrent = (assignment: AdministrationType) => {
   const now = new Date();

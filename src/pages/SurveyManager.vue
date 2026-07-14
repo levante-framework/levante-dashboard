@@ -78,15 +78,15 @@
 </template>
 
 <script setup lang="ts">
+import PvButton from 'primevue/button';
+import PvSelect from 'primevue/select';
+import { Model } from 'survey-core';
 import LanguageSelector from '@/components/LanguageSelector.vue';
 import { useSurveyListQuery } from '@/composables/queries/useSurveyListQuery';
 import { useSurveyQuery } from '@/composables/queries/useSurveyQuery';
 import { getParsedLocale, getPlainSurveyData } from '@/helpers/survey';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
-import PvButton from 'primevue/button';
-import PvSelect from 'primevue/select';
-import { Model } from 'survey-core';
 import 'survey-core/survey-core.css';
 import { type ICreatorOptions, SurveyCreatorModel } from 'survey-creator-core';
 import 'survey-creator-core/survey-creator-core.css';

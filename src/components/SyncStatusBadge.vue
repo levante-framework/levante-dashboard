@@ -24,9 +24,7 @@ const statusToLabel = {
   failed: 'assignment failed',
 };
 
-const displayLabel = computed(() =>
-  props.status ? statusToLabel[props.status] : '',
-);
+const displayLabel = computed(() => (props.status ? statusToLabel[props.status] : ''));
 </script>
 
 <style scoped>

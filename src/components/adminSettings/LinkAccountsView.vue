@@ -47,12 +47,12 @@
   <PvConfirmDialog group="link-accounts" />
 </template>
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { useToast } from 'primevue/usetoast';
-import { useConfirm } from 'primevue/useconfirm';
 import { storeToRefs } from 'pinia';
 import PvChip from 'primevue/chip';
 import PvConfirmDialog from 'primevue/confirmdialog';
+import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
+import { computed, onMounted, ref } from 'vue';
 import { useAuthStore } from '@/store/auth';
 
 // +----------------+

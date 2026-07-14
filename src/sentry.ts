@@ -1,9 +1,9 @@
-import * as Sentry from '@sentry/vue';
 import { captureConsoleIntegration, contextLinesIntegration, extraErrorDataIntegration } from '@sentry/integrations';
-import { formattedLocale, languageOptions } from './translations/i18n';
+import * as Sentry from '@sentry/vue';
+import type { App } from 'vue';
 import { isLevante } from '@/helpers';
-import { App } from 'vue';
 import { useAuthStore } from '@/store/auth';
+import { formattedLocale, languageOptions } from './translations/i18n';
 
 const language = formattedLocale;
 

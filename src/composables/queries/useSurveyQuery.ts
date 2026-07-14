@@ -1,7 +1,7 @@
-import { logger } from '@/logger';
-import { useQuery, type UseQueryReturnType } from '@tanstack/vue-query';
+import { type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
 import axios from 'axios';
 import { computed, type MaybeRefOrGetter, toValue } from 'vue';
+import { logger } from '@/logger';
 
 export interface SurveyOption {
   id: string;

@@ -1,4 +1,4 @@
-import { toValue, MaybeRefOrGetter } from 'vue';
+import { type MaybeRefOrGetter, toValue } from 'vue';
 
 /**
  * Test if an array has entries.

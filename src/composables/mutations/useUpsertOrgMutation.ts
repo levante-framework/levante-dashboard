@@ -1,5 +1,5 @@
+import type { CreateOrgType } from '@levante-framework/levante-zod';
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
-import { CreateOrgType } from '@levante-framework/levante-zod';
 import { ORG_MUTATION_KEY, SITE_OVERVIEW_QUERY_KEY } from '@/constants/queryKeys';
 import { groupsRepository } from '@/firebase/repositories/GroupsRepository';
 

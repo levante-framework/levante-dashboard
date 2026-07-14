@@ -38,8 +38,8 @@
 </template>
 
 <script setup>
-import DocsButton from '@/components/DocsButton.vue';
 import PvPanel from 'primevue/panel';
+import DocsButton from '@/components/DocsButton.vue';
 import { LEVANTE_STATIC_ASSETS_URL } from '@/constants/bucket';
 </script>
 

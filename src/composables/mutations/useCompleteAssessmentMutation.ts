@@ -1,9 +1,9 @@
-import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import type { UseMutationReturnType } from '@tanstack/vue-query';
-import { useAuthStore } from '@/store/auth';
+import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { COMPLETE_ASSESSMENT_MUTATION_KEY } from '@/constants/mutationKeys';
 import { USER_ASSIGNMENTS_QUERY_KEY } from '@/constants/queryKeys';
 import { logger } from '@/logger';
+import { useAuthStore } from '@/store/auth';
 
 interface CompleteAssessmentParams {
   adminId: string;

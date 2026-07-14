@@ -1,5 +1,5 @@
-import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import type { UseMutationReturnType } from '@tanstack/vue-query';
+import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { USER_UPDATE_MUTATION_KEY } from '@/constants/mutationKeys';
 import { SITE_OVERVIEW_QUERY_KEY, USER_DATA_QUERY_KEY } from '@/constants/queryKeys';
 import { useAuthStore } from '@/store/auth';

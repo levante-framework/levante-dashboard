@@ -30,9 +30,9 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import _isEmpty from 'lodash/isEmpty';
 import PvChart from 'primevue/chart';
+import { computed, ref } from 'vue';
 
 interface Props {
   totalGames: number;

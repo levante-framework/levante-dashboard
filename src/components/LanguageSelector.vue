@@ -25,14 +25,14 @@
 </template>
 
 <script setup lang="ts">
+import PvSelect from 'primevue/select';
+import PvTag from 'primevue/tag';
+import { computed } from 'vue';
 import { isLevante } from '@/helpers';
 import { getParsedLocale } from '@/helpers/survey';
 import { setupStudentAudio } from '@/helpers/surveyInitialization';
 import { useSurveyStore } from '@/store/survey';
-import { getTranslations, LanguageOption, languageOptions } from '@/translations/i18n';
-import PvSelect from 'primevue/select';
-import PvTag from 'primevue/tag';
-import { computed } from 'vue';
+import { getTranslations, type LanguageOption, languageOptions } from '@/translations/i18n';
 
 interface LanguageChangeEvent {
   value: string;

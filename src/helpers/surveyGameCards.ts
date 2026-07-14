@@ -94,8 +94,7 @@ export function getSurveyPartProgress(
   const specificResponse = surveyResponseDoc?.specific?.[part.index];
   if (specificResponse?.isComplete) return 100;
 
-  const specificId =
-    surveyStore.specificSurveyRelationData[part.index]?.id ?? relationIds[part.index] ?? part.index;
+  const specificId = surveyStore.specificSurveyRelationData[part.index]?.id ?? relationIds[part.index] ?? part.index;
   const localProgress = getStoredSurveyProgress(userId, specificId, surveyStore, { isGeneral: false });
   if (localProgress !== null) return localProgress;
 

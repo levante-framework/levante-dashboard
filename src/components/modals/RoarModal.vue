@@ -28,9 +28,9 @@
   </PvDialog>
 </template>
 <script setup lang="ts">
-import { watch, ref, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import PvDialog from 'primevue/dialog';
+import { onMounted, ref, watch } from 'vue';
 import { useAuthStore } from '@/store/auth';
 
 interface Props {
@@ -41,9 +41,7 @@ interface Props {
   small?: boolean;
 }
 
-interface Emits {
-  (e: 'modalClosed'): void;
-}
+type Emits = (e: 'modalClosed') => void;
 
 const props = withDefaults(defineProps<Props>(), {
   isEnabled: false,

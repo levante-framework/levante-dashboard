@@ -12,10 +12,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
 import PvSkeleton from 'primevue/skeleton';
+import { ref } from 'vue';
 
 interface SkeletonRow {
   col0: string;

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, Ref } from 'vue';
+import { type Ref, ref } from 'vue';
 
 export const useLevanteStore = defineStore(
   'levanteStore',

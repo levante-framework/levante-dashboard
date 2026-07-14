@@ -250,17 +250,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, toRaw } from 'vue';
-import _isEmpty from 'lodash/isEmpty';
 import _cloneDeep from 'lodash/cloneDeep';
-import { isLevante } from '@/helpers';
+import _isEmpty from 'lodash/isEmpty';
 import PvButton from 'primevue/button';
+import PvColumn from 'primevue/column';
 import PvDialog from 'primevue/dialog';
 import PvDivider from 'primevue/divider';
 import PvSelect from 'primevue/select';
-import PvToggleSwitch from 'primevue/toggleswitch';
 import PvTag from 'primevue/tag';
-import PvColumn from 'primevue/column';
+import PvToggleSwitch from 'primevue/toggleswitch';
+import { computed, onMounted, ref, toRaw } from 'vue';
+import { isLevante } from '@/helpers';
 
 interface FieldOption {
   label: string;

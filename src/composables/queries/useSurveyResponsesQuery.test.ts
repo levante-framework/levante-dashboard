@@ -1,12 +1,12 @@
-import { ref, nextTick } from 'vue';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createTestingPinia } from '@pinia/testing';
+import type { QueryClient } from '@tanstack/vue-query';
 import * as VueQuery from '@tanstack/vue-query';
-import { type QueryClient } from '@tanstack/vue-query';
 import { nanoid } from 'nanoid';
-import { withSetup } from '@/test-support/withSetup.js';
-import { useAuthStore } from '@/store/auth';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick, ref } from 'vue';
 import { fetchSubcollection } from '@/helpers/query/utils';
+import { useAuthStore } from '@/store/auth';
+import { withSetup } from '@/test-support/withSetup.js';
 import useSurveyResponsesQuery from './useSurveyResponsesQuery';
 
 vi.mock('@/helpers/query/utils', () => ({

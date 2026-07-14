@@ -1,13 +1,13 @@
 import { sentryVitePlugin } from '@sentry/vite-plugin';
-import { fileURLToPath, URL } from 'url';
+import UnheadVite from '@unhead/addons/vite';
+import Vue from '@vitejs/plugin-vue';
+import * as child from 'child_process';
 import { createRequire } from 'module';
 import path from 'path';
+import { fileURLToPath, URL } from 'url';
 import { defineConfig } from 'vite';
-import Vue from '@vitejs/plugin-vue';
 import mkcert from 'vite-plugin-mkcert';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
-import UnheadVite from '@unhead/addons/vite';
-import * as child from 'child_process';
 
 const require = createRequire(import.meta.url);
 const commitHash = child.execSync('git rev-parse --short HEAD').toString();
@@ -44,7 +44,14 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
-    dedupe: ['firebase', '@firebase/app', '@firebase/auth', '@firebase/firestore', '@firebase/functions', '@firebase/storage'],
+    dedupe: [
+      'firebase',
+      '@firebase/app',
+      '@firebase/auth',
+      '@firebase/firestore',
+      '@firebase/functions',
+      '@firebase/storage',
+    ],
     preserveSymlinks: true,
   },
 

@@ -103,12 +103,6 @@
 </template>
 
 <script setup lang="ts">
-import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
-import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
-import { convertToGroupName } from '@/helpers';
-import { orderByDefault } from '@/helpers/query/utils';
-import { useAuthStore } from '@/store/auth';
 import _capitalize from 'lodash/capitalize';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
@@ -126,6 +120,12 @@ import PvTabPanels from 'primevue/tabpanels';
 import PvTabs from 'primevue/tabs';
 import { useConfirm } from 'primevue/useconfirm';
 import { computed, reactive, ref, toRaw, watch } from 'vue';
+import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
+import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { convertToGroupName } from '@/helpers';
+import { orderByDefault } from '@/helpers/query/utils';
+import { useAuthStore } from '@/store/auth';
 
 interface OrgItem {
   id: string;

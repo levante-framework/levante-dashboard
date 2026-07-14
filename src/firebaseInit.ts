@@ -1,8 +1,8 @@
 import { RoarFirekit } from '@levante-framework/firekit';
 import { AuthPersistence } from '@levante-framework/firekit/lib/firestore/util';
+import firebaseJSON from '../firebase.json';
 import levanteFirebaseConfig from './config/firebaseLevante';
 import { isLevante } from './helpers';
-import firebaseJSON from '../firebase.json';
 
 const emulatorConfig = import.meta.env.VITE_EMULATOR ? firebaseJSON.emulators : undefined;
 

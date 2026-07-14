@@ -174,29 +174,29 @@
 </template>
 
 <script lang="ts" setup>
-import { usePermissions } from '@/composables/usePermissions';
-import { AdminSubResource } from '@levante-framework/permissions-core';
-import AddAdministratorModal from '@/components/modals/AddAdministratorModal.vue';
-import DocsButton from '@/components/DocsButton.vue';
-import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import RoarDataTable from '@/components/RoarDataTable.vue';
-import useAdminsBySiteQuery from '@/composables/queries/useAdminsBySiteQuery';
-import useSuperAdminsQuery from '@/composables/queries/useSuperAdminsQuery';
-import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
-import { useAuthStore } from '@/store/auth';
+import type { AdminSubResource } from '@levante-framework/permissions-core';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
-import PvTab from 'primevue/tab';
-import PvTabList from 'primevue/tablist';
-import PvTabs from 'primevue/tabs';
 import PvConfirmDialog from 'primevue/confirmdialog';
 import PvDialog from 'primevue/dialog';
 import PvInputText from 'primevue/inputtext';
+import PvTab from 'primevue/tab';
+import PvTabList from 'primevue/tablist';
+import PvTabs from 'primevue/tabs';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
+import DocsButton from '@/components/DocsButton.vue';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import AddAdministratorModal from '@/components/modals/AddAdministratorModal.vue';
 import PermissionGuard from '@/components/PermissionGuard.vue';
+import RoarDataTable from '@/components/RoarDataTable.vue';
+import useAdminsBySiteQuery from '@/composables/queries/useAdminsBySiteQuery';
+import useSuperAdminsQuery from '@/composables/queries/useSuperAdminsQuery';
+import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
+import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import { useAuthStore } from '@/store/auth';
 
 interface AdministratorName {
   first?: string;
@@ -264,9 +264,7 @@ const isRemovingAdministrator = ref(false);
 
 const isAllSitesSelected = computed(() => currentSite.value === 'any');
 
-const needsSiteSelectionForAddResearcher = computed(
-  () => !currentSite.value || currentSite.value === 'any',
-);
+const needsSiteSelectionForAddResearcher = computed(() => !currentSite.value || currentSite.value === 'any');
 
 const isSuperAdminsTabActive = computed(() => adminPageTab.value === 'super-admins');
 
@@ -318,8 +316,7 @@ function hasOnlySuperAdminRoles(admin: AdministratorRecord): boolean {
 }
 
 const tableData = computed<AdministratorTableRow[]>(() => {
-  const isSuperList =
-    isUserSuperAdminComputed.value && adminPageTab.value === 'super-admins';
+  const isSuperList = isUserSuperAdminComputed.value && adminPageTab.value === 'super-admins';
 
   let admins: AdministratorRecord[];
   if (isSuperList) {
@@ -416,7 +413,6 @@ const tableColumns = computed(() => {
   return columns;
 });
 
-
 function onAdministratorsRefetch() {
   void adminsRefetch();
   if (isUserSuperAdminComputed.value) {
@@ -442,9 +438,7 @@ const isRemovalConfirmationValid = computed(() => {
     return false;
   }
 
-  return (
-    removalTargetLabel.value.trim().toLowerCase() === removalConfirmationInput.value.trim().toLowerCase()
-  );
+  return removalTargetLabel.value.trim().toLowerCase() === removalConfirmationInput.value.trim().toLowerCase();
 });
 
 const openRemovalVerificationModal = () => {
@@ -511,8 +505,7 @@ async function executeAdministratorRemoval() {
   isRemovingAdministrator.value = true;
 
   try {
-    await roarfirekit
-      .value!.removeAdministratorFromSite(administrator.value.id, siteId);
+    await roarfirekit.value!.removeAdministratorFromSite(administrator.value.id, siteId);
 
     onAdministratorsRefetch();
 

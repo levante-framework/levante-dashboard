@@ -1,23 +1,23 @@
+import type { RoarFirekit as RoarfirekitType } from '@bdelab/roar-firekit';
+import type { QueryClient } from '@tanstack/vue-query';
 import axios from 'axios';
 import _merge from 'lodash/merge';
-import { BufferLoader, AudioContext, type BufferList } from '@/helpers/audio';
-import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
-import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
-import type { SurveyModel, Question } from 'survey-core';
-import type { Router } from 'vue-router';
-import type { QueryClient } from '@tanstack/vue-query';
-import type { RoarFirekit as RoarfirekitType } from '@bdelab/roar-firekit';
 import type { ToastServiceMethods } from 'primevue/toastservice';
-// @ts-expect-error - Will be resolved when store file is converted to TS
-import type { UseSurveyStore } from '@/store/survey';
-import type { useAssignmentsStore } from '@/store/assignments';
+import type { Question, SurveyModel } from 'survey-core';
+import { toRaw } from 'vue';
+import type { Router } from 'vue-router';
 import {
   LEVANTE_BUCKET_STORAGE_LIST_API,
   LEVANTE_BUCKET_SURVEY_AUDIO_PREFIX,
   LEVANTE_BUCKET_URL,
+  LEVANTE_SURVEY_RESPONSES_KEY,
 } from '@/constants/bucket';
+import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
+import { AudioContext, type BufferList, BufferLoader } from '@/helpers/audio';
+import type { useAssignmentsStore } from '@/store/assignments';
+// @ts-expect-error - Will be resolved when store file is converted to TS
+import type { UseSurveyStore } from '@/store/survey';
 import { findBestMatchingLocale } from '@/translations/i18n';
-import { toRaw } from 'vue';
 
 export interface AudioLinkMap {
   [locale: string]: {

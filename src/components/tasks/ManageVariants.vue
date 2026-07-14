@@ -471,11 +471,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { required } from '@vuelidate/validators';
 import { useVuelidate } from '@vuelidate/core';
+import { required } from '@vuelidate/validators';
+import { camelCase, cloneDeep } from 'lodash';
 import { storeToRefs } from 'pinia';
-import { useToast } from 'primevue/usetoast';
 import PvButton from 'primevue/button';
 import PvCheckbox from 'primevue/checkbox';
 import PvDropdown from 'primevue/dropdown';
@@ -483,13 +482,14 @@ import PvInputNumber from 'primevue/inputnumber';
 import PvInputText from 'primevue/inputtext';
 import PvSelectButton from 'primevue/selectbutton';
 import PvToast from 'primevue/toast';
-import { cloneDeep, camelCase } from 'lodash';
-import { useAuthStore } from '@/store/auth';
-import useTasksQuery from '@/composables/queries/useTasksQuery';
-import useTaskVariantsQuery from '@/composables/queries/useTaskVariantsQuery';
+import { useToast } from 'primevue/usetoast';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import useAddTaskVariantMutation from '@/composables/mutations/useAddTaskVariantMutation';
 import useUpdateTaskVariantMutation from '@/composables/mutations/useUpdateTaskVariantMutation';
-import { getAllLanguageOptions, getPrimaryLanguageOptions, getLanguageInfo } from '@/helpers/languageDiscovery';
+import useTasksQuery from '@/composables/queries/useTasksQuery';
+import useTaskVariantsQuery from '@/composables/queries/useTaskVariantsQuery';
+import { getAllLanguageOptions, getLanguageInfo, getPrimaryLanguageOptions } from '@/helpers/languageDiscovery';
+import { useAuthStore } from '@/store/auth';
 
 const toast = useToast();
 const initialized = ref(false);

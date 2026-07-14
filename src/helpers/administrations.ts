@@ -2,7 +2,9 @@ import { normalizeToLowercase } from '@/helpers';
 
 function extractOrgIds(orgs: unknown): string[] {
   if (!Array.isArray(orgs)) return [];
-  return orgs.map((item) => (typeof item === 'object' && item !== null && 'id' in item ? (item as { id: string }).id : String(item)));
+  return orgs.map((item) =>
+    typeof item === 'object' && item !== null && 'id' in item ? (item as { id: string }).id : String(item),
+  );
 }
 
 export function buildRetryAdministrationArgs(admin: Record<string, unknown>, siteId: string | undefined) {

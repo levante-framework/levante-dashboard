@@ -93,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, StyleValue } from 'vue';
+import { computed, type StyleValue } from 'vue';
 
 interface Props {
   fullscreen?: boolean;

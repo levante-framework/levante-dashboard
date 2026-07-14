@@ -1,12 +1,12 @@
-import { ref } from 'vue';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { QueryClient } from '@tanstack/vue-query';
 import * as VueQuery from '@tanstack/vue-query';
-import { type QueryClient } from '@tanstack/vue-query';
-import { withSetup } from '@/test-support/withSetup.js';
-import { orgFetcher } from '@/helpers/query/orgs';
-import useDistrictsListQuery from './useDistrictsListQuery';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { createPinia, setActivePinia } from 'pinia';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ref } from 'vue';
+import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
+import { orgFetcher } from '@/helpers/query/orgs';
+import { withSetup } from '@/test-support/withSetup.js';
+import useDistrictsListQuery from './useDistrictsListQuery';
 
 vi.mock('@/helpers/query/orgs', () => ({
   orgFetcher: vi.fn().mockImplementation(() => []),

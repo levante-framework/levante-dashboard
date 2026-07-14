@@ -42,20 +42,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, type Ref, watchEffect } from 'vue';
-import { useRouter } from 'vue-router';
-import { storeToRefs } from 'pinia';
 import { useElementSize } from '@vueuse/core';
+import { storeToRefs } from 'pinia';
+import Badge from 'primevue/badge';
 import PvButton from 'primevue/button';
 import PvMenubar from 'primevue/menubar';
-import { useAuthStore } from '@/store/auth';
-import { getNavbarActions } from '@/router/navbarActions';
+import { computed, onMounted, onUnmounted, type Ref, ref, watchEffect } from 'vue';
+import { useRouter } from 'vue-router';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import { APP_ROUTES } from '@/constants/routes';
-import Badge from 'primevue/badge';
-import UserActions from './UserActions.vue';
-import { ROLES } from '@/constants/roles';
 import { usePermissions } from '@/composables/usePermissions';
+import { ROLES } from '@/constants/roles';
+import { APP_ROUTES } from '@/constants/routes';
+import { getNavbarActions } from '@/router/navbarActions';
+import { useAuthStore } from '@/store/auth';
+import UserActions from './UserActions.vue';
 
 interface NavbarAction {
   category: string;

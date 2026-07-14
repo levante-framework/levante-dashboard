@@ -1,9 +1,9 @@
+import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
+import { storeToRefs } from 'pinia';
+import { computed } from 'vue';
 import { ADMINS_QUERY_KEY } from '@/constants/queryKeys';
 import { fetchAdminsBySite } from '@/helpers/query/administrations';
-import { useQuery, UseQueryOptions, UseQueryReturnType } from '@tanstack/vue-query';
-import { computed } from 'vue';
 import { useAuthStore } from '@/store/auth';
-import { storeToRefs } from 'pinia';
 
 type AdminsQueryOptions = Omit<UseQueryOptions, 'queryKey' | 'queryFn'>;
 

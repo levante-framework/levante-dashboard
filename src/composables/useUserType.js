@@ -1,6 +1,6 @@
+import _isEmpty from 'lodash/isEmpty';
 import { computed } from 'vue';
 import { AUTH_USER_TYPE } from '@/constants/auth';
-import _isEmpty from 'lodash/isEmpty';
 
 /**
  * Get user type

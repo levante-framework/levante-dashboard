@@ -1,7 +1,7 @@
+import { mount } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
 import PvFileUpload from 'primevue/fileupload';
 import { describe, expect, it } from 'vitest';
-import { mount } from '@vue/test-utils';
 import CsvUploader from './CsvUploader.vue';
 
 // ─── Mount helper ─────────────────────────────────────────────────────────────

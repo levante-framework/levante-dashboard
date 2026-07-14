@@ -1,9 +1,9 @@
+import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
+import type { DocumentData } from 'firebase/firestore';
+import { computed, type MaybeRefOrGetter, toValue } from 'vue';
 import { SUPER_ADMINS_QUERY_KEY } from '@/constants/queryKeys';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
-import { useQuery, type UseQueryOptions, type UseQueryReturnType } from '@tanstack/vue-query';
-import type { DocumentData } from 'firebase/firestore';
 import { useAuthStore } from '@/store/auth';
-import { computed, type MaybeRefOrGetter, toValue } from 'vue';
 
 type SuperAdminUser = DocumentData & { id: string };
 

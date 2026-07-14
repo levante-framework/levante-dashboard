@@ -85,20 +85,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import _cloneDeep from 'lodash/cloneDeep';
+import _union from 'lodash/union';
 import { storeToRefs } from 'pinia';
-import { useToast } from 'primevue/usetoast';
 import PvButton from 'primevue/button';
 import PvCheckbox from 'primevue/checkbox';
 import PvDivider from 'primevue/divider';
-import PvInputText from 'primevue/inputtext';
-import _cloneDeep from 'lodash/cloneDeep';
-import _union from 'lodash/union';
-import { useAuthStore } from '@/store/auth';
-import GroupPicker from '@/components/GroupPicker.vue';
 import PvFloatLabel from 'primevue/floatlabel';
+import PvInputText from 'primevue/inputtext';
+import { useToast } from 'primevue/usetoast';
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import GroupPicker from '@/components/GroupPicker.vue';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import { useAuthStore } from '@/store/auth';
+
 const router = useRouter();
 const toast = useToast();
 const initialized = ref(false);

@@ -82,15 +82,8 @@
 </template>
 
 <script lang="ts" setup>
-import DocsButton from '@/components/DocsButton.vue';
-import useCreateUpdateAdministratorMutation from '@/composables/mutations/useCreateUpdateAdministratorMutation';
-import useCreateUpdateSuperAdminMutation from '@/composables/mutations/useCreateUpdateSuperAdminMutation';
-import { usePermissions } from '@/composables/usePermissions';
-import { ROLES, SUPER_ADMIN_PLATFORM_SCOPE } from '@/constants/roles';
-import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
-import { useAuthStore } from '@/store/auth';
-import { Name } from '@levante-framework/firekit/lib/interfaces';
-import { AdminSubResource } from '@levante-framework/permissions-core';
+import type { Name } from '@levante-framework/firekit/lib/interfaces';
+import type { AdminSubResource } from '@levante-framework/permissions-core';
 import useVuelidate from '@vuelidate/core';
 import { required } from '@vuelidate/validators';
 import { storeToRefs } from 'pinia';
@@ -101,6 +94,13 @@ import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
+import DocsButton from '@/components/DocsButton.vue';
+import useCreateUpdateAdministratorMutation from '@/composables/mutations/useCreateUpdateAdministratorMutation';
+import useCreateUpdateSuperAdminMutation from '@/composables/mutations/useCreateUpdateSuperAdminMutation';
+import { usePermissions } from '@/composables/usePermissions';
+import { ROLES, SUPER_ADMIN_PLATFORM_SCOPE } from '@/constants/roles';
+import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import { useAuthStore } from '@/store/auth';
 
 interface AdministratorData {
   id?: string;
@@ -154,7 +154,9 @@ const { mutateAsync: createUpdateAdministrator } = useCreateUpdateAdministratorM
 const isSuperAdminVariant = computed(() => props.variant === 'super-admin');
 
 const isEditMode = computed(() => Boolean(props?.data));
-const administratorName = computed(() => [props.data?.name?.first, props.data?.name?.middle, props.data?.name?.last].filter(Boolean).join(' ').trim());
+const administratorName = computed(() =>
+  [props.data?.name?.first, props.data?.name?.middle, props.data?.name?.last].filter(Boolean).join(' ').trim(),
+);
 const modalTitle = computed(() => {
   if (isSuperAdminVariant.value) {
     return isEditMode.value ? 'Update Super Admin' : 'Add Super Admin';
@@ -176,8 +178,7 @@ const submittingBtnLabel = computed(() => {
 const roleOptions = computed(() => {
   const action = 'create';
 
-  const canAssignRole = (role: AdminSubResource) =>
-    can('admins', action, role) || canGlobal('admins', action, role);
+  const canAssignRole = (role: AdminSubResource) => can('admins', action, role) || canGlobal('admins', action, role);
 
   return Object.values(ROLES)
     .map((role) => {
@@ -227,7 +228,6 @@ const hasRoleChanges = computed(() => {
 });
 
 const isSubmitDisabled = computed(() => {
-
   if (isSubmitting.value) {
     return true;
   }
@@ -361,9 +361,7 @@ async function submit() {
       toast.add({
         severity: 'success',
         summary: 'Success',
-        detail: props?.data?.id
-          ? 'Super admin updated successfully'
-          : 'Super admin created successfully',
+        detail: props?.data?.id ? 'Super admin updated successfully' : 'Super admin created successfully',
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
       emit('refetch');
@@ -396,9 +394,7 @@ async function submit() {
     toast.add({
       severity: 'success',
       summary: 'Success',
-      detail: props?.data?.id
-        ? 'Researcher account updated successfully'
-        : 'Researcher account created successfully',
+      detail: props?.data?.id ? 'Researcher account updated successfully' : 'Researcher account created successfully',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     emit('refetch');

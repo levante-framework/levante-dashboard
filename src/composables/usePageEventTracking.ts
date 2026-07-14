@@ -11,7 +11,7 @@ export function usePageEventTracking() {
 
   const handleVisibilityChange = () => {
     const currentUrl = window.location.href;
-    
+
     if (document.hidden) {
       // Page lost focus
       isPageVisible = false;
@@ -31,7 +31,7 @@ export function usePageEventTracking() {
   const setupEventListeners = () => {
     // Listen for page visibility changes (focus/blur)
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     // Listen for page reload/close
     beforeUnloadHandler = handleBeforeUnload;
     window.addEventListener('beforeunload', beforeUnloadHandler);
@@ -39,7 +39,7 @@ export function usePageEventTracking() {
 
   const removeEventListeners = () => {
     document.removeEventListener('visibilitychange', handleVisibilityChange);
-    
+
     if (beforeUnloadHandler) {
       window.removeEventListener('beforeunload', beforeUnloadHandler);
       beforeUnloadHandler = null;

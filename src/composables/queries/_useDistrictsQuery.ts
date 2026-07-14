@@ -1,9 +1,9 @@
+import { type UseQueryOptions, useQuery } from '@tanstack/vue-query';
+import { storeToRefs } from 'pinia';
+import { computed } from 'vue';
 import { DISTRICTS_QUERY_KEY } from '@/constants/queryKeys';
 import { fetchDistricts } from '@/helpers/query/orgs';
 import { useAuthStore } from '@/store/auth';
-import { useQuery, UseQueryOptions } from '@tanstack/vue-query';
-import { storeToRefs } from 'pinia';
-import { computed } from 'vue';
 
 const _useDistrictsQuery = (queryOptions?: UseQueryOptions) => {
   const authStore = useAuthStore();

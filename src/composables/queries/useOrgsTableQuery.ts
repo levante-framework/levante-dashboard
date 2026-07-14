@@ -1,10 +1,10 @@
-import { computed, Ref, ComputedRef } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { orgFetchAll } from '@/helpers/query/orgs';
-import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
-import { ORG_TYPES } from '@/constants/orgTypes';
-import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
+import { type ComputedRef, computed, type Ref } from 'vue';
+import { ORG_TYPES } from '@/constants/orgTypes';
+import { ORGS_TABLE_QUERY_KEY } from '@/constants/queryKeys';
+import { orgFetchAll } from '@/helpers/query/orgs';
+import { useAuthStore } from '@/store/auth';
 
 export interface OrgItem {
   id: string;
