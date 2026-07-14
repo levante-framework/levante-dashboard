@@ -213,6 +213,11 @@ import GroupPicker from '@/components/GroupPicker.vue';
 import { APP_ROUTES } from '@/constants/routes';
 import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { isLevante, isPlainObject, normalizeToLowercase } from '@/helpers';
+import {
+  endOfLocalDay,
+  normalizeAdministrationDateOpen,
+  startOfLocalDay,
+} from '@/helpers/administrations';
 import { useQueryClient } from '@tanstack/vue-query';
 import useAssignmentExistsQuery from '@/composables/queries/useAssignmentExistsQuery';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
@@ -426,13 +431,13 @@ const rules = {
 
 const v$ = useVuelidate(rules, state);
 
-const minStartDate = computed(() => new Date());
+const minStartDate = computed(() => startOfLocalDay());
 
 const minEndDate = computed(() => {
   if (state.dateStarted) {
-    return new Date(state.dateStarted);
+    return startOfLocalDay(new Date(state.dateStarted));
   }
-  return new Date();
+  return startOfLocalDay();
 });
 
 // +------------------------------------------------------------------------------------------------------------------+
@@ -752,15 +757,15 @@ const submit = async () => {
     return;
   }
 
-  const dateClose = new Date(state.dateClosed);
-  dateClose.setHours(23, 59, 59, 999);
+  const dateClose = endOfLocalDay(state.dateClosed);
+  const dateOpen = normalizeAdministrationDateOpen(state.dateStarted);
 
   const args = {
     name: toRaw(state).administrationName,
     publicName: toRaw(state).administrationName,
     normalizedName: normalizeToLowercase(toRaw(state).administrationName),
     assessments: submittedAssessments,
-    dateOpen: toRaw(state).dateStarted,
+    dateOpen,
     dateClose,
     sequential: toRaw(state).sequential,
     orgs: orgs,
