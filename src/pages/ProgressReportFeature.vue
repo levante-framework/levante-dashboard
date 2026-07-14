@@ -3,7 +3,9 @@
     <section class="main-body">
       <div v-if="isPageLoading" class="loading-wrapper">
         <LevanteSpinner fullscreen />
-        <div class="uppercase text-sm text-gray-600 font-light">Loading Progress Datatable</div>
+        <div class="uppercase text-sm text-gray-600 font-light">
+          Loading Progress Datatable
+        </div>
       </div>
 
       <template v-else>
@@ -13,8 +15,12 @@
           style="min-height: calc(100vh - 8rem)"
         >
           <div style="max-width: 48rem; text-align: center">
-            <div class="text-lg font-semibold text-gray-700">There was a problem fetching the assignment details.</div>
-            <div class="mt-2 text-sm text-gray-500">Please refresh the page or try again later.</div>
+            <div class="text-lg font-semibold text-gray-700">
+              There was a problem fetching the assignment details.
+            </div>
+            <div class="mt-2 text-sm text-gray-500">
+              Please refresh the page or try again later.
+            </div>
           </div>
         </div>
 
@@ -22,29 +28,40 @@
           <div class="flex justify-content-between align-items-center">
             <div class="flex flex-column align-items-start mb-4 gap-2">
               <div>
-                <div class="uppercase font-light text-gray-500 text-md">{{ displayOrgType }} Progress Report</div>
+                <div class="uppercase font-light text-gray-500 text-md">
+                  {{ displayOrgType }} Progress Report
+                </div>
                 <div class="report-title">
                   {{ orgDoc?.name }}
                 </div>
               </div>
               <div>
-                <div class="uppercase font-light text-gray-500 text-md">Assignment</div>
+                <div class="uppercase font-light text-gray-500 text-md">
+                  Assignment
+                </div>
                 <div class="administration-name">
                   {{ assignmentDisplayName }}
                 </div>
               </div>
               <div>
-                <div class="uppercase font-light text-gray-500 text-md">Created by</div>
+                <div class="uppercase font-light text-gray-500 text-md">
+                  Created by
+                </div>
                 <div class="administration-creator">
                   {{ creatorName }}
                 </div>
               </div>
             </div>
-            <div v-if="!isLevante" class="flex flex-row align-items-center gap-4">
+            <div
+              v-if="!isLevante"
+              class="flex flex-row align-items-center gap-4"
+            >
               <div class="uppercase text-sm text-gray-600">VIEW</div>
               <PvSelectButton
                 v-model="reportView"
-                v-tooltip.top="getTooltip('View different report', { showDelay: 0 })"
+                v-tooltip.top="
+                  getTooltip('View different report', { showDelay: 0 })
+                "
                 :options="reportViews"
                 option-disabled="constant"
                 :allow-empty="false"
@@ -56,18 +73,28 @@
             </div>
           </div>
 
-          <div v-if="!progressUsers?.length || !totalChartStats" class="empty-user-list">
-            <div class="text-lg font-semibold text-gray-700">Could not find users for {{ orgDoc?.name }}.</div>
+          <div
+            v-if="!progressUsers?.length || !totalChartStats"
+            class="empty-user-list"
+          >
+            <div class="text-lg font-semibold text-gray-700">
+              Could not find users for {{ orgDoc?.name }}.
+            </div>
             <div class="mt-2 text-sm text-gray-500">
-              <a href="/add-users">Add users</a> to <span class="font-bold">{{ orgDoc?.name }}</span> to see the
+              <a href="/add-users">Add users</a> to
+              <span class="font-bold">{{ orgDoc?.name }}</span> to see the
               progress report.
             </div>
           </div>
 
           <div v-else>
-            <div class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card">
+            <div
+              class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card"
+            >
               <div class="flex flex-column gap-1 mx-5 mb-5">
-                <div class="text-sm uppercase text-gray-500">Progress by Task</div>
+                <div class="text-sm uppercase text-gray-500">
+                  Progress by Task
+                </div>
                 <div
                   v-for="taskId of orderedTaskIds"
                   :key="taskId"
@@ -85,11 +112,15 @@
                 </div>
               </div>
               <div class="flex flex-column mx-5">
-                <div class="text-sm uppercase text-gray-500">Total Progress</div>
+                <div class="text-sm uppercase text-gray-500">
+                  Total Progress
+                </div>
                 <div class="flex justify-content-between align-items-center">
                   <div class="text-xl font-bold text-gray-600 w-full">
                     Total
-                    <span class="font-light text-sm"> (Assigned to {{ totalAssignedCount }} users) </span>
+                    <span class="font-light text-sm">
+                      (Assigned to {{ totalAssignedCount }} users)
+                    </span>
                   </div>
                   <PvChart
                     type="bar"
@@ -100,27 +131,43 @@
                 </div>
               </div>
               <div class="flex flex-column align-items-center mx-5">
-                <div class="flex flex-wrap justify-content-around align-items-center px-2 py-1 rounded">
+                <div
+                  class="flex flex-wrap justify-content-around align-items-center px-2 py-1 rounded"
+                >
                   <div class="legend-entry">
-                    <div class="circle" style="background-color: var(--bright-green)" />
+                    <div
+                      class="circle"
+                      style="background-color: var(--bright-green)"
+                    />
                     <div>
                       <div>Completed</div>
                     </div>
                   </div>
                   <div class="legend-entry">
-                    <div class="circle" style="background-color: var(--yellow-100)" />
+                    <div
+                      class="circle"
+                      style="background-color: var(--yellow-100)"
+                    />
                     <div>
                       <div>Started</div>
                     </div>
                   </div>
                   <div class="legend-entry">
-                    <div class="circle" style="background-color: var(--surface-d)" />
+                    <div
+                      class="circle"
+                      style="background-color: var(--surface-d)"
+                    />
                     <div>
                       <div>Not Started</div>
                     </div>
                   </div>
                 </div>
-                <div v-if="!isLevante" class="font-light uppercase text-xs text-gray-500 my-1">Legend</div>
+                <div
+                  v-if="!isLevante"
+                  class="font-light uppercase text-xs text-gray-500 my-1"
+                >
+                  Legend
+                </div>
               </div>
             </div>
 
@@ -145,7 +192,11 @@
                 <div class="inline-flex gap-1">
                   <div class="w-8">
                     <PvFloatLabel>
-                      <PvInputText v-model="searchInput" class="w-full" :maxlength="50" />
+                      <PvInputText
+                        v-model="searchInput"
+                        class="w-full"
+                        :maxlength="50"
+                      />
                       <label>Search login...</label>
                     </PvFloatLabel>
                   </div>
@@ -176,33 +227,33 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useRoute, useRouter } from 'vue-router';
-import _get from 'lodash/get';
-import _kebabCase from 'lodash/kebabCase';
-import _map from 'lodash/map';
-import _startCase from 'lodash/startCase';
-import PvChart from 'primevue/chart';
-import PvMultiSelect from 'primevue/multiselect';
-import PvSelectButton from 'primevue/selectbutton';
-import { useAuthStore } from '@/store/auth';
-import { useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
-import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
-import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
-import { exportCsv } from '@/helpers/query/utils';
-import { normalizeUserTypeForDisplay } from '@/helpers/userType';
-import { taskDisplayNames } from '@/helpers/reports';
-import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
-import { isLevante, getTooltip, normalizeToLowercase } from '@/helpers';
-import { APP_ROUTES } from '@/constants/routes';
-import RoarDataTable from '@/components/RoarDataTable.vue';
-import PvFloatLabel from 'primevue/floatlabel';
-import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import PvInputText from 'primevue/inputtext';
-import _capitalize from 'lodash/capitalize';
-import { administrationsRepository } from '@/firebase/repositories/AdministrationsRepository';
-import { usersRepository } from '@/firebase/repositories/UsersRepository';
+import { computed, ref, watch, onMounted } from "vue";
+import { storeToRefs } from "pinia";
+import { useRoute, useRouter } from "vue-router";
+import _get from "lodash/get";
+import _kebabCase from "lodash/kebabCase";
+import _map from "lodash/map";
+import _startCase from "lodash/startCase";
+import PvChart from "primevue/chart";
+import PvMultiSelect from "primevue/multiselect";
+import PvSelectButton from "primevue/selectbutton";
+import { useAuthStore } from "@/store/auth";
+import { useAdministrationSyncStatus } from "@/composables/useAdministrationSyncStatus";
+import useTasksDictionaryQuery from "@/composables/queries/useTasksDictionaryQuery";
+import { getDynamicRouterPath } from "@/helpers/getDynamicRouterPath";
+import { exportCsv } from "@/helpers/query/utils";
+import { normalizeUserTypeForDisplay } from "@/helpers/userType";
+import { taskDisplayNames } from "@/helpers/reports";
+import { setBarChartData, setBarChartOptions } from "@/helpers/plotting";
+import { isLevante, getTooltip, normalizeToLowercase } from "@/helpers";
+import { APP_ROUTES } from "@/constants/routes";
+import RoarDataTable from "@/components/RoarDataTable.vue";
+import PvFloatLabel from "primevue/floatlabel";
+import LevanteSpinner from "@/components/LevanteSpinner.vue";
+import PvInputText from "primevue/inputtext";
+import _capitalize from "lodash/capitalize";
+import { administrationsRepository } from "@/firebase/repositories/AdministrationsRepository";
+import { usersRepository } from "@/firebase/repositories/UsersRepository";
 
 const props = defineProps({
   administrationId: {
@@ -233,11 +284,12 @@ const progressPayload = ref(null);
 
 const userTypeOptions = ref([]);
 const selectedUserTypes = ref([]);
-const searchInput = ref('');
+const searchInput = ref("");
 
-const { data: tasksDictionary, isLoading: isLoadingTasksDictionary } = useTasksDictionaryQuery({
-  enabled: initialized,
-});
+const { data: tasksDictionary, isLoading: isLoadingTasksDictionary } =
+  useTasksDictionaryQuery({
+    enabled: initialized,
+  });
 
 const { displayedSyncStatus } = useAdministrationSyncStatus(administration, {
   defaultStatus: undefined,
@@ -246,8 +298,12 @@ const { displayedSyncStatus } = useAdministrationSyncStatus(administration, {
 watch(
   [isFetchingProgress, displayedSyncStatus],
   ([loading, status]) => {
-    if (!loading && administration.value && (status === 'pending' || status === 'failed')) {
-      router.replace({ name: 'Administrator' });
+    if (
+      !loading &&
+      administration.value &&
+      (status === "pending" || status === "failed")
+    ) {
+      router.replace({ name: "Administrator" });
     }
   },
   { immediate: true },
@@ -255,10 +311,10 @@ watch(
 
 const routeOrgTypeToCollectionKey = (orgType) => {
   const m = {
-    district: 'districts',
-    school: 'schools',
-    class: 'classes',
-    group: 'groups',
+    district: "districts",
+    school: "schools",
+    class: "classes",
+    group: "groups",
   };
   return m[orgType];
 };
@@ -287,37 +343,37 @@ const statusForUserOnTask = (userId, taskId, taskProgress) => {
   const tid = taskId.toLowerCase();
   for (const row of taskProgress ?? []) {
     if (row.taskId.toLowerCase() !== tid) continue;
-    if (row.userIds.completed.includes(userId)) return 'completed';
+    if (row.userIds.completed.includes(userId)) return "completed";
   }
   for (const row of taskProgress ?? []) {
     if (row.taskId.toLowerCase() !== tid) continue;
-    if (row.userIds.started.includes(userId)) return 'started';
+    if (row.userIds.started.includes(userId)) return "started";
   }
-  return 'notStarted';
+  return "notStarted";
 };
 
 const progressCellFromStatus = (status) => {
-  if (status === 'completed') {
+  if (status === "completed") {
     return {
-      value: 'Completed',
-      icon: 'pi pi-check-circle',
-      severity: 'success',
-      tags: ' Completed ',
+      value: "Completed",
+      icon: "pi pi-check-circle",
+      severity: "success",
+      tags: " Completed ",
     };
   }
-  if (status === 'started') {
+  if (status === "started") {
     return {
-      value: 'Started',
-      icon: 'pi pi-clock',
-      severity: 'warn',
-      tags: ' Started ',
+      value: "Started",
+      icon: "pi pi-clock",
+      severity: "warn",
+      tags: " Started ",
     };
   }
   return {
-    value: 'Not Started',
-    icon: 'pi pi-minus-circle',
-    severity: 'warning',
-    tags: ' Not Started ',
+    value: "Not Started",
+    icon: "pi pi-minus-circle",
+    severity: "warning",
+    tags: " Not Started ",
   };
 };
 
@@ -332,7 +388,10 @@ const fetchProgressData = async () => {
     }
     const [admin, org, progress] = await Promise.all([
       administrationsRepository.fetchAdministrationById(props.administrationId),
-      administrationsRepository.fetchOrgBySingularRouteType(props.orgType, props.orgId),
+      administrationsRepository.fetchOrgBySingularRouteType(
+        props.orgType,
+        props.orgId,
+      ),
       usersRepository.getAdministrationOrgProgress({
         administrationId: props.administrationId,
         orgId: props.orgId,
@@ -350,7 +409,12 @@ const fetchProgressData = async () => {
 };
 
 watch(
-  [initialized, () => props.administrationId, () => props.orgType, () => props.orgId],
+  [
+    initialized,
+    () => props.administrationId,
+    () => props.orgType,
+    () => props.orgId,
+  ],
   () => {
     if (initialized.value) fetchProgressData();
   },
@@ -360,20 +424,40 @@ watch(
 const progressUsers = computed(() => progressPayload.value?.users ?? []);
 
 const orderedTaskIds = computed(() => {
-  const fromAdmin = administration.value?.assessments?.map((a) => a.taskId.toLowerCase());
+  const fromAdmin = administration.value?.assessments?.map((a) =>
+    a.taskId.toLowerCase(),
+  );
   if (fromAdmin?.length) {
-    return [...fromAdmin].sort((a, b) => (taskDisplayNames[a]?.order ?? 0) - (taskDisplayNames[b]?.order ?? 0));
+    return [...fromAdmin].sort(
+      (a, b) =>
+        (taskDisplayNames[a]?.order ?? 0) - (taskDisplayNames[b]?.order ?? 0),
+    );
   }
-  const fromProgress = [...new Set((progressPayload.value?.taskProgress ?? []).map((r) => r.taskId.toLowerCase()))];
-  return fromProgress.sort((a, b) => (taskDisplayNames[a]?.order ?? 0) - (taskDisplayNames[b]?.order ?? 0));
+  const fromProgress = [
+    ...new Set(
+      (progressPayload.value?.taskProgress ?? []).map((r) =>
+        r.taskId.toLowerCase(),
+      ),
+    ),
+  ];
+  return fromProgress.sort(
+    (a, b) =>
+      (taskDisplayNames[a]?.order ?? 0) - (taskDisplayNames[b]?.order ?? 0),
+  );
 });
 
 const taskChartStats = computed(() => {
-  const aggregated = aggregateTaskProgressByTaskId(progressPayload.value?.taskProgress);
+  const aggregated = aggregateTaskProgressByTaskId(
+    progressPayload.value?.taskProgress,
+  );
   const out = {};
   for (const taskId of orderedTaskIds.value) {
     const c = aggregated[taskId] ?? { notStarted: 0, started: 0, completed: 0 };
-    out[taskId] = statsFromExclusiveCounts(c.notStarted, c.started, c.completed);
+    out[taskId] = statsFromExclusiveCounts(
+      c.notStarted,
+      c.started,
+      c.completed,
+    );
   }
   return out;
 });
@@ -383,36 +467,41 @@ const totalChartStats = computed(() => {
   if (!users.length) return null;
 
   const assignedTotal = users.length;
-  const completed = users.filter((u) => u.status === 'completed').length;
-  const startedOnly = users.filter((u) => u.status === 'started').length;
+  const completed = users.filter((u) => u.status === "completed").length;
+  const startedOnly = users.filter((u) => u.status === "started").length;
   const notStarted = Math.max(0, assignedTotal - completed - startedOnly);
   return statsFromExclusiveCounts(notStarted, startedOnly, completed);
 });
 
 const totalAssignedCount = computed(() => progressUsers.value.length);
 
-const creatorName = computed(() => administration.value?.creatorName ?? '');
+const creatorName = computed(() => administration.value?.creatorName ?? "");
 
 const displayOrgType = computed(() => {
   switch (props.orgType) {
-    case 'district':
-      return 'Site';
-    case 'group':
-      return 'Cohort';
+    case "district":
+      return "Site";
+    case "group":
+      return "Cohort";
     default:
       return _capitalize(props.orgType);
   }
 });
 
-const isPageLoading = computed(() => !initialized.value || isFetchingProgress.value || isLoadingTasksDictionary.value);
+const isPageLoading = computed(
+  () =>
+    !initialized.value ||
+    isFetchingProgress.value ||
+    isLoadingTasksDictionary.value,
+);
 
-const reportView = ref({ name: 'Progress Report', constant: true });
+const reportView = ref({ name: "Progress Report", constant: true });
 const reportViews = [
-  { name: 'Progress Report', constant: true },
-  { name: 'Score Report', constant: false },
+  { name: "Progress Report", constant: true },
+  { name: "Score Report", constant: false },
 ];
 
-const assignmentDisplayName = computed(() => administration.value?.name ?? '');
+const assignmentDisplayName = computed(() => administration.value?.name ?? "");
 
 const handleViewChange = () => {
   const { administrationId, orgType, orgId } = props;
@@ -428,19 +517,19 @@ const handleViewChange = () => {
 
 const orderBy = ref([
   {
-    order: '1',
-    field: 'user.grade',
+    order: "1",
+    field: "user.grade",
   },
   {
-    order: '1',
-    field: 'user.lastName',
+    order: "1",
+    field: "user.lastName",
   },
 ]);
 
-if (props.orgType === 'district') {
+if (props.orgType === "district") {
   orderBy.value.unshift({
-    order: '1',
-    field: 'user.schoolName',
+    order: "1",
+    field: "user.schoolName",
   });
 }
 
@@ -448,7 +537,7 @@ const filterSchools = ref([]);
 const filterGrades = ref([]);
 const pageLimit = ref(10);
 
-const CSV_NOT_ASSIGNED_VALUE = 'Not Assigned';
+const CSV_NOT_ASSIGNED_VALUE = "Not Assigned";
 
 const taskLabel = (taskId) => {
   if (tasksDictionary.value?.[taskId]?.publicName) {
@@ -457,7 +546,9 @@ const taskLabel = (taskId) => {
   if (tasksDictionary.value?.[taskId]?.name) {
     return tasksDictionary.value[taskId].name;
   }
-  const fromProgress = progressPayload.value?.taskProgress?.find((r) => r.taskId.toLowerCase() === taskId);
+  const fromProgress = progressPayload.value?.taskProgress?.find(
+    (r) => r.taskId.toLowerCase() === taskId,
+  );
   if (fromProgress?.variantName) return fromProgress.variantName;
   return _startCase(taskId);
 };
@@ -483,12 +574,14 @@ const appendTaskProgressColumns = (row, progress = {}) => {
 
 const buildProgressExportRow = (user, progress = {}) => {
   const tableRow = {
-    'User Login': _get(user, 'username') ?? '',
-    'User Type': _startCase(normalizeUserTypeForDisplay(_get(user, 'userType') ?? '')),
+    "User Login": _get(user, "username") ?? "",
+    "User Type": _startCase(
+      normalizeUserTypeForDisplay(_get(user, "userType") ?? ""),
+    ),
   };
 
-  if (props.orgType === 'district') {
-    tableRow.School = _get(user, 'schoolName') ?? '';
+  if (props.orgType === "district") {
+    tableRow.School = _get(user, "schoolName") ?? "";
   }
 
   appendTaskProgressColumns(tableRow, progress);
@@ -498,7 +591,9 @@ const buildProgressExportRow = (user, progress = {}) => {
 
 const buildExportData = (rows) => {
   if (!rows) return [];
-  return _map(rows, ({ user, progress }) => buildProgressExportRow(user, progress));
+  return _map(rows, ({ user, progress }) =>
+    buildProgressExportRow(user, progress),
+  );
 };
 
 const computedProgressData = computed(() => {
@@ -535,24 +630,43 @@ const resetFilters = () => {
 
 const exportSelected = (selectedRows) => {
   const computedExportData = buildExportData(selectedRows);
-  exportCsv(computedExportData, 'progress-selected.csv');
+  exportCsv(computedExportData, "progress-selected.csv");
 };
 
 const exportAll = async () => {
   const computedExportData = buildExportData(computedProgressData.value);
-  const administrationTitle = administration.value?.name ?? 'progress';
-  const orgName = orgDoc.value?.name ?? 'organization';
-  const formattedFileName = `progress-report-${_kebabCase(administrationTitle)}-${_kebabCase(orgName) || 'org'}.csv`;
+  const administrationTitle = administration.value?.name ?? "progress";
+  const orgName = orgDoc.value?.name ?? "organization";
+  const formattedFileName = `progress-report-${_kebabCase(administrationTitle)}-${_kebabCase(orgName) || "org"}.csv`;
   exportCsv(computedExportData, formattedFileName);
 };
 
 const progressReportColumns = computed(() => {
-  if (isLoadingTasksDictionary.value || progressPayload.value === undefined) return [];
+  if (isLoadingTasksDictionary.value || progressPayload.value === undefined)
+    return [];
 
   const tableColumns = [
-    { field: 'user.userId', header: 'UID', dataType: 'text', sort: true, filter: true },
-    { field: 'user.username', header: 'User Login', dataType: 'text', sort: true, filter: true },
-    { field: 'user.userType', header: 'User Type', dataType: 'text', sort: true, filter: true },
+    {
+      field: "user.userId",
+      header: "UID",
+      dataType: "text",
+      sort: true,
+      filter: true,
+    },
+    {
+      field: "user.username",
+      header: "User Login",
+      dataType: "text",
+      sort: true,
+      filter: true,
+    },
+    {
+      field: "user.userType",
+      header: "User Type",
+      dataType: "text",
+      sort: true,
+      filter: true,
+    },
   ];
 
   for (const taskId of orderedTaskIds.value) {
@@ -560,7 +674,7 @@ const progressReportColumns = computed(() => {
       field: `progress.${taskId}.value`,
       filterField: `progress.${taskId}.tags`,
       header: tasksDictionary.value[taskId]?.name ?? getTaskColumnLabel(taskId),
-      dataType: 'progress',
+      dataType: "progress",
       tag: true,
       severityField: `progress.${taskId}.severity`,
       iconField: `progress.${taskId}.icon`,
@@ -576,12 +690,16 @@ const filteredTableData = ref([]);
 watch(computedProgressData, (newValue) => {
   filteredTableData.value = newValue;
 
-  userTypeOptions.value = Array.from(new Set(newValue?.map((item) => item?.user?.userType))).map((userType) => ({
+  userTypeOptions.value = Array.from(
+    new Set(newValue?.map((item) => item?.user?.userType)),
+  ).map((userType) => ({
     label: _startCase(userType),
     value: userType,
   }));
 
-  selectedUserTypes.value = Array.from(new Set(newValue?.map((item) => item?.user?.userType)));
+  selectedUserTypes.value = Array.from(
+    new Set(newValue?.map((item) => item?.user?.userType)),
+  );
 });
 
 watch([filterSchools, filterGrades], ([newSchools, newGrades]) => {
@@ -603,23 +721,28 @@ watch([filterSchools, filterGrades], ([newSchools, newGrades]) => {
   }
 });
 
-watch([searchInput, selectedUserTypes], ([newSearchInput, newSelectedUserTypes]) => {
-  let filteredData = computedProgressData.value;
+watch(
+  [searchInput, selectedUserTypes],
+  ([newSearchInput, newSelectedUserTypes]) => {
+    let filteredData = computedProgressData.value;
 
-  if (newSearchInput) {
-    const normalizedSearchInput = normalizeToLowercase(newSearchInput);
-    filteredData = filteredData?.filter((data) => {
-      const normalizedUID = normalizeToLowercase(data?.user?.username);
-      return normalizedUID.includes(normalizedSearchInput);
-    });
-  }
+    if (newSearchInput) {
+      const normalizedSearchInput = normalizeToLowercase(newSearchInput);
+      filteredData = filteredData?.filter((data) => {
+        const normalizedUID = normalizeToLowercase(data?.user?.username);
+        return normalizedUID.includes(normalizedSearchInput);
+      });
+    }
 
-  if (newSelectedUserTypes) {
-    filteredData = filteredData?.filter((data) => newSelectedUserTypes.includes(data?.user?.userType));
-  }
+    if (newSelectedUserTypes) {
+      filteredData = filteredData?.filter((data) =>
+        newSelectedUserTypes.includes(data?.user?.userType),
+      );
+    }
 
-  filteredTableData.value = filteredData;
-});
+    filteredTableData.value = filteredData;
+  },
+);
 
 let unsubscribe;
 const refresh = () => {
