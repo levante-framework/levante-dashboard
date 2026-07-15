@@ -1,8 +1,8 @@
-import { flushPromises, mount } from '@vue/test-utils';
-import { createPinia, setActivePinia } from 'pinia';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { defineComponent, h, nextTick, ref } from 'vue';
-import ProgressReportFeature from '../ProgressReportFeature.vue';
+import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { defineComponent, h, nextTick, ref } from "vue";
+import ProgressReportFeature from "../ProgressReportFeature.vue";
 
 const {
   mockExportCsv,
@@ -20,9 +20,9 @@ const {
   mockRouterReplace: vi.fn(),
 }));
 
-vi.mock('vue-router', () => ({
+vi.mock("vue-router", () => ({
   useRoute: () => ({
-    query: { tab: 'progress' },
+    query: { tab: "progress" },
   }),
   useRouter: () => ({
     push: mockRouterPush,
@@ -30,51 +30,52 @@ vi.mock('vue-router', () => ({
   }),
 }));
 
-vi.mock('@bdelab/roar-utils', () => ({
+vi.mock("@bdelab/roar-utils", () => ({
   default: {
     //
   },
 }));
 
-vi.mock('primevue/chart', () => ({
+vi.mock("primevue/chart", () => ({
   default: {
-    name: 'PvChart',
-    props: ['data', 'options', 'type'],
+    name: "PvChart",
+    props: ["data", "options", "type"],
     template: '<div class="pv-chart" />',
   },
 }));
 
-vi.mock('primevue/floatlabel', () => ({
+vi.mock("primevue/floatlabel", () => ({
   default: {
-    name: 'PvFloatLabel',
-    template: '<div><slot /></div>',
+    name: "PvFloatLabel",
+    template: "<div><slot /></div>",
   },
 }));
 
-vi.mock('primevue/inputtext', () => ({
+vi.mock("primevue/inputtext", () => ({
   default: {
-    name: 'PvInputText',
-    props: ['modelValue'],
-    emits: ['update:modelValue'],
-    template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+    name: "PvInputText",
+    props: ["modelValue"],
+    emits: ["update:modelValue"],
+    template:
+      '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
   },
 }));
 
-vi.mock('primevue/multiselect', () => ({
+vi.mock("primevue/multiselect", () => ({
   default: {
-    name: 'PvMultiSelect',
+    name: "PvMultiSelect",
     template: '<div class="pv-multiselect" />',
   },
 }));
 
-vi.mock('primevue/selectbutton', () => ({
+vi.mock("primevue/selectbutton", () => ({
   default: {
-    name: 'PvSelectButton',
+    name: "PvSelectButton",
     template: '<div class="pv-select-button" />',
   },
 }));
 
-vi.mock('@/store/auth', () => ({
+vi.mock("@/store/auth", () => ({
   useAuthStore: vi.fn(() => ({
     $subscribe: vi.fn(),
     roarfirekit: ref({
@@ -83,70 +84,71 @@ vi.mock('@/store/auth', () => ({
   })),
 }));
 
-vi.mock('@/composables/queries/useTasksDictionaryQuery', () => ({
+vi.mock("@/composables/queries/useTasksDictionaryQuery", () => ({
   default: () => ({
     data: ref({
       math: {
-        name: 'Math',
-        publicName: 'Math Public',
+        name: "Math",
+        publicName: "Math Public",
       },
       vocab: {
-        name: 'Vocabulary',
-        publicName: 'Vocabulary Public',
+        name: "Vocabulary",
+        publicName: "Vocabulary Public",
       },
     }),
     isLoading: ref(false),
   }),
 }));
 
-vi.mock('@/composables/useAdministrationSyncStatus', () => ({
+vi.mock("@/composables/useAdministrationSyncStatus", () => ({
   useAdministrationSyncStatus: () => ({
     displayedSyncStatus: ref(undefined),
   }),
 }));
 
-vi.mock('@/firebase/repositories/AdministrationsRepository', () => ({
+vi.mock("@/firebase/repositories/AdministrationsRepository", () => ({
   administrationsRepository: {
     fetchAdministrationById: mockFetchAdministrationById,
     fetchOrgBySingularRouteType: mockFetchOrgBySingularRouteType,
   },
 }));
 
-vi.mock('@/firebase/repositories/UsersRepository', () => ({
+vi.mock("@/firebase/repositories/UsersRepository", () => ({
   usersRepository: {
     getAdministrationOrgProgress: mockGetAdministrationOrgProgress,
   },
 }));
 
-vi.mock('@/helpers', () => ({
+vi.mock("@/helpers", () => ({
   getTooltip: () => ({}),
   isLevante: false,
-  normalizeToLowercase: (value) => String(value ?? '').toLowerCase(),
+  normalizeToLowercase: (value) => String(value ?? "").toLowerCase(),
 }));
 
-vi.mock('@/helpers/getDynamicRouterPath', () => ({
-  getDynamicRouterPath: (route, params) => `${route.path}/${params.administrationId}/${params.orgType}/${params.orgId}`,
+vi.mock("@/helpers/getDynamicRouterPath", () => ({
+  getDynamicRouterPath: (route, params) =>
+    `${route.path}/${params.administrationId}/${params.orgType}/${params.orgId}`,
 }));
 
-vi.mock('@/constants/routes', () => ({
+vi.mock("@/constants/routes", () => ({
   APP_ROUTES: {
     SCORE_REPORT: {
-      path: '/score-report/:administrationId/:orgType/:orgId',
+      path: "/score-report/:administrationId/:orgType/:orgId",
     },
   },
 }));
 
-vi.mock('@/helpers/query/utils', () => ({
+vi.mock("@/helpers/query/utils", () => ({
   exportCsv: mockExportCsv,
 }));
 
-vi.mock('@/helpers/userType', () => ({
+vi.mock("@/helpers/userType", () => ({
   normalizeUserTypeForDisplay: (userType) => userType,
 }));
 
-vi.mock('@/components/RoarDataTable.vue', () => ({
+vi.mock("@/components/RoarDataTable.vue", () => ({
   default: defineComponent({
-    name: 'RoarDataTable',
+    name: "RoarDataTable",
     props: {
       allowExport: Boolean,
       allowFiltering: Boolean,
@@ -164,18 +166,22 @@ vi.mock('@/components/RoarDataTable.vue', () => ({
       },
       totalRecords: Number,
     },
-    emits: ['export-all', 'export-selected'],
+    emits: ["export-all", "export-selected"],
     setup(props, { emit, slots }) {
       return () =>
-        h('div', { 'data-cy': 'roar-data-table' }, [
-          h('button', { 'data-testid': 'export-all', onClick: () => emit('export-all') }, 'Export All'),
+        h("div", { "data-cy": "roar-data-table" }, [
           h(
-            'button',
+            "button",
+            { "data-testid": "export-all", onClick: () => emit("export-all") },
+            "Export All",
+          ),
+          h(
+            "button",
             {
-              'data-testid': 'export-selected',
-              onClick: () => emit('export-selected', props.data.slice(0, 1)),
+              "data-testid": "export-selected",
+              onClick: () => emit("export-selected", props.data.slice(0, 1)),
             },
-            'Export Selected',
+            "Export Selected",
           ),
           slots.filterbar?.(),
         ]);
@@ -184,13 +190,13 @@ vi.mock('@/components/RoarDataTable.vue', () => ({
 }));
 
 const administration = {
-  assessments: [{ taskId: 'vocab' }, { taskId: 'math' }],
-  creatorName: 'Dr. Ada Lovelace',
-  name: 'Winter Progress Assignment',
+  assessments: [{ taskId: "vocab" }, { taskId: "math" }],
+  creatorName: "Dr. Ada Lovelace",
+  name: "Winter Progress Assignment",
 };
 
 const orgDoc = {
-  name: 'North District',
+  name: "North District",
 };
 
 const progressPayload = {
@@ -201,12 +207,12 @@ const progressPayload = {
         notStarted: 1,
         started: 1,
       },
-      taskId: 'vocab',
+      taskId: "vocab",
       userIds: {
-        completed: ['student-1'],
-        started: ['student-2'],
+        completed: ["student-1"],
+        started: ["student-2"],
       },
-      variantName: 'Vocabulary Variant',
+      variantName: "Vocabulary Variant",
     },
     {
       counts: {
@@ -214,40 +220,40 @@ const progressPayload = {
         notStarted: 1,
         started: 1,
       },
-      taskId: 'math',
+      taskId: "math",
       userIds: {
-        completed: ['teacher-1'],
-        started: ['student-1'],
+        completed: ["teacher-1"],
+        started: ["student-1"],
       },
-      variantName: 'Math Variant',
+      variantName: "Math Variant",
     },
   ],
   users: [
     {
-      email: 'alice@example.com',
-      status: 'completed',
-      userId: 'student-1',
-      userType: 'student',
+      email: "alice@example.com",
+      status: "completed",
+      userId: "student-1",
+      userType: "student",
     },
     {
-      email: 'bob@example.com',
-      status: 'started',
-      userId: 'student-2',
-      userType: 'student',
+      email: "bob@example.com",
+      status: "started",
+      userId: "student-2",
+      userType: "student",
     },
     {
-      email: 'teacher@example.com',
-      status: 'notStarted',
-      userId: 'teacher-1',
-      userType: 'teacher',
+      email: "teacher@example.com",
+      status: "notStarted",
+      userId: "teacher-1",
+      userType: "teacher",
     },
   ],
 };
 
 const defaultProps = {
-  administrationId: 'admin-123',
-  orgId: 'district-123',
-  orgType: 'district',
+  administrationId: "admin-123",
+  orgId: "district-123",
+  orgType: "district",
 };
 
 function mountProgressReport(props = {}) {
@@ -287,191 +293,212 @@ beforeEach(() => {
   mockRouterReplace.mockClear();
 });
 
-describe('ProgressReportFeature.vue', () => {
-  it('fetches progress data and renders the loaded report', async () => {
+describe("ProgressReportFeature.vue", () => {
+  it("fetches progress data and renders the loaded report", async () => {
     const wrapper = await mountLoadedProgressReport();
-    const table = wrapper.findComponent({ name: 'RoarDataTable' });
+    const table = wrapper.findComponent({ name: "RoarDataTable" });
 
-    expect(mockFetchAdministrationById).toHaveBeenCalledWith('admin-123');
-    expect(mockFetchOrgBySingularRouteType).toHaveBeenCalledWith('district', 'district-123');
+    expect(mockFetchAdministrationById).toHaveBeenCalledWith("admin-123");
+    expect(mockFetchOrgBySingularRouteType).toHaveBeenCalledWith(
+      "district",
+      "district-123",
+    );
     expect(mockGetAdministrationOrgProgress).toHaveBeenCalledWith({
-      administrationId: 'admin-123',
-      orgId: 'district-123',
-      orgType: 'districts',
+      administrationId: "admin-123",
+      orgId: "district-123",
+      orgType: "districts",
     });
-    expect(wrapper.text()).toContain('Site Progress Report');
-    expect(wrapper.text()).toContain('North District');
-    expect(wrapper.text()).toContain('Winter Progress Assignment');
-    expect(wrapper.text()).toContain('Dr. Ada Lovelace');
-    expect(wrapper.text()).toContain('Total');
-    expect(wrapper.text()).toContain('Assigned to 3 users');
+    expect(wrapper.text()).toContain("Site Progress Report");
+    expect(wrapper.text()).toContain("North District");
+    expect(wrapper.text()).toContain("Winter Progress Assignment");
+    expect(wrapper.text()).toContain("Dr. Ada Lovelace");
+    expect(wrapper.text()).toContain("Total");
+    expect(wrapper.text()).toContain("Assigned to 3 users");
     expect(table.exists()).toBe(true);
-    expect(table.props('allowFiltering')).toBe(true);
-    expect(table.props('totalRecords')).toBe(3);
-    expect(table.props('lazyPreSorting')).toEqual([
-      { order: '1', field: 'user.schoolName' },
-      { order: '1', field: 'user.grade' },
-      { order: '1', field: 'user.lastName' },
+    expect(table.props("allowFiltering")).toBe(true);
+    expect(table.props("totalRecords")).toBe(3);
+    expect(table.props("lazyPreSorting")).toEqual([
+      { order: "1", field: "user.schoolName" },
+      { order: "1", field: "user.grade" },
+      { order: "1", field: "user.lastName" },
     ]);
   });
 
-  it('builds table rows and task columns from the progress payload', async () => {
+  it("builds table rows and task columns from the progress payload", async () => {
     const wrapper = await mountLoadedProgressReport();
-    const table = wrapper.findComponent({ name: 'RoarDataTable' });
-    const columnHeaders = table.props('columns').map((column) => column.header);
+    const table = wrapper.findComponent({ name: "RoarDataTable" });
+    const columnHeaders = table.props("columns").map((column) => column.header);
 
-    expect(columnHeaders).toEqual(['UID', 'User Login', 'User Type', 'Math', 'Vocabulary']);
-    expect(table.props('data')).toEqual([
+    expect(columnHeaders).toEqual([
+      "UID",
+      "User Login",
+      "User Type",
+      "Math",
+      "Vocabulary",
+    ]);
+    expect(table.props("data")).toEqual([
       {
         progress: {
           math: {
-            icon: 'pi pi-clock',
-            severity: 'warn',
-            tags: ' Started ',
-            value: 'Started',
+            icon: "pi pi-clock",
+            severity: "warn",
+            tags: " Started ",
+            value: "Started",
           },
           vocab: {
-            icon: 'pi pi-check-circle',
-            severity: 'success',
-            tags: ' Completed ',
-            value: 'Completed',
+            icon: "pi pi-check-circle",
+            severity: "success",
+            tags: " Completed ",
+            value: "Completed",
           },
         },
         user: {
           assessmentPid: undefined,
           grade: undefined,
-          userId: 'student-1',
-          userType: 'student',
-          username: 'alice@example.com',
+          userId: "student-1",
+          userType: "student",
+          username: "alice@example.com",
         },
       },
       {
         progress: {
           math: {
-            icon: 'pi pi-minus-circle',
-            severity: 'warning',
-            tags: ' Not Started ',
-            value: 'Not Started',
+            icon: "pi pi-minus-circle",
+            severity: "warning",
+            tags: " Not Started ",
+            value: "Not Started",
           },
           vocab: {
-            icon: 'pi pi-clock',
-            severity: 'warn',
-            tags: ' Started ',
-            value: 'Started',
+            icon: "pi pi-clock",
+            severity: "warn",
+            tags: " Started ",
+            value: "Started",
           },
         },
         user: {
           assessmentPid: undefined,
           grade: undefined,
-          userId: 'student-2',
-          userType: 'student',
-          username: 'bob@example.com',
+          userId: "student-2",
+          userType: "student",
+          username: "bob@example.com",
         },
       },
       {
         progress: {
           math: {
-            icon: 'pi pi-check-circle',
-            severity: 'success',
-            tags: ' Completed ',
-            value: 'Completed',
+            icon: "pi pi-check-circle",
+            severity: "success",
+            tags: " Completed ",
+            value: "Completed",
           },
           vocab: {
-            icon: 'pi pi-minus-circle',
-            severity: 'warning',
-            tags: ' Not Started ',
-            value: 'Not Started',
+            icon: "pi pi-minus-circle",
+            severity: "warning",
+            tags: " Not Started ",
+            value: "Not Started",
           },
         },
         user: {
           assessmentPid: undefined,
           grade: undefined,
-          userId: 'teacher-1',
-          userType: 'teacher',
-          username: 'teacher@example.com',
+          userId: "teacher-1",
+          userType: "teacher",
+          username: "teacher@example.com",
         },
       },
     ]);
   });
 
-  it('filters table rows by login search input', async () => {
+  it("filters table rows by login search input", async () => {
     const wrapper = await mountLoadedProgressReport();
 
-    wrapper.vm.searchInput = 'bob';
+    wrapper.vm.searchInput = "bob";
     await nextTick();
 
-    const table = wrapper.findComponent({ name: 'RoarDataTable' });
+    const table = wrapper.findComponent({ name: "RoarDataTable" });
 
-    expect(table.props('data')).toHaveLength(1);
-    expect(table.props('data')[0].user.username).toBe('bob@example.com');
+    expect(table.props("data")).toHaveLength(1);
+    expect(table.props("data")[0].user.username).toBe("bob@example.com");
   });
 
-  it('exports all and selected progress rows as CSV data', async () => {
+  it("exports all and selected progress rows as CSV data", async () => {
     const wrapper = await mountLoadedProgressReport();
 
-    await wrapper.find('[data-testid="export-all"]').trigger('click');
-    await wrapper.find('[data-testid="export-selected"]').trigger('click');
+    await wrapper.find('[data-testid="export-all"]').trigger("click");
+    await wrapper.find('[data-testid="export-selected"]').trigger("click");
 
     expect(mockExportCsv).toHaveBeenNthCalledWith(
       1,
       [
         {
-          'Math Public': 'Started',
-          School: '',
-          'User Login': 'alice@example.com',
-          'User Type': 'Student',
-          'Vocabulary Public': 'Completed',
+          "Math Public": "Started",
+          School: "",
+          UID: "student-1",
+          "User Login": "alice@example.com",
+          "User Type": "Student",
+          "Vocabulary Public": "Completed",
         },
         {
-          'Math Public': 'Not Started',
-          School: '',
-          'User Login': 'bob@example.com',
-          'User Type': 'Student',
-          'Vocabulary Public': 'Started',
+          "Math Public": "Not Started",
+          School: "",
+          UID: "student-2",
+          "User Login": "bob@example.com",
+          "User Type": "Student",
+          "Vocabulary Public": "Started",
         },
         {
-          'Math Public': 'Completed',
-          School: '',
-          'User Login': 'teacher@example.com',
-          'User Type': 'Teacher',
-          'Vocabulary Public': 'Not Started',
+          "Math Public": "Completed",
+          School: "",
+          UID: "teacher-1",
+          "User Login": "teacher@example.com",
+          "User Type": "Teacher",
+          "Vocabulary Public": "Not Started",
         },
       ],
-      'progress-report-winter-progress-assignment-north-district.csv',
+      "progress-report-winter-progress-assignment-north-district.csv",
     );
     expect(mockExportCsv).toHaveBeenNthCalledWith(
       2,
       [
         {
-          'Math Public': 'Started',
-          School: '',
-          'User Login': 'alice@example.com',
-          'User Type': 'Student',
-          'Vocabulary Public': 'Completed',
+          "Math Public": "Started",
+          School: "",
+          UID: "student-1",
+          "User Login": "alice@example.com",
+          "User Type": "Student",
+          "Vocabulary Public": "Completed",
         },
       ],
-      'progress-selected.csv',
+      "progress-selected.csv",
     );
   });
 
-  it('navigates to the score report with the current route query', async () => {
+  it("navigates to the score report with the current route query", async () => {
     const wrapper = await mountLoadedProgressReport();
 
     wrapper.vm.handleViewChange();
 
     expect(mockRouterPush).toHaveBeenCalledWith({
-      path: '/score-report/:administrationId/:orgType/:orgId/admin-123/district/district-123',
-      query: { tab: 'progress' },
+      path: "/score-report/:administrationId/:orgType/:orgId/admin-123/district/district-123",
+      query: { tab: "progress" },
     });
   });
 
-  it('renders the fetch error state when progress data cannot be loaded', async () => {
-    mockGetAdministrationOrgProgress.mockRejectedValue(new Error('Progress fetch failed'));
+  it("renders the fetch error state when progress data cannot be loaded", async () => {
+    mockGetAdministrationOrgProgress.mockRejectedValue(
+      new Error("Progress fetch failed"),
+    );
 
     const wrapper = await mountLoadedProgressReport();
 
-    expect(wrapper.text()).toContain('There was a problem fetching the assignment details.');
-    expect(wrapper.text()).toContain('Please refresh the page or try again later.');
-    expect(wrapper.findComponent({ name: 'RoarDataTable' }).exists()).toBe(false);
+    expect(wrapper.text()).toContain(
+      "There was a problem fetching the assignment details.",
+    );
+    expect(wrapper.text()).toContain(
+      "Please refresh the page or try again later.",
+    );
+    expect(wrapper.findComponent({ name: "RoarDataTable" }).exists()).toBe(
+      false,
+    );
   });
 });
