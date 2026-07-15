@@ -27,6 +27,7 @@ export function buildRetryAdministrationArgs(admin: Record<string, unknown>, sit
     assessments: Array.isArray(admin.assessments) ? admin.assessments : [],
     dateOpen: dateOpened,
     dateClose,
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     sequential: admin.sequential ?? true,
     orgs: {
       districts: extractOrgIds(districts),
