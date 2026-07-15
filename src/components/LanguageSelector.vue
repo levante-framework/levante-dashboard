@@ -27,7 +27,6 @@
 <script setup lang="ts">
 import { isLevante } from '@/helpers';
 import { getParsedLocale } from '@/helpers/survey';
-import { setupStudentAudio } from '@/helpers/surveyInitialization';
 import { useSurveyStore } from '@/store/survey';
 import { getTranslations, LanguageOption, languageOptions } from '@/translations/i18n';
 import PvSelect from 'primevue/select';
@@ -57,7 +56,6 @@ async function onChangeLanguage(event: LanguageChangeEvent): Promise<void> {
 
   if (isLevante && surveyStore.survey) {
     (surveyStore.survey as any).locale = getParsedLocale(event.value);
-    await setupStudentAudio(surveyStore.survey as any, event.value, surveyStore.audioLinkMap, surveyStore);
   }
 }
 </script>

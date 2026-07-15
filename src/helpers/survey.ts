@@ -1,6 +1,4 @@
-import axios from 'axios';
 import _merge from 'lodash/merge';
-import { BufferLoader, AudioContext, type BufferList } from '@/helpers/audio';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
 import type { SurveyModel, Question } from 'survey-core';
@@ -11,53 +9,8 @@ import type { ToastServiceMethods } from 'primevue/toastservice';
 // @ts-expect-error - Will be resolved when store file is converted to TS
 import type { UseSurveyStore } from '@/store/survey';
 import type { useAssignmentsStore } from '@/store/assignments';
-import {
-  LEVANTE_BUCKET_STORAGE_LIST_API,
-  LEVANTE_BUCKET_SURVEY_AUDIO_PREFIX,
-  LEVANTE_BUCKET_URL,
-} from '@/constants/bucket';
 import { findBestMatchingLocale } from '@/translations/i18n';
 import { toRaw } from 'vue';
-
-export interface AudioLinkMap {
-  [locale: string]: {
-    [fileName: string]: string;
-  };
-}
-
-interface GCSFileItem {
-  contentType: string;
-  name: string;
-}
-
-interface GCSListObjectsResponse {
-  items?: GCSFileItem[];
-  nextPageToken?: string;
-}
-
-interface FinishedLoadingParams {
-  bufferList: BufferList;
-  parsedLocale: string;
-  setSurveyAudioLoading: (loading: boolean) => void;
-  setSurveyAudioPlayerBuffers: (locale: string, buffers: AudioBuffer[]) => void;
-}
-
-interface SurveyAudioBuffers {
-  [locale: string]: AudioBuffer[];
-}
-
-interface FetchBufferParams {
-  parsedLocale: string;
-  setSurveyAudioLoading: (loading: boolean) => void;
-  audioLinks: AudioLinkMap;
-  surveyAudioBuffers: SurveyAudioBuffers;
-  setSurveyAudioPlayerBuffers: (locale: string, buffers: AudioBuffer[]) => void;
-}
-
-interface ShowAndPlaceAudioButtonParams {
-  playAudioButton: HTMLElement | null;
-  el: HTMLElement;
-}
 
 interface SurveyResponseDoc {
   administrationId?: string;
@@ -127,135 +80,9 @@ interface SaveFinalSurveyDataParams {
   assignmentsStore: typeof useAssignmentsStore;
 }
 
-const context = new AudioContext();
-
-async function listAllObjectsWithPrefix(prefix: string): Promise<GCSFileItem[]> {
-  const all: GCSFileItem[] = [];
-  let pageToken: string | undefined;
-  do {
-    const params = new URLSearchParams({ prefix });
-    if (pageToken) {
-      params.set('pageToken', pageToken);
-    }
-    const url = `${LEVANTE_BUCKET_STORAGE_LIST_API}?${params.toString()}`;
-    const { data } = await axios.get<GCSListObjectsResponse>(url);
-    if (data.items?.length) {
-      all.push(...data.items);
-    }
-    pageToken = data.nextPageToken;
-  } while (pageToken);
-  return all;
-}
-
-/**
- * Lists MP3s under `audio/<locale>/` via a prefixed GCS list (not the whole bucket).
- * Paths are `audio/<locale>/<file>.mp3`.
- * @param _surveyType legacy argument; ignored. Kept so callers do not need churn.
- */
-export const fetchAudioLinks = async (_surveyType?: string): Promise<AudioLinkMap> => {
-  const items = await listAllObjectsWithPrefix(LEVANTE_BUCKET_SURVEY_AUDIO_PREFIX);
-  const audioLinkMap: AudioLinkMap = {};
-  items.forEach((item: GCSFileItem) => {
-    if (item.contentType !== 'audio/mpeg') return;
-    const splitParts = item.name.split('/');
-    if (splitParts.length >= 3 && splitParts[0] === 'audio') {
-      const fileLocale = splitParts[1];
-      const fileName = splitParts.at(-1)?.split('.')?.[0];
-      if (fileName && fileLocale) {
-        if (!audioLinkMap[fileLocale]) {
-          audioLinkMap[fileLocale] = {};
-        }
-        audioLinkMap[fileLocale][fileName] = LEVANTE_BUCKET_URL + `/${item.name}`;
-      }
-    }
-  });
-
-  return audioLinkMap;
-};
-
 export function getParsedLocale(locale: string | undefined | null): string {
   return findBestMatchingLocale(locale);
 }
-
-/**
- * Maps dashboard locale to the `audio/<folder>/` prefix used in levante-assets-*.
- * Exceptions: German → `de`; English → `en`; otherwise the folder name matches the full locale (e.g. `es-CO`).
- */
-export function resolveAudioLinksForLocale(audioLinks: AudioLinkMap, parsedLocale: string): Record<string, string> {
-  const mapFor = (folderKey: string): Record<string, string> => audioLinks[folderKey] ?? {};
-
-  if (!parsedLocale) {
-    return mapFor('en');
-  }
-
-  const lower = parsedLocale.toLowerCase();
-
-  if (lower === 'de-de' || lower.startsWith('de')) {
-    return mapFor('de');
-  }
-
-  if (lower === 'en-us' || lower.startsWith('en')) {
-    return mapFor('en');
-  }
-
-  return mapFor(parsedLocale);
-}
-
-function finishedLoading({
-  bufferList,
-  parsedLocale,
-  setSurveyAudioLoading,
-  setSurveyAudioPlayerBuffers,
-}: FinishedLoadingParams): void {
-  // @ts-expect-error - Will be resolved when store file is converted to TS
-  setSurveyAudioPlayerBuffers(parsedLocale, bufferList);
-  setSurveyAudioLoading(false);
-}
-
-// Function to fetch buffer or return from the cache
-export const fetchBuffer = ({
-  parsedLocale,
-  setSurveyAudioLoading,
-  audioLinks,
-  surveyAudioBuffers,
-  setSurveyAudioPlayerBuffers,
-}: FetchBufferParams): void => {
-  // buffer already exists for the given local
-  if (surveyAudioBuffers[parsedLocale]) {
-    return;
-  }
-
-  const urlMap = resolveAudioLinksForLocale(audioLinks, parsedLocale);
-  if (Object.keys(urlMap).length === 0) {
-    console.warn('[survey audio] No files for locale; check bucket folders vs app locale.', {
-      parsedLocale,
-      bucketLocales: Object.keys(audioLinks),
-    });
-    setSurveyAudioLoading(false);
-    return;
-  }
-
-  setSurveyAudioLoading(true);
-
-  const bufferLoader = new BufferLoader(context, urlMap, (bufferList: BufferList) =>
-    finishedLoading({
-      bufferList,
-      parsedLocale,
-      setSurveyAudioLoading,
-      setSurveyAudioPlayerBuffers,
-    }),
-  );
-
-  bufferLoader.load();
-};
-
-export const showAndPlaceAudioButton = ({ playAudioButton, el }: ShowAndPlaceAudioButtonParams): void => {
-  if (playAudioButton) {
-    playAudioButton.classList.add('play-button-visible');
-    playAudioButton.style.display = 'flex';
-    el.appendChild(playAudioButton);
-  }
-};
 
 export function restoreSurveyData({
   surveyInstance,

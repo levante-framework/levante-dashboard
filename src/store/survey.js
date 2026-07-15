@@ -7,10 +7,7 @@ export const useSurveyStore = defineStore('surveyStore', () => {
   const survey = ref(null); // This will hold the markRaw survey
   const numGeneralPages = ref(0);
   const numSpecificPages = ref(0);
-  const currentSurveyAudioSource = ref(null);
   const isSavingSurveyResponses = ref(false);
-  const surveyAudioPlayerBuffers = ref({});
-  const surveyAudioLoading = ref(false);
   const allSurveyPages = ref([]);
   const allSpecificPages = ref([]);
   const currentPageIndex = ref(0);
@@ -19,7 +16,6 @@ export const useSurveyStore = defineStore('surveyStore', () => {
   const isGeneralSurveyComplete = ref(false);
   const isSpecificSurveyComplete = ref(false);
   const isSurveyCompleted = ref(false);
-  const audioLinkMap = ref({});
 
   // Actions
   function setSurveyCompleted() {
@@ -36,20 +32,8 @@ export const useSurveyStore = defineStore('surveyStore', () => {
     numSpecificPages.value = numSpecific;
   }
 
-  function setCurrentSurveyAudioSource(audioSource) {
-    currentSurveyAudioSource.value = audioSource;
-  }
-
   function setIsSavingSurveyResponses(isSaving) {
     isSavingSurveyResponses.value = isSaving;
-  }
-
-  function setSurveyAudioPlayerBuffers(parsedLocale, bufferList) {
-    surveyAudioPlayerBuffers.value[parsedLocale] = bufferList;
-  }
-
-  function setSurveyAudioLoading(loading) {
-    surveyAudioLoading.value = loading;
   }
 
   function setAllSurveyPages(pages) {
@@ -80,18 +64,12 @@ export const useSurveyStore = defineStore('surveyStore', () => {
     isSpecificSurveyComplete.value = isComplete;
   }
 
-  function setAudioLinkMap(map) {
-    audioLinkMap.value = map;
-  }
-
   function reset() {
     requireRefresh.value = false;
     survey.value = null;
     numGeneralPages.value = 0;
     numSpecificPages.value = 0;
-    currentSurveyAudioSource.value = null;
     isSavingSurveyResponses.value = false;
-    surveyAudioLoading.value = false;
     allSurveyPages.value = [];
     allSpecificPages.value = [];
     currentPageIndex.value = 0;
@@ -108,10 +86,7 @@ export const useSurveyStore = defineStore('surveyStore', () => {
     survey,
     numGeneralPages,
     numSpecificPages,
-    currentSurveyAudioSource,
     isSavingSurveyResponses,
-    surveyAudioPlayerBuffers,
-    surveyAudioLoading,
     allSurveyPages,
     allSpecificPages,
     currentPageIndex,
@@ -120,16 +95,12 @@ export const useSurveyStore = defineStore('surveyStore', () => {
     isGeneralSurveyComplete,
     isSpecificSurveyComplete,
     isSurveyCompleted,
-    audioLinkMap,
 
     // Actions
     setSurveyCompleted,
     setSurvey,
     setNumberOfSurveyPages,
-    setCurrentSurveyAudioSource,
     setIsSavingSurveyResponses,
-    setSurveyAudioPlayerBuffers,
-    setSurveyAudioLoading,
     setAllSurveyPages,
     setAllSpecificPages,
     setCurrentPageIndex,
@@ -137,7 +108,6 @@ export const useSurveyStore = defineStore('surveyStore', () => {
     setSpecificSurveyRelationIndex,
     setIsGeneralSurveyComplete,
     setIsSpecificSurveyComplete,
-    setAudioLinkMap,
     reset,
   };
 });
