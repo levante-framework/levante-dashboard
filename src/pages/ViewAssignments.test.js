@@ -175,6 +175,24 @@ describe('ViewAssignments', () => {
       },
     }));
 
+    vi.mock('primevue/autocomplete', () => ({
+      default: {
+        name: 'AutoComplete',
+        inheritAttrs: false,
+        props: ['modelValue', 'suggestions', 'placeholder', 'dropdown'],
+        emits: ['update:modelValue', 'complete'],
+        template: `
+          <div v-bind="$attrs">
+            <input
+              :value="modelValue"
+              :placeholder="placeholder"
+              @input="$emit('update:modelValue', $event.target.value)"
+            />
+          </div>
+        `,
+      },
+    }));
+
     vi.mock('vue-router', () => ({
       useRouter: () => ({
         push: vi.fn(),
