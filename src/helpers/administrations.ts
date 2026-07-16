@@ -5,6 +5,35 @@ function extractOrgIds(orgs: unknown): string[] {
   return orgs.map((item) => (typeof item === 'object' && item !== null && 'id' in item ? (item as { id: string }).id : String(item)));
 }
 
+export function startOfLocalDay(date: Date = new Date()): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+export function endOfLocalDay(date: Date | string): Date {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+/** Date pickers yield local midnight; for "today" that is always before now, so open immediately. */
+export function normalizeAdministrationDateOpen(
+  dateStarted: Date | string,
+  now: Date = new Date(),
+): Date {
+  const open = new Date(dateStarted);
+  const startOfToday = startOfLocalDay(now);
+  const startOfSelected = startOfLocalDay(open);
+
+  if (startOfSelected.getTime() === startOfToday.getTime()) {
+    if (open.getTime() <= startOfToday.getTime()) return now;
+    return open;
+  }
+
+  return startOfSelected;
+}
+
 export function buildRetryAdministrationArgs(admin: Record<string, unknown>, siteId: string | undefined) {
   const dateOpened = admin.dateOpened ?? admin.dateOpen;
   const dateClosed = admin.dateClosed ?? admin.dateClose;
@@ -14,8 +43,7 @@ export function buildRetryAdministrationArgs(admin: Record<string, unknown>, sit
   const classes = minOrgs.classes ?? admin.classes ?? [];
   const groups = minOrgs.groups ?? admin.groups ?? [];
 
-  const dateClose = dateClosed ? new Date(dateClosed as string | Date) : new Date();
-  dateClose.setHours(23, 59, 59, 999);
+  const dateClose = dateClosed ? endOfLocalDay(dateClosed as string | Date) : endOfLocalDay(new Date());
 
   const legal = (admin.legal ?? {}) as Record<string, unknown>;
 
