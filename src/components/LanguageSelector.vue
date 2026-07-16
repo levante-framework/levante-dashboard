@@ -30,7 +30,6 @@ import PvTag from 'primevue/tag';
 import { computed } from 'vue';
 import { isLevante } from '@/helpers';
 import { getParsedLocale } from '@/helpers/survey';
-import { setupStudentAudio } from '@/helpers/surveyInitialization';
 import { useSurveyStore } from '@/store/survey';
 import { getTranslations, type LanguageOption, languageOptions } from '@/translations/i18n';
 
@@ -57,7 +56,6 @@ async function onChangeLanguage(event: LanguageChangeEvent): Promise<void> {
 
   if (isLevante && surveyStore.survey) {
     (surveyStore.survey as any).locale = getParsedLocale(event.value);
-    await setupStudentAudio(surveyStore.survey as any, event.value, surveyStore.audioLinkMap, surveyStore);
   }
 }
 </script>

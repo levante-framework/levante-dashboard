@@ -116,8 +116,7 @@ import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
 import { formatDateWithLocale } from '@/helpers';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { fetchDocsById } from '@/helpers/query/utils';
-import { fetchAudioLinks } from '@/helpers/survey';
-import { bootstrapSurveyInstance, setupStudentAudio, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
+import { bootstrapSurveyInstance, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
@@ -443,8 +442,6 @@ const { data: surveyData } = useQuery({
 
     if (userType === 'student') {
       const resSurvey = await axios.get(`${LEVANTE_BUCKET_URL}/surveys/child_survey.json`);
-      const resAudio = await fetchAudioLinks('child-survey');
-      surveyStore.setAudioLinkMap(resAudio);
       return {
         general: resSurvey.data,
       };
@@ -623,10 +620,6 @@ watch(
     });
 
     surveyStore.setSurvey(surveyInstance);
-
-    if (userType.value === 'student') {
-      await setupStudentAudio(surveyInstance, locale.value, surveyStore.audioLinkMap, surveyStore);
-    }
   },
   { immediate: true },
 );

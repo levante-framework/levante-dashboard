@@ -3,7 +3,9 @@
     <section class="main-body">
       <div v-if="isPageLoading" class="loading-wrapper">
         <LevanteSpinner fullscreen />
-        <div class="uppercase text-sm text-gray-600 font-light">Loading Progress Datatable</div>
+        <div class="uppercase text-sm text-gray-600 font-light">
+          Loading Progress Datatable
+        </div>
       </div>
 
       <template v-else>
@@ -13,8 +15,12 @@
           style="min-height: calc(100vh - 8rem)"
         >
           <div style="max-width: 48rem; text-align: center">
-            <div class="text-lg font-semibold text-gray-700">There was a problem fetching the assignment details.</div>
-            <div class="mt-2 text-sm text-gray-500">Please refresh the page or try again later.</div>
+            <div class="text-lg font-semibold text-gray-700">
+              There was a problem fetching the assignment details.
+            </div>
+            <div class="mt-2 text-sm text-gray-500">
+              Please refresh the page or try again later.
+            </div>
           </div>
         </div>
 
@@ -22,29 +28,40 @@
           <div class="flex justify-content-between align-items-center">
             <div class="flex flex-column align-items-start mb-4 gap-2">
               <div>
-                <div class="uppercase font-light text-gray-500 text-md">{{ displayOrgType }} Progress Report</div>
+                <div class="uppercase font-light text-gray-500 text-md">
+                  {{ displayOrgType }} Progress Report
+                </div>
                 <div class="report-title">
                   {{ orgDoc?.name }}
                 </div>
               </div>
               <div>
-                <div class="uppercase font-light text-gray-500 text-md">Assignment</div>
+                <div class="uppercase font-light text-gray-500 text-md">
+                  Assignment
+                </div>
                 <div class="administration-name">
                   {{ assignmentDisplayName }}
                 </div>
               </div>
               <div>
-                <div class="uppercase font-light text-gray-500 text-md">Created by</div>
+                <div class="uppercase font-light text-gray-500 text-md">
+                  Created by
+                </div>
                 <div class="administration-creator">
                   {{ creatorName }}
                 </div>
               </div>
             </div>
-            <div v-if="!isLevante" class="flex flex-row align-items-center gap-4">
+            <div
+              v-if="!isLevante"
+              class="flex flex-row align-items-center gap-4"
+            >
               <div class="uppercase text-sm text-gray-600">VIEW</div>
               <PvSelectButton
                 v-model="reportView"
-                v-tooltip.top="getTooltip('View different report', { showDelay: 0 })"
+                v-tooltip.top="
+                  getTooltip('View different report', { showDelay: 0 })
+                "
                 :options="reportViews"
                 option-disabled="constant"
                 :allow-empty="false"
@@ -56,18 +73,28 @@
             </div>
           </div>
 
-          <div v-if="!progressUsers?.length || !totalChartStats" class="empty-user-list">
-            <div class="text-lg font-semibold text-gray-700">Could not find users for {{ orgDoc?.name }}.</div>
+          <div
+            v-if="!progressUsers?.length || !totalChartStats"
+            class="empty-user-list"
+          >
+            <div class="text-lg font-semibold text-gray-700">
+              Could not find users for {{ orgDoc?.name }}.
+            </div>
             <div class="mt-2 text-sm text-gray-500">
-              <a href="/add-users">Add users</a> to <span class="font-bold">{{ orgDoc?.name }}</span> to see the
+              <a href="/add-users">Add users</a> to
+              <span class="font-bold">{{ orgDoc?.name }}</span> to see the
               progress report.
             </div>
           </div>
 
           <div v-else>
-            <div class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card">
+            <div
+              class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card"
+            >
               <div class="flex flex-column gap-1 mx-5 mb-5">
-                <div class="text-sm uppercase text-gray-500">Progress by Task</div>
+                <div class="text-sm uppercase text-gray-500">
+                  Progress by Task
+                </div>
                 <div
                   v-for="taskId of orderedTaskIds"
                   :key="taskId"
@@ -85,11 +112,15 @@
                 </div>
               </div>
               <div class="flex flex-column mx-5">
-                <div class="text-sm uppercase text-gray-500">Total Progress</div>
+                <div class="text-sm uppercase text-gray-500">
+                  Total Progress
+                </div>
                 <div class="flex justify-content-between align-items-center">
                   <div class="text-xl font-bold text-gray-600 w-full">
                     Total
-                    <span class="font-light text-sm"> (Assigned to {{ totalAssignedCount }} users) </span>
+                    <span class="font-light text-sm">
+                      (Assigned to {{ totalAssignedCount }} users)
+                    </span>
                   </div>
                   <PvChart
                     type="bar"
@@ -100,27 +131,43 @@
                 </div>
               </div>
               <div class="flex flex-column align-items-center mx-5">
-                <div class="flex flex-wrap justify-content-around align-items-center px-2 py-1 rounded">
+                <div
+                  class="flex flex-wrap justify-content-around align-items-center px-2 py-1 rounded"
+                >
                   <div class="legend-entry">
-                    <div class="circle" style="background-color: var(--bright-green)" />
+                    <div
+                      class="circle"
+                      style="background-color: var(--bright-green)"
+                    />
                     <div>
                       <div>Completed</div>
                     </div>
                   </div>
                   <div class="legend-entry">
-                    <div class="circle" style="background-color: var(--yellow-100)" />
+                    <div
+                      class="circle"
+                      style="background-color: var(--yellow-100)"
+                    />
                     <div>
                       <div>Started</div>
                     </div>
                   </div>
                   <div class="legend-entry">
-                    <div class="circle" style="background-color: var(--surface-d)" />
+                    <div
+                      class="circle"
+                      style="background-color: var(--surface-d)"
+                    />
                     <div>
                       <div>Not Started</div>
                     </div>
                   </div>
                 </div>
-                <div v-if="!isLevante" class="font-light uppercase text-xs text-gray-500 my-1">Legend</div>
+                <div
+                  v-if="!isLevante"
+                  class="font-light uppercase text-xs text-gray-500 my-1"
+                >
+                  Legend
+                </div>
               </div>
             </div>
 
@@ -145,8 +192,12 @@
                 <div class="inline-flex gap-1">
                   <div class="w-8">
                     <PvFloatLabel>
-                      <PvInputText v-model="searchInput" class="w-full" :maxlength="50" />
-                      <label>Search login...</label>
+                      <PvInputText
+                        v-model="searchInput"
+                        class="w-full"
+                        :maxlength="50"
+                      />
+                      <label>Search UID or login...</label>
                     </PvFloatLabel>
                   </div>
                   <div class="w-5">
@@ -483,6 +534,7 @@ const appendTaskProgressColumns = (row, progress = {}) => {
 
 const buildProgressExportRow = (user, progress = {}) => {
   const tableRow = {
+    UID: _get(user, 'userId') ?? '',
     'User Login': _get(user, 'username') ?? '',
     'User Type': _startCase(normalizeUserTypeForDisplay(_get(user, 'userType') ?? '')),
   };
@@ -550,9 +602,27 @@ const progressReportColumns = computed(() => {
   if (isLoadingTasksDictionary.value || progressPayload.value === undefined) return [];
 
   const tableColumns = [
-    { field: 'user.userId', header: 'UID', dataType: 'text', sort: true, filter: true },
-    { field: 'user.username', header: 'User Login', dataType: 'text', sort: true, filter: true },
-    { field: 'user.userType', header: 'User Type', dataType: 'text', sort: true, filter: true },
+    {
+      field: 'user.userId',
+      header: 'UID',
+      dataType: 'text',
+      sort: true,
+      filter: true,
+    },
+    {
+      field: 'user.username',
+      header: 'User Login',
+      dataType: 'text',
+      sort: true,
+      filter: true,
+    },
+    {
+      field: 'user.userType',
+      header: 'User Type',
+      dataType: 'text',
+      sort: true,
+      filter: true,
+    },
   ];
 
   for (const taskId of orderedTaskIds.value) {
@@ -609,8 +679,10 @@ watch([searchInput, selectedUserTypes], ([newSearchInput, newSelectedUserTypes])
   if (newSearchInput) {
     const normalizedSearchInput = normalizeToLowercase(newSearchInput);
     filteredData = filteredData?.filter((data) => {
-      const normalizedUID = normalizeToLowercase(data?.user?.username);
-      return normalizedUID.includes(normalizedSearchInput);
+      const normalizedUID = normalizeToLowercase(data?.user?.userId);
+      const normalizedUsername = normalizeToLowercase(data?.user?.username);
+
+      return normalizedUID.includes(normalizedSearchInput) || normalizedUsername.includes(normalizedSearchInput);
     });
   }
 

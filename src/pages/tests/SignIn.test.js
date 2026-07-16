@@ -50,25 +50,13 @@ vi.mock('@/constants/routes', () => ({
   },
 }));
 
-// Mock survey initialization to avoid AudioContext issues
 vi.mock('@/helpers/surveyInitialization', () => ({}));
 
 vi.mock('@/helpers/survey', () => ({
-  fetchAudioLinks: vi.fn(),
   getParsedLocale: vi.fn(),
   restoreSurveyData: vi.fn(),
   saveSurveyData: vi.fn(),
   saveFinalSurveyData: vi.fn(),
-  fetchBuffer: vi.fn(),
-  showAndPlaceAudioButton: vi.fn(),
-}));
-
-// Mock audio helpers that use AudioContext
-vi.mock('@/helpers/audio', () => ({
-  BufferLoader: vi.fn().mockImplementation(() => ({
-    load: vi.fn(),
-    loadBuffer: vi.fn(),
-  })),
 }));
 
 // Create a working stub for the SignIn component that can emit events

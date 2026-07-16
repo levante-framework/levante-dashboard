@@ -418,6 +418,7 @@ describe('ProgressReportFeature.vue', () => {
         {
           'Math Public': 'Started',
           School: '',
+          UID: 'student-1',
           'User Login': 'alice@example.com',
           'User Type': 'Student',
           'Vocabulary Public': 'Completed',
@@ -425,6 +426,7 @@ describe('ProgressReportFeature.vue', () => {
         {
           'Math Public': 'Not Started',
           School: '',
+          UID: 'student-2',
           'User Login': 'bob@example.com',
           'User Type': 'Student',
           'Vocabulary Public': 'Started',
@@ -432,6 +434,7 @@ describe('ProgressReportFeature.vue', () => {
         {
           'Math Public': 'Completed',
           School: '',
+          UID: 'teacher-1',
           'User Login': 'teacher@example.com',
           'User Type': 'Teacher',
           'Vocabulary Public': 'Not Started',
@@ -445,6 +448,7 @@ describe('ProgressReportFeature.vue', () => {
         {
           'Math Public': 'Started',
           School: '',
+          UID: 'student-1',
           'User Login': 'alice@example.com',
           'User Type': 'Student',
           'Vocabulary Public': 'Completed',
