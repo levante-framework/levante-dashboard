@@ -476,7 +476,7 @@ const handleSave = (): void => {
   // Check if any emppty fields in Assigned Conditions
   for (const condition of assignedConditions.value) {
     for (const [key, value] of Object.entries(condition)) {
-      if (value == '') {
+      if (value === '') {
         errorSubmitText.value = 'Missing fields in Assigned Conditions';
         error = true;
       }
@@ -486,7 +486,7 @@ const handleSave = (): void => {
   // Check if any emppty fields in Optional Conditions
   for (const condition of optionalConditions.value) {
     for (const [key, value] of Object.entries(condition)) {
-      if (value == '') {
+      if (value === '') {
         errorSubmitText.value = 'Missing fields in Optional Conditions';
         error = true;
       }

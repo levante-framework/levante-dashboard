@@ -210,7 +210,9 @@ function writeConsolidatedCSVs({ allIdentifiers, perLangFlat }, langs) {
     mainIds.sort().forEach((id) => {
       const label = id.split('.').slice(-1)[0];
       const row = [id, label];
-      OUTPUT_LANGS.forEach((lang) => row.push(getValue(id, lang)));
+      OUTPUT_LANGS.forEach((lang) => {
+        row.push(getValue(id, lang));
+      });
       out.push(toCsvLine(row));
     });
     const file = path.join(consolidatedRoot, 'dashboard-translations.csv');
@@ -227,7 +229,9 @@ function writeConsolidatedCSVs({ allIdentifiers, perLangFlat }, langs) {
     ids.sort().forEach((id) => {
       const label = id.split('.').slice(-1)[0];
       const row = [id, label];
-      OUTPUT_LANGS.forEach((lang) => row.push(getValue(id, lang)));
+      OUTPUT_LANGS.forEach((lang) => {
+        row.push(getValue(id, lang));
+      });
       out.push(toCsvLine(row));
     });
     const safeName = componentName.replace(/[\\/]/g, '-');

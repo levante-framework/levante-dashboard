@@ -280,6 +280,7 @@ const displaySignInMethods = computed(() => {
   return signInMethods.value.map((method) => {
     if (method === 'password') return 'Password';
     if (method === AUTH_SSO_PROVIDERS.GOOGLE) return 'Google';
+    return method;
   });
 });
 

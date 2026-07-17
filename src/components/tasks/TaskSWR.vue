@@ -21,7 +21,6 @@ const props = defineProps({
 
 let TaskLauncher;
 
-const taskId = props.taskId;
 const { version } = packageLockJson.packages['node_modules/@bdelab/roar-swr'];
 const router = useRouter();
 const taskStarted = ref(false);
@@ -75,7 +74,7 @@ onMounted(async () => {
 
     logger.error('Error importing the game module', {
       error,
-      taskId,
+      taskId: props.taskId,
       userId: getUserId(),
     });
   }
@@ -109,7 +108,7 @@ async function startTask(selectedAdmin) {
       }
     }, 100);
 
-    const appKit = await authStore.roarfirekit.startAssessment(selectedAdmin.value.id, taskId, version);
+    const appKit = await authStore.roarfirekit.startAssessment(selectedAdmin.value.id, props.taskId, version);
 
     const userParams = {
       grade: '',
@@ -125,7 +124,7 @@ async function startTask(selectedAdmin) {
       // Handle any post-game actions.
       await completeAssessmentMutate({
         adminId: selectedAdmin.value.id,
-        taskId,
+        taskId: props.taskId,
       });
 
       // Navigate to home, but first set the refresh flag to true.
@@ -139,7 +138,7 @@ async function startTask(selectedAdmin) {
     logger.error('Error starting task', {
       error,
       administrationId: selectedAdmin.value.id,
-      taskId,
+      taskId: props.taskId,
       userId: getUserId(),
     });
   }

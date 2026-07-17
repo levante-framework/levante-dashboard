@@ -44,7 +44,9 @@ function rebuildFromConsolidated() {
     const { headers, rows } = readCsv(path.join(consolidatedRoot, csvName));
     // identifier,label,en,es-co,de,de-ch,en-so,fr-ca,nl
     const langHeaders = headers.slice(2);
-    langHeaders.forEach((h) => languageSet.add(h.toLowerCase()));
+    langHeaders.forEach((h) => {
+      languageSet.add(h.toLowerCase());
+    });
 
     const section = csvName.replace('dashboard-', '').replace('-translations.csv', '');
     // Group rows by component path in identifier like components/navbar.title

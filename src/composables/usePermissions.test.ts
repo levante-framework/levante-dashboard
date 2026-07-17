@@ -49,9 +49,15 @@ vi.mock('lodash/mapValues', () => ({
 }));
 
 describe('usePermissions', () => {
-  let piniaInstance;
-  let mockPermissionService;
-  let mockAuthStore;
+  let piniaInstance: ReturnType<typeof createTestingPinia>;
+  let mockPermissionService: {
+    loadPermissions: ReturnType<typeof vi.fn>;
+    canPerformSiteAction: ReturnType<typeof vi.fn>;
+    canPerformGlobalAction: ReturnType<typeof vi.fn>;
+    getUserSiteRole: ReturnType<typeof vi.fn>;
+    hasMinimumRole: ReturnType<typeof vi.fn>;
+  };
+  let mockAuthStore: Record<string, unknown>;
 
   beforeEach(async () => {
     piniaInstance = createTestingPinia({

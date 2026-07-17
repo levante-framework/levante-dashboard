@@ -36,6 +36,7 @@ export const convertValues = (value) => {
     } else if (key === 'mapValue') {
       return _fromPairs(_toPairs(_value.fields).map(([mapKey, mapValue]) => [mapKey, convertValues(mapValue)]));
     }
+    return undefined;
   })[0];
 };
 

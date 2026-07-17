@@ -11,11 +11,11 @@
         class="text-red-700 cursor-pointer options-toggle"
         @click.prevent="toggleControls"
       >
-        {{ showOptions ? 'Hide Options' : 'Show Options' }}
+        {{ isOptionsVisible ? 'Hide Options' : 'Show Options' }}
       </button>
     </div>
     <div
-      v-if="showOptions && shouldRenderToolbar"
+      v-if="isOptionsVisible && shouldRenderToolbar"
       class="w-full gap-1 pt-1 flex justify-content-center align-items-center flex-wrap mb-4"
     >
       <div
@@ -483,10 +483,10 @@ Array of objects consisting of a field and header at minimum.
 */
 const shouldRenderToolbar = computed(() => props.allowFiltering || props.allowColumnSelection || props.allowExport);
 
-const showOptions = ref(props.showOptions && shouldRenderToolbar.value);
+const isOptionsVisible = ref(props.showOptions && shouldRenderToolbar.value);
 const toggleControls = () => {
   if (!props.showOptionsControl || !shouldRenderToolbar.value) return;
-  showOptions.value = !showOptions.value;
+  isOptionsVisible.value = !isOptionsVisible.value;
 };
 const authStore = useAuthStore();
 const { currentSite } = storeToRefs(authStore);

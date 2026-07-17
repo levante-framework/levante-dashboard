@@ -727,7 +727,7 @@ const checkForDuplicates = (newItemsArray, currentDataObject) => {
 };
 
 function checkVariantExists(value) {
-  variants.value.forEach((item) => {
+  for (const item of variants.value) {
     if (value === item.variant?.name) {
       toast.add({
         severity: 'error',
@@ -735,10 +735,9 @@ function checkVariantExists(value) {
         detail: `Variant with name '${value}' already exists. Please choose a different name.`,
         life: 3000,
       });
-      return true;
+      return;
     }
-    return false;
-  });
+  }
 }
 
 // Helper function to check for errors before updating a task

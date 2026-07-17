@@ -125,7 +125,7 @@ export function parseGrade(grade) {
       return 'jk';
     } else if (grade.substring(0, 3).toLowerCase() === 'kin') {
       return 'k';
-    } else if (grade.toLowerCase() == 'adult') {
+    } else if (grade.toLowerCase() === 'adult') {
       return 'adult';
     } else if (!isNaN(parseInt(grade))) {
       // this catches strings like 1st, 2nd, 3rd
@@ -155,7 +155,7 @@ export function thetaToSupportSWR(percentile, grade) {
   let support;
 
   // we report automaticity instead of support for grades K/1
-  if (grade == 'K' || grade == '1') {
+  if (grade === 'K' || grade === '1') {
     support = percentile < 50 ? 'Limited' : 'Average or Above Average';
   } else {
     support =
@@ -175,7 +175,7 @@ export function percentileToSupportClassification(taskId, percentile, grade = 1)
 
   switch (taskId) {
     case 'pa':
-      if (grade == 'K' || grade <= '4') {
+      if (grade === 'K' || grade <= '4') {
         support =
           percentile < 25
             ? 'Extra Support Needed'
@@ -194,7 +194,7 @@ export function percentileToSupportClassification(taskId, percentile, grade = 1)
 
     case 'swr':
       // we report automaticity instead of support for grades K/1
-      if (grade == 'K' || grade == '1') {
+      if (grade === 'K' || grade === '1') {
         support = percentile < 50 ? 'Limited' : 'Average or Above Average';
       } else {
         support =
