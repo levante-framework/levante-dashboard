@@ -1,12 +1,12 @@
-import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
+import { storeToRefs } from 'pinia';
+import { computed, ref } from 'vue';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { DISTRICTS_LIST_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { orgFetcher } from '@/helpers/query/orgs';
-import { DISTRICTS_LIST_QUERY_KEY } from '@/constants/queryKeys';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { useAuthStore } from '@/store/auth';
-import { storeToRefs } from 'pinia';
 
 /**
  * Districts List query.

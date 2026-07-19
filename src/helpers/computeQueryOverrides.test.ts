@@ -1,5 +1,5 @@
+import { describe, expect, it, vi } from 'vitest';
 import { reactive } from 'vue';
-import { describe, it, expect, vi } from 'vitest';
 import { computeQueryOverrides } from './computeQueryOverrides';
 
 describe('computeQueryOverrides', () => {

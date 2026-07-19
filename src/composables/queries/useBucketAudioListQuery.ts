@@ -1,8 +1,8 @@
+import { type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
+import axios from 'axios';
+import { computed, type MaybeRefOrGetter, toValue } from 'vue';
 import { LEVANTE_BUCKET_STORAGE_LIST_API, LEVANTE_BUCKET_URL } from '@/constants/bucket';
 import { logger } from '@/logger';
-import { useQuery, UseQueryReturnType } from '@tanstack/vue-query';
-import axios from 'axios';
-import { computed, MaybeRefOrGetter, toValue } from 'vue';
 
 interface GcsObject {
   name: string;

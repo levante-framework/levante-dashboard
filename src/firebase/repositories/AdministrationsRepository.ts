@@ -1,4 +1,4 @@
-import { doc, getDoc, type DocumentData } from 'firebase/firestore';
+import { type DocumentData, doc, getDoc } from 'firebase/firestore';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { Repository } from '@/firebase/Repository';
 import { FirebaseService } from '@/firebase/Service';

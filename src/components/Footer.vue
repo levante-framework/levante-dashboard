@@ -14,8 +14,8 @@
 </template>
 
 <script setup lang="ts">
-import { APP_NAME } from '@/constants';
 import { computed, ref } from 'vue';
+import { APP_NAME } from '@/constants';
 
 interface Props {
   variant?: 'primary' | 'secondary';

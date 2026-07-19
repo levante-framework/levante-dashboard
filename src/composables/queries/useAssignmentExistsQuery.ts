@@ -1,10 +1,10 @@
+import { useQuery } from '@tanstack/vue-query';
+import { storeToRefs } from 'pinia';
+import type { Ref } from 'vue';
 import { USE_ASSIGNMENT_EXISTS_QUERY_KEY } from '@/constants/queryKeys';
 import { normalizeToLowercase } from '@/helpers';
 import { fetchAssignmentsByNameAndSite } from '@/helpers/query/assignments';
 import { useAuthStore } from '@/store/auth';
-import { useQuery } from '@tanstack/vue-query';
-import { storeToRefs } from 'pinia';
-import { Ref } from 'vue';
 
 export default function useAssignmentExistsQuery(name: Ref<string>, adminId: string | null) {
   const authStore = useAuthStore();

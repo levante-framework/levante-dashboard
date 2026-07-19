@@ -1,6 +1,6 @@
+import { type HttpsCallableResult, httpsCallable } from 'firebase/functions';
 import levanteFirebaseConfig from '@/config/firebaseLevante';
-import { EmulatorConfig, FirebaseConfig, FirebaseService } from '@/firebase/Service';
-import { httpsCallable, HttpsCallableResult } from 'firebase/functions';
+import { type EmulatorConfig, type FirebaseConfig, FirebaseService } from '@/firebase/Service';
 import firebaseJSON from './../../firebase.json';
 
 export class Repository {

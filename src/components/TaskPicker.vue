@@ -168,8 +168,6 @@
 </template>
 
 <script setup lang="ts">
-import { formattedVariantName } from '@/helpers';
-import { languageOptions } from '@/translations/i18n';
 import _cloneDeep from 'lodash/cloneDeep';
 import _debounce from 'lodash/debounce';
 import PvAccordion from 'primevue/accordion';
@@ -186,8 +184,10 @@ import PvSelect from 'primevue/select';
 import { useToast } from 'primevue/usetoast';
 import { computed, nextTick, ref, watch } from 'vue';
 import { VueDraggableNext } from 'vue-draggable-next';
-import VariantCard from './VariantCard.vue';
+import { formattedVariantName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
+import { languageOptions } from '@/translations/i18n';
+import type VariantCard from './VariantCard.vue';
 
 type VariantObject = InstanceType<typeof VariantCard>['$props']['variant'];
 

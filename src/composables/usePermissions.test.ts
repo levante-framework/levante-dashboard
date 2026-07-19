@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { nextTick } from 'vue';
-import { flushPromises } from '@vue/test-utils';
 import { createTestingPinia } from '@pinia/testing';
-import { withSetup } from '@/test-support/withSetup.js';
+import { flushPromises } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import { useAuthStore } from '@/store/auth';
+import { withSetup } from '@/test-support/withSetup.js';
 import { usePermissions } from './usePermissions';
 
 // Mock the permissions-core package

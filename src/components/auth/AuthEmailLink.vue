@@ -10,14 +10,14 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
-import { useAuthStore } from '@/store/auth';
-import { fetchDocById } from '@/helpers/query/utils';
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import { fetchDocById } from '@/helpers/query/utils';
 import { logger } from '@/logger';
+import { useAuthStore } from '@/store/auth';
 
 const router = useRouter();
 const authStore = useAuthStore();

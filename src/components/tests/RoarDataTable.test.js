@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createPinia, setActivePinia } from 'pinia';
 import RoarDataTable from '../RoarDataTable.vue';
 
 vi.mock('@bdelab/roar-utils', () => ({

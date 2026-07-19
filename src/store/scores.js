@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
+import { ref } from 'vue';
 import { standardDeviation } from '@/helpers';
 import { csvFileToJson } from '@/helpers/csv';
-import { ref } from 'vue';
 
 const standardizeTaskId = (taskId) => {
   return taskId.replace(/^roar-/, '');
@@ -17,7 +17,7 @@ const standardizeNames = (run) => {
 
 const getRunInfoCommon = (mergedRun) => {
   let normedPercentile;
-  let parsedGrade = parseGrade(mergedRun.grade);
+  const parsedGrade = parseGrade(mergedRun.grade);
 
   // note: new fields should be added to all cases
   switch (mergedRun.taskId) {
@@ -97,12 +97,12 @@ function differenceInMonths(date1, date2) {
 
 export function computeAges(dob, timeStarted) {
   //const timeStartedDate = str.match(/(\d{1,4}([.\-/])\d{1,2}([.\-/])\d{1,4})/g);
-  let timeStartedDate = timeStarted.substring(0, 10);
-  let dateOfBirth = new Date(dob);
-  let dateOfRun = new Date(timeStartedDate);
+  const timeStartedDate = timeStarted.substring(0, 10);
+  const dateOfBirth = new Date(dob);
+  const dateOfRun = new Date(timeStartedDate);
 
-  let ageMonths = differenceInMonths(dateOfRun, dateOfBirth);
-  let ageYears = parseFloat((ageMonths / 12).toFixed(1));
+  const ageMonths = differenceInMonths(dateOfRun, dateOfBirth);
+  const ageYears = parseFloat((ageMonths / 12).toFixed(1));
 
   return { ageMonths, ageYears };
 }
@@ -129,7 +129,7 @@ export function parseGrade(grade) {
       return 'adult';
     } else if (!isNaN(parseInt(grade))) {
       // this catches strings like 1st, 2nd, 3rd
-      let gradeNum = parseInt(grade);
+      const gradeNum = parseInt(grade);
       return gradeNum.toString();
     } else {
       console.warn(grade, 'not recognized as a grade');
@@ -137,7 +137,7 @@ export function parseGrade(grade) {
     }
   } else {
     // parse as a number
-    let gradeNum = parseInt(grade);
+    const gradeNum = parseInt(grade);
 
     if (gradeNum < 0) {
       return 'pk';
@@ -180,15 +180,15 @@ export function percentileToSupportClassification(taskId, percentile, grade = 1)
           percentile < 25
             ? 'Extra Support Needed'
             : percentile < 50
-            ? 'Some Support Needed'
-            : 'Average or Above Average';
+              ? 'Some Support Needed'
+              : 'Average or Above Average';
       } else {
         support =
           percentile < 15
             ? 'Extra Support Needed'
             : percentile < 30
-            ? 'Some Support Needed'
-            : 'Average or Above Average';
+              ? 'Some Support Needed'
+              : 'Average or Above Average';
       }
       break;
 
@@ -201,8 +201,8 @@ export function percentileToSupportClassification(taskId, percentile, grade = 1)
           percentile < 25
             ? 'Extra Support Needed'
             : percentile < 50
-            ? 'Some Support Needed'
-            : 'Average or Above Average';
+              ? 'Some Support Needed'
+              : 'Average or Above Average';
       }
       break;
 
@@ -414,12 +414,8 @@ export const useScoreStore = defineStore('scoreStore', () => {
     }
 
     return {
-      gradeMin: parsedGrades.reduce(function (prev, curr) {
-        return gradeComparator(curr, prev) === 1 ? prev : curr;
-      }),
-      gradeMax: parsedGrades.reduce(function (prev, curr) {
-        return gradeComparator(curr, prev) === 1 ? curr : prev;
-      }),
+      gradeMin: parsedGrades.reduce((prev, curr) => (gradeComparator(curr, prev) === 1 ? prev : curr)),
+      gradeMax: parsedGrades.reduce((prev, curr) => (gradeComparator(curr, prev) === 1 ? curr : prev)),
       hasFirstOrK: hasFirstOrK,
     };
   }
@@ -436,7 +432,7 @@ export const useScoreStore = defineStore('scoreStore', () => {
   }
 
   function supportStats() {
-    let stats = {
+    const stats = {
       // set defaults
       High: '',
       Medium: '',
@@ -463,7 +459,7 @@ export const useScoreStore = defineStore('scoreStore', () => {
   }
 
   function swrAutomaticityStats() {
-    let stats = {
+    const stats = {
       // set defaults
       High: '',
       Low: '',

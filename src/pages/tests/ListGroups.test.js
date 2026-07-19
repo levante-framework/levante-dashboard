@@ -228,5 +228,4 @@ describe('ListGroups.vue', () => {
     addGroupBtn.trigger('click');
     expect(wrapper.vm.isAddGroupModalVisible).toBe(true);
   });
-
 });

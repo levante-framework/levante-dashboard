@@ -1,16 +1,16 @@
-import { toValue, toRaw } from 'vue';
 import _find from 'lodash/find';
 import _flatten from 'lodash/flatten';
 import _get from 'lodash/get';
 import _groupBy from 'lodash/groupBy';
+import _isEmpty from 'lodash/isEmpty';
 import _mapValues from 'lodash/mapValues';
 import _replace from 'lodash/replace';
 import _uniq from 'lodash/uniq';
 import _without from 'lodash/without';
-import _isEmpty from 'lodash/isEmpty';
-import { convertValues, getAxiosInstance, getBaseDocumentPath, getProjectId, mapFields } from './utils';
-import { pluralizeFirestoreCollection, isLevante } from '@/helpers';
+import { toRaw, toValue } from 'vue';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { isLevante, pluralizeFirestoreCollection } from '@/helpers';
+import { convertValues, getAxiosInstance, getBaseDocumentPath, getProjectId, mapFields } from './utils';
 
 const userSelectFields = ['name', 'assessmentPid', 'username', 'studentData', 'schools', 'classes', 'userType'];
 

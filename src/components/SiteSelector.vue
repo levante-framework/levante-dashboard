@@ -24,18 +24,18 @@
 </template>
 
 <script setup lang="ts">
-import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
-import useFetchAllDistrictsQuery from '@/firestore/queries/districts/useFetchAllDistrictsQuery';
-import { useAuthStore } from '@/store/auth';
-import { useLevanteStore } from '@/store/levante';
 import { storeToRefs } from 'pinia';
 import PvConfirmDialog from 'primevue/confirmdialog';
-import { DropdownChangeEvent } from 'primevue/dropdown';
+import type { DropdownChangeEvent } from 'primevue/dropdown';
 import PvSelect from 'primevue/select';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
+import useFetchAllDistrictsQuery from '@/firestore/queries/districts/useFetchAllDistrictsQuery';
+import { useAuthStore } from '@/store/auth';
+import { useLevanteStore } from '@/store/levante';
 
 interface DropdownOption {
   label: string;

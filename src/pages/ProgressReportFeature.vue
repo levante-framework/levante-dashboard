@@ -227,33 +227,33 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted } from "vue";
-import { storeToRefs } from "pinia";
-import { useRoute, useRouter } from "vue-router";
-import _get from "lodash/get";
-import _kebabCase from "lodash/kebabCase";
-import _map from "lodash/map";
-import _startCase from "lodash/startCase";
-import PvChart from "primevue/chart";
-import PvMultiSelect from "primevue/multiselect";
-import PvSelectButton from "primevue/selectbutton";
-import { useAuthStore } from "@/store/auth";
-import { useAdministrationSyncStatus } from "@/composables/useAdministrationSyncStatus";
-import useTasksDictionaryQuery from "@/composables/queries/useTasksDictionaryQuery";
-import { getDynamicRouterPath } from "@/helpers/getDynamicRouterPath";
-import { exportCsv } from "@/helpers/query/utils";
-import { normalizeUserTypeForDisplay } from "@/helpers/userType";
-import { taskDisplayNames } from "@/helpers/reports";
-import { setBarChartData, setBarChartOptions } from "@/helpers/plotting";
-import { isLevante, getTooltip, normalizeToLowercase } from "@/helpers";
-import { APP_ROUTES } from "@/constants/routes";
-import RoarDataTable from "@/components/RoarDataTable.vue";
-import PvFloatLabel from "primevue/floatlabel";
-import LevanteSpinner from "@/components/LevanteSpinner.vue";
-import PvInputText from "primevue/inputtext";
-import _capitalize from "lodash/capitalize";
-import { administrationsRepository } from "@/firebase/repositories/AdministrationsRepository";
-import { usersRepository } from "@/firebase/repositories/UsersRepository";
+import _capitalize from 'lodash/capitalize';
+import _get from 'lodash/get';
+import _kebabCase from 'lodash/kebabCase';
+import _map from 'lodash/map';
+import _startCase from 'lodash/startCase';
+import { storeToRefs } from 'pinia';
+import PvChart from 'primevue/chart';
+import PvFloatLabel from 'primevue/floatlabel';
+import PvInputText from 'primevue/inputtext';
+import PvMultiSelect from 'primevue/multiselect';
+import PvSelectButton from 'primevue/selectbutton';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import RoarDataTable from '@/components/RoarDataTable.vue';
+import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
+import { useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
+import { APP_ROUTES } from '@/constants/routes';
+import { administrationsRepository } from '@/firebase/repositories/AdministrationsRepository';
+import { usersRepository } from '@/firebase/repositories/UsersRepository';
+import { getTooltip, isLevante, normalizeToLowercase } from '@/helpers';
+import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
+import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
+import { exportCsv } from '@/helpers/query/utils';
+import { taskDisplayNames } from '@/helpers/reports';
+import { normalizeUserTypeForDisplay } from '@/helpers/userType';
+import { useAuthStore } from '@/store/auth';
 
 const props = defineProps({
   administrationId: {
@@ -284,12 +284,11 @@ const progressPayload = ref(null);
 
 const userTypeOptions = ref([]);
 const selectedUserTypes = ref([]);
-const searchInput = ref("");
+const searchInput = ref('');
 
-const { data: tasksDictionary, isLoading: isLoadingTasksDictionary } =
-  useTasksDictionaryQuery({
-    enabled: initialized,
-  });
+const { data: tasksDictionary, isLoading: isLoadingTasksDictionary } = useTasksDictionaryQuery({
+  enabled: initialized,
+});
 
 const { displayedSyncStatus } = useAdministrationSyncStatus(administration, {
   defaultStatus: undefined,
@@ -298,12 +297,8 @@ const { displayedSyncStatus } = useAdministrationSyncStatus(administration, {
 watch(
   [isFetchingProgress, displayedSyncStatus],
   ([loading, status]) => {
-    if (
-      !loading &&
-      administration.value &&
-      (status === "pending" || status === "failed")
-    ) {
-      router.replace({ name: "Administrator" });
+    if (!loading && administration.value && (status === 'pending' || status === 'failed')) {
+      router.replace({ name: 'Administrator' });
     }
   },
   { immediate: true },
@@ -311,10 +306,10 @@ watch(
 
 const routeOrgTypeToCollectionKey = (orgType) => {
   const m = {
-    district: "districts",
-    school: "schools",
-    class: "classes",
-    group: "groups",
+    district: 'districts',
+    school: 'schools',
+    class: 'classes',
+    group: 'groups',
   };
   return m[orgType];
 };
@@ -343,37 +338,37 @@ const statusForUserOnTask = (userId, taskId, taskProgress) => {
   const tid = taskId.toLowerCase();
   for (const row of taskProgress ?? []) {
     if (row.taskId.toLowerCase() !== tid) continue;
-    if (row.userIds.completed.includes(userId)) return "completed";
+    if (row.userIds.completed.includes(userId)) return 'completed';
   }
   for (const row of taskProgress ?? []) {
     if (row.taskId.toLowerCase() !== tid) continue;
-    if (row.userIds.started.includes(userId)) return "started";
+    if (row.userIds.started.includes(userId)) return 'started';
   }
-  return "notStarted";
+  return 'notStarted';
 };
 
 const progressCellFromStatus = (status) => {
-  if (status === "completed") {
+  if (status === 'completed') {
     return {
-      value: "Completed",
-      icon: "pi pi-check-circle",
-      severity: "success",
-      tags: " Completed ",
+      value: 'Completed',
+      icon: 'pi pi-check-circle',
+      severity: 'success',
+      tags: ' Completed ',
     };
   }
-  if (status === "started") {
+  if (status === 'started') {
     return {
-      value: "Started",
-      icon: "pi pi-clock",
-      severity: "warn",
-      tags: " Started ",
+      value: 'Started',
+      icon: 'pi pi-clock',
+      severity: 'warn',
+      tags: ' Started ',
     };
   }
   return {
-    value: "Not Started",
-    icon: "pi pi-minus-circle",
-    severity: "warning",
-    tags: " Not Started ",
+    value: 'Not Started',
+    icon: 'pi pi-minus-circle',
+    severity: 'warning',
+    tags: ' Not Started ',
   };
 };
 
@@ -388,10 +383,7 @@ const fetchProgressData = async () => {
     }
     const [admin, org, progress] = await Promise.all([
       administrationsRepository.fetchAdministrationById(props.administrationId),
-      administrationsRepository.fetchOrgBySingularRouteType(
-        props.orgType,
-        props.orgId,
-      ),
+      administrationsRepository.fetchOrgBySingularRouteType(props.orgType, props.orgId),
       usersRepository.getAdministrationOrgProgress({
         administrationId: props.administrationId,
         orgId: props.orgId,
@@ -409,12 +401,7 @@ const fetchProgressData = async () => {
 };
 
 watch(
-  [
-    initialized,
-    () => props.administrationId,
-    () => props.orgType,
-    () => props.orgId,
-  ],
+  [initialized, () => props.administrationId, () => props.orgType, () => props.orgId],
   () => {
     if (initialized.value) fetchProgressData();
   },
@@ -424,40 +411,20 @@ watch(
 const progressUsers = computed(() => progressPayload.value?.users ?? []);
 
 const orderedTaskIds = computed(() => {
-  const fromAdmin = administration.value?.assessments?.map((a) =>
-    a.taskId.toLowerCase(),
-  );
+  const fromAdmin = administration.value?.assessments?.map((a) => a.taskId.toLowerCase());
   if (fromAdmin?.length) {
-    return [...fromAdmin].sort(
-      (a, b) =>
-        (taskDisplayNames[a]?.order ?? 0) - (taskDisplayNames[b]?.order ?? 0),
-    );
+    return [...fromAdmin].sort((a, b) => (taskDisplayNames[a]?.order ?? 0) - (taskDisplayNames[b]?.order ?? 0));
   }
-  const fromProgress = [
-    ...new Set(
-      (progressPayload.value?.taskProgress ?? []).map((r) =>
-        r.taskId.toLowerCase(),
-      ),
-    ),
-  ];
-  return fromProgress.sort(
-    (a, b) =>
-      (taskDisplayNames[a]?.order ?? 0) - (taskDisplayNames[b]?.order ?? 0),
-  );
+  const fromProgress = [...new Set((progressPayload.value?.taskProgress ?? []).map((r) => r.taskId.toLowerCase()))];
+  return fromProgress.sort((a, b) => (taskDisplayNames[a]?.order ?? 0) - (taskDisplayNames[b]?.order ?? 0));
 });
 
 const taskChartStats = computed(() => {
-  const aggregated = aggregateTaskProgressByTaskId(
-    progressPayload.value?.taskProgress,
-  );
+  const aggregated = aggregateTaskProgressByTaskId(progressPayload.value?.taskProgress);
   const out = {};
   for (const taskId of orderedTaskIds.value) {
     const c = aggregated[taskId] ?? { notStarted: 0, started: 0, completed: 0 };
-    out[taskId] = statsFromExclusiveCounts(
-      c.notStarted,
-      c.started,
-      c.completed,
-    );
+    out[taskId] = statsFromExclusiveCounts(c.notStarted, c.started, c.completed);
   }
   return out;
 });
@@ -467,41 +434,36 @@ const totalChartStats = computed(() => {
   if (!users.length) return null;
 
   const assignedTotal = users.length;
-  const completed = users.filter((u) => u.status === "completed").length;
-  const startedOnly = users.filter((u) => u.status === "started").length;
+  const completed = users.filter((u) => u.status === 'completed').length;
+  const startedOnly = users.filter((u) => u.status === 'started').length;
   const notStarted = Math.max(0, assignedTotal - completed - startedOnly);
   return statsFromExclusiveCounts(notStarted, startedOnly, completed);
 });
 
 const totalAssignedCount = computed(() => progressUsers.value.length);
 
-const creatorName = computed(() => administration.value?.creatorName ?? "");
+const creatorName = computed(() => administration.value?.creatorName ?? '');
 
 const displayOrgType = computed(() => {
   switch (props.orgType) {
-    case "district":
-      return "Site";
-    case "group":
-      return "Cohort";
+    case 'district':
+      return 'Site';
+    case 'group':
+      return 'Cohort';
     default:
       return _capitalize(props.orgType);
   }
 });
 
-const isPageLoading = computed(
-  () =>
-    !initialized.value ||
-    isFetchingProgress.value ||
-    isLoadingTasksDictionary.value,
-);
+const isPageLoading = computed(() => !initialized.value || isFetchingProgress.value || isLoadingTasksDictionary.value);
 
-const reportView = ref({ name: "Progress Report", constant: true });
+const reportView = ref({ name: 'Progress Report', constant: true });
 const reportViews = [
-  { name: "Progress Report", constant: true },
-  { name: "Score Report", constant: false },
+  { name: 'Progress Report', constant: true },
+  { name: 'Score Report', constant: false },
 ];
 
-const assignmentDisplayName = computed(() => administration.value?.name ?? "");
+const assignmentDisplayName = computed(() => administration.value?.name ?? '');
 
 const handleViewChange = () => {
   const { administrationId, orgType, orgId } = props;
@@ -517,19 +479,19 @@ const handleViewChange = () => {
 
 const orderBy = ref([
   {
-    order: "1",
-    field: "user.grade",
+    order: '1',
+    field: 'user.grade',
   },
   {
-    order: "1",
-    field: "user.lastName",
+    order: '1',
+    field: 'user.lastName',
   },
 ]);
 
-if (props.orgType === "district") {
+if (props.orgType === 'district') {
   orderBy.value.unshift({
-    order: "1",
-    field: "user.schoolName",
+    order: '1',
+    field: 'user.schoolName',
   });
 }
 
@@ -537,7 +499,7 @@ const filterSchools = ref([]);
 const filterGrades = ref([]);
 const pageLimit = ref(10);
 
-const CSV_NOT_ASSIGNED_VALUE = "Not Assigned";
+const CSV_NOT_ASSIGNED_VALUE = 'Not Assigned';
 
 const taskLabel = (taskId) => {
   if (tasksDictionary.value?.[taskId]?.publicName) {
@@ -546,9 +508,7 @@ const taskLabel = (taskId) => {
   if (tasksDictionary.value?.[taskId]?.name) {
     return tasksDictionary.value[taskId].name;
   }
-  const fromProgress = progressPayload.value?.taskProgress?.find(
-    (r) => r.taskId.toLowerCase() === taskId,
-  );
+  const fromProgress = progressPayload.value?.taskProgress?.find((r) => r.taskId.toLowerCase() === taskId);
   if (fromProgress?.variantName) return fromProgress.variantName;
   return _startCase(taskId);
 };
@@ -574,15 +534,13 @@ const appendTaskProgressColumns = (row, progress = {}) => {
 
 const buildProgressExportRow = (user, progress = {}) => {
   const tableRow = {
-    UID: _get(user, "userId") ?? "",
-    "User Login": _get(user, "username") ?? "",
-    "User Type": _startCase(
-      normalizeUserTypeForDisplay(_get(user, "userType") ?? ""),
-    ),
+    UID: _get(user, 'userId') ?? '',
+    'User Login': _get(user, 'username') ?? '',
+    'User Type': _startCase(normalizeUserTypeForDisplay(_get(user, 'userType') ?? '')),
   };
 
-  if (props.orgType === "district") {
-    tableRow.School = _get(user, "schoolName") ?? "";
+  if (props.orgType === 'district') {
+    tableRow.School = _get(user, 'schoolName') ?? '';
   }
 
   appendTaskProgressColumns(tableRow, progress);
@@ -592,9 +550,7 @@ const buildProgressExportRow = (user, progress = {}) => {
 
 const buildExportData = (rows) => {
   if (!rows) return [];
-  return _map(rows, ({ user, progress }) =>
-    buildProgressExportRow(user, progress),
-  );
+  return _map(rows, ({ user, progress }) => buildProgressExportRow(user, progress));
 };
 
 const computedProgressData = computed(() => {
@@ -631,40 +587,39 @@ const resetFilters = () => {
 
 const exportSelected = (selectedRows) => {
   const computedExportData = buildExportData(selectedRows);
-  exportCsv(computedExportData, "progress-selected.csv");
+  exportCsv(computedExportData, 'progress-selected.csv');
 };
 
 const exportAll = async () => {
   const computedExportData = buildExportData(computedProgressData.value);
-  const administrationTitle = administration.value?.name ?? "progress";
-  const orgName = orgDoc.value?.name ?? "organization";
-  const formattedFileName = `progress-report-${_kebabCase(administrationTitle)}-${_kebabCase(orgName) || "org"}.csv`;
+  const administrationTitle = administration.value?.name ?? 'progress';
+  const orgName = orgDoc.value?.name ?? 'organization';
+  const formattedFileName = `progress-report-${_kebabCase(administrationTitle)}-${_kebabCase(orgName) || 'org'}.csv`;
   exportCsv(computedExportData, formattedFileName);
 };
 
 const progressReportColumns = computed(() => {
-  if (isLoadingTasksDictionary.value || progressPayload.value === undefined)
-    return [];
+  if (isLoadingTasksDictionary.value || progressPayload.value === undefined) return [];
 
   const tableColumns = [
     {
-      field: "user.userId",
-      header: "UID",
-      dataType: "text",
+      field: 'user.userId',
+      header: 'UID',
+      dataType: 'text',
       sort: true,
       filter: true,
     },
     {
-      field: "user.username",
-      header: "User Login",
-      dataType: "text",
+      field: 'user.username',
+      header: 'User Login',
+      dataType: 'text',
       sort: true,
       filter: true,
     },
     {
-      field: "user.userType",
-      header: "User Type",
-      dataType: "text",
+      field: 'user.userType',
+      header: 'User Type',
+      dataType: 'text',
       sort: true,
       filter: true,
     },
@@ -675,7 +630,7 @@ const progressReportColumns = computed(() => {
       field: `progress.${taskId}.value`,
       filterField: `progress.${taskId}.tags`,
       header: tasksDictionary.value[taskId]?.name ?? getTaskColumnLabel(taskId),
-      dataType: "progress",
+      dataType: 'progress',
       tag: true,
       severityField: `progress.${taskId}.severity`,
       iconField: `progress.${taskId}.icon`,
@@ -691,16 +646,12 @@ const filteredTableData = ref([]);
 watch(computedProgressData, (newValue) => {
   filteredTableData.value = newValue;
 
-  userTypeOptions.value = Array.from(
-    new Set(newValue?.map((item) => item?.user?.userType)),
-  ).map((userType) => ({
+  userTypeOptions.value = Array.from(new Set(newValue?.map((item) => item?.user?.userType))).map((userType) => ({
     label: _startCase(userType),
     value: userType,
   }));
 
-  selectedUserTypes.value = Array.from(
-    new Set(newValue?.map((item) => item?.user?.userType)),
-  );
+  selectedUserTypes.value = Array.from(new Set(newValue?.map((item) => item?.user?.userType)));
 });
 
 watch([filterSchools, filterGrades], ([newSchools, newGrades]) => {
@@ -722,33 +673,25 @@ watch([filterSchools, filterGrades], ([newSchools, newGrades]) => {
   }
 });
 
-watch(
-  [searchInput, selectedUserTypes],
-  ([newSearchInput, newSelectedUserTypes]) => {
-    let filteredData = computedProgressData.value;
+watch([searchInput, selectedUserTypes], ([newSearchInput, newSelectedUserTypes]) => {
+  let filteredData = computedProgressData.value;
 
-    if (newSearchInput) {
-      const normalizedSearchInput = normalizeToLowercase(newSearchInput);
-      filteredData = filteredData?.filter((data) => {
-        const normalizedUID = normalizeToLowercase(data?.user?.userId);
-        const normalizedUsername = normalizeToLowercase(data?.user?.username);
+  if (newSearchInput) {
+    const normalizedSearchInput = normalizeToLowercase(newSearchInput);
+    filteredData = filteredData?.filter((data) => {
+      const normalizedUID = normalizeToLowercase(data?.user?.userId);
+      const normalizedUsername = normalizeToLowercase(data?.user?.username);
 
-        return (
-          normalizedUID.includes(normalizedSearchInput) ||
-          normalizedUsername.includes(normalizedSearchInput)
-        );
-      });
-    }
+      return normalizedUID.includes(normalizedSearchInput) || normalizedUsername.includes(normalizedSearchInput);
+    });
+  }
 
-    if (newSelectedUserTypes) {
-      filteredData = filteredData?.filter((data) =>
-        newSelectedUserTypes.includes(data?.user?.userType),
-      );
-    }
+  if (newSelectedUserTypes) {
+    filteredData = filteredData?.filter((data) => newSelectedUserTypes.includes(data?.user?.userType));
+  }
 
-    filteredTableData.value = filteredData;
-  },
-);
+  filteredTableData.value = filteredData;
+});
 
 let unsubscribe;
 const refresh = () => {

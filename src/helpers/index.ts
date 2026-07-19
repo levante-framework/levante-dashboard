@@ -1,8 +1,8 @@
-import { query, where, getDocs, CollectionReference, DocumentData, Query } from 'firebase/firestore';
+import { type CollectionReference, DocumentData, getDocs, type Query, query, where } from 'firebase/firestore';
 import _fromPairs from 'lodash/fromPairs';
 import _invert from 'lodash/invert';
 import _toPairs from 'lodash/toPairs';
-import { TooltipOptions } from 'primevue/tooltip';
+import type { TooltipOptions } from 'primevue/tooltip';
 import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
 
 export const isLevante: boolean = import.meta.env.VITE_LEVANTE === 'TRUE';
@@ -80,7 +80,7 @@ export const arrayRandom = <T>(array: T[]): T | undefined => {
 };
 
 export const getUniquePropsFromUsers = (users: any[], prop: string): { id: any }[] => {
-  const propArrays = users.map((user) => user[prop]).flat();
+  const propArrays = users.flatMap((user) => user[prop]);
   return [...new Set(propArrays)].map((item) => ({ id: item }));
 };
 
@@ -179,12 +179,12 @@ export const flattenObj = (obj: any): Record<string, any> => {
   const result: Record<string, any> = {};
 
   for (const i in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, i)) {
+    if (Object.hasOwn(obj, i)) {
       // Add hasOwnProperty check
       if (typeof obj[i] === 'object' && !Array.isArray(obj[i]) && obj[i] !== null) {
         const temp = flattenObj(obj[i]);
         for (const j in temp) {
-          if (Object.prototype.hasOwnProperty.call(temp, j)) {
+          if (Object.hasOwn(temp, j)) {
             // Add hasOwnProperty check
             result[camelCase(i + '.' + j)] = temp[j] === undefined || temp[j] === null ? '' : temp[j]; // More robust empty check
           }

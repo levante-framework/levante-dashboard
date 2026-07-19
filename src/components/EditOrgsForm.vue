@@ -16,14 +16,14 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
-import { useAuthStore } from '@/store/auth';
-import { storeToRefs } from 'pinia';
-import { fetchDocById } from '@/helpers/query/utils';
 import { useQuery } from '@tanstack/vue-query';
+import _isEmpty from 'lodash/isEmpty';
+import { storeToRefs } from 'pinia';
 import PvChips from 'primevue/chips';
 import PvInputText from 'primevue/inputtext';
-import _isEmpty from 'lodash/isEmpty';
+import { onMounted, ref, watch } from 'vue';
+import { fetchDocById } from '@/helpers/query/utils';
+import { useAuthStore } from '@/store/auth';
 
 interface Props {
   orgType: string;

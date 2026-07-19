@@ -1,4 +1,3 @@
-import UserActions from '@/components/UserActions.vue';
 import * as VueQuery from '@tanstack/vue-query';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
@@ -8,6 +7,7 @@ import PvSelect from 'primevue/select';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import { createI18n } from 'vue-i18n';
+import UserActions from '@/components/UserActions.vue';
 
 vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
   default: vi.fn(() => ({

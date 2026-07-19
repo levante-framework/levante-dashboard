@@ -1,9 +1,9 @@
+import { useQuery } from '@tanstack/vue-query';
+import { storeToRefs } from 'pinia';
+import { type ComputedRef, computed, type MaybeRefOrGetter, type Ref } from 'vue';
 import { SCHOOLS_QUERY_KEY } from '@/constants/queryKeys';
 import { fetchSchools } from '@/helpers/query/orgs';
 import { useAuthStore } from '@/store/auth';
-import { useQuery } from '@tanstack/vue-query';
-import { storeToRefs } from 'pinia';
-import { computed, type ComputedRef, type MaybeRefOrGetter, type Ref } from 'vue';
 
 interface SchoolsQueryOptions {
   enabled?: MaybeRefOrGetter<boolean> | ComputedRef<boolean>;

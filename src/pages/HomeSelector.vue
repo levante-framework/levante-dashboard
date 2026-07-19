@@ -14,21 +14,22 @@
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
-import { storeToRefs } from 'pinia';
 import _isEmpty from 'lodash/isEmpty';
-import { useAuthStore } from '@/store/auth';
-import { useAssignmentsStore } from '@/store/assignments';
-import useUserType from '@/composables/useUserType';
+import { storeToRefs } from 'pinia';
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
+import { usePermissions } from '@/composables/usePermissions';
+import useUserType from '@/composables/useUserType';
 import { CONSENT_TYPES } from '@/constants/consentTypes';
+import { ROLES } from '@/constants/roles';
 import { APP_ROUTES } from '@/constants/routes';
 import { isLevante } from '@/helpers';
-import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import { usePermissions } from '@/composables/usePermissions';
-import { ROLES } from '@/constants/roles';
+import { useAssignmentsStore } from '@/store/assignments';
+import { useAuthStore } from '@/store/auth';
+
 const HomeParticipant = defineAsyncComponent(() => import('@/pages/HomeParticipant.vue'));
 const HomeAdministrator = defineAsyncComponent(() => import('@/pages/HomeAdministrator.vue'));
 const ConsentModal = defineAsyncComponent(() => import('@/components/ConsentModal.vue'));

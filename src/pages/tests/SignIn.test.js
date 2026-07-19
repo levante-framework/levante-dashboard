@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { shallowMount } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SignIn from '@/pages/SignIn.vue';
 
 // Create mock auth store for testing
@@ -15,7 +15,7 @@ const authStoreMock = {
 
 // Mocking behavior setup - must be separate from the mock implementation
 let isMobileBrowserMock = false;
-let isEmulatorMock = false;
+const isEmulatorMock = false;
 
 // Mock all dependencies to avoid issues
 vi.mock('@/store/auth', () => ({

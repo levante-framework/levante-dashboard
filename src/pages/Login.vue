@@ -185,16 +185,6 @@
 </template>
 
 <script setup lang="ts">
-import AppSpinner from '@/components/AppSpinner.vue';
-import LanguageSelector from '@/components/LanguageSelector.vue';
-import RoarModal from '@/components/modals/RoarModal.vue';
-import { APP_ROUTES } from '@/constants/routes';
-import { isEmailValid, isMobileBrowser } from '@/helpers';
-import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
-import { getUserAssignments } from '@/helpers/query/assignments';
-import { fetchDocById } from '@/helpers/query/utils';
-import { useAssignmentsStore } from '@/store/assignments';
-import { useAuthStore, UserClaims, UserData } from '@/store/auth';
 import useVuelidate from '@vuelidate/core';
 import { helpers, required, requiredUnless } from '@vuelidate/validators';
 import { storeToRefs } from 'pinia';
@@ -204,6 +194,16 @@ import PvMessage from 'primevue/message';
 import PvPassword from 'primevue/password';
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import AppSpinner from '@/components/AppSpinner.vue';
+import LanguageSelector from '@/components/LanguageSelector.vue';
+import RoarModal from '@/components/modals/RoarModal.vue';
+import { APP_ROUTES } from '@/constants/routes';
+import { isEmailValid, isMobileBrowser } from '@/helpers';
+import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
+import { getUserAssignments } from '@/helpers/query/assignments';
+import { fetchDocById } from '@/helpers/query/utils';
+import { useAssignmentsStore } from '@/store/assignments';
+import { type UserClaims, type UserData, useAuthStore } from '@/store/auth';
 
 const MODES = {
   participant: 'participant',
@@ -238,7 +238,7 @@ const {
 
 function redirectAfterLogin() {
   if (!getUserId()) return;
-  
+
   if (ssoProvider.value) {
     router.replace({ path: APP_ROUTES.SSO });
   } else if (routeToProfile.value) {

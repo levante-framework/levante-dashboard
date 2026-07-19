@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
-import Button from 'primevue/button';
-import { useAuthStore } from '@/store/auth';
 import { useWindowSize } from '@vueuse/core';
+import Button from 'primevue/button';
+import { computed, onMounted, ref } from 'vue';
+import { logger } from '@/logger'; // Import the logger
+import { useAuthStore } from '@/store/auth';
 // Get package info
 import packageJson from '../../package.json';
-import { logger } from '@/logger'; // Import the logger
 
 // Define user info interface
 interface UserInfo {

@@ -1,11 +1,11 @@
 import { toValue } from 'vue';
-import { orderByDefault } from './utils';
 import { ROLES } from '@/constants/roles';
-import { logger } from '@/logger';
-import { fetchOrgsBySite } from './orgs';
 import { administrationsRepository } from '@/firebase/repositories/AdministrationsRepository';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
 import { convertToDate } from '@/helpers';
+import { logger } from '@/logger';
+import { fetchOrgsBySite } from './orgs';
+import { orderByDefault } from './utils';
 
 export function getTitle(item, isSuperAdmin) {
   if (isSuperAdmin) {
@@ -21,7 +21,7 @@ export function getTitle(item, isSuperAdmin) {
 const mapAdministrations = async (data) => {
   // First format the administration documents
   const administrationData = data.map((a) => {
-    let assignedOrgs = {
+    const assignedOrgs = {
       districts: a.districts,
       schools: a.schools,
       classes: a.classes,

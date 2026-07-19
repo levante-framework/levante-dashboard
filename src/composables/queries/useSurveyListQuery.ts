@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/vue-query';
 import axios from 'axios';
-import { computed, MaybeRefOrGetter, toValue } from 'vue';
+import { computed, type MaybeRefOrGetter, toValue } from 'vue';
 
 interface GcsObject {
   name: string;

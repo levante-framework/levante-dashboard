@@ -1,11 +1,11 @@
-import { type MaybeRefOrGetter } from 'vue';
-import { useQuery, type UseQueryReturnType, type UseQueryOptions } from '@tanstack/vue-query';
+import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
 import { storeToRefs } from 'pinia';
-import { useAuthStore } from '@/store/auth';
+import type { MaybeRefOrGetter } from 'vue';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { USER_CHILD_DATA_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { fetchDocById } from '@/helpers/query/utils';
-import { USER_CHILD_DATA_QUERY_KEY } from '@/constants/queryKeys';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { useAuthStore } from '@/store/auth';
 
 /**
  * User child data query.

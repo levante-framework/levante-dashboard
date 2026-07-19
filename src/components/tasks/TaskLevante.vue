@@ -3,16 +3,16 @@
 </template>
 
 <script setup>
-import { onMounted, watch, ref, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router';
-import { storeToRefs } from 'pinia';
 import _get from 'lodash/get';
-import { useAuthStore } from '@/store/auth';
-import { useAssignmentsStore } from '@/store/assignments';
-import useUserChildDataQuery from '@/composables/queries/useUserChildDataQuery';
+import { storeToRefs } from 'pinia';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import useCompleteAssessmentMutation from '@/composables/mutations/useCompleteAssessmentMutation';
-import packageLockJson from '../../../package-lock.json';
+import useUserChildDataQuery from '@/composables/queries/useUserChildDataQuery';
 import { logger } from '@/logger';
+import { useAssignmentsStore } from '@/store/assignments';
+import { useAuthStore } from '@/store/auth';
+import packageLockJson from '../../../package-lock.json';
 
 const props = defineProps({
   taskId: { type: String, default: 'egma-math' },
@@ -103,7 +103,7 @@ watch(
 
 async function startTask(selectedAdmin) {
   try {
-    let checkGameStarted = setInterval(function () {
+    let checkGameStarted = setInterval(() => {
       // Poll for the preload trials progress bar to exist and then begin the game
       let gameLoading = document.querySelector('.jspsych-content-wrapper');
       if (gameLoading) {

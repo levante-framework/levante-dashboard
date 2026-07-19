@@ -1,13 +1,13 @@
-import { acceptHMRUpdate, defineStore } from 'pinia';
-import { onAuthStateChanged, User, Unsubscribe } from 'firebase/auth';
-import { useRouter } from 'vue-router';
-import { initNewFirekit } from '../firebaseInit';
-import { AUTH_SSO_PROVIDERS } from '../constants/auth';
-import posthogInstance from '@/plugins/posthog';
-import { logger } from '@/logger';
 import type { RoarFirekit } from '@levante-framework/firekit';
-import { ref, type Ref } from 'vue';
 import { ROLES } from '@levante-framework/permissions-core';
+import { onAuthStateChanged, type Unsubscribe, type User } from 'firebase/auth';
+import { acceptHMRUpdate, defineStore } from 'pinia';
+import { type Ref, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { logger } from '@/logger';
+import posthogInstance from '@/plugins/posthog';
+import { AUTH_SSO_PROVIDERS } from '../constants/auth';
+import { initNewFirekit } from '../firebaseInit';
 
 interface FirebaseUser {
   adminFirebaseUser: User | null;

@@ -1,11 +1,11 @@
 <script setup>
 import 'survey-core/survey-core.css';
 import { SurveyComponent } from 'survey-vue3-ui';
-import { useAuthStore } from '@/store/auth';
-import { useSurveyStore } from '@/store/survey';
 import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import { useAuthStore } from '@/store/auth';
+import { useSurveyStore } from '@/store/survey';
 
 const authStore = useAuthStore();
 const router = useRouter();

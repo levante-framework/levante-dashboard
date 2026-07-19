@@ -3,12 +3,12 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ref, computed, reactive } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { createI18n } from 'vue-i18n';
 import { createRouter, createWebHistory } from 'vue-router';
-import NavBar from '../NavBar.vue';
 import { ROLES } from '@/constants/roles';
 import { getNavbarActions } from '@/router/navbarActions';
+import NavBar from '../NavBar.vue';
 
 // Define a reactive variable to control the role in tests
 const currentTestRole = ref(ROLES.PARTICIPANT);

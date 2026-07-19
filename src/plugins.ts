@@ -1,19 +1,19 @@
+import { definePreset } from '@primevue/themes';
+import Aura from '@primevue/themes/aura';
+import { MutationCache, Query, QueryCache, QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
+import { createHead } from '@unhead/vue';
+import { createPinia } from 'pinia';
+import piniaPluginPersistedState from 'pinia-plugin-persistedstate';
 import PrimeVue from 'primevue/config';
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
-// @ts-ignore - Linter struggles with resolving .js file via alias here, but build works
-import router from '@/router/index';
-import TextClamp from 'vue3-text-clamp';
-import { createHead } from '@unhead/vue';
-import { MutationCache, Query, QueryCache, QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { surveyPlugin } from 'survey-vue3-ui';
-// @ts-ignore - Linter struggles with resolving .ts file via alias here, but build works
-import { i18n } from '@/translations/i18n';
-import { createPinia } from 'pinia';
-import piniaPluginPersistedState from 'pinia-plugin-persistedstate';
-import { definePreset } from '@primevue/themes';
-import Aura from '@primevue/themes/aura';
+import TextClamp from 'vue3-text-clamp';
 import { logger } from '@/logger';
+// @ts-expect-error - Linter struggles with resolving .js file via alias here, but build works
+import router from '@/router/index';
+// @ts-expect-error - Linter struggles with resolving .ts file via alias here, but build works
+import { i18n } from '@/translations/i18n';
 
 const pinia = createPinia().use(piniaPluginPersistedState);
 const head = createHead();
@@ -44,7 +44,7 @@ const MyPreset = definePreset(Aura, {
 // ──── Configure VueQueryPlugin ────
 function handleQueryError(error: unknown, meta?: Record<string, unknown>) {
   // Log explicit firekit errors to Sentry
-  if (!!error && typeof error === 'object' && 'code' in error && 'data' in error) {
+  if (error && typeof error === 'object' && 'code' in error && 'data' in error) {
     logger.error(error, meta);
     // TODO signOut on functions/unauthenticated?
   }

@@ -1,10 +1,22 @@
 // composables/usePermissions.ts
-import { ref, computed, onMounted, readonly, toValue } from 'vue';
-import { storeToRefs } from 'pinia';
-import { CacheService, PermissionDocument, PermissionService, type Resource, type Action, type Role, type UserRole as CoreUserRole, GroupSubResource, AdminSubResource, ROLES } from '@levante-framework/permissions-core';
-import { useAuthStore } from '@/store/auth';
-import { getAxiosInstance, getBaseDocumentPath, convertValues } from '@/helpers/query/utils';
+
+import {
+  type Action,
+  type AdminSubResource,
+  CacheService,
+  type UserRole as CoreUserRole,
+  type GroupSubResource,
+  type PermissionDocument,
+  PermissionService,
+  type Resource,
+  ROLES,
+  type Role,
+} from '@levante-framework/permissions-core';
 import _mapValues from 'lodash/mapValues';
+import { storeToRefs } from 'pinia';
+import { computed, onMounted, readonly, ref, toValue } from 'vue';
+import { convertValues, getAxiosInstance, getBaseDocumentPath } from '@/helpers/query/utils';
+import { useAuthStore } from '@/store/auth';
 
 interface UserData {
   roles: CoreUserRole[];
@@ -67,16 +79,14 @@ export const usePermissions = () => {
   const can = (resource: Resource, action: Action, subResource?: GroupSubResource | AdminSubResource): boolean => {
     if (!shouldUsePermissions.value || !permissionsLoaded.value || !user.value || !currentSite.value) return false;
 
-    return permissionService.canPerformSiteAction(
-      user.value,
-      currentSite.value,
-      resource,
-      action,
-      subResource
-    );
+    return permissionService.canPerformSiteAction(user.value, currentSite.value, resource, action, subResource);
   };
 
-  const canGlobal = (resource: Resource, action: Action, subResource?: GroupSubResource | AdminSubResource): boolean => {
+  const canGlobal = (
+    resource: Resource,
+    action: Action,
+    subResource?: GroupSubResource | AdminSubResource,
+  ): boolean => {
     if (!shouldUsePermissions.value || !permissionsLoaded.value || !user.value) return false;
 
     return permissionService.canPerformGlobalAction(user.value, resource, action, subResource);
@@ -98,9 +108,9 @@ export const usePermissions = () => {
 
     const perms: Record<string, Record<string, boolean>> = {};
 
-    resources.forEach(resource => {
+    resources.forEach((resource) => {
       const resourcePerms: Record<string, boolean> = {};
-      actions.forEach(action => {
+      actions.forEach((action) => {
         const actionKey = `can${action.charAt(0).toUpperCase()}${action.slice(1)}`;
         resourcePerms[actionKey] = can(resource, action);
       });

@@ -408,32 +408,32 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
+import _find from 'lodash/find';
+import _forEach from 'lodash/forEach';
+import _get from 'lodash/get';
+import _map from 'lodash/map';
+import _startCase from 'lodash/startCase';
+import _toUpper from 'lodash/toUpper';
+import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
-import PvDatePicker from 'primevue/datepicker';
 import PvChip from 'primevue/chip';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
+import PvDatePicker from 'primevue/datepicker';
 import PvFloatLabel from 'primevue/floatlabel';
-import PvSelect from 'primevue/select';
 import PvInputNumber from 'primevue/inputnumber';
 import PvInputText from 'primevue/inputtext';
 import PvMultiSelect from 'primevue/multiselect';
+import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
-import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
-import _get from 'lodash/get';
-import _map from 'lodash/map';
-import _forEach from 'lodash/forEach';
-import _find from 'lodash/find';
-import _toUpper from 'lodash/toUpper';
-import _startCase from 'lodash/startCase';
-import { supportLevelColors, progressTags } from '@/helpers/reports';
-import SkeletonTable from '@/components/SkeletonTable.vue';
+import { computed, ref } from 'vue';
 import TableScoreTag from '@/components/reports/TableScoreTag.vue';
-import { getTooltip } from '@/helpers';
+import SkeletonTable from '@/components/SkeletonTable.vue';
 import { ROLES } from '@/constants/roles';
+import { getTooltip } from '@/helpers';
+import { progressTags, supportLevelColors } from '@/helpers/reports';
 import { useAuthStore } from '@/store/auth';
-import { storeToRefs } from 'pinia';
 
 const props = defineProps({
   columns: { type: Array, required: true },

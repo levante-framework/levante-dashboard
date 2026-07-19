@@ -1,12 +1,12 @@
-import { ref, onUnmounted } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useRouter } from 'vue-router';
 import { useQueryClient } from '@tanstack/vue-query';
 import { StatusCodes } from 'http-status-codes';
-import { useAuthStore } from '@/store/auth';
+import { storeToRefs } from 'pinia';
+import { onUnmounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import useUserDataQuery from '@/composables/queries/useUserDataQuery';
 import { AUTH_USER_TYPE } from '@/constants/auth';
 import { APP_ROUTES } from '@/constants/routes';
+import { useAuthStore } from '@/store/auth';
 
 const POLLING_INTERVAL = 600;
 

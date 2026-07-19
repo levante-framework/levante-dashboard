@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/vue-query';
-import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 import { fetchSubcollection } from '@/helpers/query/utils';
+import { useAuthStore } from '@/store/auth';
 
 /**
  * Survey responses composable.

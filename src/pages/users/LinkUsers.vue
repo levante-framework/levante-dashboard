@@ -118,24 +118,24 @@
 </template>
 
 <script setup>
-import { ref, toRaw, watch, computed } from 'vue';
-import { csvFileToJson } from '@/helpers/csv';
-import { useToast } from 'primevue/usetoast';
-import { useAuthStore } from '@/store/auth';
-import LinkUsersInfo from '@/components/userInfo/LinkUsersInfo.vue';
+import { validateCsvHeaders, validateLinkUsersCsv } from '@levante-framework/levante-zod';
+import _forEach from 'lodash/forEach';
+import _isEmpty from 'lodash/isEmpty';
+import _startCase from 'lodash/startCase';
+import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
+import PvDivider from 'primevue/divider';
 import PvFileUpload from 'primevue/fileupload';
 import PvMessage from 'primevue/message';
-import _forEach from 'lodash/forEach';
-import _startCase from 'lodash/startCase';
-import _isEmpty from 'lodash/isEmpty';
+import { useToast } from 'primevue/usetoast';
+import { computed, ref, toRaw, watch } from 'vue';
+import LinkUsersInfo from '@/components/userInfo/LinkUsersInfo.vue';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
-import PvDivider from 'primevue/divider';
-import { validateLinkUsersCsv, validateCsvHeaders } from '@levante-framework/levante-zod';
+import { csvFileToJson } from '@/helpers/csv';
+import { useAuthStore } from '@/store/auth';
 import { useLevanteStore } from '@/store/levante';
-import { storeToRefs } from 'pinia';
 
 const levanteStore = useLevanteStore();
 const { hasUserConfirmed } = storeToRefs(levanteStore);

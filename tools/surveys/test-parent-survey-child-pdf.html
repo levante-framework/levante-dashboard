@@ -449,7 +449,7 @@
 
           return new Promise((resolve) => {
             const reader = new FileReader();
-            reader.onload = function () {
+            reader.onload = () => {
               const base64 = reader.result;
               pdf.addImage(base64, 'PNG', x, y, width, height);
               resolve();
@@ -746,7 +746,7 @@
         pdf.setFont('helvetica', 'normal');
 
         switch (element.type) {
-          case 'boolean':
+          case 'boolean': {
             // Extract labels with English priority
             const trueLabel = extractText(element.labelTrue) || 'Yes';
             const falseLabel = extractText(element.labelFalse) || 'No';
@@ -776,6 +776,7 @@
 
             currentY += 8;
             break;
+          }
 
           case 'radiogroup':
           case 'dropdown':
@@ -2000,7 +2001,6 @@
 
               // Try to continue with next question instead of failing completely
               showStatus(`⚠️ Warning: Skipped question ${questionCount} due to error: ${error.message}`, 'error');
-              continue;
             }
           }
 

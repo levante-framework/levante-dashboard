@@ -1,10 +1,10 @@
-import { type MaybeRefOrGetter } from 'vue';
-import { useQuery, type UseQueryReturnType, type UseQueryOptions } from '@tanstack/vue-query';
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
-import { fetchDocumentsById } from '@/helpers/query/utils';
-import { hasArrayEntries } from '@/helpers/hasArrayEntries';
-import { CLASSES_QUERY_KEY } from '@/constants/queryKeys';
+import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
+import type { MaybeRefOrGetter } from 'vue';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { CLASSES_QUERY_KEY } from '@/constants/queryKeys';
+import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
+import { hasArrayEntries } from '@/helpers/hasArrayEntries';
+import { fetchDocumentsById } from '@/helpers/query/utils';
 
 /**
  * Classes query.

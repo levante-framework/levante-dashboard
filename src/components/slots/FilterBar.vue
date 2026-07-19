@@ -43,8 +43,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
 import PvMultiSelect from 'primevue/multiselect';
+import { ref, watch } from 'vue';
 
 const props = defineProps({
   updateFilters: {

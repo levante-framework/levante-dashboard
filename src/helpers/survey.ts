@@ -1,16 +1,16 @@
+import type { RoarFirekit as RoarfirekitType } from '@bdelab/roar-firekit';
+import type { QueryClient } from '@tanstack/vue-query';
 import _merge from 'lodash/merge';
+import type { ToastServiceMethods } from 'primevue/toastservice';
+import type { Question, SurveyModel } from 'survey-core';
+import { toRaw } from 'vue';
+import type { Router } from 'vue-router';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
-import type { SurveyModel, Question } from 'survey-core';
-import type { Router } from 'vue-router';
-import type { QueryClient } from '@tanstack/vue-query';
-import type { RoarFirekit as RoarfirekitType } from '@bdelab/roar-firekit';
-import type { ToastServiceMethods } from 'primevue/toastservice';
+import type { useAssignmentsStore } from '@/store/assignments';
 // @ts-expect-error - Will be resolved when store file is converted to TS
 import type { UseSurveyStore } from '@/store/survey';
-import type { useAssignmentsStore } from '@/store/assignments';
 import { findBestMatchingLocale } from '@/translations/i18n';
-import { toRaw } from 'vue';
 
 interface SurveyResponseDoc {
   administrationId?: string;

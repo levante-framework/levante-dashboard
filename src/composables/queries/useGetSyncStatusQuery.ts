@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/vue-query';
-import { computed, toValue, type MaybeRefOrGetter } from 'vue';
+import { computed, type MaybeRefOrGetter, toValue } from 'vue';
 import { SYNC_STATUS_QUERY_KEY } from '@/constants/queryKeys';
 import { useAuthStore } from '@/store/auth';
 

@@ -1,8 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import type { UseMutationReturnType } from '@tanstack/vue-query';
+import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { CREATE_UPDATE_ADMINISTRATOR_MUTATION_KEY } from '@/constants/mutationKeys';
 import { ADMINS_QUERY_KEY } from '@/constants/queryKeys';
-import { usersRepository, type CreateUpdateAdministratorPayload } from '@/firebase/repositories/UsersRepository';
+import { type CreateUpdateAdministratorPayload, usersRepository } from '@/firebase/repositories/UsersRepository';
 import { logger } from '@/logger';
 
 const useCreateUpdateAdministratorMutation = (): UseMutationReturnType<

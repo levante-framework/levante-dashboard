@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { withSetup } from '@/test-support/withSetup.js';
+import type { QueryClient } from '@tanstack/vue-query';
 import * as VueQuery from '@tanstack/vue-query';
-import { type QueryClient } from '@tanstack/vue-query';
 import { nanoid } from 'nanoid';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchUsersByOrg } from '@/helpers/query/users';
+import { withSetup } from '@/test-support/withSetup.js';
 import useOrgUsersQuery from './useOrgUsersQuery';
 
 vi.mock('@/helpers/query/users', () => ({

@@ -1,5 +1,5 @@
-import posthogInstance from '@/plugins/posthog';
 import * as Sentry from '@sentry/vue';
+import posthogInstance from '@/plugins/posthog';
 // Get package info
 import packageJson from '../package.json';
 
@@ -99,7 +99,7 @@ function setUser(userData: UserData | null, force: boolean = false): void {
       currentUser = userData;
     } else {
       // Check for reset existence on posthogInstance due to mock in dev
-      if (typeof posthogInstance.reset === 'function' && !!currentUser?.uid) {
+      if (typeof posthogInstance.reset === 'function' && currentUser?.uid) {
         posthogInstance.reset();
       }
       Sentry.setUser(null);

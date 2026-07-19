@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { withSetup } from '@/test-support/withSetup.js';
 import * as VueQuery from '@tanstack/vue-query';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SITE_OVERVIEW_QUERY_KEY, USER_DATA_QUERY_KEY } from '@/constants/queryKeys';
 import { useAuthStore } from '@/store/auth';
+import { withSetup } from '@/test-support/withSetup.js';
 import useUpdateUserMutation from './useUpdateUserMutation';
 
 vi.mock('@/store/auth', () => ({

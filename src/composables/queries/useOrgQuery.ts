@@ -1,8 +1,8 @@
 import { computed } from 'vue';
-import useDistrictsQuery from '@/composables/queries/useDistrictsQuery';
-import useSchoolsQuery from '@/composables/queries/useSchoolsQuery';
 import useClassesQuery from '@/composables/queries/useClassesQuery';
+import useDistrictsQuery from '@/composables/queries/useDistrictsQuery';
 import useGroupsQuery from '@/composables/queries/useGroupsQuery';
+import useSchoolsQuery from '@/composables/queries/useSchoolsQuery';
 import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 
 /**
