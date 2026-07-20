@@ -118,9 +118,13 @@ vi.mock('@/firebase/repositories/UsersRepository', () => ({
   },
 }));
 
+vi.mock('@/constants', async (importActual) => ({
+  ...(await importActual()),
+  isLevante: false,
+}));
+
 vi.mock('@/helpers', () => ({
   getTooltip: () => ({}),
-  isLevante: false,
   normalizeToLowercase: (value) => String(value ?? '').toLowerCase(),
 }));
 

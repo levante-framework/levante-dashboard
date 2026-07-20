@@ -53,7 +53,7 @@ import { storeToRefs } from 'pinia';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import { isLevante } from '@/helpers';
+import { isLevante } from '@/constants';
 import { useAuthStore } from '@/store/auth';
 
 const { t } = useI18n();

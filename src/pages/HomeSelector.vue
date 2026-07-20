@@ -26,7 +26,7 @@ import useUserType from '@/composables/useUserType';
 import { CONSENT_TYPES } from '@/constants/consentTypes';
 import { ROLES } from '@/constants/roles';
 import { APP_ROUTES } from '@/constants/routes';
-import { isLevante } from '@/helpers';
+import { isLevante } from '@/constants';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 

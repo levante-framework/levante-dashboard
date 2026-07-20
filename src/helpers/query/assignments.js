@@ -9,7 +9,7 @@ import _uniq from 'lodash/uniq';
 import _without from 'lodash/without';
 import { toRaw, toValue } from 'vue';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
-import { isLevante, pluralizeFirestoreCollection } from '@/helpers';
+import { pluralizeFirestoreCollection } from '@/helpers';
 import { convertValues, getAxiosInstance, getBaseDocumentPath, getProjectId, mapFields } from './utils';
 
 const userSelectFields = ['name', 'assessmentPid', 'username', 'studentData', 'schools', 'classes', 'userType'];

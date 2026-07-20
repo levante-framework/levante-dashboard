@@ -2,7 +2,7 @@ import { type FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 import { type Auth, connectAuthEmulator, getAuth } from 'firebase/auth';
 import { connectFirestoreEmulator, type Firestore, getFirestore } from 'firebase/firestore';
 import { connectFunctionsEmulator, type Functions, getFunctions } from 'firebase/functions';
-import { isEmulator } from '@/helpers';
+import { isEmulator } from '@/constants';
 
 export interface FirebaseConfig {
   apiKey: string;

@@ -28,7 +28,7 @@
 import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
 import { computed } from 'vue';
-import { isLevante } from '@/helpers';
+import { isLevante } from '@/constants';
 import { getParsedLocale } from '@/helpers/survey';
 import { useSurveyStore } from '@/store/survey';
 import { getTranslations, type LanguageOption, languageOptions } from '@/translations/i18n';
