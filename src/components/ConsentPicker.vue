@@ -277,7 +277,8 @@ import PvRadioButton from 'primevue/radiobutton';
 import PvSelect from 'primevue/select';
 import { computed, onMounted, ref, watch } from 'vue';
 import useLegalDocsQuery from '@/composables/queries/useLegalDocsQuery';
-import { getTooltip, isLevante } from '@/helpers';
+import { isLevante } from '@/constants';
+import { getTooltip } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 
 interface DefaultParam {

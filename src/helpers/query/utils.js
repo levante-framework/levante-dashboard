@@ -10,9 +10,10 @@ import _without from 'lodash/without';
 import Papa from 'papaparse';
 import { storeToRefs } from 'pinia';
 import { toValue } from 'vue';
+import { isEmulator } from '@/constants';
 import { FIRESTORE_BASE_URL, FIRESTORE_COLLECTIONS, FIRESTORE_DATABASES } from '@/constants/firebase';
 import { ROLES } from '@/constants/roles';
-import { flattenObj, isEmulator } from '@/helpers';
+import { flattenObj } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 
 export const convertValues = (value) => {

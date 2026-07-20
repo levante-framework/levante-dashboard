@@ -5,9 +5,6 @@ import _toPairs from 'lodash/toPairs';
 import type { TooltipOptions } from 'primevue/tooltip';
 import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
 
-export const isLevante: boolean = import.meta.env.VITE_LEVANTE === 'TRUE';
-export const isEmulator: boolean = (import.meta.env.VITE_EMULATOR as string) === 'TRUE';
-
 export const isMobileBrowser = (): boolean => {
   const userAgent: string = navigator.userAgent || navigator.vendor || (window as any).opera;
   if (

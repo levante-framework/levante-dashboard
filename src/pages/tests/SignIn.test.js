@@ -15,7 +15,6 @@ const authStoreMock = {
 
 // Mocking behavior setup - must be separate from the mock implementation
 let isMobileBrowserMock = false;
-const isEmulatorMock = false;
 
 // Mock all dependencies to avoid issues
 vi.mock('@/store/auth', () => ({
@@ -28,10 +27,12 @@ vi.mock('vue-router', () => ({
   })),
 }));
 
-vi.mock('@/helpers', () => ({
+vi.mock('@/constants', () => ({
   isLevante: true,
+}));
+
+vi.mock('@/helpers', () => ({
   isMobileBrowser: vi.fn(() => isMobileBrowserMock),
-  isEmulator: vi.fn(() => isEmulatorMock),
 }));
 
 vi.mock('@/helpers/query/utils', () => ({

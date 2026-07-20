@@ -1,7 +1,7 @@
 import { captureConsoleIntegration, contextLinesIntegration, extraErrorDataIntegration } from '@sentry/integrations';
 import * as Sentry from '@sentry/vue';
 import type { App } from 'vue';
-import { isLevante } from '@/helpers';
+import { isLevante } from '@/constants';
 import { useAuthStore } from '@/store/auth';
 import { formattedLocale, languageOptions } from './translations/i18n';
 

@@ -27,3 +27,9 @@ export const FOOTER_BLACKLIST = [
   "SRE",
   "SWR",
 ] as const;
+
+export const isLevante: boolean =
+  ((import.meta.env.VITE_LEVANTE as string) ?? "").toUpperCase() === "TRUE";
+
+export const isEmulator: boolean =
+  ((import.meta.env.VITE_EMULATOR as string) ?? "").toUpperCase() === "TRUE";
