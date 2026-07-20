@@ -27,7 +27,8 @@ vi.mock('vue-router', () => ({
   })),
 }));
 
-vi.mock('@/constants', () => ({
+vi.mock('@/constants', async (importActual) => ({
+  ...(await importActual()),
   isLevante: true,
   isEmulator: false,
 }));

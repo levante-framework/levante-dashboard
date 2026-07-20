@@ -118,7 +118,8 @@ vi.mock('@/firebase/repositories/UsersRepository', () => ({
   },
 }));
 
-vi.mock('@/constants', () => ({
+vi.mock('@/constants', async (importActual) => ({
+  ...(await importActual()),
   isLevante: false,
 }));
 
