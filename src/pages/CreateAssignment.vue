@@ -763,6 +763,7 @@ const submit = async () => {
     assessments: submittedAssessments,
     dateOpen: toRaw(state).dateStarted,
     dateClose,
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     sequential: toRaw(state).sequential,
     orgs: orgs,
     isTestData: isTestData.value,
