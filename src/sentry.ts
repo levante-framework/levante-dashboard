@@ -76,6 +76,15 @@ export function initSentry(app: App) {
         delete event.contexts.geo;
       }
 
+      // Drop benign Firestore permission-denied errors raised while unauthenticated
+      // (auth-transition / signout race). Genuine denials for signed-in users are kept.
+      const isPermissionDenied = (event.exception?.values ?? []).some(
+        (value) => typeof value.value === 'string' && /Missing or insufficient permissions/i.test(value.value),
+      );
+      if (isPermissionDenied && !authStore.isAuthenticated()) {
+        return null;
+      }
+
       return event;
     },
   });
