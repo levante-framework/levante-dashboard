@@ -29,6 +29,7 @@ vi.mock('vue-router', () => ({
 
 vi.mock('@/constants', () => ({
   isLevante: true,
+  isEmulator: false,
 }));
 
 vi.mock('@/helpers', () => ({
