@@ -33,6 +33,7 @@ const fetchBucketAudioList = async (locale?: string): Promise<BucketAudioFile[]>
         params: {
           prefix,
           pageToken,
+          fields: 'items(name,contentType),nextPageToken',
         },
       });
 

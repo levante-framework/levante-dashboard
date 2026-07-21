@@ -29,6 +29,7 @@ const fetchSurveyList = async (bucketId?: string): Promise<Array<SurveyListItem>
     params: {
       prefix: normalizedPrefix,
       delimiter: '/',
+      fields: 'items(name),nextPageToken',
     },
   });
 
