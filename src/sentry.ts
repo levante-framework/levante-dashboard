@@ -7,6 +7,20 @@ import { formattedLocale, languageOptions } from './translations/i18n';
 
 const language = formattedLocale;
 
+function isCrossOriginVueRefSecurityError(event: {
+  message?: string;
+  logentry?: { message?: string };
+  exception?: { values?: Array<{ type?: string; value?: string }> };
+}): boolean {
+  const haystacks = [
+    event.message,
+    event.logentry?.message,
+    ...(event.exception?.values ?? []).flatMap((exception) => [exception.type, exception.value]),
+  ].filter((value): value is string => typeof value === 'string');
+
+  return haystacks.some((text) => text.includes("__v_isRef") && text.includes('cross-origin frame'));
+}
+
 export function initSentry(app: App) {
   // skip if levante instance
   let dsn: string;
@@ -67,11 +81,14 @@ export function initSentry(app: App) {
     // Session Replay
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
+    ignoreErrors: [/Failed to read a named property '__v_isRef' from 'Window'/],
     beforeSend(event) {
-      // Remove IP
+      if (isCrossOriginVueRefSecurityError(event)) {
+        return null;
+      }
+
       delete event.user?.ip_address;
 
-      // Remove derived contexts
       if (event.contexts?.geo) {
         delete event.contexts.geo;
       }
