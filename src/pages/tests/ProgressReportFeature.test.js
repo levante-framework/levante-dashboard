@@ -183,34 +183,32 @@ vi.mock('@/components/RoarDataTable.vue', () => ({
             'Export Selected',
           ),
           slots.filterbar?.(),
-          props.data[0]
-            ? slots.expansion?.({ data: props.data[0] })
-            : null,
+          props.data[0] ? slots.expansion?.({ data: props.data[0] }) : null,
         ]);
     },
   }),
 }));
 
-vi.mock("primevue/datatable", () => ({
+vi.mock('primevue/datatable', () => ({
   default: {
-    name: "PvDataTable",
-    props: ["value"],
+    name: 'PvDataTable',
+    props: ['value'],
     template: '<div class="pv-data-table"><slot /></div>',
   },
 }));
 
-vi.mock("primevue/column", () => ({
+vi.mock('primevue/column', () => ({
   default: {
-    name: "PvColumn",
-    props: ["field", "header"],
+    name: 'PvColumn',
+    props: ['field', 'header'],
     template: "<div><slot name='body' :data='{}' /></div>",
   },
 }));
 
-vi.mock("primevue/tag", () => ({
+vi.mock('primevue/tag', () => ({
   default: {
-    name: "PvTag",
-    props: ["value", "icon", "severity"],
+    name: 'PvTag',
+    props: ['value', 'icon', 'severity'],
     template: '<span class="pv-tag">{{ value }}</span>',
   },
 }));
@@ -256,62 +254,62 @@ const progressPayload = {
   ],
   users: [
     {
-      email: "alice@example.com",
-      status: "completed",
-      userId: "student-1",
-      userType: "student",
+      email: 'alice@example.com',
+      status: 'completed',
+      userId: 'student-1',
+      userType: 'student',
       tasks: [
         {
-          taskId: "vocab",
-          status: "completed",
-          startedAt: "2024-01-10T00:00:00.000Z",
-          completedAt: "2024-01-12T00:00:00.000Z",
+          taskId: 'vocab',
+          status: 'completed',
+          startedAt: '2024-01-10T00:00:00.000Z',
+          completedAt: '2024-01-12T00:00:00.000Z',
         },
         {
-          taskId: "math",
-          status: "started",
-          startedAt: "2024-01-11T00:00:00.000Z",
+          taskId: 'math',
+          status: 'started',
+          startedAt: '2024-01-11T00:00:00.000Z',
           completedAt: null,
         },
       ],
     },
     {
-      email: "bob@example.com",
-      status: "started",
-      userId: "student-2",
-      userType: "student",
+      email: 'bob@example.com',
+      status: 'started',
+      userId: 'student-2',
+      userType: 'student',
       tasks: [
         {
-          taskId: "vocab",
-          status: "started",
-          startedAt: "2024-01-15T00:00:00.000Z",
+          taskId: 'vocab',
+          status: 'started',
+          startedAt: '2024-01-15T00:00:00.000Z',
           completedAt: null,
         },
         {
-          taskId: "math",
-          status: "notStarted",
+          taskId: 'math',
+          status: 'notStarted',
           startedAt: null,
           completedAt: null,
         },
       ],
     },
     {
-      email: "teacher@example.com",
-      status: "notStarted",
-      userId: "teacher-1",
-      userType: "teacher",
+      email: 'teacher@example.com',
+      status: 'notStarted',
+      userId: 'teacher-1',
+      userType: 'teacher',
       tasks: [
         {
-          taskId: "vocab",
-          status: "notStarted",
+          taskId: 'vocab',
+          status: 'notStarted',
           startedAt: null,
           completedAt: null,
         },
         {
-          taskId: "math",
-          status: "completed",
-          startedAt: "2024-01-08T00:00:00.000Z",
-          completedAt: "2024-01-09T00:00:00.000Z",
+          taskId: 'math',
+          status: 'completed',
+          startedAt: '2024-01-08T00:00:00.000Z',
+          completedAt: '2024-01-09T00:00:00.000Z',
         },
       ],
     },
@@ -389,41 +387,39 @@ describe('ProgressReportFeature.vue', () => {
     ]);
   });
 
-  it("builds table rows with expandable tasks from the progress payload", async () => {
+  it('builds table rows with expandable tasks from the progress payload', async () => {
     const wrapper = await mountLoadedProgressReport();
     const table = wrapper.findComponent({ name: 'RoarDataTable' });
     const columnHeaders = table.props('columns').map((column) => column.header);
 
-    expect(columnHeaders).toEqual(["UID", "User Login", "User Type"]);
-    expect(table.props("dataKey")).toBe("user.userId");
-    expect(table.props("data")).toEqual([
+    expect(columnHeaders).toEqual(['UID', 'User Login', 'User Type']);
+    expect(table.props('dataKey')).toBe('user.userId');
+    expect(table.props('data')).toEqual([
       {
         tasks: [
           {
-            taskId: "math",
-            name: "Math Public",
-            status: "started",
-            statusLabel: "Started",
-            statusIcon: "pi pi-clock",
-            statusSeverity: "warn",
-            startedAt: "2024-01-11T00:00:00.000Z",
+            taskId: 'math',
+            name: 'Math Public',
+            status: 'started',
+            statusLabel: 'Started',
+            statusIcon: 'pi pi-clock',
+            statusSeverity: 'warn',
+            startedAt: '2024-01-11T00:00:00.000Z',
             completedAt: null,
-            startedAtLabel: new Date("2024-01-11T00:00:00.000Z").toLocaleString(),
-            completedAtLabel: "--",
+            startedAtLabel: new Date('2024-01-11T00:00:00.000Z').toLocaleString(),
+            completedAtLabel: '--',
           },
           {
-            taskId: "vocab",
-            name: "Vocabulary Public",
-            status: "completed",
-            statusLabel: "Completed",
-            statusIcon: "pi pi-check-circle",
-            statusSeverity: "success",
-            startedAt: "2024-01-10T00:00:00.000Z",
-            completedAt: "2024-01-12T00:00:00.000Z",
-            startedAtLabel: new Date("2024-01-10T00:00:00.000Z").toLocaleString(),
-            completedAtLabel: new Date(
-              "2024-01-12T00:00:00.000Z",
-            ).toLocaleString(),
+            taskId: 'vocab',
+            name: 'Vocabulary Public',
+            status: 'completed',
+            statusLabel: 'Completed',
+            statusIcon: 'pi pi-check-circle',
+            statusSeverity: 'success',
+            startedAt: '2024-01-10T00:00:00.000Z',
+            completedAt: '2024-01-12T00:00:00.000Z',
+            startedAtLabel: new Date('2024-01-10T00:00:00.000Z').toLocaleString(),
+            completedAtLabel: new Date('2024-01-12T00:00:00.000Z').toLocaleString(),
           },
         ],
         user: {
@@ -437,28 +433,28 @@ describe('ProgressReportFeature.vue', () => {
       {
         tasks: [
           {
-            taskId: "math",
-            name: "Math Public",
-            status: "notStarted",
-            statusLabel: "Not Started",
-            statusIcon: "pi pi-minus-circle",
-            statusSeverity: "warning",
+            taskId: 'math',
+            name: 'Math Public',
+            status: 'notStarted',
+            statusLabel: 'Not Started',
+            statusIcon: 'pi pi-minus-circle',
+            statusSeverity: 'warning',
             startedAt: null,
             completedAt: null,
-            startedAtLabel: "--",
-            completedAtLabel: "--",
+            startedAtLabel: '--',
+            completedAtLabel: '--',
           },
           {
-            taskId: "vocab",
-            name: "Vocabulary Public",
-            status: "started",
-            statusLabel: "Started",
-            statusIcon: "pi pi-clock",
-            statusSeverity: "warn",
-            startedAt: "2024-01-15T00:00:00.000Z",
+            taskId: 'vocab',
+            name: 'Vocabulary Public',
+            status: 'started',
+            statusLabel: 'Started',
+            statusIcon: 'pi pi-clock',
+            statusSeverity: 'warn',
+            startedAt: '2024-01-15T00:00:00.000Z',
             completedAt: null,
-            startedAtLabel: new Date("2024-01-15T00:00:00.000Z").toLocaleString(),
-            completedAtLabel: "--",
+            startedAtLabel: new Date('2024-01-15T00:00:00.000Z').toLocaleString(),
+            completedAtLabel: '--',
           },
         ],
         user: {
@@ -472,30 +468,28 @@ describe('ProgressReportFeature.vue', () => {
       {
         tasks: [
           {
-            taskId: "math",
-            name: "Math Public",
-            status: "completed",
-            statusLabel: "Completed",
-            statusIcon: "pi pi-check-circle",
-            statusSeverity: "success",
-            startedAt: "2024-01-08T00:00:00.000Z",
-            completedAt: "2024-01-09T00:00:00.000Z",
-            startedAtLabel: new Date("2024-01-08T00:00:00.000Z").toLocaleString(),
-            completedAtLabel: new Date(
-              "2024-01-09T00:00:00.000Z",
-            ).toLocaleString(),
+            taskId: 'math',
+            name: 'Math Public',
+            status: 'completed',
+            statusLabel: 'Completed',
+            statusIcon: 'pi pi-check-circle',
+            statusSeverity: 'success',
+            startedAt: '2024-01-08T00:00:00.000Z',
+            completedAt: '2024-01-09T00:00:00.000Z',
+            startedAtLabel: new Date('2024-01-08T00:00:00.000Z').toLocaleString(),
+            completedAtLabel: new Date('2024-01-09T00:00:00.000Z').toLocaleString(),
           },
           {
-            taskId: "vocab",
-            name: "Vocabulary Public",
-            status: "notStarted",
-            statusLabel: "Not Started",
-            statusIcon: "pi pi-minus-circle",
-            statusSeverity: "warning",
+            taskId: 'vocab',
+            name: 'Vocabulary Public',
+            status: 'notStarted',
+            statusLabel: 'Not Started',
+            statusIcon: 'pi pi-minus-circle',
+            statusSeverity: 'warning',
             startedAt: null,
             completedAt: null,
-            startedAtLabel: "--",
-            completedAtLabel: "--",
+            startedAtLabel: '--',
+            completedAtLabel: '--',
           },
         ],
         user: {
@@ -507,7 +501,7 @@ describe('ProgressReportFeature.vue', () => {
         },
       },
     ]);
-    expect(wrapper.findComponent({ name: "PvDataTable" }).exists()).toBe(true);
+    expect(wrapper.findComponent({ name: 'PvDataTable' }).exists()).toBe(true);
   });
 
   it('filters table rows by login search input', async () => {
@@ -532,46 +526,34 @@ describe('ProgressReportFeature.vue', () => {
       1,
       [
         {
-          "Math Public Started at": new Date(
-            "2024-01-11T00:00:00.000Z",
-          ).toLocaleString(),
-          "Math Public Completed at": "--",
-          School: "",
-          UID: "student-1",
-          "User Login": "alice@example.com",
-          "User Type": "Student",
-          "Vocabulary Public Started at": new Date(
-            "2024-01-10T00:00:00.000Z",
-          ).toLocaleString(),
-          "Vocabulary Public Completed at": new Date(
-            "2024-01-12T00:00:00.000Z",
-          ).toLocaleString(),
+          'Math Public Started at': new Date('2024-01-11T00:00:00.000Z').toLocaleString(),
+          'Math Public Completed at': '--',
+          School: '',
+          UID: 'student-1',
+          'User Login': 'alice@example.com',
+          'User Type': 'Student',
+          'Vocabulary Public Started at': new Date('2024-01-10T00:00:00.000Z').toLocaleString(),
+          'Vocabulary Public Completed at': new Date('2024-01-12T00:00:00.000Z').toLocaleString(),
         },
         {
-          "Math Public Started at": "--",
-          "Math Public Completed at": "--",
-          School: "",
-          UID: "student-2",
-          "User Login": "bob@example.com",
-          "User Type": "Student",
-          "Vocabulary Public Started at": new Date(
-            "2024-01-15T00:00:00.000Z",
-          ).toLocaleString(),
-          "Vocabulary Public Completed at": "--",
+          'Math Public Started at': '--',
+          'Math Public Completed at': '--',
+          School: '',
+          UID: 'student-2',
+          'User Login': 'bob@example.com',
+          'User Type': 'Student',
+          'Vocabulary Public Started at': new Date('2024-01-15T00:00:00.000Z').toLocaleString(),
+          'Vocabulary Public Completed at': '--',
         },
         {
-          "Math Public Started at": new Date(
-            "2024-01-08T00:00:00.000Z",
-          ).toLocaleString(),
-          "Math Public Completed at": new Date(
-            "2024-01-09T00:00:00.000Z",
-          ).toLocaleString(),
-          School: "",
-          UID: "teacher-1",
-          "User Login": "teacher@example.com",
-          "User Type": "Teacher",
-          "Vocabulary Public Started at": "--",
-          "Vocabulary Public Completed at": "--",
+          'Math Public Started at': new Date('2024-01-08T00:00:00.000Z').toLocaleString(),
+          'Math Public Completed at': new Date('2024-01-09T00:00:00.000Z').toLocaleString(),
+          School: '',
+          UID: 'teacher-1',
+          'User Login': 'teacher@example.com',
+          'User Type': 'Teacher',
+          'Vocabulary Public Started at': '--',
+          'Vocabulary Public Completed at': '--',
         },
       ],
       'progress-report-winter-progress-assignment-north-district.csv',
@@ -580,20 +562,14 @@ describe('ProgressReportFeature.vue', () => {
       2,
       [
         {
-          "Math Public Started at": new Date(
-            "2024-01-11T00:00:00.000Z",
-          ).toLocaleString(),
-          "Math Public Completed at": "--",
-          School: "",
-          UID: "student-1",
-          "User Login": "alice@example.com",
-          "User Type": "Student",
-          "Vocabulary Public Started at": new Date(
-            "2024-01-10T00:00:00.000Z",
-          ).toLocaleString(),
-          "Vocabulary Public Completed at": new Date(
-            "2024-01-12T00:00:00.000Z",
-          ).toLocaleString(),
+          'Math Public Started at': new Date('2024-01-11T00:00:00.000Z').toLocaleString(),
+          'Math Public Completed at': '--',
+          School: '',
+          UID: 'student-1',
+          'User Login': 'alice@example.com',
+          'User Type': 'Student',
+          'Vocabulary Public Started at': new Date('2024-01-10T00:00:00.000Z').toLocaleString(),
+          'Vocabulary Public Completed at': new Date('2024-01-12T00:00:00.000Z').toLocaleString(),
         },
       ],
       'progress-selected.csv',

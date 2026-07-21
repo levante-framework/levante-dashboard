@@ -251,37 +251,37 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted } from "vue";
-import { storeToRefs } from "pinia";
-import { useRoute, useRouter } from "vue-router";
-import _get from "lodash/get";
-import _kebabCase from "lodash/kebabCase";
-import _map from "lodash/map";
-import _startCase from "lodash/startCase";
-import PvChart from "primevue/chart";
-import PvColumn from "primevue/column";
-import PvDataTable from "primevue/datatable";
-import PvMultiSelect from "primevue/multiselect";
-import PvSelectButton from "primevue/selectbutton";
-import PvTag from "primevue/tag";
-import { useAuthStore } from "@/store/auth";
-import { useAdministrationSyncStatus } from "@/composables/useAdministrationSyncStatus";
-import useTasksDictionaryQuery from "@/composables/queries/useTasksDictionaryQuery";
-import { getDynamicRouterPath } from "@/helpers/getDynamicRouterPath";
-import { exportCsv } from "@/helpers/query/utils";
-import { normalizeUserTypeForDisplay } from "@/helpers/userType";
-import { taskDisplayNames } from "@/helpers/reports";
-import { setBarChartData, setBarChartOptions } from "@/helpers/plotting";
-import { getTooltip, normalizeToLowercase } from "@/helpers";
-import { isLevante } from "@/constants";
-import { APP_ROUTES } from "@/constants/routes";
-import RoarDataTable from "@/components/RoarDataTable.vue";
-import PvFloatLabel from "primevue/floatlabel";
-import LevanteSpinner from "@/components/LevanteSpinner.vue";
-import PvInputText from "primevue/inputtext";
-import _capitalize from "lodash/capitalize";
-import { administrationsRepository } from "@/firebase/repositories/AdministrationsRepository";
-import { usersRepository } from "@/firebase/repositories/UsersRepository";
+import { computed, ref, watch, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useRoute, useRouter } from 'vue-router';
+import _get from 'lodash/get';
+import _kebabCase from 'lodash/kebabCase';
+import _map from 'lodash/map';
+import _startCase from 'lodash/startCase';
+import PvChart from 'primevue/chart';
+import PvColumn from 'primevue/column';
+import PvDataTable from 'primevue/datatable';
+import PvMultiSelect from 'primevue/multiselect';
+import PvSelectButton from 'primevue/selectbutton';
+import PvTag from 'primevue/tag';
+import { useAuthStore } from '@/store/auth';
+import { useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
+import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
+import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
+import { exportCsv } from '@/helpers/query/utils';
+import { normalizeUserTypeForDisplay } from '@/helpers/userType';
+import { taskDisplayNames } from '@/helpers/reports';
+import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
+import { getTooltip, normalizeToLowercase } from '@/helpers';
+import { isLevante } from '@/constants';
+import { APP_ROUTES } from '@/constants/routes';
+import RoarDataTable from '@/components/RoarDataTable.vue';
+import PvFloatLabel from 'primevue/floatlabel';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import PvInputText from 'primevue/inputtext';
+import _capitalize from 'lodash/capitalize';
+import { administrationsRepository } from '@/firebase/repositories/AdministrationsRepository';
+import { usersRepository } from '@/firebase/repositories/UsersRepository';
 
 const props = defineProps({
   administrationId: {
@@ -376,33 +376,33 @@ const statusForUserOnTask = (userId, taskId, taskProgress) => {
 };
 
 const taskStatusDisplay = (status) => {
-  if (status === "completed") {
+  if (status === 'completed') {
     return {
-      statusLabel: "Completed",
-      statusIcon: "pi pi-check-circle",
-      statusSeverity: "success",
+      statusLabel: 'Completed',
+      statusIcon: 'pi pi-check-circle',
+      statusSeverity: 'success',
     };
   }
 
-  if (status === "started") {
+  if (status === 'started') {
     return {
-      statusLabel: "Started",
-      statusIcon: "pi pi-clock",
-      statusSeverity: "warn",
+      statusLabel: 'Started',
+      statusIcon: 'pi pi-clock',
+      statusSeverity: 'warn',
     };
   }
 
   return {
-    statusLabel: "Not Started",
-    statusIcon: "pi pi-minus-circle",
-    statusSeverity: "warning",
+    statusLabel: 'Not Started',
+    statusIcon: 'pi pi-minus-circle',
+    statusSeverity: 'warning',
   };
 };
 
 const formatTaskDate = (iso) => {
-  if (!iso) return "--";
+  if (!iso) return '--';
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "--";
+  if (Number.isNaN(d.getTime())) return '--';
   return d.toLocaleString();
 };
 
@@ -549,8 +549,8 @@ const taskLabel = (taskId) => {
 
 const appendTaskProgressColumns = (row, tasks = []) => {
   for (const task of tasks) {
-    row[`${task.name} Started at`] = task.startedAtLabel ?? "--";
-    row[`${task.name} Completed at`] = task.completedAtLabel ?? "--";
+    row[`${task.name} Started at`] = task.startedAtLabel ?? '--';
+    row[`${task.name} Completed at`] = task.completedAtLabel ?? '--';
   }
 };
 
@@ -583,11 +583,8 @@ const computedProgressData = computed(() => {
   for (const u of progressUsers.value) {
     const apiTasks = u.tasks ?? [];
     const tasks = orderedTaskIds.value.map((taskId) => {
-      const fromApi = apiTasks.find(
-        (t) => t.taskId.toLowerCase() === taskId.toLowerCase(),
-      );
-      const status =
-        fromApi?.status ?? statusForUserOnTask(u.userId, taskId, taskProgress);
+      const fromApi = apiTasks.find((t) => t.taskId.toLowerCase() === taskId.toLowerCase());
+      const status = fromApi?.status ?? statusForUserOnTask(u.userId, taskId, taskProgress);
       return {
         taskId,
         name: taskLabel(taskId),
