@@ -21,6 +21,7 @@
               class="pi pi-info-circle text-primary p-1 border-circle hover:text-100"
             ></i
           ></PvButton>
+          <i v-if="isUserSuperAdmin() && variant?.variant?.registered" class="pi pi-verified ml-1 text-primary"></i>
           <div v-if="variant?.variant?.params?.cat" class="flex ml-2 gap-2">
             <PvTag severity="warn" rounded><div class="font-semibold text-xs">Adaptive</div></PvTag>
           </div>
@@ -113,6 +114,7 @@
               class="pi pi-info-circle text-primary p-1 border-circle hover:text-100"
             ></i
           ></PvButton>
+          <i v-if="isUserSuperAdmin() && variant?.variant?.registered" class="pi pi-verified ml-1 text-primary"></i>
           <div v-if="variant?.variant?.params?.cat" class="flex ml-2 gap-2">
             <PvTag severity="warn" rounded><div class="font-semibold text-xs">Adaptive</div></PvTag>
           </div>
@@ -300,6 +302,7 @@ interface VariantData {
   name: string;
   params: Record<string, any>;
   conditions?: VariantConditions;
+  registered?: boolean;
 }
 
 interface TaskData {
