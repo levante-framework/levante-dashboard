@@ -21,12 +21,21 @@ function eventTextHaystacks(event: SentryEventLike): string[] {
   ].filter((value): value is string => typeof value === 'string');
 }
 
+function eventMessageHaystacks(event: SentryEventLike): string[] {
+  return [
+    event.message,
+    event.logentry?.message,
+    ...(event.exception?.values ?? []).map((exception) => exception.value),
+  ].filter((value): value is string => typeof value === 'string');
+}
+
 function isCrossOriginVueRefSecurityError(event: SentryEventLike): boolean {
   return eventTextHaystacks(event).some((text) => text.includes("__v_isRef") && text.includes('cross-origin frame'));
 }
 
 function isGenericConsoleNoise(event: SentryEventLike): boolean {
-  return eventTextHaystacks(event).some((text) => {
+  // Only inspect message/value — never exception.type, which is often literally "Error".
+  return eventMessageHaystacks(event).some((text) => {
     const trimmed = text.trim();
     return (
       trimmed === 'error' ||
