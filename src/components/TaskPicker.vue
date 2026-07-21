@@ -164,6 +164,8 @@
         </div>
       </div>
     </div>
+
+    <PvConfirmDialog group="task-picker" :draggable="false" />
   </PvPanel>
 </template>
 
@@ -175,12 +177,14 @@ import PvAccordionContent from 'primevue/accordioncontent';
 import PvAccordionHeader from 'primevue/accordionheader';
 import PvAccordionPanel from 'primevue/accordionpanel';
 import PvButton from 'primevue/button';
+import PvConfirmDialog from 'primevue/confirmdialog';
 import PvIconField from 'primevue/iconfield';
 import PvInputIcon from 'primevue/inputicon';
 import PvInputText from 'primevue/inputtext';
 import PvPanel from 'primevue/panel';
 import PvScrollPanel from 'primevue/scrollpanel';
 import PvSelect from 'primevue/select';
+import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, nextTick, ref, watch } from 'vue';
 import { VueDraggableNext } from 'vue-draggable-next';
@@ -257,6 +261,8 @@ const emit = defineEmits<Emits>();
 const toast = useToast();
 const authStore = useAuthStore();
 const { isUserSuperAdmin } = authStore;
+
+const confirm = useConfirm();
 
 const languages = computed(() =>
   Object.entries(languageOptions).map(([key, options]) => ({
@@ -465,7 +471,28 @@ const handleCardMove = (card: DragEvent): boolean => {
 };
 
 const removeCard = (variant: VariantObject): void => {
-  selectedVariants.value = selectedVariants.value.filter((selectedVariant) => selectedVariant.id !== variant.id);
+  const isVariantRegistered = variant?.variant?.registered;
+
+  if (isVariantRegistered) {
+    selectedVariants.value = selectedVariants.value.filter((selectedVariant) => selectedVariant.id !== variant.id);
+    return;
+  }
+
+  confirm.require({
+    group: 'task-picker',
+    header: 'Remove deregistered task?',
+    message: "This task has been deregistered and you won't be able to add it back again.",
+    acceptLabel: 'Remove',
+    rejectLabel: 'Keep',
+    rejectProps: {
+      label: 'Keep',
+      severity: 'secondary',
+      outlined: true,
+    },
+    accept: () => {
+      selectedVariants.value = selectedVariants.value.filter((selectedVariant) => selectedVariant.id !== variant.id);
+    },
+  });
 };
 
 const addUserDefaultCondition = (variant: VariantObject): VariantObject => {
