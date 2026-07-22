@@ -27,6 +27,19 @@ export interface TaskProgressSummaryRow {
   completed: number;
 }
 
+export type UserTaskProgressStatus =
+  | 'notAssigned'
+  | 'notStarted'
+  | 'started'
+  | 'completed';
+
+export interface UserTaskProgressRow {
+  taskId: string;
+  status: UserTaskProgressStatus;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
 export interface UserAdministrationProgressRow {
   userId: string;
   email: string | null;
@@ -35,6 +48,7 @@ export interface UserAdministrationProgressRow {
   status: AssignmentRollupStatus;
   startedAt: string | null;
   completedAt: string | null;
+  tasks: UserTaskProgressRow[];
 }
 
 export interface GetAdministrationOrgProgressResult {
