@@ -187,9 +187,7 @@ import { VueDraggableNext } from 'vue-draggable-next';
 import { formattedVariantName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 import { languageOptions } from '@/translations/i18n';
-import type VariantCard from './VariantCard.vue';
-
-type VariantObject = InstanceType<typeof VariantCard>['$props']['variant'];
+import VariantCard, { type VariantObject } from './VariantCard.vue';
 
 interface PreExistingAssessmentRecord {
   variantId: string;
