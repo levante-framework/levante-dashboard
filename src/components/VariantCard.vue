@@ -307,7 +307,7 @@ interface TaskData {
   image?: string;
 }
 
-interface VariantObject {
+export interface VariantObject {
   id: string;
   variant: VariantData;
   task: TaskData;
