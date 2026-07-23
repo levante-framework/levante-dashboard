@@ -10,23 +10,7 @@ interface UserData {
   [key: string]: any; // Allow other properties
 }
 
-interface NavigatorUABrandVersion {
-  brand: string;
-  version: string;
-}
-
-interface NavigatorUAData {
-  brands?: NavigatorUABrandVersion[];
-  mobile?: boolean;
-  platform?: string;
-  getHighEntropyValues?: (hints: string[]) => Promise<Record<string, unknown>>;
-}
-
-interface NavigatorWithUAData extends Navigator {
-  userAgentData?: NavigatorUAData;
-}
-
-const HIGH_ENTROPY_HINTS = ['architecture', 'bitness', 'model', 'platformVersion', 'fullVersionList', 'wow64'] as const;
+const HIGH_ENTROPY_HINTS = ['architecture', 'bitness', 'model', 'platformVersion', 'fullVersionList', 'wow64'];
 
 const isProduction = import.meta.env.MODE === 'production';
 // const isProduction = import.meta.env.VITE_FIREBASE_PROJECT==='PROD'; // can be used for more accurate logging
@@ -37,18 +21,12 @@ const coreTasksVersion = packageJson.dependencies['@levante-framework/core-tasks
 const commitHash = import.meta.env.VITE_APP_VERSION;
 let currentUser: UserData | null = null;
 let currentProperties: Record<string, any> = {};
-let clientHintsPromise: Promise<void> | null = null;
 
 function setAdditionalProperties(properties: Record<string, any>): void {
   currentProperties = {
     ...currentProperties,
     ...properties,
   };
-}
-
-function clearUserScopedProperties(): void {
-  const { clientHints } = currentProperties;
-  currentProperties = clientHints ? { clientHints } : {};
 }
 
 /**
@@ -128,60 +106,40 @@ function setUser(userData: UserData | null, force: boolean = false): void {
       }
       Sentry.setUser(null);
       currentUser = null;
-      clearUserScopedProperties();
+      currentProperties = {};
     }
   } else {
     if (userData) {
       console.info('[Logger SetUser]', userData);
     } else {
       console.info('[Logger ResetUser]');
-      clearUserScopedProperties();
+      currentProperties = {};
     }
   }
 }
 
-/**
- * Collect low-entropy UA Client Hints plus high-entropy values when available.
- * Never throws; missing API/fields are omitted. Does not show a user permission prompt.
- */
+/** Attach UA Client Hints when available. Never throws if the API or fields are missing. */
 async function enrichClientHints(): Promise<void> {
-  if (clientHintsPromise) return clientHintsPromise;
+  try {
+    const ua = (navigator as Navigator & { userAgentData?: any }).userAgentData;
+    if (!ua) return;
 
-  clientHintsPromise = (async () => {
-    try {
-      const uaData = (navigator as NavigatorWithUAData).userAgentData;
-      if (!uaData) return;
+    const high =
+      typeof ua.getHighEntropyValues === 'function'
+        ? await ua.getHighEntropyValues(HIGH_ENTROPY_HINTS).catch(() => ({}))
+        : {};
 
-      const clientHints: Record<string, unknown> = {};
-      if (Array.isArray(uaData.brands)) clientHints.brands = uaData.brands;
-      if (typeof uaData.mobile === 'boolean') clientHints.mobile = uaData.mobile;
-      if (typeof uaData.platform === 'string' && uaData.platform) clientHints.platform = uaData.platform;
-
-      if (typeof uaData.getHighEntropyValues === 'function') {
-        try {
-          const highEntropy = await uaData.getHighEntropyValues([...HIGH_ENTROPY_HINTS]);
-          if (highEntropy && typeof highEntropy === 'object') {
-            for (const key of HIGH_ENTROPY_HINTS) {
-              const value = highEntropy[key];
-              if (value !== undefined && value !== null && value !== '') {
-                clientHints[key] = value;
-              }
-            }
-          }
-        } catch {
-          // Policy denial or unsupported hints — keep low-entropy values only.
-        }
-      }
-
-      if (Object.keys(clientHints).length > 0) {
-        setAdditionalProperties({ clientHints });
-      }
-    } catch {
-      // Never let telemetry enrichment break the app.
-    }
-  })();
-
-  return clientHintsPromise;
+    setAdditionalProperties({
+      clientHints: {
+        brands: ua.brands,
+        mobile: ua.mobile,
+        platform: ua.platform,
+        ...high,
+      },
+    });
+  } catch {
+    // Never let telemetry enrichment break the app.
+  }
 }
 
 export const logger = {
