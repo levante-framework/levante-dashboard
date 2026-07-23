@@ -44,6 +44,7 @@ import NavBar from '@/components/NavBar.vue';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 import { fetchDocById } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { getLanguages, getTranslations, i18n } from '@/translations/i18n';
 import Footer from './components/Footer.vue';
@@ -152,6 +153,8 @@ onBeforeMount(async () => {
 });
 
 onMounted(() => {
+  void logger.enrichClientHints();
+
   const isLocal = import.meta.env.MODE === 'development';
   const shouldShowDevTools = import.meta.env.VITE_SHOW_DEV_TOOLS === 'true';
   const isDevToolsEnabled = import.meta.env.VITE_QUERY_DEVTOOLS_ENABLED === 'true';
