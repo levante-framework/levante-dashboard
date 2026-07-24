@@ -500,7 +500,7 @@ const handleSave = (): void => {
     const conditionsCopy = computedConditions(assignedConditionsToValues, optionalConditionsToValues);
 
     if (isOptionalForAll.value === true) {
-      conditionsCopy['optional'] = true;
+      conditionsCopy.optional = true;
     }
 
     props.updateVariant(props.assessment.id, conditionsCopy);

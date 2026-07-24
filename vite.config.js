@@ -1,10 +1,10 @@
+import * as child from 'node:child_process';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { fileURLToPath, URL } from 'node:url';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import UnheadVite from '@unhead/addons/vite';
 import Vue from '@vitejs/plugin-vue';
-import * as child from 'child_process';
-import { createRequire } from 'module';
-import path from 'path';
-import { fileURLToPath, URL } from 'url';
 import { defineConfig } from 'vite';
 import mkcert from 'vite-plugin-mkcert';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';

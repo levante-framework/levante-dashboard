@@ -594,8 +594,8 @@ const removeNewField = (field, array) => {
 
 // Deletes a parameter from the updatedTaskData object
 const deleteParam = (param) => {
-  if (updatedTaskData['gameConfig'][param] !== undefined) {
-    delete updatedTaskData['gameConfig'][param];
+  if (updatedTaskData.gameConfig[param] !== undefined) {
+    delete updatedTaskData.gameConfig[param];
   }
   delete updatedTaskData[param];
 };

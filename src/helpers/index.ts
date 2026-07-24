@@ -183,7 +183,7 @@ export const flattenObj = (obj: any): Record<string, any> => {
         for (const j in temp) {
           if (Object.hasOwn(temp, j)) {
             // Add hasOwnProperty check
-            result[camelCase(i + '.' + j)] = temp[j] === undefined || temp[j] === null ? '' : temp[j]; // More robust empty check
+            result[camelCase(`${i}.${j}`)] = temp[j] === undefined || temp[j] === null ? '' : temp[j]; // More robust empty check
           }
         }
       } else {

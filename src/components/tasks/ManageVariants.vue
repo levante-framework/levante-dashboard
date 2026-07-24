@@ -675,8 +675,8 @@ const moveToDeletedParams = (param) => {
 
 // Delete the param from the updatedVariantData object when updating a variant
 const deleteParam = (param) => {
-  if (updatedVariantData['params'][param] !== undefined) {
-    delete updatedVariantData['params'][param];
+  if (updatedVariantData.params[param] !== undefined) {
+    delete updatedVariantData.params[param];
   }
   delete updatedVariantData[param];
 };

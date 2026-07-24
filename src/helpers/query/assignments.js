@@ -1039,15 +1039,15 @@ export const assignmentPageFetcher = async (
           const userRuns = runs[score.roarUid];
           for (const task of score.assignment.assessments) {
             const runId = task.runId;
-            task['scores'] = _get(
+            task.scores = _get(
               _find(userRuns, (runDoc) => runDoc.name.includes(runId)),
               'data.scores',
             );
-            task['reliable'] = _get(
+            task.reliable = _get(
               _find(userRuns, (runDoc) => runDoc.name.includes(runId)),
               'data.reliable',
             );
-            task['engagementFlags'] = _get(
+            task.engagementFlags = _get(
               _find(userRuns, (runDoc) => runDoc.name.includes(runId)),
               'data.engagementFlags',
             );

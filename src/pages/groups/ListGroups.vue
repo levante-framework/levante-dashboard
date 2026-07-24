@@ -587,7 +587,7 @@ watchEffect(async () => {
             orgType: activeOrgType.value,
             orgId: org.id,
             orgName: org?.name || '_',
-            tooltip: 'View Users in ' + org?.name || '',
+            tooltip: `View Users in ${org?.name}` || '',
           },
         };
       }),

@@ -581,7 +581,7 @@ const computedFilters = computed(() => {
   _forEach(computedColumns.value, (column) => {
     // Check if header text is supplied; if not, generate.
     if (!_get(column, 'header')) {
-      column['header'] = _startCase(_get(column, 'field'));
+      column.header = _startCase(_get(column, 'field'));
     }
     // Choose whether to default to field or a custom filterField (e.g. tag based filters)
     const fieldOrFilterField = column?.filterField ? column.filterField : column.field;

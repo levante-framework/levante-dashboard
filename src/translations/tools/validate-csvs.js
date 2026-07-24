@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import fs from 'fs';
+import fs from 'node:fs';
+import path from 'node:path';
 import Papa from 'papaparse';
-import path from 'path';
 
 const consolidatedRoot = path.join('src', 'translations', 'consolidated');
 

@@ -177,11 +177,11 @@ export const orgFetcher = async (orgType, selectedDistrict, isSuperAdmin, adminO
       });
 
       // Then add all of the district IDs listed in the docs for each school and class in adminOrgs.
-      const schoolPromises = (adminOrgs.value['schools'] ?? []).map((schoolId) => {
+      const schoolPromises = (adminOrgs.value.schools ?? []).map((schoolId) => {
         return fetchDocById('schools', schoolId, ['districtId']);
       });
 
-      const classPromises = (adminOrgs.value['classes'] ?? []).map((classId) => {
+      const classPromises = (adminOrgs.value.classes ?? []).map((classId) => {
         return fetchDocById('classes', classId, ['districtId']);
       });
 
@@ -197,19 +197,19 @@ export const orgFetcher = async (orgType, selectedDistrict, isSuperAdmin, adminO
       return Promise.all(promises);
     } else if (orgType === 'schools') {
       const districtDoc = await fetchDocById('districts', districtId, ['schools']);
-      if ((adminOrgs.value['districts'] ?? []).includes(districtId)) {
+      if ((adminOrgs.value.districts ?? []).includes(districtId)) {
         const promises = (districtDoc.schools ?? []).map((schoolId) => {
           return fetchDocById('schools', schoolId, select);
         });
         return Promise.all(promises);
-      } else if ((adminOrgs.value['schools'] ?? []).length > 0) {
-        const schoolIds = _intersection(adminOrgs.value['schools'], districtDoc.schools);
+      } else if ((adminOrgs.value.schools ?? []).length > 0) {
+        const schoolIds = _intersection(adminOrgs.value.schools, districtDoc.schools);
         const promises = (schoolIds ?? []).map((schoolId) => {
           return fetchDocById('schools', schoolId, select);
         });
         return Promise.all(promises);
-      } else if ((adminOrgs.value['classes'] ?? []).length > 0) {
-        const classPromises = (adminOrgs.value['classes'] ?? []).map((classId) => {
+      } else if ((adminOrgs.value.classes ?? []).length > 0) {
+        const classPromises = (adminOrgs.value.classes ?? []).map((classId) => {
           return fetchDocById('classes', classId, ['schoolId']);
         });
         const classes = await Promise.all(classPromises);

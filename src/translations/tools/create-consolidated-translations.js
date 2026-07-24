@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -142,7 +142,7 @@ function toCsvLine(values) {
       // Escape newlines, carriage returns, and quotes for CSV
       const escaped = s.replace(/\r?\n/g, '\\n').replace(/\r/g, '\\r');
       return escaped.includes(',') || escaped.includes('"') || s.includes('\n') || s.includes('\r')
-        ? '"' + escaped.replace(/"/g, '""') + '"'
+        ? `"${escaped.replace(/"/g, '""')}"`
         : escaped;
     })
     .join(',');
