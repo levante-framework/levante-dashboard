@@ -403,13 +403,13 @@
           // FIRST: Look for English under 'en' key
           if (textObj.en) {
             const englishText = extractTextWithEnglishPriority(textObj.en);
-            if (englishText && englishText.trim()) return englishText;
+            if (englishText?.trim()) return englishText;
           }
 
           // SECOND: Look for 'default' but check if it's English
           if (textObj.default) {
             const defaultText = extractTextWithEnglishPriority(textObj.default);
-            if (defaultText && defaultText.trim()) {
+            if (defaultText?.trim()) {
               // Skip if it's clearly Spanish
               if (!defaultText.toLowerCase().includes('sí') && !defaultText.toLowerCase().includes('no')) {
                 return defaultText;
@@ -444,7 +444,7 @@
               }
               if (typeof textObj[key] === 'object') {
                 const nested = extractTextWithEnglishPriority(textObj[key]);
-                if (nested && nested.trim()) return nested;
+                if (nested?.trim()) return nested;
               }
             }
           }

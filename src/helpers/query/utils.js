@@ -316,7 +316,7 @@ export const matchMode2Op = {
  * @returns {Object} - Mapped data with converted values
  */
 export const mapToValues = (data) => {
-  if (!data || !data.fields) {
+  if (!data?.fields) {
     return data; // Return as-is if no fields to convert
   }
 

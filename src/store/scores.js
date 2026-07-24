@@ -40,9 +40,6 @@ const getRunInfoCommon = (mergedRun) => {
         //supportLevel: thetaToSupportSWR(run.runInfoOrig.thetaEstimate, run.runInfoOrig.grade),
         supportLevel: percentileToSupportClassification('pa', normedPercentile, mergedRun.grade),
       };
-
-    case 'sre':
-    case 'vocab':
     default:
       console.log('TODO: add', mergedRun.taskId, ' to getRunInfoCommon()');
       break;

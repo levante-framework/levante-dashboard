@@ -711,7 +711,7 @@ const filteredTableData = computed(() => {
       const normalizedItemName = normalizeToLowercase(item?.name || '');
 
       // Filter by name
-      if (normalizedItemName && normalizedItemName.includes(normalizedSearchQuery)) {
+      if (normalizedItemName?.includes(normalizedSearchQuery)) {
         return true;
       }
 

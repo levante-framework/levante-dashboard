@@ -310,7 +310,7 @@ export const orgFetchAll = async (
             if (creatorData) {
               if (creatorData.displayName) {
                 creatorName = creatorData.displayName;
-              } else if (creatorData.name && creatorData.name.first && creatorData.name.last) {
+              } else if (creatorData.name?.first && creatorData.name.last) {
                 creatorName = `${creatorData.name.first} ${creatorData.name.last}`;
               }
             }
