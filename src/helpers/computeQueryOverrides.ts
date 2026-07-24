@@ -1,5 +1,5 @@
 import type { QueryKey, UseQueryOptions } from '@tanstack/vue-query'; // Import relevant types
-import { type ComputedRef, computed, type MaybeRefOrGetter, Ref, reactive, toRaw, toRefs, toValue } from 'vue';
+import { type ComputedRef, computed, type MaybeRefOrGetter, reactive, toRaw, toRefs, toValue } from 'vue';
 
 // Define a more specific type for conditions
 type Condition = MaybeRefOrGetter<boolean>;

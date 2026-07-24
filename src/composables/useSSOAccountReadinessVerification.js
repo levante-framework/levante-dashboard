@@ -1,6 +1,5 @@
 import { useQueryClient } from '@tanstack/vue-query';
 import { StatusCodes } from 'http-status-codes';
-import { storeToRefs } from 'pinia';
 import { onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import useUserDataQuery from '@/composables/queries/useUserDataQuery';

@@ -1,4 +1,4 @@
-import { type CollectionReference, DocumentData, getDocs, type Query, query, where } from 'firebase/firestore';
+import { type CollectionReference, getDocs, type Query, query, where } from 'firebase/firestore';
 import _fromPairs from 'lodash/fromPairs';
 import _invert from 'lodash/invert';
 import _toPairs from 'lodash/toPairs';

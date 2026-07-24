@@ -9,12 +9,11 @@ import {
   type PermissionDocument,
   PermissionService,
   type Resource,
-  ROLES,
   type Role,
 } from '@levante-framework/permissions-core';
 import _mapValues from 'lodash/mapValues';
 import { storeToRefs } from 'pinia';
-import { computed, onMounted, readonly, ref, toValue } from 'vue';
+import { computed, onMounted, readonly, ref } from 'vue';
 import { convertValues, getAxiosInstance, getBaseDocumentPath } from '@/helpers/query/utils';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';

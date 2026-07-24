@@ -1,6 +1,6 @@
 import { definePreset } from '@primevue/themes';
 import Aura from '@primevue/themes/aura';
-import { MutationCache, Query, QueryCache, QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
+import { MutationCache, QueryCache, QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { createHead } from '@unhead/vue';
 import { createPinia } from 'pinia';
 import piniaPluginPersistedState from 'pinia-plugin-persistedstate';
