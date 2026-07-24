@@ -4,12 +4,15 @@ import type {
   CreateTaskVariantResult,
   GetTasksParams,
   GetTasksResult,
+  GetTaskVariantRevisionsParams,
+  GetTaskVariantRevisionsResult,
   GetTaskVariantsParams,
   GetTaskVariantsResult,
   GetVariantParamSpecsParams,
   GetVariantParamSpecsResult,
   SerializedTask,
   SerializedTaskVariant,
+  SerializedTaskVariantRevision,
   SerializedVariantParamSpec,
   UpdateTaskVariantParams,
   UpdateTaskVariantResult,
@@ -34,6 +37,14 @@ class TasksRepository extends Repository {
     return response?.variants ?? [];
   }
 
+  async getTaskVariantRevisions(variantId: string): Promise<SerializedTaskVariantRevision[]> {
+    const response = await this.call<GetTaskVariantRevisionsParams, GetTaskVariantRevisionsResult>(
+      'getTaskVariantRevisions',
+      { variantId },
+    );
+    return response?.revisions ?? [];
+  }
+
   async getVariantParamSpecs(params: GetVariantParamSpecsParams = {}): Promise<SerializedVariantParamSpec[]> {
     const response = await this.call<GetVariantParamSpecsParams, GetVariantParamSpecsResult>(
       'getVariantParamSpecs',
@@ -42,12 +53,10 @@ class TasksRepository extends Repository {
     return response?.variantParamSpecs ?? [];
   }
 
-  // Create/edit/archive tasks
   async upsertTask(params: UpsertTaskParams): Promise<UpsertTaskResult> {
     return await this.call<UpsertTaskParams, UpsertTaskResult>('upsertTask', params);
   }
 
-  // Create/edit/archive variant param specs
   async upsertVariantParamSpec(params: UpsertVariantParamSpecParams): Promise<UpsertVariantParamSpecResult> {
     return await this.call<UpsertVariantParamSpecParams, UpsertVariantParamSpecResult>(
       'upsertVariantParamSpec',
@@ -55,12 +64,10 @@ class TasksRepository extends Repository {
     );
   }
 
-  // Create a new variant when params change (params are immutable)
   async createTaskVariant(params: CreateTaskVariantParams): Promise<CreateTaskVariantResult> {
     return await this.call<CreateTaskVariantParams, CreateTaskVariantResult>('createTaskVariant', params);
   }
 
-  // Register/deregister (and archive) only — never send params
   async updateTaskVariant(params: UpdateTaskVariantParams): Promise<UpdateTaskVariantResult> {
     return await this.call<UpdateTaskVariantParams, UpdateTaskVariantResult>('updateTaskVariant', params);
   }

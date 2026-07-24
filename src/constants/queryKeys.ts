@@ -24,6 +24,7 @@ export const SYNC_STATUS_QUERY_KEY: string = 'sync-status';
 export const TASK_VARIANTS_QUERY_KEY: string = 'task-variants';
 export const TASKS_CATALOG_QUERY_KEY: string = 'tasks-catalog';
 export const TASK_VARIANTS_CATALOG_QUERY_KEY: string = 'task-variants-catalog';
+export const TASK_VARIANT_REVISIONS_QUERY_KEY: string = 'task-variant-revisions';
 export const VARIANT_PARAM_SPECS_QUERY_KEY: string = 'variant-param-specs';
 export const TASKS_QUERY_KEY: string = 'tasks';
 export const USE_ASSIGNMENT_EXISTS_QUERY_KEY: string = 'useAssignmentByNameQuery';

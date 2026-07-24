@@ -1,7 +1,7 @@
 import type { UseMutationReturnType } from '@tanstack/vue-query';
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { TASK_VARIANT_REGISTER_MUTATION_KEY } from '@/constants/mutationKeys';
-import { TASK_VARIANTS_CATALOG_QUERY_KEY } from '@/constants/queryKeys';
+import { TASK_VARIANT_REVISIONS_QUERY_KEY, TASK_VARIANTS_CATALOG_QUERY_KEY } from '@/constants/queryKeys';
 import { tasksRepository } from '@/firebase/repositories/TasksRepository';
 import { logger } from '@/logger';
 import type { UpdateTaskVariantParams, UpdateTaskVariantResult } from '@/types/taskCatalog';
@@ -19,6 +19,7 @@ const useUpdateTaskVariantMutation = (): UseMutationReturnType<
     mutationFn: (payload: UpdateTaskVariantParams) => tasksRepository.updateTaskVariant(payload),
     onSuccess: (_data, payload): void => {
       queryClient.invalidateQueries({ queryKey: [TASK_VARIANTS_CATALOG_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [TASK_VARIANT_REVISIONS_QUERY_KEY, payload.id] });
       logger.capture('Task catalog: update task variant flags', {
         variantId: payload.id,
         registered: payload.registered,

@@ -97,15 +97,13 @@
                   text
                   @click="openCreate(entry.variant)"
                 />
-                <!-- Next iteration: registration history from revisions API -->
                 <PvButton
-                  v-tooltip.top="'Registration history will use the revisions API in a later iteration'"
                   label="Reg. history"
                   icon="pi pi-history"
                   size="small"
                   severity="secondary"
                   text
-                  disabled
+                  @click="openHistory(entry.variant)"
                 />
               </div>
             </div>
@@ -156,6 +154,10 @@
       :task-id="selectedTaskId"
       :source-variant="createSourceVariant"
     />
+    <VariantRegistrationHistoryDialog
+      v-model:visible="historyDialogVisible"
+      :variant-id="historyVariantId"
+    />
   </div>
 </template>
 
@@ -167,6 +169,7 @@ import PvTag from 'primevue/tag';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { useToast } from 'primevue/usetoast';
 import VariantCreateDialog from '@/components/tasks/VariantCreateDialog.vue';
+import VariantRegistrationHistoryDialog from '@/components/tasks/VariantRegistrationHistoryDialog.vue';
 import useUpdateTaskVariantMutation from '@/composables/mutations/useUpdateTaskVariantMutation';
 import useTaskVariantsCatalogQuery from '@/composables/queries/useTaskVariantsCatalogQuery';
 import useTasksCatalogQuery from '@/composables/queries/useTasksCatalogQuery';
@@ -178,6 +181,8 @@ const toast = useToast();
 const selectedTaskId = ref<string | undefined>(undefined);
 const createDialogVisible = ref(false);
 const createSourceVariant = ref<SerializedTaskVariant | null>(null);
+const historyDialogVisible = ref(false);
+const historyVariantId = ref<string | null>(null);
 const updatingVariantId = ref<string | null>(null);
 
 const { data: tasks, isFetching: isTasksFetching } = useTasksCatalogQuery();
@@ -227,6 +232,11 @@ const timelineEntries = computed((): TimelineEntry[] => {
 function openCreate(source: SerializedTaskVariant | null = null): void {
   createSourceVariant.value = source;
   createDialogVisible.value = true;
+}
+
+function openHistory(variant: SerializedTaskVariant): void {
+  historyVariantId.value = variant.id;
+  historyDialogVisible.value = true;
 }
 
 async function toggleRegistered(variant: SerializedTaskVariant, registered: boolean): Promise<void> {

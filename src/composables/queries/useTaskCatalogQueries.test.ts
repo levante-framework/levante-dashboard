@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import { tasksRepository } from '@/firebase/repositories/TasksRepository';
 import { withSetup } from '@/test-support/withSetup.js';
+import useTaskVariantRevisionsQuery from './useTaskVariantRevisionsQuery';
 import useTaskVariantsCatalogQuery from './useTaskVariantsCatalogQuery';
 import useTasksCatalogQuery from './useTasksCatalogQuery';
 import useVariantParamSpecsQuery from './useVariantParamSpecsQuery';
@@ -12,6 +13,7 @@ vi.mock('@/firebase/repositories/TasksRepository', () => ({
   tasksRepository: {
     getTasks: vi.fn().mockResolvedValue([]),
     getTaskVariants: vi.fn().mockResolvedValue([]),
+    getTaskVariantRevisions: vi.fn().mockResolvedValue([]),
     getVariantParamSpecs: vi.fn().mockResolvedValue([]),
   },
 }));
@@ -31,6 +33,7 @@ describe('task catalog queries', () => {
     queryClient = new VueQuery.QueryClient();
     vi.mocked(tasksRepository.getTasks).mockClear();
     vi.mocked(tasksRepository.getTaskVariants).mockClear();
+    vi.mocked(tasksRepository.getTaskVariantRevisions).mockClear();
     vi.mocked(tasksRepository.getVariantParamSpecs).mockClear();
   });
 
@@ -106,5 +109,32 @@ describe('task catalog queries', () => {
         queryFn: expect.any(Function),
       }),
     );
+  });
+
+  it('useTaskVariantRevisionsQuery calls getTaskVariantRevisions with variantId', async () => {
+    vi.mocked(tasksRepository.getTaskVariantRevisions).mockResolvedValue([
+      {
+        id: 'rev-1',
+        archived: false,
+        registered: true,
+        updatedAt: '2024-02-01T00:00:00.000Z',
+        updatedBy: 'admin@example.com',
+      },
+    ]);
+
+    vi.spyOn(VueQuery, 'useQuery');
+    const variantId = ref('variant-1');
+
+    withSetup(() => useTaskVariantRevisionsQuery({ variantId }), {
+      plugins: [[VueQuery.VueQueryPlugin, { queryClient }]],
+    });
+
+    const call = vi.mocked(VueQuery.useQuery).mock.calls.at(-1)?.[0] as {
+      queryFn: () => Promise<{ id: string }[]>;
+    };
+    const result = await call.queryFn();
+
+    expect(tasksRepository.getTaskVariantRevisions).toHaveBeenCalledWith('variant-1');
+    expect(result.map((revision) => revision.id)).toEqual(['rev-1']);
   });
 });
