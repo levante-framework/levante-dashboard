@@ -157,7 +157,7 @@ export async function formatDateWithLocale(
   if (!date) return '';
 
   const dateObj = date instanceof Date ? date : new Date(date);
-  if (isNaN(dateObj.getTime())) return '';
+  if (Number.isNaN(dateObj.getTime())) return '';
 
   const { format } = await import('date-fns');
 
@@ -312,7 +312,7 @@ export const convertToDate = (dateValue?: unknown): Date | null => {
 
   // Already a Date
   if (dateValue instanceof Date) {
-    return isNaN(dateValue.getTime()) ? null : dateValue;
+    return Number.isNaN(dateValue.getTime()) ? null : dateValue;
   }
 
   // Firestore Timestamp (preferred way)
@@ -334,7 +334,7 @@ export const convertToDate = (dateValue?: unknown): Date | null => {
   // String or number fallback
   if (typeof dateValue === 'string' || typeof dateValue === 'number') {
     const parsed = new Date(dateValue);
-    return isNaN(parsed.getTime()) ? null : parsed;
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   return null;

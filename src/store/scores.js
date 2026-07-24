@@ -111,7 +111,7 @@ export function parseGrade(grade) {
   if (!grade) {
     // null, undefined, or empty string
     return 'NA';
-  } else if (isNaN(grade)) {
+  } else if (Number.isNaN(grade)) {
     // parse as a string
     if (grade.toLowerCase() === 'k') {
       return 'k';
@@ -127,9 +127,9 @@ export function parseGrade(grade) {
       return 'k';
     } else if (grade.toLowerCase() === 'adult') {
       return 'adult';
-    } else if (!isNaN(parseInt(grade))) {
+    } else if (!Number.isNaN(parseInt(grade, 10))) {
       // this catches strings like 1st, 2nd, 3rd
-      const gradeNum = parseInt(grade);
+      const gradeNum = parseInt(grade, 10);
       return gradeNum.toString();
     } else {
       console.warn(grade, 'not recognized as a grade');
@@ -137,7 +137,7 @@ export function parseGrade(grade) {
     }
   } else {
     // parse as a number
-    const gradeNum = parseInt(grade);
+    const gradeNum = parseInt(grade, 10);
 
     if (gradeNum < 0) {
       return 'pk';
