@@ -90,7 +90,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/pages/ManageTasksVariants.vue'),
     meta: {
       pageTitle: 'Manage Tasks',
-      allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SITE_ADMIN],
+      allowedRoles: [ROLES.SUPER_ADMIN],
     },
   },
   {
