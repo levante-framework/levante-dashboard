@@ -42,12 +42,12 @@ class TasksRepository extends Repository {
     return response?.variantParamSpecs ?? [];
   }
 
-  // Phase 2: create/edit/archive tasks
+  // Create/edit/archive tasks
   async upsertTask(params: UpsertTaskParams): Promise<UpsertTaskResult> {
     return await this.call<UpsertTaskParams, UpsertTaskResult>('upsertTask', params);
   }
 
-  // Phase 2: create/edit/archive variant param specs
+  // Create/edit/archive variant param specs
   async upsertVariantParamSpec(params: UpsertVariantParamSpecParams): Promise<UpsertVariantParamSpecResult> {
     return await this.call<UpsertVariantParamSpecParams, UpsertVariantParamSpecResult>(
       'upsertVariantParamSpec',
@@ -55,12 +55,12 @@ class TasksRepository extends Repository {
     );
   }
 
-  // Phase 2: create a new variant when params change (params are immutable)
+  // Create a new variant when params change (params are immutable)
   async createTaskVariant(params: CreateTaskVariantParams): Promise<CreateTaskVariantResult> {
     return await this.call<CreateTaskVariantParams, CreateTaskVariantResult>('createTaskVariant', params);
   }
 
-  // Phase 2: register/deregister only — never send params
+  // Register/deregister (and archive) only — never send params
   async updateTaskVariant(params: UpdateTaskVariantParams): Promise<UpdateTaskVariantResult> {
     return await this.call<UpdateTaskVariantParams, UpdateTaskVariantResult>('updateTaskVariant', params);
   }

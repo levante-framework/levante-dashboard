@@ -28,7 +28,7 @@ const useTaskVariantsCatalogQuery = (
       if (taskId.value) request.taskId = taskId.value;
       if (registered.value !== undefined) request.registered = registered.value;
       const variants = await tasksRepository.getTaskVariants(request);
-      return sortVariantsByCreatedAt(variants, true);
+      return sortVariantsByCreatedAt(variants, false);
     },
     enabled: isEnabled,
     ...queryOptions,

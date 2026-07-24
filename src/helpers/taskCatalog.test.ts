@@ -19,4 +19,13 @@ describe('getCallableErrorMessage', () => {
     expect(getCallableErrorMessage({ code: 'functions/already-exists', message: 'dup' }, 'fallback')).toBe('dup');
     expect(getCallableErrorMessage({ code: 'functions/not-found' }, 'fallback')).toBe('Document not found.');
   });
+
+  it('maps duplicate variant params already-exists', () => {
+    expect(
+      getCallableErrorMessage(
+        { code: 'functions/already-exists', details: { code: 'params' } },
+        'fallback',
+      ),
+    ).toBe('A variant with the same params already exists for this task.');
+  });
 });

@@ -53,7 +53,7 @@ describe('task catalog queries', () => {
     );
   });
 
-  it('useTaskVariantsCatalogQuery passes taskId and sorts by createdAt', async () => {
+  it('useTaskVariantsCatalogQuery passes taskId and sorts newest first', async () => {
     vi.mocked(tasksRepository.getTaskVariants).mockResolvedValue([
       {
         id: 'v2',
@@ -90,7 +90,7 @@ describe('task catalog queries', () => {
     const result = await call.queryFn();
 
     expect(tasksRepository.getTaskVariants).toHaveBeenCalledWith({ taskId: 'task-1' });
-    expect(result.map((variant) => variant.id)).toEqual(['v1', 'v2']);
+    expect(result.map((variant) => variant.id)).toEqual(['v2', 'v1']);
   });
 
   it('useVariantParamSpecsQuery calls getVariantParamSpecs', () => {

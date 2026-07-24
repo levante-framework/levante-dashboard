@@ -3,8 +3,8 @@
     <div class="flex flex-column gap-1">
       <h2 class="text-xl font-bold m-0">Variants</h2>
       <p class="text-md text-gray-500 m-0">
-        Timeline of variants for a task, ordered by createdAt. Param changes create a new variant; register status may
-        change on an existing one.
+        Timeline of variants for a task, ordered by createdAt. Editing params creates a new variant; register status can
+        be flipped on any existing variant.
       </p>
     </div>
 
@@ -27,7 +27,13 @@
       <span v-if="selectedTaskId && variants?.length" class="text-sm text-gray-500">
         {{ variants.length }} variant{{ variants.length === 1 ? '' : 's' }}
       </span>
-      <!-- Phase 2: New variant / fork action -->
+      <PvButton
+        v-if="selectedTaskId"
+        label="New variant"
+        icon="pi pi-plus"
+        :disabled="isFetching"
+        @click="openCreate()"
+      />
     </div>
 
     <div v-if="!selectedTaskId" class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-200">
@@ -59,11 +65,67 @@
     <ol v-else class="timeline list-none m-0 p-0 flex flex-column gap-0">
       <li v-for="(entry, index) in timelineEntries" :key="entry.variant.id" class="timeline-item">
         <div class="timeline-rail" aria-hidden="true">
-          <span class="timeline-dot" />
+          <span class="timeline-dot" :class="{ 'timeline-dot-latest': entry.isLatest }" />
           <span v-if="index < timelineEntries.length - 1" class="timeline-line" />
         </div>
 
         <div class="flex flex-column gap-3 flex-grow-1 pb-5">
+          <article class="surface-50 border-1 border-200 border-round p-4 flex flex-column gap-3">
+            <div class="flex flex-wrap align-items-start justify-content-between gap-2">
+              <div class="flex flex-column gap-1">
+                <div class="flex flex-wrap align-items-center gap-2">
+                  <div class="font-semibold text-lg">{{ entry.variant.name || entry.variant.id }}</div>
+                  <PvTag v-if="entry.isLatest" value="Latest" severity="info" rounded />
+                </div>
+                <div class="text-sm text-gray-500">Variant ID: {{ entry.variant.id }}</div>
+              </div>
+              <div class="flex flex-wrap align-items-center gap-3">
+                <div class="flex align-items-center gap-2">
+                  <PvToggleSwitch
+                    :model-value="entry.variant.registered"
+                    :disabled="updatingVariantId === entry.variant.id"
+                    @update:model-value="(value) => toggleRegistered(entry.variant, value)"
+                  />
+                  <span class="text-sm">{{ entry.variant.registered ? 'Registered' : 'Unregistered' }}</span>
+                </div>
+                <PvButton
+                  v-if="entry.isLatest"
+                  label="Edit params"
+                  icon="pi pi-pencil"
+                  size="small"
+                  severity="secondary"
+                  text
+                  @click="openCreate(entry.variant)"
+                />
+                <!-- Next iteration: registration history from revisions API -->
+                <PvButton
+                  v-tooltip.top="'Registration history will use the revisions API in a later iteration'"
+                  label="Reg. history"
+                  icon="pi pi-history"
+                  size="small"
+                  severity="secondary"
+                  text
+                  disabled
+                />
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-4 text-sm text-gray-500">
+              <span>Created: {{ formatTimestamp(entry.variant.createdAt) }}</span>
+              <span v-if="entry.variant.createdBy">Created by: {{ entry.variant.createdBy }}</span>
+              <span>Updated: {{ formatTimestamp(entry.variant.updatedAt) }}</span>
+              <span v-if="entry.variant.updatedBy">Updated by: {{ entry.variant.updatedBy }}</span>
+            </div>
+
+            <div class="flex flex-column gap-1">
+              <div class="text-sm text-gray-500 font-medium">Parameters</div>
+              <pre
+                class="m-0 p-3 surface-0 border-round border-1 border-200 text-sm overflow-auto white-space-pre-wrap"
+                >{{ formatParams(entry.variant.params) }}</pre
+              >
+            </div>
+          </article>
+
           <div
             v-if="entry.diff && hasVariantParamDiff(entry.diff)"
             class="diff-card surface-0 border-1 border-200 border-round p-3"
@@ -84,53 +146,39 @@
               </div>
             </div>
           </div>
-
-          <article class="surface-50 border-1 border-200 border-round p-4 flex flex-column gap-3">
-            <div class="flex flex-wrap align-items-start justify-content-between gap-2">
-              <div class="flex flex-column gap-1">
-                <div class="font-semibold text-lg">{{ entry.variant.name || entry.variant.id }}</div>
-                <div class="text-sm text-gray-500">Variant ID: {{ entry.variant.id }}</div>
-              </div>
-              <div class="flex align-items-center gap-2">
-                <PvTag
-                  rounded
-                  :severity="entry.variant.registered ? 'success' : 'secondary'"
-                  :value="entry.variant.registered ? 'Registered' : 'Unregistered'"
-                />
-                <!-- Phase 2: register/deregister toggle -->
-              </div>
-            </div>
-
-            <div class="flex flex-wrap gap-4 text-sm text-gray-500">
-              <span>Created: {{ formatTimestamp(entry.variant.createdAt) }}</span>
-              <span v-if="entry.variant.createdBy">By: {{ entry.variant.createdBy }}</span>
-              <span>Updated: {{ formatTimestamp(entry.variant.updatedAt) }}</span>
-            </div>
-
-            <div class="flex flex-column gap-1">
-              <div class="text-sm text-gray-500 font-medium">Parameters</div>
-              <pre
-                class="m-0 p-3 surface-0 border-round border-1 border-200 text-sm overflow-auto white-space-pre-wrap"
-                >{{ formatParams(entry.variant.params) }}</pre
-              >
-            </div>
-          </article>
         </div>
       </li>
     </ol>
+
+    <VariantCreateDialog
+      v-if="selectedTaskId"
+      v-model:visible="createDialogVisible"
+      :task-id="selectedTaskId"
+      :source-variant="createSourceVariant"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import PvButton from 'primevue/button';
 import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
+import PvToggleSwitch from 'primevue/toggleswitch';
+import { useToast } from 'primevue/usetoast';
+import VariantCreateDialog from '@/components/tasks/VariantCreateDialog.vue';
+import useUpdateTaskVariantMutation from '@/composables/mutations/useUpdateTaskVariantMutation';
 import useTaskVariantsCatalogQuery from '@/composables/queries/useTaskVariantsCatalogQuery';
 import useTasksCatalogQuery from '@/composables/queries/useTasksCatalogQuery';
 import { diffVariantParams, hasVariantParamDiff } from '@/helpers/diffVariantParams';
+import { getCallableErrorMessage } from '@/helpers/taskCatalog';
 import type { SerializedTaskVariant, VariantParamDiff, VariantParamValue } from '@/types/taskCatalog';
 
+const toast = useToast();
 const selectedTaskId = ref<string | undefined>(undefined);
+const createDialogVisible = ref(false);
+const createSourceVariant = ref<SerializedTaskVariant | null>(null);
+const updatingVariantId = ref<string | null>(null);
 
 const { data: tasks, isFetching: isTasksFetching } = useTasksCatalogQuery();
 const {
@@ -141,6 +189,7 @@ const {
   taskId: selectedTaskId,
   enabled: computed(() => Boolean(selectedTaskId.value)),
 });
+const { mutateAsync: updateVariant } = useUpdateTaskVariantMutation();
 
 const taskOptions = computed(() => {
   if (!tasks.value) return [];
@@ -155,20 +204,57 @@ const taskOptions = computed(() => {
 interface TimelineEntry {
   variant: SerializedTaskVariant;
   diff: VariantParamDiff | null;
+  isLatest: boolean;
 }
 
 const timelineEntries = computed((): TimelineEntry[] => {
+  // variants arrive newest-first; diffs compare each to the chronologically older neighbor.
   const list = variants.value ?? [];
   return list.map((variant, index) => {
-    if (index === 0) {
-      return { variant, diff: null };
+    const isLatest = index === 0;
+    const older = list[index + 1];
+    if (!older) {
+      return { variant, diff: null, isLatest };
     }
     return {
       variant,
-      diff: diffVariantParams(list[index - 1].params, variant.params),
+      diff: diffVariantParams(older.params, variant.params),
+      isLatest,
     };
   });
 });
+
+function openCreate(source: SerializedTaskVariant | null = null): void {
+  createSourceVariant.value = source;
+  createDialogVisible.value = true;
+}
+
+async function toggleRegistered(variant: SerializedTaskVariant, registered: boolean): Promise<void> {
+  if (registered === variant.registered) return;
+  updatingVariantId.value = variant.id;
+  try {
+    await updateVariant({
+      id: variant.id,
+      archived: variant.archived === true,
+      registered,
+    });
+    toast.add({
+      severity: 'success',
+      summary: registered ? 'Variant registered' : 'Variant deregistered',
+      detail: variant.id,
+      life: 2500,
+    });
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Update failed',
+      detail: getCallableErrorMessage(error, 'Unable to update registration.'),
+      life: 4000,
+    });
+  } finally {
+    updatingVariantId.value = null;
+  }
+}
 
 function formatTimestamp(value: string): string {
   const date = new Date(value);
@@ -210,6 +296,10 @@ function formatParams(params: Record<string, VariantParamValue>): string {
   background: #64748b;
   margin-top: 1.25rem;
   flex-shrink: 0;
+}
+
+.timeline-dot-latest {
+  background: #2563eb;
 }
 
 .timeline-line {

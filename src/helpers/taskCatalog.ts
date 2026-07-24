@@ -11,6 +11,9 @@ export function getCallableErrorMessage(error: unknown, fallback: string): strin
   if (!error || typeof error !== 'object') return fallback;
   const err = error as { code?: string; message?: string; details?: { code?: string } };
   if (err.code === 'functions/already-exists') {
+    if (err.details?.code === 'params') {
+      return err.message || 'A variant with the same params already exists for this task.';
+    }
     return err.message || 'A document with this id already exists.';
   }
   if (err.code === 'functions/not-found') {
