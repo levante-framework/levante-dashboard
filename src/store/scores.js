@@ -108,7 +108,7 @@ export function parseGrade(grade) {
   if (!grade) {
     // null, undefined, or empty string
     return 'NA';
-  } else if (Number.isNaN(grade)) {
+  } else if (Number.isNaN(Number(grade))) {
     // parse as a string
     if (grade.toLowerCase() === 'k') {
       return 'k';
