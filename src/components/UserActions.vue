@@ -29,7 +29,7 @@
         :options="helpOptions"
         :optionValue="(o) => o.value"
         :optionLabel="(o) => o.label"
-        class="options-help"
+        class="options-help --djs-options-help"
         @change="handleHelpChange"
       >
         <template #value>
