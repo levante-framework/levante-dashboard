@@ -56,6 +56,15 @@
           <i class="pi pi-user"></i>
         </template>
       </PvSelect>
+
+      <PvButton
+        severity="info"
+        variant="outlined"
+        class="--djs-wizard-link wizard-link"
+        @click="() => runWizard({ steps: welcomeSteps, force: true })"
+      >
+        <i class="pi pi-sparkles"></i>
+      </PvButton>
     </div>
   </div>
 </template>
@@ -72,6 +81,8 @@ import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import { APP_ROUTES } from '@/constants/routes';
 import { useAuthStore } from '@/store/auth';
 import SiteSelector from './SiteSelector.vue';
+import { runWizard } from '@/wizard/index.js';
+import { welcomeSteps } from '@/wizard/steps/welcome-steps.js';
 
 interface Props {
   isBasicView: boolean;
@@ -137,6 +148,18 @@ const handleProfileChange = (e: DropdownChangeEvent): void => {
 .options-settings {
   .p-select-dropdown {
     display: none;
+  }
+}
+
+.wizard-link {
+  border-color: var(--docs-btn) !important;
+
+  .pi {
+    color: var(--docs-btn);
+  }
+
+  &:hover {
+    border-color: var(--docs-btn) !important;
   }
 }
 </style>

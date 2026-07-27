@@ -1,14 +1,14 @@
 <template>
   <LevanteSpinner v-if="isLoading" fullscreen />
 
-  <div v-else class="text-color">
+  <div v-else class="text-color --djs-welcome">
     <div class="w-full px-5 my-5">
       <div class="text-2xl">{{ userName ? 'Welcome,' : 'Welcome!' }}</div>
       <div v-if="userName" class="font-bold text-3xl">{{ userName }}</div>
     </div>
 
     <div class="w-full px-5 mb-5">
-      <div class="info">
+      <div class="info --djs-info">
         <i class="pi pi-exclamation-circle" />
 
         <div class="mr-auto">
@@ -261,15 +261,18 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import PvBadge from 'primevue/badge';
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import DocsButton from '@/components/DocsButton.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { useGetSiteOverviewQuery } from '@/composables/queries/useGetSiteOverviewQuery';
 import { useAuthStore } from '@/store/auth';
+import { welcomeSteps } from '@/wizard/steps/welcome-steps';
+import { runWizard } from '@/wizard';
 
 const authStore = useAuthStore();
 const { currentSite, userData } = storeToRefs(authStore);
+const { isUserSuperAdmin } = authStore;
 
 const isSiteSelected = computed(() => !!currentSite.value && currentSite.value !== 'any');
 const showSelectSitePrompt = computed(() => !!userData.value && !isSiteSelected.value);
@@ -324,6 +327,12 @@ const numOfGroups = computed(() => schools.value.length + classes.value.length +
 
 const getParentSchoolName = (schoolId: string): string =>
   schools.value.find((school) => school.id === schoolId)?.name ?? '';
+
+onMounted(() => {
+  if (!isUserSuperAdmin()) {
+    runWizard({ steps: welcomeSteps });
+  }
+});
 </script>
 
 <style scoped lang="scss">
