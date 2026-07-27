@@ -1,4 +1,6 @@
+import { useLevanteStore } from "@/store/levante";
 import { Config, Driver, driver as driverjs, DriveStep } from "driver.js";
+import { storeToRefs } from "pinia";
 
 interface RunDriverOptions {
   config?: Config;
@@ -15,7 +17,9 @@ export const runWizard = ({
   driver = driverjs(),
   force = false,
   steps = [],
-}: RunDriverOptions) => {
+}: RunDriverOptions = {}) => {
+  const levanteStore = useLevanteStore();
+  const { wizardSteps } = storeToRefs(levanteStore);
   const isDismissed = localStorage.getItem(localStorageKey);
 
   if (!force && isDismissed?.toLowerCase() === localStorageValue) return;
@@ -26,7 +30,11 @@ export const runWizard = ({
     ...config,
   };
 
-  driver.setConfig({ ...defaultConfig, steps: steps || config.steps });
+  driver.setConfig({
+    ...defaultConfig,
+    steps: wizardSteps.value || steps || config.steps,
+  });
+
   driver.drive();
 };
 
