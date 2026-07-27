@@ -8,6 +8,7 @@ import plugins from './plugins';
 import { PostHogPlugin } from './plugins/posthog';
 import './styles.css';
 import 'flag-icons/css/flag-icons.min.css';
+import 'driver.js/dist/driver.css';
 
 /**
  * Create Vue App
