@@ -1,0 +1,84 @@
+$popover-primary-color: #217af4;
+
+.driver-popover {
+  &.djs-levante-theme {
+    max-width: 320px;
+    padding: 20px;
+    background-color: $popover-primary-color;
+    color: #fff;
+    border-radius: 8px;
+    box-shadow:
+      rgba(0, 0, 0, 0.09) 0px 2px 1px,
+      rgba(0, 0, 0, 0.09) 0px 4px 2px,
+      rgba(0, 0, 0, 0.09) 0px 8px 4px,
+      rgba(0, 0, 0, 0.09) 0px 16px 8px,
+      rgba(0, 0, 0, 0.09) 0px 32px 16px;
+
+    .driver-popover-title,
+    .driver-popover-description,
+    .driver-popover-progress-text {
+      color: #fff;
+      line-height: 1.3;
+    }
+
+    .driver-popover-title {
+      padding: 0 32px 0 0;
+      font-size: 20px;
+    }
+
+    button {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 8px;
+      background-color: #fff;
+      border: 2px solid #fff;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 14px;
+      color: $popover-primary-color;
+      text-shadow: none;
+    }
+
+    .driver-popover-prev-btn {
+      background-color: transparent;
+      color: #fff;
+    }
+
+    .driver-popover-navigation-btns {
+      justify-content: space-between;
+      gap: 3px;
+    }
+
+    .driver-popover-close-btn {
+      background-color: transparent;
+      border: none;
+      font-size: 16px;
+      color: #fff;
+      opacity: 0.5;
+
+      &:hover {
+        background-color: transparent;
+        color: #fff;
+        opacity: 1;
+      }
+    }
+
+    .driver-popover-arrow-side-left.driver-popover-arrow {
+      border-left-color: $popover-primary-color;
+    }
+
+    .driver-popover-arrow-side-right.driver-popover-arrow {
+      border-right-color: $popover-primary-color;
+    }
+
+    .driver-popover-arrow-side-top.driver-popover-arrow {
+      border-top-color: $popover-primary-color;
+    }
+
+    .driver-popover-arrow-side-bottom.driver-popover-arrow {
+      border-bottom-color: $popover-primary-color;
+    }
+  }
+}
