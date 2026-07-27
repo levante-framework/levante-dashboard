@@ -29,6 +29,11 @@ function setAdditionalProperties(properties: Record<string, any>): void {
   };
 }
 
+function clearUserScopedProperties(): void {
+  const { clientHints } = currentProperties;
+  currentProperties = clientHints ? { clientHints } : {};
+}
+
 /**
  * Logs an event for analytics.
  * In production, sends the event to PostHog.
@@ -106,14 +111,14 @@ function setUser(userData: UserData | null, force: boolean = false): void {
       }
       Sentry.setUser(null);
       currentUser = null;
-      currentProperties = {};
+      clearUserScopedProperties();
     }
   } else {
     if (userData) {
       console.info('[Logger SetUser]', userData);
     } else {
       console.info('[Logger ResetUser]');
-      currentProperties = {};
+      clearUserScopedProperties();
     }
   }
 }
