@@ -10,6 +10,8 @@ interface UserData {
   [key: string]: any; // Allow other properties
 }
 
+const HIGH_ENTROPY_HINTS = ['architecture', 'bitness', 'model', 'platformVersion', 'fullVersionList', 'wow64'];
+
 const isProduction = import.meta.env.MODE === 'production';
 // const isProduction = import.meta.env.VITE_FIREBASE_PROJECT==='PROD'; // can be used for more accurate logging
 
@@ -25,6 +27,11 @@ function setAdditionalProperties(properties: Record<string, any>): void {
     ...currentProperties,
     ...properties,
   };
+}
+
+function clearUserScopedProperties(): void {
+  const { clientHints } = currentProperties;
+  currentProperties = clientHints ? { clientHints } : {};
 }
 
 /**
@@ -104,15 +111,39 @@ function setUser(userData: UserData | null, force: boolean = false): void {
       }
       Sentry.setUser(null);
       currentUser = null;
-      currentProperties = {};
+      clearUserScopedProperties();
     }
   } else {
     if (userData) {
       console.info('[Logger SetUser]', userData);
     } else {
       console.info('[Logger ResetUser]');
-      currentProperties = {};
+      clearUserScopedProperties();
     }
+  }
+}
+
+/** Attach UA Client Hints when available. Never throws if the API or fields are missing. */
+async function enrichClientHints(): Promise<void> {
+  try {
+    const ua = (navigator as Navigator & { userAgentData?: any }).userAgentData;
+    if (!ua) return;
+
+    const high =
+      typeof ua.getHighEntropyValues === 'function'
+        ? await ua.getHighEntropyValues(HIGH_ENTROPY_HINTS).catch(() => ({}))
+        : {};
+
+    setAdditionalProperties({
+      clientHints: {
+        brands: ua.brands,
+        mobile: ua.mobile,
+        platform: ua.platform,
+        ...high,
+      },
+    });
+  } catch {
+    // Never let telemetry enrichment break the app.
   }
 }
 
@@ -121,4 +152,5 @@ export const logger = {
   error,
   setUser,
   setAdditionalProperties,
+  enrichClientHints,
 };
