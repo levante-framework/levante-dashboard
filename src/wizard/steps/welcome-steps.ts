@@ -1,8 +1,20 @@
-export const welcomeSteps = [
+import { DriveStep } from "driver.js";
+
+export const welcomeSteps: Array<DriveStep> = [
+  {
+    element: undefined,
+    popover: {
+      title: "Welcome to the<br>LEVANTE dashboard",
+      description:
+        "Since this is your first time here, we'd like to give you a quick tour. Every page has it's own tour you can access from this button. If you'd like to skip this for now, just press the \"x\" on the upper right of the dialog.",
+      side: "bottom",
+      align: "start",
+    },
+  },
   {
     element: "body",
     popover: {
-      title: "Welcome to the<br>LEVANTE dashboard",
+      title: "Your welcome page",
       description:
         "Login lands you on the welcome page, where you can see basic site stats.",
       side: "bottom",
@@ -10,16 +22,7 @@ export const welcomeSteps = [
     },
   },
   {
-    element: ".levante-logo",
-    popover: {
-      title: "Return to the welcome page",
-      description: "Click the LEVANTE logo anytime to return here.",
-      side: "bottom",
-      align: "start",
-    },
-  },
-  {
-    element: '[data-cy="site-selector"]',
+    element: ".--djs-site-selector",
     popover: {
       title: "Always check your site",
       description:
@@ -29,7 +32,7 @@ export const welcomeSteps = [
     },
   },
   {
-    element: '[data-cy="docs-button"]',
+    element: ".--djs-docs-button",
     popover: {
       title: "Researcher documentation",
       description:
@@ -39,7 +42,7 @@ export const welcomeSteps = [
     },
   },
   {
-    element: ".options-help",
+    element: ".--djs-options-help",
     popover: {
       title: "Help menu",
       description:
@@ -51,9 +54,19 @@ export const welcomeSteps = [
   {
     element: ".--djs-wizard-link",
     popover: {
+      title: "Page walkthroughs",
+      description:
+        "Each page has its own walkthrough like this one that will help you understand what to do: just click the wizard icon on any page to trigger the walkthrough.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: ".--djs-groups-link",
+    popover: {
       title: "Get started",
       description:
-        "Each page has its own walkthrough like this one that will help you understand what to do: just click the wizard icon to trigger the walkthrough. The best place to start is by adding Groups.",
+        "The starting point for every project is adding your groups. Head to the Groups page to get started.",
       side: "bottom",
       align: "start",
     },
