@@ -1,4 +1,4 @@
-import { DriveStep } from 'driver.js';
+import type { DriveStep } from 'driver.js';
 
 export const welcomeSteps: Array<DriveStep> = [
   {
