@@ -1,3 +1,4 @@
+import { DriveStep } from 'driver.js';
 import { defineStore } from 'pinia';
 import { type Ref, ref } from 'vue';
 
@@ -9,6 +10,7 @@ export const useLevanteStore = defineStore(
     const assignmentsSelectedSorting: Ref<any> = ref(null);
     const hasUserConfirmed: Ref<boolean> = ref(false);
     const shouldUserConfirm: Ref<boolean> = ref(false);
+    const wizardSteps: Ref<Array<DriveStep>> = ref([]);
 
     // Actions
     function $reset(): void {
@@ -16,6 +18,7 @@ export const useLevanteStore = defineStore(
       assignmentsSelectedSorting.value = null;
       hasUserConfirmed.value = false;
       shouldUserConfirm.value = false;
+      wizardSteps.value = [];
     }
 
     function setAssignmentsSelectedFilter(filter: any): void {
@@ -35,12 +38,17 @@ export const useLevanteStore = defineStore(
       shouldUserConfirm.value = should;
     }
 
+    function setWizardSteps(steps: Array<DriveStep>): void {
+      wizardSteps.value = steps;
+    }
+
     return {
       // State
       assignmentsSelectedFilter,
       assignmentsSelectedSorting,
       hasUserConfirmed,
       shouldUserConfirm,
+      wizardSteps,
 
       // Actions
       $reset,
@@ -48,11 +56,12 @@ export const useLevanteStore = defineStore(
       setAssignmentsSelectedSorting,
       setHasUserConfirmed,
       setShouldUserConfirm,
+      setWizardSteps,
     };
   },
   {
     persist: {
-      paths: ['assignmentsSelectedFilter', 'assignmentsSelectedSorting'],
+      paths: ['assignmentsSelectedFilter', 'assignmentsSelectedSorting', 'wizardSteps'],
       storage: sessionStorage,
     },
   },
