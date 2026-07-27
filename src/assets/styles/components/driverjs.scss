@@ -27,9 +27,7 @@ $popover-primary-color: #217af4;
     }
 
     button {
-      display: flex !important;
-      align-items: center;
-      justify-content: center;
+      display: block;
       flex: 1;
       padding: 8px;
       background-color: #fff;
@@ -39,6 +37,7 @@ $popover-primary-color: #217af4;
       font-size: 14px;
       color: $popover-primary-color;
       text-shadow: none;
+      text-align: center;
     }
 
     .driver-popover-prev-btn {
@@ -81,4 +80,8 @@ $popover-primary-color: #217af4;
       border-bottom-color: $popover-primary-color;
     }
   }
+}
+
+.driver-hint {
+  --driver-hint-color: #217af4;
 }
