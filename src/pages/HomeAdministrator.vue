@@ -261,7 +261,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import PvBadge from 'primevue/badge';
-import { computed, onBeforeMount, onMounted } from 'vue';
+import { computed, nextTick, onBeforeMount, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import DocsButton from '@/components/DocsButton.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
@@ -331,14 +331,18 @@ const numOfGroups = computed(() => schools.value.length + classes.value.length +
 const getParentSchoolName = (schoolId: string): string =>
   schools.value.find((school) => school.id === schoolId)?.name ?? '';
 
+watch(
+  [isLoading],
+  async ([newIsLoading]) => {
+    if (newIsLoading || isUserSuperAdmin()) return;
+    await nextTick();
+    runWizard();
+  },
+  { immediate: true },
+);
+
 onBeforeMount(() => {
   setWizardSteps(welcomeSteps);
-});
-
-onMounted(() => {
-  if (!isUserSuperAdmin()) {
-    runWizard();
-  }
 });
 </script>
 
