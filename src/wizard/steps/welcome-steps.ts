@@ -54,7 +54,7 @@ export const welcomeSteps: Array<DriveStep> = [
     popover: {
       title: 'Page walkthroughs',
       description:
-        'Each page has its own walkthrough like this one that will help you understand what to do: just click the wizard icon on any page to trigger the walkthrough.',
+        "This button will appear on pages where there's an available walkthrough - just click it to get started.",
       side: 'bottom',
       align: 'start',
     },
