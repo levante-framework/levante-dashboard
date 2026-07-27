@@ -61,7 +61,7 @@
         severity="info"
         variant="outlined"
         class="--djs-wizard-link wizard-link"
-        @click="() => runWizard({ steps: welcomeSteps, force: true })"
+        @click="() => runWizard({ force: true })"
       >
         <i class="pi pi-sparkles"></i>
       </PvButton>
@@ -82,7 +82,6 @@ import { APP_ROUTES } from '@/constants/routes';
 import { useAuthStore } from '@/store/auth';
 import SiteSelector from './SiteSelector.vue';
 import { runWizard } from '@/wizard/index.js';
-import { welcomeSteps } from '@/wizard/steps/welcome-steps.js';
 
 interface Props {
   isBasicView: boolean;
