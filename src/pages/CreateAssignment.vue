@@ -221,12 +221,17 @@ import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { useLevanteStore } from '@/store/levante';
 
+const props = defineProps({
+  adminId: { type: String, required: false, default: null },
+});
+
 const initialized = ref(false);
 const isFormPopulated = ref(false);
 const editTasksHydrated = ref(false);
 const router = useRouter();
 const toast = useToast();
 const queryClient = useQueryClient();
+const registeredVariantsOnly = ref(!props.adminId);
 
 const { mutate: upsertAdministration, isPending: isSubmitting } = useUpsertAdministrationMutation();
 
@@ -235,10 +240,6 @@ const { hasUserConfirmed } = storeToRefs(levanteStore);
 const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const authStore = useAuthStore();
 const { roarfirekit, userData } = storeToRefs(authStore);
-
-const props = defineProps({
-  adminId: { type: String, required: false, default: null },
-});
 
 const header = computed(() => {
   if (!props.adminId) return 'Create Assignment';
@@ -284,7 +285,7 @@ function resolveVariantForAssessment(assessment, allVariantInfo) {
   return found;
 }
 
-const { data: allVariants, isFetched: isVariantsFetched } = useTaskVariantsQuery(true, {
+const { data: allVariants, isFetched: isVariantsFetched } = useTaskVariantsQuery(registeredVariantsOnly.value, {
   enabled: initialized,
 });
 
