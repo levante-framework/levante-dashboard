@@ -12,7 +12,7 @@
  * 4. On load error → raster fallback, then Levante logo
  *
  * Upload WebP siblings next to existing logos in GCS when available, e.g.
- * `gs://levante-assets-*/task-logos/sre-logo.webp` beside `sre-logo.png`.
+ * `task-logos/sre-logo.webp` beside `task-logos/sre-logo.png` in each assets bucket.
  *
  * Prefer the Vue wrapper: `<TaskImage :image="task.image" :alt="task.name" />`.
  */
