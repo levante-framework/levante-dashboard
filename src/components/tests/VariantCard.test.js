@@ -75,7 +75,8 @@ const mockLanguages = [
 const createMockVariant = (language) => ({
   id: `test-variant-${language.variantCode}`,
   variant: {
-    name: `Test Variant ${language.displayName}`,
+    name: `internal-${language.variantCode}`,
+    displayName: `Test Variant ${language.displayName}`,
     params: {
       language: language.variantCode,
       cat: true,
@@ -161,10 +162,11 @@ describe('VariantCard.vue - Language Variant Testing', () => {
           const taskNameElement = taskNameElements.find((el) => el.text().includes(mockVariant.task.name));
           expect(taskNameElement).toBeTruthy();
 
-          // Test 3: Variant name is displayed
+          // Test 3: Variant display name is shown (not internal name)
           const variantNameText = wrapper.text();
           expect(variantNameText).toContain('Variant name:');
-          expect(variantNameText).toContain(mockVariant.variant.name);
+          expect(variantNameText).toContain(mockVariant.variant.displayName);
+          expect(variantNameText).not.toContain(mockVariant.variant.name);
 
           // Test 4: Select button is present and functional
           const selectButton = wrapper.find('[data-cy="selected-variant"]');
@@ -401,6 +403,34 @@ describe('VariantCard.vue - Language Variant Testing', () => {
 
       expect(wrapper.exists()).toBe(true);
       expect(wrapper.vm.formattedAssignedConditions).toBe('');
+
+      wrapper.unmount();
+    });
+
+    it('falls back to formatted internal name when displayName is missing', async () => {
+      const wrapper = mount(VariantCard, {
+        ...mountOptions,
+        props: {
+          ...mountOptions.props,
+          variant: {
+            id: 'legacy-variant',
+            variant: {
+              name: 'legacy-internal-name',
+              params: { language: 'en-US' },
+            },
+            task: {
+              name: 'Test Task',
+              image: '/test-image.jpg',
+            },
+          },
+          hasControls: false,
+        },
+      });
+
+      await nextTick();
+
+      expect(wrapper.text()).toContain('Variant name:');
+      expect(wrapper.text()).toContain('legacy-internal-name');
 
       wrapper.unmount();
     });

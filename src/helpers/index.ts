@@ -301,6 +301,16 @@ export const formattedVariantName = (variantName: string): string => {
   const matchedLocale = findBestMatchingLocale(trimmedName);
   return languageOptions[matchedLocale]?.languageTaskPicker ?? rawName;
 };
+
+export const resolveVariantDisplayName = (variant: {
+  displayName?: string | null;
+  name?: string | null;
+}): string => {
+  const displayName = variant.displayName?.trim();
+  if (displayName) return displayName;
+  const name = variant.name?.trim() ?? '';
+  return name ? formattedVariantName(name) : '';
+};
 // Accept Date, Map, and others...
 export const isObject = (obj: unknown): boolean => obj !== null && typeof obj === 'object' && !Array.isArray(obj);
 // This one just accept plain objects
