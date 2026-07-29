@@ -4,11 +4,7 @@
     class="flex-1 flex h-6rem flex-row gap-2 border-1 border-round surface-border bg-white-alpha-90 mb-2 hover:surface-hover"
   >
     <div class="w-full my-2 flex flex-row align-items-center p-0">
-      <img
-        class="w-4rem shadow-2 border-round ml-2"
-        :src="variant.task.image || backupImage"
-        :alt="variant.task.name"
-      />
+      <TaskImage class="w-4rem shadow-2 border-round ml-2" :image="variant.task.image" :alt="variant.task.name" />
       <div class="h-auto m-0 p-0 pl-2">
         <div class="flex align-items-center flex-row">
           <span class="font-bold">{{ variant.task.name }}</span>
@@ -98,7 +94,7 @@
     </div>
     <div class="w-11 mt-3 flex flex-row p-0">
       <div>
-        <img class="w-4rem shadow-2 border-round" :src="variant.task.image || backupImage" :alt="variant.task.name" />
+        <TaskImage class="w-4rem shadow-2 border-round" :image="variant.task.image" :alt="variant.task.name" />
       </div>
 
       <div class="pl-2">
@@ -276,6 +272,7 @@ import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { computed, ref } from 'vue';
 import EditVariantDialog from '@/components/EditVariantDialog.vue';
+import TaskImage from '@/components/TaskImage.vue';
 import { formattedVariantName, getTooltip } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 
@@ -336,7 +333,6 @@ const emit = defineEmits<Emits>();
 const authStore = useAuthStore();
 const { isUserSuperAdmin } = authStore;
 
-const backupImage = '/src/assets/roar-logo.png';
 const showContent = ref<boolean>(false);
 const op = ref<any>(null);
 const visible = ref<boolean>(false);
