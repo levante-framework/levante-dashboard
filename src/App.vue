@@ -122,8 +122,18 @@ watch(
 );
 
 onBeforeMount(async () => {
-  await getLanguages();
-  await getTranslations();
+  try {
+    await getLanguages();
+    await getTranslations();
+  } catch (error) {
+    console.warn('Translation bootstrap failed (ok for offline packs)', error);
+  }
+
+  // Air-gapped kit: skip Firebase bootstrap entirely.
+  if (route.path.startsWith('/offline')) {
+    isAuthStoreReady.value = true;
+    return;
+  }
 
   await authStore.initFirekit();
 

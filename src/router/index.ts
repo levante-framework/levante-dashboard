@@ -330,6 +330,24 @@ const routes: Array<RouteRecordRaw> = [
       allowedRoles: ['*'],
     },
   },
+  {
+    path: '/offline',
+    name: 'OfflineHome',
+    component: () => import('@/pages/offline/OfflineHome.vue'),
+    meta: {
+      pageTitle: 'Levante in a Box',
+      allowedRoles: ['*'],
+    },
+  },
+  {
+    path: '/offline/task/:taskId',
+    name: 'OfflineTask',
+    component: () => import('@/pages/offline/OfflineTask.vue'),
+    meta: {
+      pageTitle: 'Offline Task',
+      allowedRoles: ['*'],
+    },
+  },
 ];
 
 const scrollBehavior: RouterScrollBehavior = (to, from, savedPosition) => {

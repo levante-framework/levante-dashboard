@@ -11,6 +11,7 @@
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "dev": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=DEV && export VITE_EMULATOR=TRUE && vite --force --host",
+    "dev:in-a-box": "export VITE_LEVANTE=TRUE && export VITE_IN_A_BOX=1 && export VITE_FIREBASE_PROJECT=DEV && vite --force --host",
     "dev:db": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=DEV && vite --force --host",
     "dev:preview:db": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=DEV && export VITE_ADMIN_AS_APP=TRUE && vite --force --host",
     "local:prod": "export VITE_LEVANTE=TRUE && export VITE_FIREBASE_PROJECT=PROD && vite --force --host",

@@ -1,0 +1,16 @@
+{
+  "packId": "zh-pilot-demo",
+  "language": "zh-CN",
+  "assetBaseUrl": "/offline-pack/assets",
+  "assignmentId": "offline-assignment-demo",
+  "tasks": [
+    {
+      "taskId": "hearts-and-flowers",
+      "label": "Hearts and Flowers",
+      "variantParams": {
+        "language": "zh-CN",
+        "taskName": "hearts-and-flowers"
+      }
+    }
+  ]
+}

@@ -12,6 +12,8 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 const require = createRequire(import.meta.url);
 const commitHash = child.execSync('git rev-parse --short HEAD').toString();
 const primeiconsDir = path.dirname(require.resolve('primeicons/primeicons.css'));
+const coreTasksSrc = path.resolve(__dirname, '../core-tasks/task-launcher/src/index.ts');
+const useLocalCoreTasks = process.env.VITE_IN_A_BOX === '1';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -43,6 +45,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      ...(useLocalCoreTasks
+        ? {
+            '@levante-framework/core-tasks': coreTasksSrc,
+          }
+        : {}),
     },
     dedupe: [
       'firebase',

@@ -1,0 +1,13 @@
+{
+  "packId": "zh-pilot-demo",
+  "users": [
+    {
+      "localUserId": "pack-child-001",
+      "displayName": "Demo Child 1",
+      "assessmentPid": "DEMO001",
+      "birthMonth": "6",
+      "birthYear": "2018",
+      "source": "pack"
+    }
+  ]
+}
