@@ -446,20 +446,6 @@ const updateVariant = (variantId: string, conditions: VariantObject['variant']['
 
 const bindUpdateVariant = updateVariant as unknown as (variant: VariantObject) => void;
 
-const handleCardAdd = (card: DragEvent): void => {
-  const taskIds = selectedVariants.value.map((variant) => getTaskId(variant.task));
-  const droppedTaskId = card.item.dataset.taskId;
-  if (droppedTaskId && taskIds.includes(droppedTaskId)) {
-    selectedVariants.value.pop();
-    toast.add({
-      severity: 'warn',
-      summary: 'Task Selected',
-      detail: 'There is a task with that Task ID already selected.',
-      life: 3000,
-    });
-  }
-};
-
 const handleCardMove = (card: DragEvent): boolean => {
   const cardVariantId = card.dragged.id;
   const index = selectedVariants.value.findIndex((element) => element.id === cardVariantId);
@@ -521,24 +507,82 @@ const addUserDefaultCondition = (variant: VariantObject): VariantObject => {
   return defaultedVariant;
 };
 
+const replaceDeregisteredVariant = (existingIndex: number, variant: VariantObject): void => {
+  confirm.require({
+    group: 'task-picker',
+    header: 'Replace deregistered task?',
+    message: 'A deregistered variant of this task is already selected. Replace it with the registered variant?',
+    acceptLabel: 'Replace',
+    rejectLabel: 'Keep',
+    rejectProps: {
+      label: 'Keep',
+      severity: 'secondary',
+      outlined: true,
+    },
+    accept: () => {
+      selectedVariants.value.splice(existingIndex, 1, addUserDefaultCondition(variant));
+    },
+  });
+};
+
+const tryReplaceOrWarnDuplicateTask = (existingIndex: number, incomingVariant: VariantObject): void => {
+  const existingVariant = selectedVariants.value[existingIndex];
+  const isIncomingRegistered = Boolean(incomingVariant?.variant?.registered);
+  const isExistingDeregistered = !existingVariant?.variant?.registered;
+
+  if (isIncomingRegistered && isExistingDeregistered) {
+    replaceDeregisteredVariant(existingIndex, incomingVariant);
+    return;
+  }
+
+  toast.add({
+    severity: 'warn',
+    summary: 'Task Selected',
+    detail: 'There is a task with that Task ID already selected.',
+    life: 3000,
+  });
+};
+
+const handleCardAdd = (card: DragEvent): void => {
+  const droppedTaskId = card.item.dataset.taskId;
+  if (!droppedTaskId) return;
+
+  const droppedIndex = selectedVariants.value.findIndex((variant) => variant.id === card.item.id);
+  if (droppedIndex === -1) return;
+
+  const existingIndex = selectedVariants.value.findIndex(
+    (variant, index) => index !== droppedIndex && getTaskId(variant.task) === droppedTaskId,
+  );
+  if (existingIndex === -1) return;
+
+  const droppedVariant = selectedVariants.value[droppedIndex];
+  selectedVariants.value.splice(droppedIndex, 1);
+
+  const adjustedExistingIndex = existingIndex > droppedIndex ? existingIndex - 1 : existingIndex;
+  if (!droppedVariant) return;
+
+  tryReplaceOrWarnDuplicateTask(adjustedExistingIndex, droppedVariant);
+};
+
 const selectCard = (variant: VariantObject): void => {
   const index = selectedVariants.value.findIndex((element) => element.id === variant.id);
-  const selectedTaskIds = selectedVariants.value.map((selectedVariant) => getTaskId(selectedVariant.task));
 
-  if (index === -1) {
-    if (selectedTaskIds.includes(getTaskId(variant.task))) {
-      toast.add({
-        severity: 'warn',
-        summary: 'Task Selected',
-        detail: 'There is a task with that Task ID already selected.',
-        life: 3000,
-      });
-      return;
-    }
+  if (index !== -1) {
+    debounceToast();
+    return;
+  }
+
+  const taskId = getTaskId(variant.task);
+  const existingIndex = selectedVariants.value.findIndex(
+    (selectedVariant) => getTaskId(selectedVariant.task) === taskId,
+  );
+
+  if (existingIndex === -1) {
     selectedVariants.value.push(addUserDefaultCondition(variant));
     return;
   }
-  debounceToast();
+
+  tryReplaceOrWarnDuplicateTask(existingIndex, variant);
 };
 
 const moveCardUp = (variant: VariantObject): void => {
