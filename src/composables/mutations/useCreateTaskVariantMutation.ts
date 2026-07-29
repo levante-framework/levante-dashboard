@@ -19,7 +19,11 @@ const useCreateTaskVariantMutation = (): UseMutationReturnType<
     mutationFn: (payload: CreateTaskVariantParams) => tasksRepository.createTaskVariant(payload),
     onSuccess: (_data, payload): void => {
       queryClient.invalidateQueries({ queryKey: [TASK_VARIANTS_CATALOG_QUERY_KEY] });
-      logger.capture('Task catalog: create task variant', { taskId: payload.taskId, name: payload.name });
+      logger.capture('Task catalog: create task variant', {
+        taskId: payload.taskId,
+        name: payload.name,
+        displayName: payload.displayName,
+      });
     },
     onError: (error: Error, payload: CreateTaskVariantParams): void => {
       logger.error(error, { payload });

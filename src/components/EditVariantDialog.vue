@@ -24,10 +24,10 @@
             {{ assessment.task.name }}
           </div>
         </div>
-        <div v-if="assessment.variant?.name" class="gap-2">
+        <div v-if="variantDisplayName" class="gap-2">
           <div class="text-sm font-light uppercase text-gray-500">Variant Name</div>
           <div class="text-xl">
-            {{ assessment.variant?.name }}
+            {{ variantDisplayName }}
           </div>
         </div>
       </div>
@@ -261,6 +261,7 @@ import PvTag from 'primevue/tag';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { computed, onMounted, ref, toRaw } from 'vue';
 import { isLevante } from '@/constants';
+import { resolveVariantDisplayName } from '@/helpers';
 
 interface FieldOption {
   label: string;
@@ -299,6 +300,7 @@ interface Task {
 }
 
 interface Variant {
+  displayName?: string;
   name?: string;
 }
 
@@ -322,6 +324,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   preExistingAssessmentInfo: () => [],
 });
+
+const variantDisplayName = computed(() => resolveVariantDisplayName(props.assessment.variant ?? {}));
 
 onMounted((): void => {
   getAllConditions(props.assessment.task.id);

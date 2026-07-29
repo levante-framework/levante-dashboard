@@ -74,10 +74,15 @@
             <div class="flex flex-wrap align-items-start justify-content-between gap-2">
               <div class="flex flex-column gap-1">
                 <div class="flex flex-wrap align-items-center gap-2">
-                  <div class="font-semibold text-lg">{{ entry.variant.name || entry.variant.id }}</div>
+                  <div class="font-semibold text-lg">
+                    {{ entry.variant.displayName || entry.variant.name || entry.variant.id }}
+                  </div>
                   <PvTag v-if="entry.isLatest" value="Latest" severity="info" rounded />
                 </div>
-                <div class="text-sm text-gray-500">Variant ID: {{ entry.variant.id }}</div>
+                <div class="text-sm text-gray-500">
+                  Variant ID: {{ entry.variant.id }}
+                  <span v-if="entry.variant.name"> · Internal: {{ entry.variant.name }}</span>
+                </div>
               </div>
               <div class="flex flex-wrap align-items-center gap-3">
                 <div class="flex align-items-center gap-2">

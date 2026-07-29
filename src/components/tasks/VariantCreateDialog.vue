@@ -17,8 +17,15 @@
 
     <form class="flex flex-column gap-4 mt-2" @submit.prevent="handleSubmit">
       <div class="flex flex-column gap-1">
+        <label for="variant-display-name" class="text-sm font-medium text-gray-600"
+          >Display name <span class="text-red-500">*</span></label
+        >
+        <PvInputText id="variant-display-name" v-model="form.displayName" class="w-full" autocomplete="off" />
+      </div>
+
+      <div class="flex flex-column gap-1">
         <label for="variant-name" class="text-sm font-medium text-gray-600"
-          >Name <span class="text-red-500">*</span></label
+          >Internal name <span class="text-red-500">*</span></label
         >
         <PvInputText id="variant-name" v-model="form.name" class="w-full" autocomplete="off" />
       </div>
@@ -148,6 +155,7 @@ const booleanOptions = [
 ];
 
 const form = reactive({
+  displayName: '',
   name: '',
   registered: true,
   rows: [] as ParamRow[],
@@ -221,6 +229,7 @@ watch(
   ([visible, source]) => {
     if (!visible) return;
     errorMessage.value = '';
+    form.displayName = source?.displayName ?? source?.name ?? '';
     form.name = source?.name ?? '';
     form.registered = source?.registered ?? true;
     form.rows = buildParamsFromSource(source);
@@ -273,9 +282,14 @@ function collectParams(): Record<string, VariantParamValue> | null {
 
 async function handleSubmit(): Promise<void> {
   errorMessage.value = '';
+  const displayName = form.displayName.trim();
   const name = form.name.trim();
+  if (!displayName) {
+    errorMessage.value = 'Display name is required.';
+    return;
+  }
   if (!name) {
-    errorMessage.value = 'Name is required.';
+    errorMessage.value = 'Internal name is required.';
     return;
   }
   if (!props.taskId) {
@@ -290,6 +304,7 @@ async function handleSubmit(): Promise<void> {
     const result = await mutateAsync({
       taskId: props.taskId,
       name,
+      displayName,
       params,
       registered: form.registered,
     });

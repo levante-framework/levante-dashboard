@@ -10,7 +10,7 @@ import type {
   GetVariantParamSpecsParams,
   GetVariantParamSpecsResult,
   SerializedTask,
-  SerializedTaskVariant,
+  SerializedTaskVariant as ZodSerializedTaskVariant,
   SerializedTaskVariantRevision,
   SerializedVariantParamSpec,
   UpdateTaskVariantParams,
@@ -20,6 +20,10 @@ import type {
   UpsertVariantParamSpecParams,
   UpsertVariantParamSpecResult,
 } from '@levante-framework/levante-zod';
+
+export type SerializedTaskVariant = ZodSerializedTaskVariant & {
+  displayName?: string;
+};
 
 export type {
   CreateTaskVariantParams,
@@ -33,7 +37,6 @@ export type {
   GetVariantParamSpecsParams,
   GetVariantParamSpecsResult,
   SerializedTask,
-  SerializedTaskVariant,
   SerializedTaskVariantRevision,
   SerializedVariantParamSpec,
   UpdateTaskVariantParams,

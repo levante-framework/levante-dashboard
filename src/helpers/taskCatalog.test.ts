@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { resolveVariantDisplayName } from '@/helpers';
 import { getCallableErrorMessage, semanticIdFromName } from '@/helpers/taskCatalog';
 
 describe('semanticIdFromName', () => {
@@ -11,6 +12,18 @@ describe('semanticIdFromName', () => {
   it('returns empty string when name yields no slug', () => {
     expect(semanticIdFromName('!!!')).toBe('');
     expect(semanticIdFromName('   ')).toBe('');
+  });
+});
+
+describe('resolveVariantDisplayName', () => {
+  it('prefers explicit displayName over internal name', () => {
+    expect(resolveVariantDisplayName({ displayName: 'Friendly Label', name: 'en-US' })).toBe('Friendly Label');
+  });
+
+  it('falls back to formatted internal name', () => {
+    expect(resolveVariantDisplayName({ name: 'en-US' })).toBeTruthy();
+    expect(resolveVariantDisplayName({ name: 'en-US' })).not.toBe('Friendly Label');
+    expect(resolveVariantDisplayName({ name: 'custom-label' })).toBe('custom-label');
   });
 });
 
