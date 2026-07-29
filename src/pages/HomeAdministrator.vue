@@ -261,21 +261,17 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import PvBadge from 'primevue/badge';
-import { computed, nextTick, onBeforeMount, watch } from 'vue';
+import { computed, nextTick, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import DocsButton from '@/components/DocsButton.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { useGetSiteOverviewQuery } from '@/composables/queries/useGetSiteOverviewQuery';
 import { useAuthStore } from '@/store/auth';
-import { welcomeSteps } from '@/wizard/steps/welcome-steps';
 import { runWizard } from '@/wizard';
-import { useLevanteStore } from '@/store/levante';
 
 const authStore = useAuthStore();
 const { currentSite, userData } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
-const levanteStore = useLevanteStore();
-const { setWizardSteps } = levanteStore;
 
 const isSiteSelected = computed(() => !!currentSite.value && currentSite.value !== 'any');
 const showSelectSitePrompt = computed(() => !!userData.value && !isSiteSelected.value);
@@ -340,10 +336,6 @@ watch(
   },
   { immediate: true },
 );
-
-onBeforeMount(() => {
-  setWizardSteps(welcomeSteps);
-});
 </script>
 
 <style scoped lang="scss">

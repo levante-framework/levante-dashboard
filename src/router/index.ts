@@ -13,6 +13,7 @@ import { APP_ROUTES } from '@/constants/routes';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import type { Role } from '@/types';
+import { fetchWizardSteps } from '@/wizard/index.js';
 
 function removeQueryParams(to: RouteLocationNormalized) {
   if (Object.keys(to.query).length) return { path: to.path, query: {}, hash: to.hash };
@@ -391,6 +392,8 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
   if ((requiresNewPermissions && !shouldUsePermissions.value) || (allowedRoles.length && !isUserAllowed)) {
     return next({ name: 'Home' });
   }
+
+  await fetchWizardSteps(String(to.name));
 
   return next();
 });
