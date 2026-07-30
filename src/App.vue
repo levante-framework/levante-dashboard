@@ -74,12 +74,18 @@ const footerVariant = computed(() => {
 
 async function recoverFromProfileFetchFailure(error) {
   console.error('Error fetching user claims or user data', error);
+  logger.error(new Error('Failed to fetch user claims or user data', { cause: error }), {
+    tags: { component: 'App', function: 'recoverFromProfileFetchFailure' },
+  });
   try {
     if (authStore.isFirekitInit()) {
       await authStore.signOut();
     }
   } catch (signOutError) {
     console.error('Error signing out after profile fetch failure', signOutError);
+    logger.error(new Error('Failed to sign out after profile fetch failure', { cause: signOutError }), {
+      tags: { component: 'App', function: 'recoverFromProfileFetchFailure' },
+    });
   }
   authStore.$reset();
   await authStore.initFirekit();
@@ -147,6 +153,9 @@ onBeforeMount(async () => {
     })
     .catch((error) => {
       console.error('Error initializing auth store', error);
+      logger.error(new Error('Failed to initialize auth store from redirect', { cause: error }), {
+        tags: { component: 'App', function: 'initStateFromRedirect' },
+      });
     });
 
   isAuthStoreReady.value = true;

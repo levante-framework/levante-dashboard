@@ -1,6 +1,7 @@
 import { createI18n } from 'vue-i18n';
 import { LEVANTE_TRANSLATION_LANGUAGES, LEVANTE_TRANSLATIONS } from '@/constants/bucket';
 import { isLevante } from '@/constants';
+import { logger } from '@/logger';
 
 export interface LanguageOption {
   languageMenu: string;
@@ -162,6 +163,11 @@ async function fetchTranslations(bucket: 'test' | 'live', locale: string): Promi
     return data as Translations;
   } catch (error) {
     console.error(`Failed to fetch ${bucket.toLowerCase()} translations`, error);
+    logger.error(new Error('Failed to fetch translations', { cause: error }), {
+      tags: { function: 'fetchTranslations' },
+      bucket,
+      locale: parsedLocale,
+    });
     return null;
   }
 }

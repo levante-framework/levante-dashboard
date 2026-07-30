@@ -438,6 +438,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import useAddTaskMutation from '@/composables/mutations/useAddTaskMutation';
 import useUpdateTaskMutation from '@/composables/mutations/useUpdateTaskMutation';
 import useTasksQuery from '@/composables/queries/useTasksQuery';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 const toast = useToast();
@@ -696,6 +697,9 @@ const handleUpdateTask = async () => {
         life: 3000,
       });
       console.error('Failed to update task.', error);
+      logger.error(new Error('Failed to update task', { cause: error }), {
+        tags: { component: 'ManageTasks', function: 'handleUpdateTaskSubmit' },
+      });
     },
   });
 };
@@ -744,6 +748,9 @@ const handleNewTaskSubmit = async (isFormValid) => {
         life: 3000,
       });
       console.error('Failed to add task.', error);
+      logger.error(new Error('Failed to add task', { cause: error }), {
+        tags: { component: 'ManageTasks', function: 'handleNewTaskSubmit' },
+      });
     },
   });
 };

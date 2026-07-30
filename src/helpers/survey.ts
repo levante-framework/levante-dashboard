@@ -7,6 +7,7 @@ import { toRaw } from 'vue';
 import type { Router } from 'vue-router';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
+import { logger } from '@/logger';
 import type { useAssignmentsStore } from '@/store/assignments';
 // @ts-expect-error - Will be resolved when store file is converted to TS
 import type { UseSurveyStore } from '@/store/survey';
@@ -288,6 +289,9 @@ export async function saveFinalSurveyData({
   } catch (error: unknown) {
     surveyStore.setIsSavingSurveyResponses(false);
     console.error(error);
+    logger.error(new Error('Failed to save survey responses', { cause: error }), {
+      tags: { function: 'saveFinalSurveyData' },
+    });
     toast.add({
       severity: 'error',
       summary: 'Error saving survey responses: ' + (error instanceof Error ? error.message : String(error)),

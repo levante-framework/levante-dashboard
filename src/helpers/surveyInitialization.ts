@@ -11,6 +11,7 @@ import {
   saveFinalSurveyData,
   saveSurveyData,
 } from '@/helpers/survey';
+import { logger } from '@/logger';
 import type { useAssignmentsStore } from '@/store/assignments';
 
 interface UserData {
@@ -169,6 +170,9 @@ export function setupSurveyEventHandlers({
               'Error saving previous page responses: ',
               error instanceof Error ? error.message : String(error),
             );
+            logger.error(new Error('Failed to save previous page survey responses', { cause: error }), {
+              tags: { function: 'setupSurveyEventHandlers' },
+            });
           }
         }
       }

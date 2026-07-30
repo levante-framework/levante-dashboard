@@ -1,6 +1,7 @@
 import { type HttpsCallableResult, httpsCallable } from 'firebase/functions';
 import levanteFirebaseConfig from '@/config/firebaseLevante';
 import { type EmulatorConfig, type FirebaseConfig, FirebaseService } from '@/firebase/Service';
+import { logger } from '@/logger';
 import firebaseJSON from './../../firebase.json';
 
 export class Repository {
@@ -17,6 +18,9 @@ export class Repository {
       return response?.data;
     } catch (error) {
       console.error(`[${functionName}]`, error);
+      logger.error(new Error(`Failed to call ${functionName}`, { cause: error }), {
+        tags: { function: functionName },
+      });
       throw error;
     }
   }
@@ -34,6 +38,9 @@ export class Repository {
       return response?.data;
     } catch (error) {
       console.error(`[${functionName}]`, error);
+      logger.error(new Error(`Failed to call ${functionName} with timeout`, { cause: error }), {
+        tags: { function: functionName },
+      });
       throw error;
     }
   }

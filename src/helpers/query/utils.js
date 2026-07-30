@@ -14,6 +14,7 @@ import { isEmulator } from '@/constants';
 import { FIRESTORE_BASE_URL, FIRESTORE_COLLECTIONS, FIRESTORE_DATABASES } from '@/constants/firebase';
 import { ROLES } from '@/constants/roles';
 import { flattenObj } from '@/helpers';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 export const convertValues = (value) => {
@@ -217,6 +218,9 @@ export const fetchDocumentsById = async (collection, docIds, select = [], db = F
       });
   } catch (error) {
     console.error('fetchDocumentsById: Error fetching documents by ID:', error);
+    logger.error(new Error('Failed to fetch documents by ID', { cause: error }), {
+      tags: { function: 'fetchDocumentsById' },
+    });
     return [];
   }
 };
@@ -248,6 +252,11 @@ export const fetchDocsById = async (documents, db = FIRESTORE_DATABASES.ADMIN) =
         })
         .catch((error) => {
           console.error('fetchDocsById: Error fetching document:', error);
+          logger.error(new Error('Failed to fetch document by ID', { cause: error }), {
+            tags: { function: 'fetchDocsById' },
+            collection,
+            docId,
+          });
           return [];
         }),
     );
@@ -336,6 +345,9 @@ export const fetchSubcollection = async (
     }));
   } catch (error) {
     console.error('Failed to fetch subcollection: ', error);
+    logger.error(new Error('Failed to fetch subcollection', { cause: error }), {
+      tags: { function: 'fetchSubcollection' },
+    });
     return {
       error: error.response?.status === 404 ? 'Subcollection not found' : error.message,
     };
