@@ -179,7 +179,16 @@ function sendTestError() {
     // Create a new error to ensure it has a stack trace
     throw new Error('Test error from Debug.vue');
   } catch (e) {
-    logger.error(e, undefined, true);
+    logger.error(
+      new Error('Test error from Debug.vue', { cause: e }),
+      {
+        tags: {
+          component: 'Debug',
+          function: 'sendTestError',
+        },
+      },
+      true,
+    );
     alert('Test error sent!');
   }
 }

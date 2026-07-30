@@ -61,25 +61,34 @@ function capture(name: string, properties?: Record<string, any>, force: boolean 
 }
 
 /**
- * Logs an error.
- * In production, sends the error to Sentry.
- * Otherwise, logs to the console.
+ * Logs an error to Sentry (production) or the console (dev).
  *
- * @param error - The error object (Error or unknown).
- * @param context - Optional additional context for Sentry.
+ * @example
+ * logger.error(new Error('Failed to load groups', { cause: err }), {
+ *   tags: { function: 'listGroups' },
+ * });
  */
-function error(error: Error | unknown, context?: Record<string, any>, force: boolean = false): void {
+function error(
+  exception: Error,
+  context?: {
+    tags?: Record<string, string>;
+    [key: string]: unknown;
+  },
+  force = false,
+) {
+  const { tags, ...rest } = context ?? {};
   const extra = {
     appVersion,
     coreTasksVersion,
     commitHash,
-    ...context,
+    ...rest,
     ...currentProperties,
   };
+
   if (isProduction || force) {
-    Sentry.captureException(error, { extra });
+    Sentry.captureException(exception, { extra, tags });
   } else {
-    console.error('[Logger Error]', error, extra ?? '');
+    console.error('[Logger Error]', exception, extra);
   }
 }
 

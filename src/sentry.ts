@@ -1,4 +1,4 @@
-import { captureConsoleIntegration, contextLinesIntegration, extraErrorDataIntegration } from '@sentry/integrations';
+import { contextLinesIntegration, extraErrorDataIntegration } from '@sentry/integrations';
 import * as Sentry from '@sentry/vue';
 import type { App } from 'vue';
 import { isLevante } from '@/constants';
@@ -7,18 +7,22 @@ import { formattedLocale, languageOptions } from './translations/i18n';
 
 const language = formattedLocale;
 
-function isCrossOriginVueRefSecurityError(event: {
+type SentryEventLike = {
   message?: string;
   logentry?: { message?: string };
   exception?: { values?: Array<{ type?: string; value?: string }> };
-}): boolean {
-  const haystacks = [
+};
+
+function eventTextHaystacks(event: SentryEventLike): string[] {
+  return [
     event.message,
     event.logentry?.message,
     ...(event.exception?.values ?? []).flatMap((exception) => [exception.type, exception.value]),
   ].filter((value): value is string => typeof value === 'string');
+}
 
-  return haystacks.some((text) => text.includes("__v_isRef") && text.includes('cross-origin frame'));
+function isCrossOriginVueRefSecurityError(event: SentryEventLike): boolean {
+  return eventTextHaystacks(event).some((text) => text.includes('__v_isRef') && text.includes('cross-origin frame'));
 }
 
 export function initSentry(app: App) {
@@ -53,9 +57,6 @@ export function initSentry(app: App) {
         maskAllInputs: true,
       }),
       Sentry.browserTracingIntegration(),
-      captureConsoleIntegration({
-        levels: ['error'],
-      }),
       Sentry.feedbackIntegration({
         showBranding: false,
         showName: false,

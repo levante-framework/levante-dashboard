@@ -110,8 +110,10 @@ class UsersRepository extends Repository {
 
       return users;
     } catch (error) {
-      console.error('fetchAdminUsers: Error fetching admin users from Firestore:', error);
-      logger.error(error, { context: { function: 'fetchAdminUsers', superAdminsOnly } });
+      logger.error(new Error('Failed to fetch admin users', { cause: error }), {
+        tags: { function: 'fetchAdminUsers' },
+        superAdminsOnly,
+      });
       throw error;
     }
   }
