@@ -10,11 +10,6 @@ interface UserData {
   [key: string]: any; // Allow other properties
 }
 
-interface ErrorContext {
-  tags?: Record<string, string>;
-  [key: string]: unknown;
-}
-
 const isProduction = import.meta.env.MODE === 'production';
 // const isProduction = import.meta.env.VITE_FIREBASE_PROJECT==='PROD'; // can be used for more accurate logging
 
@@ -58,72 +53,22 @@ function capture(name: string, properties?: Record<string, any>, force: boolean 
   }
 }
 
-function isPlainContext(value: unknown): value is ErrorContext {
-  return value !== null && typeof value === 'object' && !(value instanceof Error) && !Array.isArray(value);
-}
-
-function buildException(message: string, cause?: Error | unknown): Error {
-  if (cause instanceof Error) {
-    const wrapped = new Error(message, { cause });
-    wrapped.name = cause.name;
-    return wrapped;
-  }
-  if (cause !== undefined) {
-    return new Error(`${message}: ${String(cause)}`);
-  }
-  return new Error(message);
-}
-
 /**
  * Logs an error to Sentry (production) or the console (dev).
  *
- * Preferred:
- *   logger.error('Failed to load groups', err, { tags: { operation: 'list-groups' } })
- *
- * Legacy (still supported):
- *   logger.error(err, { context: { function: '...' } })
- *   logger.error('Something failed', { extraField: 1 })
+ * @example
+ * logger.error(new Error('Failed to load groups', { cause: err }), {
+ *   tags: { function: 'listGroups' },
+ * });
  */
-function error(message: string, cause?: Error | unknown, context?: ErrorContext, force?: boolean): void;
-function error(error: Error | unknown, context?: ErrorContext, force?: boolean): void;
 function error(
-  messageOrError: string | Error | unknown,
-  causeOrContext?: Error | unknown | ErrorContext,
-  contextOrForce?: ErrorContext | boolean,
-  forceArg = false,
-): void {
-  let message: string | undefined;
-  let cause: Error | unknown | undefined;
-  let context: ErrorContext | undefined;
-  let force = forceArg;
-
-  if (typeof messageOrError === 'string') {
-    message = messageOrError;
-    if (typeof contextOrForce === 'boolean') {
-      force = contextOrForce;
-      if (isPlainContext(causeOrContext)) {
-        context = causeOrContext;
-      } else {
-        cause = causeOrContext;
-      }
-    } else if (isPlainContext(causeOrContext) && contextOrForce === undefined) {
-      context = causeOrContext;
-    } else if (causeOrContext !== undefined && isPlainContext(contextOrForce)) {
-      cause = causeOrContext;
-      context = contextOrForce;
-    } else if (causeOrContext !== undefined) {
-      cause = causeOrContext;
-    }
-  } else {
-    cause = messageOrError;
-    if (typeof causeOrContext === 'boolean') {
-      force = causeOrContext;
-    } else if (isPlainContext(causeOrContext)) {
-      context = causeOrContext;
-      if (typeof contextOrForce === 'boolean') force = contextOrForce;
-    }
-  }
-
+  exception: Error,
+  context?: {
+    tags?: Record<string, string>;
+    [key: string]: unknown;
+  },
+  force = false,
+) {
   const { tags, ...rest } = context ?? {};
   const extra = {
     appVersion,
@@ -132,12 +77,11 @@ function error(
     ...rest,
     ...currentProperties,
   };
-  const exception = message !== undefined ? buildException(message, cause) : cause;
 
   if (isProduction || force) {
     Sentry.captureException(exception, { extra, tags });
   } else {
-    console.error('[Logger Error]', message ?? exception, cause !== undefined && message ? cause : '', extra ?? '');
+    console.error('[Logger Error]', exception, extra);
   }
 }
 

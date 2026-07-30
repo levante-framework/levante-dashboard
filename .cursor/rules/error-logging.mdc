@@ -1,0 +1,38 @@
+---
+globs: src/**/*.js,src/**/*.ts,src/**/*.vue
+alwaysApply: false
+---
+# Error logging
+
+Use `logger` from `@/logger`. In production `logger.error` reports to Sentry; in dev it echoes to the console. `console.error` never reaches Sentry, so don't pair the two for the same failure.
+
+## Decision table
+
+| Situation | Use |
+| --- | --- |
+| Caught failure that breaks a feature, corrupts data, or you'd want alerted on | `logger.error` |
+| Error already reported at a boundary closer to its source | Don't log again — one report per root cause; callers handle UI/control flow only |
+| Expected user-facing outcomes (wrong password, cancelled auth popup, form validation) | UI/toast only; no Sentry |
+| Unexpected internal state that validation should have prevented | `logger.error` — signals a real bug, not a user error |
+| Caught error swallowed by a fallback (`return []`/`null`) | `logger.error` before returning — an outage shouldn't look like empty results |
+| Temporary local debugging while developing | `console.error` (remove or upgrade before merge) |
+| CLI / scripts outside `src/` | `console.error` is fine |
+
+## Shape the call
+
+Always wrap the caught error in a new `Error` with a fixed, descriptive message, passing the original via `cause`: this gives a stable Sentry title (one root cause → one issue), preserves the original stack, and sidesteps the `unknown` type of a caught error. Put low-cardinality, filterable labels in `tags` (Sentry indexes them); put IDs/payloads as extra context fields — unique values in `tags` bloat the index instead of aiding search. Common tags: `function` (the function logging the error) and `component` (the Vue component, for errors in `.vue` files).
+
+```ts
+// DO — descriptive title + original stack via cause
+logger.error(new Error('Failed to fetch administration by ID', { cause: error }), {
+  tags: { function: 'fetchAdministrationById' }, // low-cardinality, filterable
+  administrationId, // high-cardinality, kept out of tags
+});
+
+// DON'T — interpolated message loses the original stack; high-cardinality ID in tags pollutes the index
+logger.error(new Error(`Failed: ${error.message}`), { tags: { administrationId } });
+```
+
+## No PII in tags or extra
+
+`sendDefaultPii` is disabled app-wide — don't undo that with emails, names, or other identifying free text. Use opaque IDs (uid, administrationId).

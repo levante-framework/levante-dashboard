@@ -21,30 +21,8 @@ function eventTextHaystacks(event: SentryEventLike): string[] {
   ].filter((value): value is string => typeof value === 'string');
 }
 
-function eventMessageHaystacks(event: SentryEventLike): string[] {
-  return [
-    event.message,
-    event.logentry?.message,
-    ...(event.exception?.values ?? []).map((exception) => exception.value),
-  ].filter((value): value is string => typeof value === 'string');
-}
-
 function isCrossOriginVueRefSecurityError(event: SentryEventLike): boolean {
-  return eventTextHaystacks(event).some((text) => text.includes("__v_isRef") && text.includes('cross-origin frame'));
-}
-
-function isGenericConsoleNoise(event: SentryEventLike): boolean {
-  // Only inspect message/value — never exception.type, which is often literally "Error".
-  return eventMessageHaystacks(event).some((text) => {
-    const trimmed = text.trim();
-    return (
-      trimmed === 'error' ||
-      trimmed === 'Error' ||
-      trimmed === 'Error: Error' ||
-      trimmed === 'The following errors were found' ||
-      /^Invalid response: (null|undefined)/i.test(trimmed)
-    );
-  });
+  return eventTextHaystacks(event).some((text) => text.includes('__v_isRef') && text.includes('cross-origin frame'));
 }
 
 export function initSentry(app: App) {
@@ -107,10 +85,6 @@ export function initSentry(app: App) {
     ignoreErrors: [/Failed to read a named property '__v_isRef' from 'Window'/],
     beforeSend(event) {
       if (isCrossOriginVueRefSecurityError(event)) {
-        return null;
-      }
-
-      if (isGenericConsoleNoise(event)) {
         return null;
       }
 

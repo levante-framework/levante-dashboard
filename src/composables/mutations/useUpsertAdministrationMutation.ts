@@ -50,7 +50,10 @@ const useUpsertAdministrationMutation = (): UseMutationReturnType<void, Error, A
       logger.capture('Admin: Create Administration', { data });
     },
     onError: (error: Error, data: AdministrationData): void => {
-      logger.error('Error creating administration', { data, error });
+      logger.error(new Error('Failed to upsert administration', { cause: error }), {
+        tags: { function: 'useUpsertAdministrationMutation' },
+        data,
+      });
     },
   });
 };

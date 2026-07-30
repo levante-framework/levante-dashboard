@@ -212,10 +212,10 @@ import useDistrictsQuery from '@/composables/queries/useDistrictsQuery';
 import useGroupsQuery from '@/composables/queries/useGroupsQuery';
 import useSchoolsQuery from '@/composables/queries/useSchoolsQuery';
 import useTaskVariantsQuery from '@/composables/queries/useTaskVariantsQuery';
+import { isLevante } from '@/constants';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
 import { APP_ROUTES } from '@/constants/routes';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
-import { isLevante } from '@/constants';
 import { isPlainObject, normalizeToLowercase } from '@/helpers';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
@@ -311,9 +311,12 @@ watch(
   ([newExistingData, newIsLoadingExistingData, newErrorExistingData]) => {
     if (!props.adminId) return;
     if (!newIsLoadingExistingData && !newExistingData) {
-      logger.error('Failed to fetch administration by id', {
+      logger.error(new Error('Failed to fetch administration by id', { cause: newErrorExistingData }), {
+        tags: {
+          component: 'CreateAssignment',
+          function: 'watch',
+        },
         assignmentId: props.adminId,
-        error: newErrorExistingData,
       });
 
       toast.add({

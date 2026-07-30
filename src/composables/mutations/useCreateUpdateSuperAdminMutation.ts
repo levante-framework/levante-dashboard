@@ -24,7 +24,10 @@ const useCreateUpdateSuperAdminMutation = (): UseMutationReturnType<
       logger.capture('Admin: Create or update super admin', { adminUid: payload.adminUid, email: payload.email });
     },
     onError: (error: Error, payload: CreateUpdateSuperAdminPayload): void => {
-      logger.error(error, { payload });
+      logger.error(new Error('Failed to create or update super admin', { cause: error }), {
+        tags: { function: 'useCreateUpdateSuperAdminMutation' },
+        adminUid: payload.adminUid,
+      });
     },
   });
 };
