@@ -116,10 +116,11 @@ const getFirebaseUser = () => {
 /**
  * Keep the bearer token on an Axios instance current.
  *
- * `roarfirekit.restConfig` exposes a snapshot of the ID token taken the last time the SDK emitted a
- * token change. Attaching that snapshot at request time sends an expired credential whenever the
- * refresh did not land, so resolve the token per request instead and retry once on a 401 in case the
- * token expired in flight.
+ * `roarfirekit.restConfig` reads `_idTokens.admin` live, but firekit only ever writes that field
+ * from its `onIdTokenChanged` listener, and that listener fires only when the SDK actually obtains a
+ * new token. Once a refresh starts failing it stops firing, so the last good token stays in the
+ * header past its own expiry with nothing left to recover it. Ask the SDK for the token per request
+ * instead — it refreshes when needed and throws when it cannot — and retry once on a 401.
  *
  * @param {Object} instance - The Axios instance to decorate.
  */
