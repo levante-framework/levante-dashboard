@@ -12,6 +12,7 @@ import {
   fetchDocumentsById,
   getAxiosInstance,
   getBaseDocumentPath,
+  isAuthError,
   mapFields,
   orderByNameASC,
 } from '@/helpers/query/utils';
@@ -247,6 +248,7 @@ export const orgFetchAll = async (
       orgs = district ? [district] : [];
     } catch (error) {
       console.error('orgFetchAll: Error fetching district by ID:', error);
+      if (isAuthError(error)) throw error;
       return [];
     }
   } else {
@@ -268,6 +270,7 @@ export const orgFetchAll = async (
       });
     } catch (error) {
       console.error('orgFetchAll: Error fetching orgs:', error);
+      if (isAuthError(error)) throw error;
       return [];
     }
   }
@@ -280,7 +283,9 @@ export const orgFetchAll = async (
       const creatorIds = [...new Set(orgs.map((org) => org.createdBy).filter(Boolean))];
 
       if (creatorIds.length > 0) {
-        // Fetch creator data in batch
+        // Fetch creator data in batch. Creators are frequently super admins whose user document the
+        // requesting admin cannot read, so this lookup must stay non-fatal: the org list itself has
+        // already loaded and only the creator column degrades to "Unknown User".
         let creatorsData = [];
         try {
           creatorsData = await fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, creatorIds, ['displayName', 'name']);
