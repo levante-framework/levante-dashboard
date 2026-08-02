@@ -397,79 +397,86 @@ const submitUsers = async () => {
   const orgIdsPerUser: OrgIds[] = [];
   const orgErrors: { field: string; validatedIdx: number }[] = [];
   const getOrgId = createOrgIdResolver();
-  // A rejected org lookup must not be recorded as a missing org. Doing so tells the user their cohort
-  // does not exist at this site when the request was in fact refused, so auth failures abort the whole
-  // resolution pass and surface as a session error instead.
-  try {
-    for (const { user, validatedIdx } of unregistered) {
-      const orgIds: OrgIds = {
-        sites: [siteId],
-        schools: [],
-        classes: [],
-        cohorts: [],
-      };
+  // Auth failures must not be recorded as missing orgs (that produced "cohort does not exist").
+  let orgLookupAuthError: unknown;
+  users: for (const { user, validatedIdx } of unregistered) {
+    const orgIds: OrgIds = {
+      sites: [siteId],
+      schools: [],
+      classes: [],
+      cohorts: [],
+    };
 
-      // Get firestore ids for schools
-      let allSchoolsFound = true;
-      for (const schoolName of user.school) {
-        try {
-          const schoolId = await getOrgId('schools', schoolName, siteId);
-          orgIds.schools.push(schoolId);
-        } catch (error) {
-          if (isAuthError(error)) throw error;
-          allSchoolsFound = false;
-          orgErrors.push({
-            field: 'school',
-            validatedIdx,
-          });
+    // Get firestore ids for schools
+    let allSchoolsFound = true;
+    for (const schoolName of user.school) {
+      try {
+        const schoolId = await getOrgId('schools', schoolName, siteId);
+        orgIds.schools.push(schoolId);
+      } catch (error) {
+        if (isAuthError(error)) {
+          orgLookupAuthError = error;
+          break users;
         }
+        allSchoolsFound = false;
+        orgErrors.push({
+          field: 'school',
+          validatedIdx,
+        });
       }
+    }
 
-      // Get firestore ids for classes
-      if (allSchoolsFound) {
-        for (const className of user.class) {
-          let classFound = false;
-          for (const schoolId of orgIds.schools) {
-            try {
-              const classId = await getOrgId('classes', className, siteId, schoolId);
-              orgIds.classes.push(classId);
-              classFound = true;
-              break;
-            } catch (error) {
-              if (isAuthError(error)) throw error;
+    // Get firestore ids for classes
+    if (allSchoolsFound) {
+      for (const className of user.class) {
+        let classFound = false;
+        for (const schoolId of orgIds.schools) {
+          try {
+            const classId = await getOrgId('classes', className, siteId, schoolId);
+            orgIds.classes.push(classId);
+            classFound = true;
+            break;
+          } catch (error) {
+            if (isAuthError(error)) {
+              orgLookupAuthError = error;
+              break users;
             }
           }
-          if (!classFound) {
-            orgErrors.push({
-              field: 'class',
-              validatedIdx,
-            });
-          }
         }
-      }
-
-      // Get firestore ids for cohorts
-      for (const cohortName of user.cohort) {
-        try {
-          const cohortId = await getOrgId(
-            'groups', // NB: the backend expects groups for cohorts
-            cohortName,
-            siteId,
-          );
-          orgIds.cohorts.push(cohortId);
-        } catch (error) {
-          if (isAuthError(error)) throw error;
+        if (!classFound) {
           orgErrors.push({
-            field: 'cohort',
+            field: 'class',
             validatedIdx,
           });
         }
       }
-
-      orgIdsPerUser.push(orgIds);
     }
-  } catch (error) {
-    logger.error(new Error('Org lookup rejected while validating CSV', { cause: error }), {
+
+    // Get firestore ids for cohorts
+    for (const cohortName of user.cohort) {
+      try {
+        const cohortId = await getOrgId(
+          'groups', // NB: the backend expects groups for cohorts
+          cohortName,
+          siteId,
+        );
+        orgIds.cohorts.push(cohortId);
+      } catch (error) {
+        if (isAuthError(error)) {
+          orgLookupAuthError = error;
+          break users;
+        }
+        orgErrors.push({
+          field: 'cohort',
+          validatedIdx,
+        });
+      }
+    }
+
+    orgIdsPerUser.push(orgIds);
+  }
+  if (orgLookupAuthError) {
+    logger.error(new Error('Org lookup rejected while validating CSV', { cause: orgLookupAuthError }), {
       tags: { component: 'AddUsers', function: 'submitUsers' },
     });
     status.value = {
