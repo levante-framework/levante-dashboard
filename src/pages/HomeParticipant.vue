@@ -117,6 +117,7 @@ import { formatDateWithLocale } from '@/helpers';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { fetchDocsById } from '@/helpers/query/utils';
 import { bootstrapSurveyInstance, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
+import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 import { useSurveyStore } from '@/store/survey';
@@ -567,7 +568,9 @@ watch(
           surveyStore.setSpecificSurveyRelationData(res);
         }
       } catch (error) {
-        console.error('Error fetching relation data:', error);
+        logger.error(new Error('Failed to fetch survey relation data', { cause: error }), {
+          tags: { component: 'HomeParticipant', function: 'watch' },
+        });
       }
     }
 

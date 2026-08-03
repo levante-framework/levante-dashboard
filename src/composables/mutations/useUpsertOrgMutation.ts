@@ -2,6 +2,7 @@ import type { CreateOrgType } from '@levante-framework/levante-zod';
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { ORG_MUTATION_KEY, SITE_OVERVIEW_QUERY_KEY } from '@/constants/queryKeys';
 import { groupsRepository } from '@/firebase/repositories/GroupsRepository';
+import { logger } from '@/logger';
 
 const useUpsertOrgMutation = () => {
   const queryClient = useQueryClient();
@@ -15,7 +16,11 @@ const useUpsertOrgMutation = () => {
       queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY, data.siteId] });
     },
     onError: (err, newOrgData) => {
-      console.error('Error upserting org:', err, newOrgData);
+      logger.error(new Error('Failed to upsert org', { cause: err }), {
+        tags: { function: 'useUpsertOrgMutation' },
+        siteId: newOrgData.siteId,
+        type: newOrgData.type,
+      });
     },
   });
 };

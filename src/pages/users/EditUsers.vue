@@ -102,6 +102,7 @@ import { ref, toRaw } from 'vue';
 import EditUsersInfo from '@/components/userInfo/EditUsersInfo.vue';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { csvFileToJson, generateColumns } from '@/helpers/csv';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 const authStore = useAuthStore();
@@ -293,7 +294,9 @@ const submitEdits = async () => {
       });
     }
   } catch (error) {
-    console.error(error);
+    logger.error(new Error('Failed to edit users', { cause: error }), {
+      tags: { component: 'EditUsers', function: 'submitEdits' },
+    });
     toast.add({
       severity: 'error',
       summary: 'Error',

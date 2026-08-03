@@ -98,6 +98,7 @@ import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import GroupPicker from '@/components/GroupPicker.vue';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 const router = useRouter();
@@ -193,7 +194,9 @@ const submit = async () => {
         detail: error.message,
         life: 5000,
       });
-      console.error(error);
+      logger.error(new Error('Failed to create administrator', { cause: error }), {
+        tags: { component: 'CreateAdministrator', function: 'submit' },
+      });
     });
 };
 </script>
