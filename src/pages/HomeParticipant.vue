@@ -299,21 +299,6 @@ const userType = computed(() => {
   return toRaw(userData.value)?.userType?.toLowerCase();
 });
 
-// Derive site for telemetry from the user's own roles; participants cannot read district docs (403).
-watch(
-  currentUserData,
-  (user) => {
-    const currentDistrictId = user?.districts?.current?.[0];
-    if (!currentDistrictId) return;
-    const roles = user?.roles ?? [];
-    const matchingRole = roles.find((role) => role?.siteId === currentDistrictId) ?? roles[0];
-    const siteId = matchingRole?.siteId ?? currentDistrictId;
-    const siteName = matchingRole?.siteName;
-    logger.setAdditionalProperties({ siteId, ...(siteName ? { siteName } : {}) });
-  },
-  { immediate: true },
-);
-
 // Watch for locale changes and reset survey to allow reinitialization with new locale
 watch(locale, (newLocale, oldLocale) => {
   if (newLocale !== oldLocale && surveyStore.survey) {
@@ -583,7 +568,9 @@ watch(
           surveyStore.setSpecificSurveyRelationData(res);
         }
       } catch (error) {
-        console.error('Error fetching relation data:', error);
+        logger.error(new Error('Failed to fetch survey relation data', { cause: error }), {
+          tags: { component: 'HomeParticipant', function: 'watch' },
+        });
       }
     }
 

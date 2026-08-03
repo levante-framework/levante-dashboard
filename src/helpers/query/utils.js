@@ -10,9 +10,11 @@ import _without from 'lodash/without';
 import Papa from 'papaparse';
 import { storeToRefs } from 'pinia';
 import { toValue } from 'vue';
+import { isEmulator } from '@/constants';
 import { FIRESTORE_BASE_URL, FIRESTORE_COLLECTIONS, FIRESTORE_DATABASES } from '@/constants/firebase';
 import { ROLES } from '@/constants/roles';
-import { flattenObj, isEmulator } from '@/helpers';
+import { flattenObj } from '@/helpers';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 export const convertValues = (value) => {
@@ -216,7 +218,9 @@ export const fetchDocumentsById = async (collection, docIds, select = [], db = F
         };
       });
   } catch (error) {
-    console.error('fetchDocumentsById: Error fetching documents by ID:', error);
+    logger.error(new Error('Failed to fetch documents by ID', { cause: error }), {
+      tags: { function: 'fetchDocumentsById' },
+    });
     return [];
   }
 };
@@ -231,6 +235,7 @@ export const fetchDocsById = async (documents, db = FIRESTORE_DATABASES.ADMIN) =
   }
   const axiosInstance = getAxiosInstance(db);
   const promises = [];
+  const failures = [];
 
   for (const { collection, docId, select } of documents) {
     const docPath = `/${collection}/${docId}`;
@@ -247,12 +252,21 @@ export const fetchDocsById = async (documents, db = FIRESTORE_DATABASES.ADMIN) =
           };
         })
         .catch((error) => {
-          console.error('fetchDocsById: Error fetching document:', error);
+          failures.push({ collection, docId, error });
           return [];
         }),
     );
   }
-  return Promise.all(promises);
+  const results = await Promise.all(promises);
+  if (failures.length > 0) {
+    logger.error(new Error('Failed to fetch documents by ID', { cause: failures[0].error }), {
+      tags: { function: 'fetchDocsById' },
+      failureCount: failures.length,
+      totalCount: documents.length,
+      failures: failures.map(({ collection, docId }) => ({ collection, docId })),
+    });
+  }
+  return results;
 };
 
 export const batchGetDocs = async (docPaths, select = [], db = FIRESTORE_DATABASES.ADMIN) => {
@@ -335,7 +349,9 @@ export const fetchSubcollection = async (
       ..._mapValues(doc.fields, (value) => convertValues(value)),
     }));
   } catch (error) {
-    console.error('Failed to fetch subcollection: ', error);
+    logger.error(new Error('Failed to fetch subcollection', { cause: error }), {
+      tags: { function: 'fetchSubcollection' },
+    });
     return {
       error: error.response?.status === 404 ? 'Subcollection not found' : error.message,
     };

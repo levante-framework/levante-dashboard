@@ -4,6 +4,7 @@ import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { DISTRICTS_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { convertValues, getAxiosInstance, getBaseDocumentPath, orderByDefault } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 const getStructuredQuery = ({ collection, orderBy = orderByDefault }) => {
@@ -37,7 +38,9 @@ const fetchAllDistricts = async () => {
         };
       });
   } catch (error) {
-    console.error('Error fetching all districts', error);
+    logger.error(new Error('Failed to fetch all districts', { cause: error }), {
+      tags: { function: 'fetchAllDistricts' },
+    });
     return [];
   }
 };

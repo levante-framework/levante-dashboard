@@ -1,4 +1,4 @@
-import { isEmulator } from '@/helpers';
+import { isEmulator } from '@/constants';
 
 /**
  * Firestore databases

@@ -128,4 +128,19 @@ describe('RoarDataTable.vue', () => {
     wrapper.vm.onColumnToggle([columns[0], columns[1]]);
     expect(wrapper.vm.selectedColumns.length).toBe(2);
   });
+
+  it('should render an expander when an expansion slot is provided', () => {
+    const wrapper = mount(RoarDataTable, {
+      ...mountOptions,
+      props: {
+        ...mountOptions.props,
+        dataKey: 'col_1',
+      },
+      slots: {
+        expansion: '<div data-testid="expansion-content">Expanded</div>',
+      },
+    });
+
+    expect(wrapper.find('.p-datatable-row-toggle-button').exists()).toBe(true);
+  });
 });

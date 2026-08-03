@@ -45,7 +45,10 @@ const MyPreset = definePreset(Aura, {
 function handleQueryError(error: unknown, meta?: Record<string, unknown>) {
   // Log explicit firekit errors to Sentry
   if (error && typeof error === 'object' && 'code' in error && 'data' in error) {
-    logger.error(error, meta);
+    logger.error(new Error('Firekit query error', { cause: error }), {
+      tags: { function: 'handleQueryError', code: String(error.code) },
+      ...meta,
+    });
     // TODO signOut on functions/unauthenticated?
   }
 }

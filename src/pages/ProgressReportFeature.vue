@@ -178,6 +178,7 @@
               :total-records="filteredTableData?.length"
               :loading="false"
               :page-limit="pageLimit"
+              data-key="user.userId"
               data-cy="roar-data-table"
               :allow-filtering="!isLevante"
               :reset-filters="resetFilters"
@@ -218,6 +219,29 @@
                   </div>
                 </div>
               </template>
+              <template #expansion="{ data: row }">
+                <PvDataTable
+                  :value="row.tasks"
+                  :row-hover="false"
+                  class="p-datatable-sm"
+                  size="small"
+                >
+                  <PvColumn field="name" header="Task" />
+                  <PvColumn field="statusLabel" header="Status">
+                    <template #body="{ data: task }">
+                      <PvTag
+                        :value="task.statusLabel"
+                        :icon="task.statusIcon"
+                        :severity="task.statusSeverity"
+                        class="progress-tag"
+                        rounded
+                      />
+                    </template>
+                  </PvColumn>
+                  <PvColumn field="startedAtLabel" header="Started at" />
+                  <PvColumn field="completedAtLabel" header="Finished at" />
+                </PvDataTable>
+              </template>
             </RoarDataTable>
           </div>
         </template>
@@ -227,33 +251,37 @@
 </template>
 
 <script setup>
-import _capitalize from 'lodash/capitalize';
+import { computed, ref, watch, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useRoute, useRouter } from 'vue-router';
 import _get from 'lodash/get';
 import _kebabCase from 'lodash/kebabCase';
 import _map from 'lodash/map';
 import _startCase from 'lodash/startCase';
-import { storeToRefs } from 'pinia';
 import PvChart from 'primevue/chart';
-import PvFloatLabel from 'primevue/floatlabel';
-import PvInputText from 'primevue/inputtext';
+import PvColumn from 'primevue/column';
+import PvDataTable from 'primevue/datatable';
 import PvMultiSelect from 'primevue/multiselect';
 import PvSelectButton from 'primevue/selectbutton';
-import { computed, onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import RoarDataTable from '@/components/RoarDataTable.vue';
-import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
+import PvTag from 'primevue/tag';
+import { useAuthStore } from '@/store/auth';
 import { useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
+import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
+import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
+import { exportCsv } from '@/helpers/query/utils';
+import { normalizeUserTypeForDisplay } from '@/helpers/userType';
+import { taskDisplayNames } from '@/helpers/reports';
+import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
+import { getTooltip, normalizeToLowercase } from '@/helpers';
+import { isLevante } from '@/constants';
 import { APP_ROUTES } from '@/constants/routes';
+import RoarDataTable from '@/components/RoarDataTable.vue';
+import PvFloatLabel from 'primevue/floatlabel';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import PvInputText from 'primevue/inputtext';
+import _capitalize from 'lodash/capitalize';
 import { administrationsRepository } from '@/firebase/repositories/AdministrationsRepository';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
-import { getTooltip, isLevante, normalizeToLowercase } from '@/helpers';
-import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
-import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
-import { exportCsv } from '@/helpers/query/utils';
-import { taskDisplayNames } from '@/helpers/reports';
-import { normalizeUserTypeForDisplay } from '@/helpers/userType';
-import { useAuthStore } from '@/store/auth';
 
 const props = defineProps({
   administrationId: {
@@ -347,29 +375,35 @@ const statusForUserOnTask = (userId, taskId, taskProgress) => {
   return 'notStarted';
 };
 
-const progressCellFromStatus = (status) => {
+const taskStatusDisplay = (status) => {
   if (status === 'completed') {
     return {
-      value: 'Completed',
-      icon: 'pi pi-check-circle',
-      severity: 'success',
-      tags: ' Completed ',
+      statusLabel: 'Completed',
+      statusIcon: 'pi pi-check-circle',
+      statusSeverity: 'success',
     };
   }
+
   if (status === 'started') {
     return {
-      value: 'Started',
-      icon: 'pi pi-clock',
-      severity: 'warn',
-      tags: ' Started ',
+      statusLabel: 'Started',
+      statusIcon: 'pi pi-clock',
+      statusSeverity: 'warn',
     };
   }
+
   return {
-    value: 'Not Started',
-    icon: 'pi pi-minus-circle',
-    severity: 'warning',
-    tags: ' Not Started ',
+    statusLabel: 'Not Started',
+    statusIcon: 'pi pi-minus-circle',
+    statusSeverity: 'warning',
   };
+};
+
+const formatTaskDate = (iso) => {
+  if (!iso) return '--';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '--';
+  return d.toLocaleString();
 };
 
 const fetchProgressData = async () => {
@@ -513,26 +547,14 @@ const taskLabel = (taskId) => {
   return _startCase(taskId);
 };
 
-const getTaskColumnLabel = (taskId) => {
-  if (tasksDictionary.value?.[taskId]?.publicName) {
-    return tasksDictionary.value[taskId].publicName;
+const appendTaskProgressColumns = (row, tasks = []) => {
+  for (const task of tasks) {
+    row[`${task.name} Started at`] = task.startedAtLabel ?? '--';
+    row[`${task.name} Completed at`] = task.completedAtLabel ?? '--';
   }
-  if (tasksDictionary.value?.[taskId]?.name) {
-    return tasksDictionary.value[taskId].name;
-  }
-  return _startCase(taskId);
 };
 
-const appendTaskProgressColumns = (row, progress = {}) => {
-  const addTaskValue = (taskId) => {
-    const columnLabel = getTaskColumnLabel(taskId);
-    row[columnLabel] = progress?.[taskId]?.value ?? CSV_NOT_ASSIGNED_VALUE;
-  };
-
-  orderedTaskIds.value.forEach(addTaskValue);
-};
-
-const buildProgressExportRow = (user, progress = {}) => {
+const buildProgressExportRow = (user, tasks = []) => {
   const tableRow = {
     UID: _get(user, 'userId') ?? '',
     'User Login': _get(user, 'username') ?? '',
@@ -543,14 +565,14 @@ const buildProgressExportRow = (user, progress = {}) => {
     tableRow.School = _get(user, 'schoolName') ?? '';
   }
 
-  appendTaskProgressColumns(tableRow, progress);
+  appendTaskProgressColumns(tableRow, tasks);
 
   return tableRow;
 };
 
 const buildExportData = (rows) => {
   if (!rows) return [];
-  return _map(rows, ({ user, progress }) => buildProgressExportRow(user, progress));
+  return _map(rows, ({ user, tasks }) => buildProgressExportRow(user, tasks));
 };
 
 const computedProgressData = computed(() => {
@@ -559,11 +581,21 @@ const computedProgressData = computed(() => {
   const rows = [];
 
   for (const u of progressUsers.value) {
-    const currRowProgress = {};
-    for (const taskId of orderedTaskIds.value) {
-      const st = statusForUserOnTask(u.userId, taskId, taskProgress);
-      currRowProgress[taskId] = progressCellFromStatus(st);
-    }
+    const apiTasks = u.tasks ?? [];
+    const tasks = orderedTaskIds.value.map((taskId) => {
+      const fromApi = apiTasks.find((t) => t.taskId.toLowerCase() === taskId.toLowerCase());
+      const status = fromApi?.status ?? statusForUserOnTask(u.userId, taskId, taskProgress);
+      return {
+        taskId,
+        name: taskLabel(taskId),
+        status,
+        ...taskStatusDisplay(status),
+        startedAt: fromApi?.startedAt ?? null,
+        completedAt: fromApi?.completedAt ?? null,
+        startedAtLabel: formatTaskDate(fromApi?.startedAt),
+        completedAtLabel: formatTaskDate(fromApi?.completedAt),
+      };
+    });
 
     rows.push({
       user: {
@@ -573,7 +605,7 @@ const computedProgressData = computed(() => {
         grade: undefined,
         assessmentPid: undefined,
       },
-      progress: currRowProgress,
+      tasks,
     });
   }
 
@@ -601,7 +633,7 @@ const exportAll = async () => {
 const progressReportColumns = computed(() => {
   if (isLoadingTasksDictionary.value || progressPayload.value === undefined) return [];
 
-  const tableColumns = [
+  return [
     {
       field: 'user.userId',
       header: 'UID',
@@ -624,21 +656,6 @@ const progressReportColumns = computed(() => {
       filter: true,
     },
   ];
-
-  for (const taskId of orderedTaskIds.value) {
-    tableColumns.push({
-      field: `progress.${taskId}.value`,
-      filterField: `progress.${taskId}.tags`,
-      header: tasksDictionary.value[taskId]?.name ?? getTaskColumnLabel(taskId),
-      dataType: 'progress',
-      tag: true,
-      severityField: `progress.${taskId}.severity`,
-      iconField: `progress.${taskId}.icon`,
-      sort: true,
-    });
-  }
-
-  return tableColumns;
 });
 
 const filteredTableData = ref([]);
@@ -774,6 +791,7 @@ onMounted(async () => {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
+
 .details-card {
   max-width: 100%;
 }
@@ -787,5 +805,13 @@ onMounted(async () => {
   padding: 1.5rem 0 0;
   border-top: 1px solid var(--gray-100);
   text-align: center;
+}
+
+.p-datatable-row-expansion {
+  background: var(--p-datatable-row-hover-background) !important;
+}
+
+.p-datatable .p-datatable-tbody > tr.p-datatable-row-expansion > td {
+  padding: 0 1rem 1rem !important;
 }
 </style>

@@ -86,9 +86,11 @@
           ref="dataTable"
           v-model:filters="refFilters"
           v-model:selection="selectedRows"
+          v-model:expandedRows="expandedRows"
           class="scrollable-container"
           :class="{ compressed: compressedRows }"
           :value="data"
+          :data-key="dataKey"
           :row-hover="true"
           :reorderable-columns="true"
           :resizable-columns="true"
@@ -117,6 +119,14 @@
             v-if="props.allowRowSelection"
             selection-mode="multiple"
             header-style="background-color: var(--primary-color); border:none;"
+            :reorderable-column="false"
+            frozen
+          />
+          <PvColumn
+            v-if="hasExpansion"
+            expander
+            header-style="background-color: var(--primary-color); border:none;"
+            style="width: 3rem"
             :reorderable-column="false"
             frozen
           />
@@ -401,6 +411,9 @@
               >
             </div>
           </template>
+          <template v-if="hasExpansion" #expansion="slotProps">
+            <slot name="expansion" v-bind="slotProps" />
+          </template>
         </PvDataTable>
       </span>
     </div>
@@ -408,6 +421,12 @@
 </template>
 
 <script setup>
+import TableScoreTag from '@/components/reports/TableScoreTag.vue';
+import SkeletonTable from '@/components/SkeletonTable.vue';
+import { ROLES } from '@/constants/roles';
+import { getTooltip } from '@/helpers';
+import { progressTags, supportLevelColors } from '@/helpers/reports';
+import { useAuthStore } from '@/store/auth';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import _find from 'lodash/find';
 import _forEach from 'lodash/forEach';
@@ -427,13 +446,7 @@ import PvInputText from 'primevue/inputtext';
 import PvMultiSelect from 'primevue/multiselect';
 import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
-import { computed, ref } from 'vue';
-import TableScoreTag from '@/components/reports/TableScoreTag.vue';
-import SkeletonTable from '@/components/SkeletonTable.vue';
-import { ROLES } from '@/constants/roles';
-import { getTooltip } from '@/helpers';
-import { progressTags, supportLevelColors } from '@/helpers/reports';
-import { useAuthStore } from '@/store/auth';
+import { computed, ref, useSlots } from 'vue';
 
 const props = defineProps({
   columns: { type: Array, required: true },
@@ -456,8 +469,12 @@ const props = defineProps({
   showOptions: { type: Boolean, default: false },
   rowClass: { type: Function, default: null },
   allowRowSelection: { type: Boolean, default: true },
+  dataKey: { type: String, default: undefined },
 });
 
+const slots = useSlots();
+const hasExpansion = computed(() => Boolean(slots.expansion));
+const expandedRows = ref([]);
 /*
 Using the DataTable
 Required Props: columns, data
@@ -808,6 +825,11 @@ g {
     font-size: 0.8rem;
     padding: 0.3rem 0.5rem !important;
   }
+}
+
+.p-datatable-hoverable .p-datatable-tbody > tr:has(+ .p-datatable-row-expansion):not(.p-datatable-row-selected) {
+  background: var(--p-datatable-row-hover-background);
+  color: var(--p-datatable-row-hover-color);
 }
 
 .p-datatable-popover-filter {

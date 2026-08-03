@@ -36,7 +36,16 @@ interface EmailLinkCredentials {
 
 export interface UserData {
   roles: { siteId: string; role: string; siteName: string }[];
+  districts?: { current?: string[] };
   [key: string]: unknown;
+}
+
+function stampTelemetrySite(siteId: string | null | undefined, siteName?: string | null): void {
+  if (!siteId) return;
+  logger.setAdditionalProperties({
+    siteId,
+    ...(siteName ? { siteName } : {}),
+  });
 }
 
 interface SiteInfo {
@@ -130,7 +139,9 @@ export const useAuthStore = defineStore(
         setAuthStateListeners();
       } catch (error) {
         // @TODO: Improve error handling as this is a critical error.
-        console.error('Error initializing Firekit:', error);
+        logger.error(new Error('Failed to initialize Firekit', { cause: error }), {
+          tags: { function: 'initFirekit' },
+        });
       }
     }
 
@@ -254,11 +265,19 @@ export const useAuthStore = defineStore(
           currentSiteName.value = data.roles[0]?.siteName ?? null;
         }
       }
+
+      // Participants often lack admin roles; fall back to districts.current for site telemetry.
+      const districtId = data?.districts?.current?.[0];
+      const siteId = currentSite.value ?? districtId ?? null;
+      const matchingRole = data?.roles?.find((role) => role?.siteId === siteId) ?? data?.roles?.[0] ?? undefined;
+      const siteName = currentSiteName.value ?? matchingRole?.siteName ?? null;
+      stampTelemetrySite(siteId, siteName);
     }
 
     function setCurrentSite(siteId: string | null, siteName: string | null): void {
       currentSite.value = siteId;
       currentSiteName.value = siteName;
+      stampTelemetrySite(siteId, siteName);
     }
 
     function setUserClaims(claims: UserClaims | null): void {

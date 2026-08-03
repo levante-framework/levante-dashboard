@@ -127,9 +127,10 @@ import { useRouter } from 'vue-router';
 import SignIn from '@/components/auth/SignIn.vue';
 import LanguageSelector from '@/components/LanguageSelector.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
+import { isLevante } from '@/constants';
 import { AUTH_SSO_PROVIDERS } from '@/constants/auth';
 import { APP_ROUTES } from '@/constants/routes';
-import { isLevante, isMobileBrowser } from '@/helpers';
+import { isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { getUserAssignments } from '@/helpers/query/assignments';
 import { fetchDocById } from '@/helpers/query/utils';
@@ -300,7 +301,7 @@ onBeforeUnmount(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 10;
+  z-index: 9999;
   background-color: rgba(255, 255, 255, 0.7);
   padding-top: 21vh;
 }

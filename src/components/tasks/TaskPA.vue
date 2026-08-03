@@ -72,8 +72,8 @@ onMounted(async () => {
       'An error occurred while loading the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
     );
 
-    logger.error('Error importing the game module', {
-      error,
+    logger.error(new Error('Failed to import the game module', { cause: error }), {
+      tags: { function: 'onMounted', component: 'TaskPA' },
       taskId: props.taskId,
       userId: getUserId(),
     });
@@ -135,8 +135,8 @@ async function startTask(selectedAdmin) {
     alert(
       'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
     );
-    logger.error('Error starting task', {
-      error,
+    logger.error(new Error('Failed to start task', { cause: error }), {
+      tags: { function: 'startTask', component: 'TaskPA' },
       administrationId: selectedAdmin.value.id,
       taskId: props.taskId,
       userId: getUserId(),

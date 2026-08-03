@@ -181,13 +181,10 @@ import { useQueryClient } from '@tanstack/vue-query';
 import { useVuelidate } from '@vuelidate/core';
 import { required, requiredIf } from '@vuelidate/validators';
 import _filter from 'lodash/filter';
-import _find from 'lodash/find';
-import _forEach from 'lodash/forEach';
 import _groupBy from 'lodash/groupBy';
 import _isEmpty from 'lodash/isEmpty';
 import _isEqual from 'lodash/isEqual';
 import _toPairs from 'lodash/toPairs';
-import _union from 'lodash/union';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvCheckbox from 'primevue/checkbox';
@@ -212,13 +209,19 @@ import useDistrictsQuery from '@/composables/queries/useDistrictsQuery';
 import useGroupsQuery from '@/composables/queries/useGroupsQuery';
 import useSchoolsQuery from '@/composables/queries/useSchoolsQuery';
 import useTaskVariantsQuery from '@/composables/queries/useTaskVariantsQuery';
+import { isLevante } from '@/constants';
+import useTasksQuery from '@/composables/queries/useTasksQuery';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY, DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
 import { APP_ROUTES } from '@/constants/routes';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
-import { isLevante, isPlainObject, normalizeToLowercase } from '@/helpers';
+import { isPlainObject, normalizeToLowercase } from '@/helpers';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { useLevanteStore } from '@/store/levante';
+
+const props = defineProps({
+  adminId: { type: String, required: false, default: null },
+});
 
 const initialized = ref(false);
 const isFormPopulated = ref(false);
@@ -234,10 +237,6 @@ const { hasUserConfirmed } = storeToRefs(levanteStore);
 const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
 const authStore = useAuthStore();
 const { roarfirekit, userData } = storeToRefs(authStore);
-
-const props = defineProps({
-  adminId: { type: String, required: false, default: null },
-});
 
 const header = computed(() => {
   if (!props.adminId) return 'Create Assignment';
@@ -257,30 +256,33 @@ const creatorName = computed(() => {
 
 const onClickCancelBtn = () => router.back();
 
-// +------------------------------------------------------------------------------------------------------------------+
-// | Fetch Variants with Params
-// +------------------------------------------------------------------------------------------------------------------+
-const findVariantWithParams = (variants, params) => {
-  // TODO: implement tie breakers if found.length > 1
-  return _find(variants, (variant) => {
-    const cleanVariantParams = removeNull(variant.variant.params);
-    const cleanInputParams = removeNull(params);
-    return _isEqual(cleanInputParams, cleanVariantParams);
+function resolveTasks(assessments, variants, tasks) {
+  if (!tasks?.length) return [];
+
+  return (assessments ?? []).map((assessment) => {
+    const resolvedTask = tasks.find((task) => task?.id === assessment.taskId);
+    if (!resolvedTask) {
+      logger.error(new Error('Task doc missing for assessment during edit hydration'), {
+        tags: { component: 'CreateAssignment', function: 'resolveTasks' },
+        taskId: assessment?.taskId,
+        assignmentId: props.adminId,
+      });
+    }
+    const task = resolvedTask ?? { id: assessment.taskId, name: assessment.variantName ?? assessment.taskId };
+    const registeredVariant = variants.find((variant) => variant.id === assessment.variantId);
+    const deregisteredVariant = {
+      id: assessment?.variantId,
+      name: assessment?.variantName,
+      params: assessment?.params,
+      registered: false,
+    };
+
+    return {
+      id: registeredVariant?.id ?? assessment?.variantId,
+      variant: { ...(registeredVariant?.variant || deregisteredVariant), conditions: assessment?.conditions },
+      task,
+    };
   });
-};
-
-function resolveVariantForAssessment(assessment, allVariantInfo) {
-  const taskId = String(assessment?.taskId ?? '').toLowerCase();
-  const forTask = _filter(allVariantInfo, (variant) => String(variant.task?.id ?? '').toLowerCase() === taskId);
-
-  let found = findVariantWithParams(forTask, assessment.params ?? {});
-
-  const variantId = assessment.variantId;
-  if (!found && variantId) {
-    found = _find(forTask, (v) => v.id === variantId) ?? _find(allVariantInfo, (v) => v.id === variantId);
-  }
-
-  return found;
 }
 
 const { data: allVariants, isFetched: isVariantsFetched } = useTaskVariantsQuery(true, {
@@ -310,9 +312,12 @@ watch(
   ([newExistingData, newIsLoadingExistingData, newErrorExistingData]) => {
     if (!props.adminId) return;
     if (!newIsLoadingExistingData && !newExistingData) {
-      logger.error('Failed to fetch administration by id', {
+      logger.error(new Error('Failed to fetch administration by id', { cause: newErrorExistingData }), {
+        tags: {
+          component: 'CreateAssignment',
+          function: 'watch',
+        },
         assignmentId: props.adminId,
-        error: newErrorExistingData,
       });
 
       toast.add({
@@ -328,6 +333,14 @@ watch(
 );
 
 const existingAssessments = computed(() => existingData?.value?.assessments ?? []);
+
+const taskIds = computed(() => existingAssessments.value.map((assessment) => assessment.taskId).filter(Boolean));
+
+const fetchTasksForEdit = computed(() => initialized.value && !!props.adminId && !_isEmpty(taskIds.value));
+
+const { data: tasksData, isFetched: isTasksFetched } = useTasksQuery(false, taskIds, {
+  enabled: fetchTasksForEdit,
+});
 
 const existingAdminMinimalOrgs = computed(() => minimalOrgsFromDoc(existingData?.value));
 
@@ -762,6 +775,7 @@ const submit = async () => {
     assessments: submittedAssessments,
     dateOpen: toRaw(state).dateStarted,
     dateClose,
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     sequential: toRaw(state).sequential,
     orgs: orgs,
     isTestData: isTestData.value,
@@ -985,19 +999,14 @@ watch(
 );
 
 watch(
-  [existingData, allVariants, isVariantsFetched],
-  ([adminInfo, allVariantInfo, variantsFetched]) => {
+  [existingData, allVariants, isVariantsFetched, tasksData, isTasksFetched, taskIds],
+  ([adminInfo, allVariantInfo, variantsFetched, tasks, tasksFetched, assessmentTaskIds]) => {
     if (!props.adminId) return;
     if (!adminInfo || !administrationMatchesRoute(adminInfo, props.adminId)) return;
     if (!variantsFetched || !Array.isArray(allVariantInfo)) return;
+    if (!_isEmpty(assessmentTaskIds) && (!tasksFetched || !Array.isArray(tasks))) return;
 
-    preSelectedVariants.value = [];
-    _forEach(adminInfo.assessments, (assessment) => {
-      const found = resolveVariantForAssessment(assessment, allVariantInfo);
-      if (found) {
-        preSelectedVariants.value = _union(preSelectedVariants.value, [found]);
-      }
-    });
+    preSelectedVariants.value = resolveTasks(adminInfo.assessments, allVariantInfo, tasks ?? []);
     variants.value = preSelectedVariants.value.slice();
     editTasksHydrated.value = true;
   },

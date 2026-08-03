@@ -38,6 +38,7 @@ const fetchBucketTaskList = async () => {
     params: {
       prefix: normalizedPrefix,
       delimiter: '/',
+      fields: 'prefixes,nextPageToken',
     },
   });
 

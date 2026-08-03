@@ -260,7 +260,7 @@ import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { computed, onMounted, ref, toRaw } from 'vue';
-import { isLevante } from '@/helpers';
+import { isLevante } from '@/constants';
 
 interface FieldOption {
   label: string;

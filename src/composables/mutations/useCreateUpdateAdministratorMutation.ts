@@ -23,7 +23,10 @@ const useCreateUpdateAdministratorMutation = (): UseMutationReturnType<
       logger.capture('Admin: Create or update administrator', { adminUid: payload.adminUid, email: payload.email });
     },
     onError: (error: Error, payload: CreateUpdateAdministratorPayload): void => {
-      logger.error(error, { payload });
+      logger.error(new Error('Failed to create or update administrator', { cause: error }), {
+        tags: { function: 'useCreateUpdateAdministratorMutation' },
+        adminUid: payload.adminUid,
+      });
     },
   });
 };

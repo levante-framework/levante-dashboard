@@ -15,6 +15,7 @@ import {
   mapFields,
   orderByNameASC,
 } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 
 export const getOrgsRequestBody = ({
   aggregationQuery,
@@ -246,7 +247,9 @@ export const orgFetchAll = async (
       const district = await fetchDocById(ORG_TYPES.DISTRICTS, districtId, select);
       orgs = district ? [district] : [];
     } catch (error) {
-      console.error('orgFetchAll: Error fetching district by ID:', error);
+      logger.error(new Error('Failed to fetch district by ID', { cause: error }), {
+        tags: { function: 'orgFetchAll' },
+      });
       return [];
     }
   } else {
@@ -267,7 +270,9 @@ export const orgFetchAll = async (
         return mapFields(data);
       });
     } catch (error) {
-      console.error('orgFetchAll: Error fetching orgs:', error);
+      logger.error(new Error('Failed to fetch orgs', { cause: error }), {
+        tags: { function: 'orgFetchAll' },
+      });
       return [];
     }
   }
@@ -285,7 +290,9 @@ export const orgFetchAll = async (
         try {
           creatorsData = await fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, creatorIds, ['displayName', 'name']);
         } catch (error) {
-          console.error('orgFetchAll: Error fetching creator data from Firestore:', error);
+          logger.error(new Error('Failed to fetch creator data from Firestore', { cause: error }), {
+            tags: { function: 'orgFetchAll' },
+          });
           creatorsData = [];
         }
 
@@ -320,7 +327,9 @@ export const orgFetchAll = async (
         });
       }
     } catch (error) {
-      console.error('orgFetchAll: Error fetching creator data:', error);
+      logger.error(new Error('Failed to fetch creator data', { cause: error }), {
+        tags: { function: 'orgFetchAll' },
+      });
       // Continue without creator data if fetching fails
     }
   }
