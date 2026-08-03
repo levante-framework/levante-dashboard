@@ -17,7 +17,6 @@ export class Repository {
       const response: HttpsCallableResult<TResponse> = await callable(data);
       return response?.data;
     } catch (error) {
-      console.error(`[${functionName}]`, error);
       logger.error(new Error(`Failed to call ${functionName}`, { cause: error }), {
         tags: { function: functionName },
       });
@@ -37,7 +36,6 @@ export class Repository {
       const response: HttpsCallableResult<TResponse> = await callable(data);
       return response?.data;
     } catch (error) {
-      console.error(`[${functionName}]`, error);
       logger.error(new Error(`Failed to call ${functionName} with timeout`, { cause: error }), {
         tags: { function: functionName },
       });

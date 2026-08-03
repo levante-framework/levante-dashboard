@@ -16,7 +16,6 @@ const useUpsertOrgMutation = () => {
       queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY, data.siteId] });
     },
     onError: (err, newOrgData) => {
-      console.error('Error upserting org:', err, newOrgData);
       logger.error(new Error('Failed to upsert org', { cause: err }), {
         tags: { function: 'useUpsertOrgMutation' },
         siteId: newOrgData.siteId,

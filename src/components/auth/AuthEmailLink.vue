@@ -44,7 +44,6 @@ const loginFromEmailLink = async (email) => {
     })
     .catch((error) => {
       isError.value = true;
-      console.error('error logging in:', error);
       logger.error(new Error('Failed to sign in with email link', { cause: error }), {
         tags: { component: 'AuthEmailLink', function: 'loginFromEmailLink' },
       });
@@ -69,7 +68,6 @@ onMounted(async () => {
     try {
       await loginFromEmailLink(email);
     } catch (error) {
-      console.error('error logging in:', error);
       logger.error(new Error('Failed to sign in with email link', { cause: error }), {
         tags: { component: 'AuthEmailLink', function: 'onMounted' },
       });

@@ -56,7 +56,6 @@ export const usePermissions = () => {
       permissionsLoaded.value = true;
 
       if (!success) {
-        console.error('Failed to load permissions:', errors);
         logger.error(new Error('Failed to load permissions'), {
           tags: { function: 'loadPermissions' },
           errors,

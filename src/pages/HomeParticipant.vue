@@ -568,7 +568,6 @@ watch(
           surveyStore.setSpecificSurveyRelationData(res);
         }
       } catch (error) {
-        console.error('Error fetching relation data:', error);
         logger.error(new Error('Failed to fetch survey relation data', { cause: error }), {
           tags: { component: 'HomeParticipant', function: 'watch' },
         });

@@ -38,7 +38,6 @@ const fetchAllDistricts = async () => {
         };
       });
   } catch (error) {
-    console.error('Error fetching all districts', error);
     logger.error(new Error('Failed to fetch all districts', { cause: error }), {
       tags: { function: 'fetchAllDistricts' },
     });

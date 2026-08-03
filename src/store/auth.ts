@@ -139,7 +139,6 @@ export const useAuthStore = defineStore(
         setAuthStateListeners();
       } catch (error) {
         // @TODO: Improve error handling as this is a critical error.
-        console.error('Error initializing Firekit:', error);
         logger.error(new Error('Failed to initialize Firekit', { cause: error }), {
           tags: { function: 'initFirekit' },
         });

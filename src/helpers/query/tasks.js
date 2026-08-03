@@ -212,7 +212,6 @@ export const variantsFetcher = async (registered = false) => {
       });
     })
     .catch((error) => {
-      console.error(error);
       logger.error(new Error('Failed to fetch task variants', { cause: error }), {
         tags: { function: 'variantsFetcher' },
       });

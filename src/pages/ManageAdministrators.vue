@@ -526,7 +526,6 @@ async function executeAdministratorRemoval() {
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
 
-    console.error('Error removing researcher from site.', error);
     logger.error(new Error('Failed to remove researcher from site', { cause: error }), {
       tags: { component: 'ManageAdministrators', function: 'removeAdministratorFromSite' },
       siteId,

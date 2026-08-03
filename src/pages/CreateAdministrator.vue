@@ -194,7 +194,6 @@ const submit = async () => {
         detail: error.message,
         life: 5000,
       });
-      console.error(error);
       logger.error(new Error('Failed to create administrator', { cause: error }), {
         tags: { component: 'CreateAdministrator', function: 'submit' },
       });

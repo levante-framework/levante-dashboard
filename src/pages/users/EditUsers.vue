@@ -294,7 +294,6 @@ const submitEdits = async () => {
       });
     }
   } catch (error) {
-    console.error(error);
     logger.error(new Error('Failed to edit users', { cause: error }), {
       tags: { component: 'EditUsers', function: 'submitEdits' },
     });

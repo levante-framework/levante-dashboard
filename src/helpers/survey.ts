@@ -288,7 +288,6 @@ export async function saveFinalSurveyData({
     router.push({ name: 'Home' });
   } catch (error: unknown) {
     surveyStore.setIsSavingSurveyResponses(false);
-    console.error(error);
     logger.error(new Error('Failed to save survey responses', { cause: error }), {
       tags: { function: 'saveFinalSurveyData' },
     });

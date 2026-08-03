@@ -166,10 +166,6 @@ export function setupSurveyEventHandlers({
               administrationId: selectedAdminId,
             });
           } catch (error: unknown) {
-            console.error(
-              'Error saving previous page responses: ',
-              error instanceof Error ? error.message : String(error),
-            );
             logger.error(new Error('Failed to save previous page survey responses', { cause: error }), {
               tags: { function: 'setupSurveyEventHandlers' },
             });

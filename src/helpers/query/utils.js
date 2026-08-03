@@ -217,7 +217,6 @@ export const fetchDocumentsById = async (collection, docIds, select = [], db = F
         };
       });
   } catch (error) {
-    console.error('fetchDocumentsById: Error fetching documents by ID:', error);
     logger.error(new Error('Failed to fetch documents by ID', { cause: error }), {
       tags: { function: 'fetchDocumentsById' },
     });
@@ -251,7 +250,6 @@ export const fetchDocsById = async (documents, db = FIRESTORE_DATABASES.ADMIN) =
           };
         })
         .catch((error) => {
-          console.error('fetchDocsById: Error fetching document:', error);
           logger.error(new Error('Failed to fetch document by ID', { cause: error }), {
             tags: { function: 'fetchDocsById' },
             collection,
@@ -344,7 +342,6 @@ export const fetchSubcollection = async (
       ..._mapValues(doc.fields, (value) => convertValues(value)),
     }));
   } catch (error) {
-    console.error('Failed to fetch subcollection: ', error);
     logger.error(new Error('Failed to fetch subcollection', { cause: error }), {
       tags: { function: 'fetchSubcollection' },
     });

@@ -831,7 +831,6 @@ const handleUpdateVariant = async () => {
         detail: 'Unable to update variant, please try again.',
         life: 3000,
       });
-      console.error('Failed to update task.', error);
       logger.error(new Error('Failed to update variant', { cause: error }), {
         tags: { component: 'ManageVariants', function: 'handleUpdateVariantSubmit' },
       });
@@ -896,7 +895,6 @@ const handleVariantSubmit = async (isFormValid) => {
         detail: 'Unable to create variant, please try again.',
         life: 3000,
       });
-      console.error('Failed to add variant.', error);
       logger.error(new Error('Failed to add variant', { cause: error }), {
         tags: { component: 'ManageVariants', function: 'handleVariantSubmit' },
       });

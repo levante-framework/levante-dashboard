@@ -162,7 +162,6 @@ async function fetchTranslations(bucket: 'test' | 'live', locale: string): Promi
     remoteCache.set(cacheKey, data as Translations);
     return data as Translations;
   } catch (error) {
-    console.error(`Failed to fetch ${bucket.toLowerCase()} translations`, error);
     logger.error(new Error('Failed to fetch translations', { cause: error }), {
       tags: { function: 'fetchTranslations' },
       bucket,

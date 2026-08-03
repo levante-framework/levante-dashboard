@@ -945,7 +945,6 @@ export const assignmentPageFetcher = async (
 
               return validResponses.length > 0 ? validResponses[0] : null;
             } catch (error) {
-              console.error('Error fetching survey response: ', error);
               logger.error(new Error('Failed to fetch survey response', { cause: error }), {
                 tags: { function: 'assignmentPageFetcher' },
               });
@@ -1161,7 +1160,6 @@ export const fetchAssignmentsByNameAndSite = async (name, normalizedName, siteId
     const response = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
     return mapFields(response.data);
   } catch (error) {
-    console.error('Error fetching assignment by name: ', error);
     logger.error(new Error('Failed to fetch assignment by name', { cause: error }), {
       tags: { function: 'fetchAssignmentsByNameAndSite' },
     });
