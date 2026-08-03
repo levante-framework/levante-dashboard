@@ -260,7 +260,15 @@ function resolveTasks(assessments, variants, tasks) {
   if (!tasks?.length) return [];
 
   return (assessments ?? []).map((assessment) => {
-    const task = tasks.find((task) => task.id === assessment.taskId);
+    const resolvedTask = tasks.find((task) => task?.id === assessment.taskId);
+    if (!resolvedTask) {
+      logger.error(new Error('Task doc missing for assessment during edit hydration'), {
+        tags: { component: 'CreateAssignment', function: 'resolveTasks' },
+        taskId: assessment?.taskId,
+        assignmentId: props.adminId,
+      });
+    }
+    const task = resolvedTask ?? { id: assessment.taskId, name: assessment.variantName ?? assessment.taskId };
     const registeredVariant = variants.find((variant) => variant.id === assessment.variantId);
     const deregisteredVariant = {
       id: assessment?.variantId,
