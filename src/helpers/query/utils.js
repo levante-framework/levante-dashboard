@@ -234,6 +234,7 @@ export const fetchDocsById = async (documents, db = FIRESTORE_DATABASES.ADMIN) =
   }
   const axiosInstance = getAxiosInstance(db);
   const promises = [];
+  const failures = [];
 
   for (const { collection, docId, select } of documents) {
     const docPath = `/${collection}/${docId}`;
@@ -250,16 +251,21 @@ export const fetchDocsById = async (documents, db = FIRESTORE_DATABASES.ADMIN) =
           };
         })
         .catch((error) => {
-          logger.error(new Error('Failed to fetch document by ID', { cause: error }), {
-            tags: { function: 'fetchDocsById' },
-            collection,
-            docId,
-          });
+          failures.push({ collection, docId, error });
           return [];
         }),
     );
   }
-  return Promise.all(promises);
+  const results = await Promise.all(promises);
+  if (failures.length > 0) {
+    logger.error(new Error('Failed to fetch documents by ID', { cause: failures[0].error }), {
+      tags: { function: 'fetchDocsById' },
+      failureCount: failures.length,
+      totalCount: documents.length,
+      failures: failures.map(({ collection, docId }) => ({ collection, docId })),
+    });
+  }
+  return results;
 };
 
 export const batchGetDocs = async (docPaths, select = [], db = FIRESTORE_DATABASES.ADMIN) => {

@@ -909,6 +909,7 @@ export const assignmentPageFetcher = async (
 
       let batchSurveyDocs = [];
       if (includeSurveyResponses) {
+        const surveyFetchErrors = [];
         // Batch get survey response docs
         batchSurveyDocs = await Promise.all(
           userDocPaths.map(async (userDocPath) => {
@@ -945,13 +946,18 @@ export const assignmentPageFetcher = async (
 
               return validResponses.length > 0 ? validResponses[0] : null;
             } catch (error) {
-              logger.error(new Error('Failed to fetch survey response', { cause: error }), {
-                tags: { function: 'assignmentPageFetcher' },
-              });
+              surveyFetchErrors.push(error);
               return null;
             }
           }),
         );
+        if (surveyFetchErrors.length > 0) {
+          logger.error(new Error('Failed to fetch survey responses', { cause: surveyFetchErrors[0] }), {
+            tags: { function: 'assignmentPageFetcher' },
+            failureCount: surveyFetchErrors.length,
+            totalCount: userDocPaths.length,
+          });
+        }
       }
 
       // Merge assignments, users, and survey data
