@@ -279,7 +279,7 @@ function resolveTasks(assessments, variants, tasks) {
 
     return {
       id: registeredVariant?.id ?? assessment?.variantId,
-      variant: registeredVariant?.variant || deregisteredVariant,
+      variant: { ...(registeredVariant?.variant || deregisteredVariant), conditions: assessment?.conditions },
       task,
     };
   });
