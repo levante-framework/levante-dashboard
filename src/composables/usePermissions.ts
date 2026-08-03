@@ -16,6 +16,7 @@ import _mapValues from 'lodash/mapValues';
 import { storeToRefs } from 'pinia';
 import { computed, onMounted, readonly, ref, toValue } from 'vue';
 import { convertValues, getAxiosInstance, getBaseDocumentPath } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 interface UserData {
@@ -55,7 +56,10 @@ export const usePermissions = () => {
       permissionsLoaded.value = true;
 
       if (!success) {
-        console.error('Failed to load permissions:', errors);
+        logger.error(new Error('Failed to load permissions'), {
+          tags: { function: 'loadPermissions' },
+          errors,
+        });
       }
     } finally {
       isLoadingPermissions = false;

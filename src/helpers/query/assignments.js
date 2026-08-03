@@ -10,6 +10,7 @@ import _without from 'lodash/without';
 import { toRaw, toValue } from 'vue';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { pluralizeFirestoreCollection } from '@/helpers';
+import { logger } from '@/logger';
 import { convertValues, getAxiosInstance, getBaseDocumentPath, getProjectId, mapFields } from './utils';
 
 const userSelectFields = ['name', 'assessmentPid', 'username', 'studentData', 'schools', 'classes', 'userType'];
@@ -908,6 +909,7 @@ export const assignmentPageFetcher = async (
 
       let batchSurveyDocs = [];
       if (includeSurveyResponses) {
+        const surveyFetchErrors = [];
         // Batch get survey response docs
         batchSurveyDocs = await Promise.all(
           userDocPaths.map(async (userDocPath) => {
@@ -944,11 +946,18 @@ export const assignmentPageFetcher = async (
 
               return validResponses.length > 0 ? validResponses[0] : null;
             } catch (error) {
-              console.error('Error fetching survey response: ', error);
+              surveyFetchErrors.push(error);
               return null;
             }
           }),
         );
+        if (surveyFetchErrors.length > 0) {
+          logger.error(new Error('Failed to fetch survey responses', { cause: surveyFetchErrors[0] }), {
+            tags: { function: 'assignmentPageFetcher' },
+            failureCount: surveyFetchErrors.length,
+            totalCount: userDocPaths.length,
+          });
+        }
       }
 
       // Merge assignments, users, and survey data
@@ -1157,7 +1166,9 @@ export const fetchAssignmentsByNameAndSite = async (name, normalizedName, siteId
     const response = await axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody);
     return mapFields(response.data);
   } catch (error) {
-    console.error('Error fetching assignment by name: ', error);
+    logger.error(new Error('Failed to fetch assignment by name', { cause: error }), {
+      tags: { function: 'fetchAssignmentsByNameAndSite' },
+    });
     return null;
   }
 };
