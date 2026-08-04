@@ -194,7 +194,7 @@ import PvFloatLabel from 'primevue/floatlabel';
 import PvInputText from 'primevue/inputtext';
 import PvRadioButton from 'primevue/radiobutton';
 import { useToast } from 'primevue/usetoast';
-import { computed, onMounted, reactive, ref, toRaw, toRef, toValue, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, toRaw, toRef, toValue, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import ConsentPicker from '@/components/ConsentPicker.vue';
 import DocsButton from '@/components/DocsButton.vue';
@@ -442,7 +442,7 @@ const minEndDate = computed(() => {
 // +------------------------------------------------------------------------------------------------------------------+
 const orgsList = computed(() => {
   return {
-    districts: existingDistrictsData.value,
+    districts: existingDistrictsData.value ?? [],
     schools: existingSchoolsData.value,
     classes: existingClassesData.value ?? [],
     groups: existingGroupData.value,
@@ -502,9 +502,14 @@ const removeUndefined = (obj) => {
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined));
 };
 
+const pendingScrollTimeouts = new Set();
+
 const scrollToError = (elementId) => {
   // Add a small delay to ensure the DOM is updated
-  setTimeout(() => {
+  const scrollTimeout = setTimeout(() => {
+    pendingScrollTimeouts.delete(scrollTimeout);
+    if (typeof document === 'undefined') return;
+
     const element = document.getElementById(elementId);
     if (element) {
       // Get the element's position relative to the viewport
@@ -521,12 +526,20 @@ const scrollToError = (elementId) => {
 
       // Add highlight effect
       element.classList.add('error-highlight');
-      setTimeout(() => {
+      const highlightTimeout = setTimeout(() => {
+        pendingScrollTimeouts.delete(highlightTimeout);
         element.classList.remove('error-highlight');
       }, 2000);
+      pendingScrollTimeouts.add(highlightTimeout);
     }
   }, 100);
+  pendingScrollTimeouts.add(scrollTimeout);
 };
+
+onUnmounted(() => {
+  pendingScrollTimeouts.forEach((id) => clearTimeout(id));
+  pendingScrollTimeouts.clear();
+});
 
 const hasAssignmentChanges = () => {
   const original = existingData.value;
