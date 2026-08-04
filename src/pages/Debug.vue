@@ -193,31 +193,31 @@ function sendTestError() {
   }
 }
 
-function sendOffloadSwallowError() {
-  const cause = new Error('Simulated batchGet failure (GH-1008 swallow path)');
+function sendDistrictsQueryError() {
+  const cause = new Error('Simulated batchGet failure (GH-1008)');
   logger.error(
     new Error('Failed to fetch districts by ID', { cause }),
     {
-      tags: { function: 'useDistrictsQuery' },
+      tags: { composable: 'useDistrictsQuery' },
     },
     true,
   );
-  alert('Sent swallow-path error (useDistrictsQuery). Check Sentry for title + function tag.');
+  alert('Sent useDistrictsQuery error. Check Sentry for title + composable tag.');
 }
 
-function sendOffloadRethrowError() {
-  const cause = new Error('Simulated subcollection failure (GH-1008 rethrow path)');
+function sendSurveyResponsesQueryError() {
+  const cause = new Error('Simulated subcollection failure (GH-1008)');
   logger.error(
-    new Error('Query failed', { cause }),
+    new Error('Failed to fetch survey responses', { cause }),
     {
-      tags: { function: 'useSurveyResponsesQuery' },
+      tags: { composable: 'useSurveyResponsesQuery' },
     },
     true,
   );
-  alert('Sent rethrow-path error (QueryCache / useSurveyResponsesQuery). Check Sentry for title + function tag.');
+  alert('Sent useSurveyResponsesQuery error. Check Sentry for title + composable tag.');
 }
 
-async function sendOffloadLiveAxiosError() {
+async function sendLiveAxiosError() {
   try {
     const { getAxiosInstance, getBaseDocumentPath } = await import('@/helpers/query/utils');
     await getAxiosInstance().post(`${getBaseDocumentPath()}:__gh1008_invalid_method__`, {});
@@ -226,7 +226,7 @@ async function sendOffloadLiveAxiosError() {
     logger.error(
       new Error('Failed to fetch districts by ID', { cause: cause as Error }),
       {
-        tags: { function: 'useDistrictsQuery', source: 'debug-live-axios' },
+        tags: { composable: 'useDistrictsQuery', source: 'debug-live-axios' },
       },
       true,
     );
@@ -483,7 +483,7 @@ async function sendOffloadLiveAxiosError() {
     </div>
 
     <!-- Logger Test Buttons -->
-    <div class="card mt-3 shadow-1">
+    <div v-if="userInfo?.isSuperAdmin" class="card mt-3 shadow-1">
       <div class="card-header bg-yellow-50 py-1 px-2">
         <h2 class="text-sm font-bold">Logger Tests</h2>
       </div>
@@ -493,31 +493,31 @@ async function sendOffloadLiveAxiosError() {
       </div>
     </div>
 
-    <div class="card mt-3 shadow-1">
+    <div v-if="userInfo?.isSuperAdmin" class="card mt-3 shadow-1">
       <div class="card-header bg-yellow-50 py-1 px-2">
         <h2 class="text-sm font-bold">GH-1008 Axios offload (force to Sentry)</h2>
       </div>
       <div class="card-body p-2 flex gap-2 flex-wrap">
         <Button
-          label="Swallow path: useDistrictsQuery"
+          label="useDistrictsQuery error"
           severity="warning"
-          @click="sendOffloadSwallowError"
+          @click="sendDistrictsQueryError"
         />
         <Button
-          label="Rethrow path: Query failed / survey"
+          label="useSurveyResponsesQuery error"
           severity="warning"
-          @click="sendOffloadRethrowError"
+          @click="sendSurveyResponsesQueryError"
         />
         <Button
           label="Live Axios fail → districts log"
           severity="danger"
-          @click="sendOffloadLiveAxiosError"
+          @click="sendLiveAxiosError"
         />
       </div>
       <p class="text-xs text-color-secondary px-2 pb-2">
         Uses logger.error(..., force=true). Expect Sentry titles
-        &quot;Failed to fetch districts by ID&quot; / &quot;Query failed&quot; with
-        tags.function = useDistrictsQuery or useSurveyResponsesQuery — not the old helper names.
+        &quot;Failed to fetch districts by ID&quot; / &quot;Failed to fetch survey responses&quot; with
+        tags.composable = useDistrictsQuery or useSurveyResponsesQuery — matching the query meta.
         Site-admin USERS permission misses are intentionally not logged.
       </p>
     </div>
