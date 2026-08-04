@@ -11,8 +11,7 @@ import Papa from 'papaparse';
 import { storeToRefs } from 'pinia';
 import { toValue } from 'vue';
 import { isEmulator } from '@/constants';
-import { FIRESTORE_BASE_URL, FIRESTORE_COLLECTIONS, FIRESTORE_DATABASES } from '@/constants/firebase';
-import { ROLES } from '@/constants/roles';
+import { FIRESTORE_BASE_URL, FIRESTORE_DATABASES } from '@/constants/firebase';
 import { flattenObj } from '@/helpers';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
@@ -317,7 +316,7 @@ export const matchMode2Op = {
  * @returns {Object} - Mapped data with converted values
  */
 export const mapToValues = (data) => {
-  if (!data || !data.fields) {
+  if (!data?.fields) {
     return data; // Return as-is if no fields to convert
   }
 

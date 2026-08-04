@@ -69,7 +69,7 @@ export function findBestMatchingLocale(locale: string | undefined | null): strin
   const languagePrefix = normalizedLocale.split('-')[0];
 
   // Find the first available locale that starts with the same language prefix
-  const prefixMatch = availableLocales.find((available) => available.toLowerCase().startsWith(languagePrefix + '-'));
+  const prefixMatch = availableLocales.find((available) => available.toLowerCase().startsWith(`${languagePrefix}-`));
   if (prefixMatch) return prefixMatch;
 
   // If no match found, default to en-US

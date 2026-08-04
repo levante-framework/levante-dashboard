@@ -1,6 +1,4 @@
 import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
-import { storeToRefs } from 'pinia';
-import type { MaybeRefOrGetter } from 'vue';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { USER_CHILD_DATA_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';

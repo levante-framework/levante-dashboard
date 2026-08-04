@@ -295,7 +295,7 @@ export async function saveFinalSurveyData({
     });
     toast.add({
       severity: 'error',
-      summary: 'Error saving survey responses: ' + (error instanceof Error ? error.message : String(error)),
+      summary: `Error saving survey responses: ${error instanceof Error ? error.message : String(error)}`,
       life: 3000,
     });
   } finally {

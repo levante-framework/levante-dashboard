@@ -1,5 +1,4 @@
 import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
-import type { MaybeRefOrGetter } from 'vue';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { GROUPS_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';

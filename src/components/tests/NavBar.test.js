@@ -122,7 +122,7 @@ const countMenuLinks = (menuItems = []) => {
   while (stack.length) {
     const item = stack.pop();
     count += 1;
-    if (item.items && item.items.length) {
+    if (item.items?.length) {
       stack.push(...item.items);
     }
   }

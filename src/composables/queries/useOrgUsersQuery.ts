@@ -1,5 +1,4 @@
 import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
-import type { MaybeRefOrGetter } from 'vue';
 import { ORG_USERS_QUERY_KEY } from '@/constants/queryKeys';
 import { fetchUsersByOrg } from '@/helpers/query/users';
 

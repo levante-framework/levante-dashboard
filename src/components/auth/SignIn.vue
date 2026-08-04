@@ -233,7 +233,7 @@ const allowLink = ref<boolean>(true);
 const validateRoarEmail = _debounce(
   async (email: string): Promise<void> => {
     // Don't evaluate empty or invalid emails
-    if (!email || !email.includes('@')) {
+    if (!email?.includes('@')) {
       evaluatingEmail.value = false;
       return;
     }

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
-import { type MaybeRefOrGetter, toValue } from 'vue';
+import { toValue } from 'vue';
 import { TASKS_QUERY_KEY } from '@/constants/queryKeys';
 import { fetchByTaskId, taskFetcher } from '@/helpers/query/tasks';
 

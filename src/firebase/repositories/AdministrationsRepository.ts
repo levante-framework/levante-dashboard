@@ -25,10 +25,6 @@ const ORG_COLLECTION_BY_ROUTE_TYPE: Record<string, string> = {
 };
 
 class AdministrationsRepository extends Repository {
-  constructor() {
-    super();
-  }
-
   async getAdministrations(params?: GetAdministrationsParams): Promise<Administration[]> {
     const response = await this.call<GetAdministrationsParams, GetAdministrationsResponse>(
       'getAdministrations',
