@@ -537,7 +537,9 @@ const scrollToError = (elementId) => {
 };
 
 onUnmounted(() => {
-  pendingScrollTimeouts.forEach((id) => clearTimeout(id));
+  pendingScrollTimeouts.forEach((id) => {
+    clearTimeout(id);
+  });
   pendingScrollTimeouts.clear();
 });
 
