@@ -108,10 +108,10 @@ import ParticipantSidebar from '@/components/ParticipantSidebar.vue';
 import SideBar from '@/components/SideBar.vue';
 import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
+import useSurveyResponsesQuery from '@/composables/queries/useSurveyResponsesQuery';
 import useTasksQuery from '@/composables/queries/useTasksQuery';
 import useUserAssignmentsQuery from '@/composables/queries/useUserAssignmentsQuery';
 import useUserDataQuery from '@/composables/queries/useUserDataQuery';
-import useSurveyResponsesQuery from '@/composables/useSurveyResponses/useSurveyResponses';
 import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
 import { formatDateWithLocale } from '@/helpers';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
@@ -239,7 +239,7 @@ watch(selectedAssignment, (newAdmin, oldAdmin) => {
 });
 
 const { data: surveyResponsesData } = useSurveyResponsesQuery({
-  enabled: hasSurvey && initialized,
+  enabled: computed(() => hasSurvey.value && initialized.value),
 });
 
 const isLoading = computed(() => {
