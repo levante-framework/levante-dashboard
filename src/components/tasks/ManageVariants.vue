@@ -488,8 +488,8 @@ import useAddTaskVariantMutation from '@/composables/mutations/useAddTaskVariant
 import useUpdateTaskVariantMutation from '@/composables/mutations/useUpdateTaskVariantMutation';
 import useTasksQuery from '@/composables/queries/useTasksQuery';
 import useTaskVariantsQuery from '@/composables/queries/useTaskVariantsQuery';
-import { logger } from '@/logger';
 import { getAllLanguageOptions, getLanguageInfo, getPrimaryLanguageOptions } from '@/helpers/languageDiscovery';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 const toast = useToast();

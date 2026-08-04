@@ -251,37 +251,37 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useRoute, useRouter } from 'vue-router';
+import _capitalize from 'lodash/capitalize';
 import _get from 'lodash/get';
 import _kebabCase from 'lodash/kebabCase';
 import _map from 'lodash/map';
 import _startCase from 'lodash/startCase';
+import { storeToRefs } from 'pinia';
 import PvChart from 'primevue/chart';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
+import PvFloatLabel from 'primevue/floatlabel';
+import PvInputText from 'primevue/inputtext';
 import PvMultiSelect from 'primevue/multiselect';
 import PvSelectButton from 'primevue/selectbutton';
 import PvTag from 'primevue/tag';
-import { useAuthStore } from '@/store/auth';
-import { useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import RoarDataTable from '@/components/RoarDataTable.vue';
 import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
-import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
-import { exportCsv } from '@/helpers/query/utils';
-import { normalizeUserTypeForDisplay } from '@/helpers/userType';
-import { taskDisplayNames } from '@/helpers/reports';
-import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
-import { getTooltip, normalizeToLowercase } from '@/helpers';
+import { useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
 import { isLevante } from '@/constants';
 import { APP_ROUTES } from '@/constants/routes';
-import RoarDataTable from '@/components/RoarDataTable.vue';
-import PvFloatLabel from 'primevue/floatlabel';
-import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import PvInputText from 'primevue/inputtext';
-import _capitalize from 'lodash/capitalize';
 import { administrationsRepository } from '@/firebase/repositories/AdministrationsRepository';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
+import { getTooltip, normalizeToLowercase } from '@/helpers';
+import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
+import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
+import { exportCsv } from '@/helpers/query/utils';
+import { taskDisplayNames } from '@/helpers/reports';
+import { normalizeUserTypeForDisplay } from '@/helpers/userType';
+import { useAuthStore } from '@/store/auth';
 
 const props = defineProps({
   administrationId: {

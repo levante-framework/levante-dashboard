@@ -1,6 +1,6 @@
 import { createI18n } from 'vue-i18n';
-import { LEVANTE_TRANSLATION_LANGUAGES, LEVANTE_TRANSLATIONS } from '@/constants/bucket';
 import { isLevante } from '@/constants';
+import { LEVANTE_TRANSLATION_LANGUAGES, LEVANTE_TRANSLATIONS } from '@/constants/bucket';
 import { logger } from '@/logger';
 
 export interface LanguageOption {

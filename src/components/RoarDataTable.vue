@@ -421,12 +421,6 @@
 </template>
 
 <script setup>
-import TableScoreTag from '@/components/reports/TableScoreTag.vue';
-import SkeletonTable from '@/components/SkeletonTable.vue';
-import { ROLES } from '@/constants/roles';
-import { getTooltip } from '@/helpers';
-import { progressTags, supportLevelColors } from '@/helpers/reports';
-import { useAuthStore } from '@/store/auth';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import _find from 'lodash/find';
 import _forEach from 'lodash/forEach';
@@ -447,6 +441,12 @@ import PvMultiSelect from 'primevue/multiselect';
 import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
 import { computed, ref, useSlots } from 'vue';
+import TableScoreTag from '@/components/reports/TableScoreTag.vue';
+import SkeletonTable from '@/components/SkeletonTable.vue';
+import { ROLES } from '@/constants/roles';
+import { getTooltip } from '@/helpers';
+import { progressTags, supportLevelColors } from '@/helpers/reports';
+import { useAuthStore } from '@/store/auth';
 
 const props = defineProps({
   columns: { type: Array, required: true },
