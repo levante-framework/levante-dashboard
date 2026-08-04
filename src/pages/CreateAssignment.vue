@@ -307,30 +307,19 @@ const {
   gcTime: 0,
 });
 
-watch(
-  [existingData, isLoadingExistingData, errorExistingData],
-  ([newExistingData, newIsLoadingExistingData, newErrorExistingData]) => {
-    if (!props.adminId) return;
-    if (!newIsLoadingExistingData && !newExistingData) {
-      logger.error(new Error('Failed to fetch administration by id', { cause: newErrorExistingData }), {
-        tags: {
-          component: 'CreateAssignment',
-          function: 'watch',
-        },
-        assignmentId: props.adminId,
-      });
+watch([existingData, isLoadingExistingData], ([newExistingData, newIsLoadingExistingData]) => {
+  if (!props.adminId) return;
+  if (!newIsLoadingExistingData && !newExistingData) {
+    toast.add({
+      severity: TOAST_SEVERITIES.ERROR,
+      summary: 'Failed to fetch assignment',
+      detail: "We could not fetch this assignment's data. Please try again later",
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
 
-      toast.add({
-        severity: TOAST_SEVERITIES.ERROR,
-        summary: 'Failed to fetch assignment',
-        detail: "We could not fetch this assignment's data. Please try again later",
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
-
-      router.go(-1);
-    }
-  },
-);
+    router.go(-1);
+  }
+});
 
 const existingAssessments = computed(() => existingData?.value?.assessments ?? []);
 
