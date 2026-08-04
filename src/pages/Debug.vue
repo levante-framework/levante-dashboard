@@ -192,6 +192,49 @@ function sendTestError() {
     alert('Test error sent!');
   }
 }
+
+function sendDistrictsQueryError() {
+  const cause = new Error('Simulated batchGet failure (GH-1008)');
+  logger.error(
+    new Error('Failed to fetch districts by ID', { cause }),
+    {
+      tags: { composable: 'useDistrictsQuery' },
+    },
+    true,
+  );
+  alert('Sent useDistrictsQuery error. Check Sentry for title + composable tag.');
+}
+
+function sendSurveyResponsesQueryError() {
+  const cause = new Error('Simulated subcollection failure (GH-1008)');
+  logger.error(
+    new Error('Failed to fetch survey responses', { cause }),
+    {
+      tags: { composable: 'useSurveyResponsesQuery' },
+    },
+    true,
+  );
+  alert('Sent useSurveyResponsesQuery error. Check Sentry for title + composable tag.');
+}
+
+async function sendLiveAxiosError() {
+  try {
+    const { getAxiosInstance, getBaseDocumentPath } = await import('@/helpers/query/utils');
+    await getAxiosInstance().post(`${getBaseDocumentPath()}:__gh1008_invalid_method__`, {});
+    alert('Unexpected success — no Axios error to report.');
+  } catch (cause) {
+    logger.error(
+      new Error('Failed to fetch districts by ID', { cause: cause as Error }),
+      {
+        tags: { composable: 'useDistrictsQuery', source: 'debug-live-axios' },
+      },
+      true,
+    );
+    alert(
+      'Live Axios failure caught and force-sent as useDistrictsQuery. Check Sentry (cause should be the Axios error).',
+    );
+  }
+}
 // -------------------------
 </script>
 
@@ -440,14 +483,43 @@ function sendTestError() {
     </div>
 
     <!-- Logger Test Buttons -->
-    <div class="card mt-3 shadow-1">
+    <div v-if="userInfo?.isSuperAdmin" class="card mt-3 shadow-1">
       <div class="card-header bg-yellow-50 py-1 px-2">
         <h2 class="text-sm font-bold">Logger Tests</h2>
       </div>
-      <div class="card-body p-2 flex gap-2">
+      <div class="card-body p-2 flex gap-2 flex-wrap">
         <Button label="Send Test Event (Force)" severity="info" @click="sendTestEvent" />
         <Button label="Send Test Error (Force)" severity="danger" @click="sendTestError" />
       </div>
+    </div>
+
+    <div v-if="userInfo?.isSuperAdmin" class="card mt-3 shadow-1">
+      <div class="card-header bg-yellow-50 py-1 px-2">
+        <h2 class="text-sm font-bold">GH-1008 Axios offload (force to Sentry)</h2>
+      </div>
+      <div class="card-body p-2 flex gap-2 flex-wrap">
+        <Button
+          label="useDistrictsQuery error"
+          severity="warning"
+          @click="sendDistrictsQueryError"
+        />
+        <Button
+          label="useSurveyResponsesQuery error"
+          severity="warning"
+          @click="sendSurveyResponsesQueryError"
+        />
+        <Button
+          label="Live Axios fail → districts log"
+          severity="danger"
+          @click="sendLiveAxiosError"
+        />
+      </div>
+      <p class="text-xs text-color-secondary px-2 pb-2">
+        Uses logger.error(..., force=true). Expect Sentry titles
+        &quot;Failed to fetch districts by ID&quot; / &quot;Failed to fetch survey responses&quot; with
+        tags.composable = useDistrictsQuery or useSurveyResponsesQuery — matching the query meta.
+        Site-admin USERS permission misses are intentionally not logged.
+      </p>
     </div>
     <!-- End Logger Test Buttons -->
   </div>

@@ -18,13 +18,14 @@ const useCreateUpdateAdministratorMutation = (): UseMutationReturnType<
     mutationFn: async (payload: CreateUpdateAdministratorPayload): Promise<unknown> => {
       return usersRepository.createUpdateAdministrator(payload);
     },
+    meta: { skipGlobalErrorLogging: true },
     onSuccess: (_data, payload): void => {
       queryClient.invalidateQueries({ queryKey: [ADMINS_QUERY_KEY] });
       logger.capture('Admin: Create or update administrator', { adminUid: payload.adminUid, email: payload.email });
     },
     onError: (error: Error, payload: CreateUpdateAdministratorPayload): void => {
       logger.error(new Error('Failed to create or update administrator', { cause: error }), {
-        tags: { function: 'useCreateUpdateAdministratorMutation' },
+        tags: { composable: 'useCreateUpdateAdministratorMutation' },
         adminUid: payload.adminUid,
       });
     },

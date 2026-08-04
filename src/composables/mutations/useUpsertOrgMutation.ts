@@ -12,12 +12,13 @@ const useUpsertOrgMutation = () => {
     mutationFn: async (data: CreateOrgType): Promise<void> => {
       await groupsRepository.upsertOrg(data);
     },
+    meta: { skipGlobalErrorLogging: true },
     onSuccess: (_, data) => {
       queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY, data.siteId] });
     },
     onError: (err, newOrgData) => {
       logger.error(new Error('Failed to upsert org', { cause: err }), {
-        tags: { function: 'useUpsertOrgMutation' },
+        tags: { composable: 'useUpsertOrgMutation' },
         siteId: newOrgData.siteId,
         type: newOrgData.type,
       });

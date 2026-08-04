@@ -13,7 +13,6 @@ import { toValue } from 'vue';
 import { isEmulator } from '@/constants';
 import { FIRESTORE_BASE_URL, FIRESTORE_DATABASES } from '@/constants/firebase';
 import { flattenObj } from '@/helpers';
-import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 export const convertValues = (value) => {
@@ -199,29 +198,22 @@ export const fetchDocumentsById = async (collection, docIds, select = [], db = F
     requestBody.mask = { fieldPaths: select };
   }
 
-  try {
-    const response = await axiosInstance.post(`${getBaseDocumentPath()}:batchGet`, requestBody);
+  const response = await axiosInstance.post(`${getBaseDocumentPath()}:batchGet`, requestBody);
 
-    return response.data
-      .filter(({ found }) => found)
-      .map(({ found }) => {
-        // Deconstruct the document path as Firebase conveniently doesn't return basic information like the record ID as
-        // part of the documentation data. Whilst this is a bit hacky, it works.
-        const pathParts = found.name.split('/');
-        const documentId = pathParts.pop();
-        const collectionName = pathParts.pop();
-        return {
-          id: documentId,
-          collection: collectionName,
-          ..._mapValues(found.fields, (value) => convertValues(value)),
-        };
-      });
-  } catch (error) {
-    logger.error(new Error('Failed to fetch documents by ID', { cause: error }), {
-      tags: { function: 'fetchDocumentsById' },
+  return response.data
+    .filter(({ found }) => found)
+    .map(({ found }) => {
+      // Deconstruct the document path as Firebase conveniently doesn't return basic information like the record ID as
+      // part of the documentation data. Whilst this is a bit hacky, it works.
+      const pathParts = found.name.split('/');
+      const documentId = pathParts.pop();
+      const collectionName = pathParts.pop();
+      return {
+        id: documentId,
+        collection: collectionName,
+        ..._mapValues(found.fields, (value) => convertValues(value)),
+      };
     });
-    return [];
-  }
 };
 
 // @TODO: Depreceate fetchDocsById and use fetchDocumentsById instead once the last queries are updated as well. This
@@ -258,12 +250,7 @@ export const fetchDocsById = async (documents, db = FIRESTORE_DATABASES.ADMIN) =
   }
   const results = await Promise.all(promises);
   if (failures.length > 0) {
-    logger.error(new Error('Failed to fetch documents by ID', { cause: failures[0].error }), {
-      tags: { function: 'fetchDocsById' },
-      failureCount: failures.length,
-      totalCount: documents.length,
-      failures: failures.map(({ collection, docId }) => ({ collection, docId })),
-    });
+    throw new Error('Failed to fetch documents by ID', { cause: failures[0].error });
   }
   return results;
 };
@@ -336,23 +323,14 @@ export const fetchSubcollection = async (
   const queryParams = select.map((field) => `mask.fieldPaths=${field}`).join('&');
   const queryString = queryParams ? `?${queryParams}` : '';
 
-  try {
-    const response = await axiosInstance.get(getBaseDocumentPath() + subcollectionPath + queryString);
+  const response = await axiosInstance.get(getBaseDocumentPath() + subcollectionPath + queryString);
 
-    // Check if the API returns an array of document data in the subcollection
-    const documents = response.data.documents ?? [];
+  // Check if the API returns an array of document data in the subcollection
+  const documents = response.data.documents ?? [];
 
-    // Map and return the documents with the required format
-    return documents.map((doc) => ({
-      id: doc.name.split('/').pop(), // Extract document ID from the document name/path
-      ..._mapValues(doc.fields, (value) => convertValues(value)),
-    }));
-  } catch (error) {
-    logger.error(new Error('Failed to fetch subcollection', { cause: error }), {
-      tags: { function: 'fetchSubcollection' },
-    });
-    return {
-      error: error.response?.status === 404 ? 'Subcollection not found' : error.message,
-    };
-  }
+  // Map and return the documents with the required format
+  return documents.map((doc) => ({
+    id: doc.name.split('/').pop(), // Extract document ID from the document name/path
+    ..._mapValues(doc.fields, (value) => convertValues(value)),
+  }));
 };

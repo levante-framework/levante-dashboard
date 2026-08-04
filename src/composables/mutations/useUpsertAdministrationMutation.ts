@@ -31,6 +31,7 @@ const useUpsertAdministrationMutation = (): UseMutationReturnType<void, Error, A
     mutationFn: async (data: AdministrationData): Promise<void> => {
       await authStore.roarfirekit.upsertAdministration(data);
     },
+    meta: { skipGlobalErrorLogging: true },
     onSuccess: (_, data: AdministrationData): void => {
       // Invalidate the queries to refetch the administration data.
       // @NOTE: Usually we would apply a more granular invalidation strategy including updating the specific
@@ -51,7 +52,7 @@ const useUpsertAdministrationMutation = (): UseMutationReturnType<void, Error, A
     },
     onError: (error: Error, data: AdministrationData): void => {
       logger.error(new Error('Failed to upsert administration', { cause: error }), {
-        tags: { function: 'useUpsertAdministrationMutation' },
+        tags: { composable: 'useUpsertAdministrationMutation' },
         data,
       });
     },

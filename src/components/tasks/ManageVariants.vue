@@ -579,7 +579,7 @@ onMounted(() => {
   if (roarfirekit.value.restConfig) init();
 });
 
-const { isFetching: isFetchingTasks, data: tasks } = useTasksQuery({
+const { isFetching: isFetchingTasks, data: tasks } = useTasksQuery(true, null, {
   enabled: initialized,
 });
 
