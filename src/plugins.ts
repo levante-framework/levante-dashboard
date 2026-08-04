@@ -41,6 +41,10 @@ const MyPreset = definePreset(Aura, {
 
 // ──── Configure VueQueryPlugin ────
 function handleQueryError(error: unknown, meta?: Record<string, unknown>) {
+  // Opt-out for callers that log the error themselves (e.g. a mutation's own onError
+  // with per-call context) so we don't double-report to Sentry.
+  if (meta?.skipGlobalErrorLogging) return;
+
   // Log explicit firekit errors to Sentry
   const isFirekitError = error && typeof error === 'object' && 'code' in error && 'data' in error;
   if (isFirekitError) {
