@@ -79,7 +79,7 @@ const useSSOAccountReadinessVerification = () => {
       router.push({ path: APP_ROUTES.HOME });
     } catch (error) {
       // If the error is a 401, we assume the backend is still processing the user document setup and we should retry.
-      if (error.status == StatusCodes.UNAUTHORIZED) return;
+      if (error.status === StatusCodes.UNAUTHORIZED) return;
 
       // Otherwise throw the error as it's unexpected.
       throw error;

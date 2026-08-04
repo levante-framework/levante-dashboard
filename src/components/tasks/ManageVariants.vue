@@ -488,8 +488,8 @@ import useAddTaskVariantMutation from '@/composables/mutations/useAddTaskVariant
 import useUpdateTaskVariantMutation from '@/composables/mutations/useUpdateTaskVariantMutation';
 import useTasksQuery from '@/composables/queries/useTasksQuery';
 import useTaskVariantsQuery from '@/composables/queries/useTaskVariantsQuery';
-import { logger } from '@/logger';
 import { getAllLanguageOptions, getLanguageInfo, getPrimaryLanguageOptions } from '@/helpers/languageDiscovery';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 const toast = useToast();
@@ -728,7 +728,7 @@ const checkForDuplicates = (newItemsArray, currentDataObject) => {
 };
 
 function checkVariantExists(value) {
-  variants.value.forEach((item) => {
+  for (const item of variants.value) {
     if (value === item.variant?.name) {
       toast.add({
         severity: 'error',
@@ -736,10 +736,9 @@ function checkVariantExists(value) {
         detail: `Variant with name '${value}' already exists. Please choose a different name.`,
         life: 3000,
       });
-      return true;
+      return;
     }
-    return false;
-  });
+  }
 }
 
 // Helper function to check for errors before updating a task

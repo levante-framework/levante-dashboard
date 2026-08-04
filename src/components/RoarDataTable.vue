@@ -11,11 +11,11 @@
         class="text-red-700 cursor-pointer options-toggle"
         @click.prevent="toggleControls"
       >
-        {{ showOptions ? 'Hide Options' : 'Show Options' }}
+        {{ isOptionsVisible ? 'Hide Options' : 'Show Options' }}
       </button>
     </div>
     <div
-      v-if="showOptions && shouldRenderToolbar"
+      v-if="isOptionsVisible && shouldRenderToolbar"
       class="w-full gap-1 pt-1 flex justify-content-center align-items-center flex-wrap mb-4"
     >
       <div
@@ -421,12 +421,6 @@
 </template>
 
 <script setup>
-import TableScoreTag from '@/components/reports/TableScoreTag.vue';
-import SkeletonTable from '@/components/SkeletonTable.vue';
-import { ROLES } from '@/constants/roles';
-import { getTooltip } from '@/helpers';
-import { progressTags, supportLevelColors } from '@/helpers/reports';
-import { useAuthStore } from '@/store/auth';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import _find from 'lodash/find';
 import _forEach from 'lodash/forEach';
@@ -447,6 +441,12 @@ import PvMultiSelect from 'primevue/multiselect';
 import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
 import { computed, ref, useSlots } from 'vue';
+import TableScoreTag from '@/components/reports/TableScoreTag.vue';
+import SkeletonTable from '@/components/SkeletonTable.vue';
+import { ROLES } from '@/constants/roles';
+import { getTooltip } from '@/helpers';
+import { progressTags, supportLevelColors } from '@/helpers/reports';
+import { useAuthStore } from '@/store/auth';
 
 const props = defineProps({
   columns: { type: Array, required: true },
@@ -500,10 +500,10 @@ Array of objects consisting of a field and header at minimum.
 */
 const shouldRenderToolbar = computed(() => props.allowFiltering || props.allowColumnSelection || props.allowExport);
 
-const showOptions = ref(props.showOptions && shouldRenderToolbar.value);
+const isOptionsVisible = ref(props.showOptions && shouldRenderToolbar.value);
 const toggleControls = () => {
   if (!props.showOptionsControl || !shouldRenderToolbar.value) return;
-  showOptions.value = !showOptions.value;
+  isOptionsVisible.value = !isOptionsVisible.value;
 };
 const authStore = useAuthStore();
 const { currentSite } = storeToRefs(authStore);

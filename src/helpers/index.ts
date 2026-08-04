@@ -30,7 +30,7 @@ export const getDocsFromQuery = async (
 
   if (querySnapshot.empty) {
     return null;
-  } else if (querySnapshot.size == 1) {
+  } else if (querySnapshot.size === 1) {
     return querySnapshot.docs[0].data();
   } else {
     return querySnapshot.docs.map((doc) => doc.data());

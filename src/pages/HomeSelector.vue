@@ -23,10 +23,10 @@ import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
 import { usePermissions } from '@/composables/usePermissions';
 import useUserType from '@/composables/useUserType';
+import { isLevante } from '@/constants';
 import { CONSENT_TYPES } from '@/constants/consentTypes';
 import { ROLES } from '@/constants/roles';
 import { APP_ROUTES } from '@/constants/routes';
-import { isLevante } from '@/constants';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 

@@ -527,11 +527,11 @@ export const getSupportLevel = (grade, percentile, rawScore, taskId, optional = 
 };
 
 export function getScoreKeys(taskId, grade) {
-  let percentileScoreKey;
-  let percentileScoreDisplayKey;
-  let standardScoreKey;
-  let standardScoreDisplayKey;
-  let rawScoreKey;
+  let percentileScoreKey: string | undefined;
+  let percentileScoreDisplayKey: string | undefined;
+  let standardScoreKey: string | undefined;
+  let standardScoreDisplayKey: string | undefined;
+  let rawScoreKey: string | undefined;
   if (taskId === 'swr' || taskId === 'swr-es') {
     percentileScoreKey = 'wjPercentile';
     percentileScoreDisplayKey = 'wjPercentile';

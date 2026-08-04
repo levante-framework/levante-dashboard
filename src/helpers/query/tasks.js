@@ -2,8 +2,8 @@ import _mapValues from 'lodash/mapValues';
 import _uniq from 'lodash/uniq';
 import _without from 'lodash/without';
 import { toValue } from 'vue';
-import { FIRESTORE_COLLECTIONS, FIRESTORE_DATABASES } from '../../constants/firebase';
 import { logger } from '@/logger';
+import { FIRESTORE_COLLECTIONS, FIRESTORE_DATABASES } from '../../constants/firebase';
 import { convertValues, fetchDocsById, getAxiosInstance, getBaseDocumentPath, mapFields } from './utils';
 
 export const getTasksRequestBody = ({

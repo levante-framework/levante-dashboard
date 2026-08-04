@@ -49,7 +49,9 @@ function main() {
   for (const file of files) {
     const rows = readCsv(file);
     const { locales } = validateHeaders(rows, file);
-    locales.forEach((l) => allLocales.add(l));
+    locales.forEach((l) => {
+      allLocales.add(l);
+    });
 
     for (const row of rows) {
       const id = (row.identifier || '').trim();

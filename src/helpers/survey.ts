@@ -216,7 +216,9 @@ export async function saveFinalSurveyData({
 
   const unansweredQuestions: Record<string, null> = {};
 
-  allQuestions.forEach((question) => (unansweredQuestions[question.name] = null));
+  allQuestions.forEach((question) => {
+    unansweredQuestions[question.name] = null;
+  });
 
   // NOTE: Values from the second object overwrite values from the first
   const responsesWithAllQuestions = _merge({}, unansweredQuestions, questionsFromStorage);
@@ -239,7 +241,7 @@ export async function saveFinalSurveyData({
     structuredResponses.specificId = specificIds[specificIndex];
   }
 
-  let isEntireSurveyCompleted;
+  let isEntireSurveyCompleted: boolean;
   if (userType === 'student') {
     isEntireSurveyCompleted = true;
   } else {

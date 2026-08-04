@@ -291,8 +291,8 @@ const resetForm = () => {
 };
 
 const parseCreateOrgData = (data: CreateOrgType) => {
-  let formatted;
-  let parsed;
+  let formatted: Record<string, unknown>;
+  let parsed: ReturnType<typeof CreateClassSchema.safeParse>;
 
   const { districtId, name, normalizedName, parentOrgId, schoolId, tags, type, createdBy, siteId } = data;
   const commonFields = {

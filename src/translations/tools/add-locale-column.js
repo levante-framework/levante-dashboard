@@ -39,7 +39,9 @@ function writeCsv(filePath, rows) {
   if (!rows.length) return;
   const headers = Object.keys(rows[0]);
   const out = [toCsvLine(headers)];
-  rows.forEach((r) => out.push(toCsvLine(headers.map((h) => r[h] ?? ''))));
+  rows.forEach((r) => {
+    out.push(toCsvLine(headers.map((h) => r[h] ?? '')));
+  });
   fs.writeFileSync(filePath, out.join('\n'));
 }
 

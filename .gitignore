@@ -15,6 +15,7 @@ dist
 dist-ssr
 dev-dist
 *.local
+vite.config.js.timestamp-*.mjs
 
 # Editor directories and files
 .editorconfig
