@@ -36,7 +36,11 @@
     "i18n:safety-check": "node src/translations/tools/translation-safety-check.js",
     "i18n:add-locale": "node src/translations/tools/add-locale-column.js",
     "i18n:sync": "npm run i18n:consolidate && npm run i18n:crowdin:upload && npm run i18n:crowdin:download && npm run i18n:csv-to-json && npm run i18n:validate",
-    "repository:new": "bash scripts/generate-repository.sh"
+    "repository:new": "bash scripts/generate-repository.sh",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
   },
   "dependencies": {
     "@bdelab/roar-pa": "5.1.0",
@@ -112,6 +116,7 @@
     "firebase-tools": "^15.22.2",
     "happy-dom": "^14.12.3",
     "husky": "^9.1.6",
+    "lint-staged": "^17.3.0",
     "nanoid": "^5.0.7",
     "sass": "^1.50.1",
     "typescript": "^5.9.2",
