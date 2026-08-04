@@ -55,11 +55,16 @@ function handleQueryError(error: unknown, meta?: Record<string, unknown>) {
     return;
   }
 
-  // Log other query errors to Sentry
-  const errorMessage = typeof meta?.errorMessage === 'string' ? meta.errorMessage : 'Unknown query error';
-  const errorContext =
-    meta?.errorContext && typeof meta.errorContext === 'object' ? { ...meta.errorContext } : undefined;
-  logger.error(new Error(errorMessage, { cause: error }), errorContext);
+  // Log explicit query errors to Sentry
+  if (typeof meta?.errorMessage === 'string') {
+    const errorContext =
+      meta.errorContext && typeof meta.errorContext === 'object' ? { ...meta.errorContext } : undefined;
+    logger.error(new Error(meta.errorMessage, { cause: error }), errorContext);
+    return;
+  }
+
+  // No meta: keep it out of Sentry, but surface it in the console for visibility
+  console.error(error, meta);
 }
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
