@@ -445,7 +445,7 @@ const orgsList = computed(() => {
     districts: existingDistrictsData.value ?? [],
     schools: existingSchoolsData.value,
     classes: existingClassesData.value ?? [],
-    groups: existingGroupData.value,
+    groups: existingGroupData.value ?? [],
   };
 });
 

@@ -1,36 +1,37 @@
-import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
+import { type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
+import type { Ref } from 'vue';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { GROUPS_QUERY_KEY } from '@/constants/queryKeys';
-import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
+import { computeQueryOverrides, type QueryOptionsWithEnabled } from '@/helpers/computeQueryOverrides';
 import { hasArrayEntries } from '@/helpers/hasArrayEntries';
 import { fetchDocumentsById } from '@/helpers/query/utils';
-import { logger } from '@/logger';
 
 /**
  * Group Query
  *
- * @param {Array} groupIds – The array of group IDs to fetch.
- * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
- * @returns {UseQueryResult} The TanStack query result.
+ * @param groupIds – A Vue ref containing an array of group IDs to fetch.
+ * @param queryOptions – Optional TanStack query options.
+ * @returns The TanStack query result.
  */
-const useGroupsQuery = (groupIds, queryOptions?: UseQueryOptions): UseQueryReturnType => {
+const useGroupsQuery = (
+  groupIds: Ref<Array<string>>,
+  queryOptions?: QueryOptionsWithEnabled,
+): UseQueryReturnType<any, Error> => {
   // Ensure all necessary data is loaded before enabling the query.
   const conditions = [() => hasArrayEntries(groupIds)];
   const { isQueryEnabled, options } = computeQueryOverrides(conditions, queryOptions);
 
   return useQuery({
     queryKey: [GROUPS_QUERY_KEY, groupIds],
-    queryFn: async () => {
-      try {
-        return await fetchDocumentsById(FIRESTORE_COLLECTIONS.GROUPS, groupIds);
-      } catch (error) {
-        logger.error(new Error('Failed to fetch groups by ID', { cause: error }), {
-          tags: { function: 'useGroupsQuery' },
-        });
-        return [];
-      }
-    },
+    queryFn: async () => await fetchDocumentsById(FIRESTORE_COLLECTIONS.GROUPS, groupIds.value),
     enabled: isQueryEnabled,
+    meta: {
+      errorMessage: 'Failed to fetch groups by ID',
+      errorContext: {
+        tags: { composable: 'useGroupsQuery' },
+        groupIds: groupIds.value,
+      },
+    },
     ...options,
   });
 };
