@@ -2,7 +2,7 @@ import { type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
 import { type MaybeRefOrGetter, toValue } from 'vue';
 import { TASKS_QUERY_KEY } from '@/constants/queryKeys';
-import { type QueryOptionsWithEnabled } from '@/helpers/computeQueryOverrides';
+import type { QueryOptionsWithEnabled } from '@/helpers/computeQueryOverrides';
 import { fetchByTaskId, taskFetcher } from '@/helpers/query/tasks';
 
 /**

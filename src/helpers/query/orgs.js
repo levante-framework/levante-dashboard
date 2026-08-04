@@ -290,6 +290,9 @@ export const orgFetchAll = async (
         try {
           creatorsData = await fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, creatorIds, ['displayName', 'name']);
         } catch {
+          // Best-effort: creator names are low-value UI decoration with an "Unknown User" fallback,
+          // so we swallow any failure. The common expected case is a non-super-admin fetching a
+          // super-admin's USERS doc (super admins don't belong to sites), which they can't read.
           creatorsData = [];
         }
 
