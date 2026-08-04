@@ -443,7 +443,7 @@ const minEndDate = computed(() => {
 const orgsList = computed(() => {
   return {
     districts: existingDistrictsData.value ?? [],
-    schools: existingSchoolsData.value,
+    schools: existingSchoolsData.value ?? [],
     classes: existingClassesData.value ?? [],
     groups: existingGroupData.value ?? [],
   };
