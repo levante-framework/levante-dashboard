@@ -30,6 +30,7 @@ const useCompleteAssessmentMutation = (): UseMutationReturnType<void, Error, Com
       }
       await authStore.roarfirekit.completeAssessment(adminId, taskId);
     },
+    meta: { skipGlobalErrorLogging: true },
     onSuccess: (_, variables: CompleteAssessmentParams): void => {
       logger.capture('Assignment Complete', { adminId: variables.adminId, taskId: variables.taskId });
       console.log(
@@ -41,7 +42,7 @@ const useCompleteAssessmentMutation = (): UseMutationReturnType<void, Error, Com
     },
     onError: (error: Error, variables: CompleteAssessmentParams): void => {
       logger.error(new Error('Failed to complete assessment', { cause: error }), {
-        tags: { function: 'useCompleteAssessmentMutation' },
+        tags: { composable: 'useCompleteAssessmentMutation' },
         adminId: variables.adminId,
         taskId: variables.taskId,
       });
