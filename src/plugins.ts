@@ -10,9 +10,7 @@ import ToastService from 'primevue/toastservice';
 import { surveyPlugin } from 'survey-vue3-ui';
 import TextClamp from 'vue3-text-clamp';
 import { logger } from '@/logger';
-// @ts-expect-error - Linter struggles with resolving .js file via alias here, but build works
 import router from '@/router/index';
-// @ts-expect-error - Linter struggles with resolving .ts file via alias here, but build works
 import { i18n } from '@/translations/i18n';
 
 const pinia = createPinia().use(piniaPluginPersistedState);
@@ -42,39 +40,38 @@ const MyPreset = definePreset(Aura, {
 });
 
 // ──── Configure VueQueryPlugin ────
-function handleQueryError(error: unknown, meta?: Record<string, unknown>, source: 'query' | 'mutation' = 'query') {
+function handleQueryError(error: unknown, meta?: Record<string, unknown>) {
+  // Log explicit firekit errors to Sentry
   const isFirekitError = error && typeof error === 'object' && 'code' in error && 'data' in error;
-
   if (isFirekitError) {
     logger.error(new Error('Firekit query error', { cause: error }), {
-      tags: { function: 'handleQueryError', code: String((error as { code: unknown }).code) },
+      tags: { function: 'handleQueryError', code: String(error.code) },
       ...meta,
     });
     return;
   }
 
-  if (source === 'query') {
-    const composable = typeof meta?.composable === 'string' ? meta.composable : 'handleQueryError';
-    logger.error(new Error('Query failed', { cause: error }), {
-      tags: { function: composable },
-    });
-  }
+  // Log other query errors to Sentry
+  const errorMessage = typeof meta?.errorMessage === 'string' ? meta.errorMessage : 'Unknown query error';
+  const errorContext =
+    meta?.errorContext && typeof meta.errorContext === 'object' ? { ...meta.errorContext } : undefined;
+  logger.error(new Error(errorMessage, { cause: error }), errorContext);
 }
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error, query) => {
-      handleQueryError(error, query.meta, 'query');
+      handleQueryError(error, query.meta);
     },
   }),
   mutationCache: new MutationCache({
     onError: (error, _vars, _ctx, mutation) => {
-      handleQueryError(error, mutation.meta, 'mutation');
+      handleQueryError(error, mutation.meta);
     },
   }),
   defaultOptions: {
     queries: {
-      staleTime: (window as any).Cypress ? 0 : 10 * 60 * 1000,
-      gcTime: (window as any).Cypress ? 0 : 15 * 60 * 1000,
+      staleTime: 'Cypress' in window ? 0 : 10 * 60 * 1000,
+      gcTime: 'Cypress' in window ? 0 : 15 * 60 * 1000,
       refetchOnWindowFocus: false,
     },
   },
