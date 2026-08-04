@@ -5,12 +5,22 @@ import { nanoid } from 'nanoid';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
 import { fetchSubcollection } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { withSetup } from '@/test-support/withSetup.js';
 import useSurveyResponsesQuery from './useSurveyResponsesQuery';
 
 vi.mock('@/helpers/query/utils', () => ({
   fetchSubcollection: vi.fn().mockImplementation(() => []),
+}));
+
+vi.mock('@/logger', () => ({
+  logger: {
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  },
 }));
 
 vi.mock('@tanstack/vue-query', async (getModule) => {
@@ -28,6 +38,9 @@ describe('useSurveyResponsesQuery', () => {
   beforeEach(() => {
     piniaInstance = createTestingPinia();
     queryClient = new VueQuery.QueryClient();
+    vi.mocked(logger.error).mockClear();
+    vi.mocked(fetchSubcollection).mockReset();
+    vi.mocked(fetchSubcollection).mockImplementation(() => Promise.resolve([]));
   });
 
   afterEach(() => {
@@ -48,6 +61,7 @@ describe('useSurveyResponsesQuery', () => {
     });
 
     expect(VueQuery.useQuery).toHaveBeenCalledWith({
+      meta: { composable: 'useSurveyResponsesQuery' },
       queryKey: ['survey-responses'],
       queryFn: expect.any(Function),
       enabled: expect.objectContaining({
@@ -76,6 +90,7 @@ describe('useSurveyResponsesQuery', () => {
     });
 
     expect(VueQuery.useQuery).toHaveBeenCalledWith({
+      meta: { composable: 'useSurveyResponsesQuery' },
       queryKey: ['survey-responses'],
       queryFn: expect.any(Function),
       enabled: expect.objectContaining({
@@ -104,6 +119,7 @@ describe('useSurveyResponsesQuery', () => {
     });
 
     expect(VueQuery.useQuery).toHaveBeenCalledWith({
+      meta: { composable: 'useSurveyResponsesQuery' },
       queryKey: ['survey-responses'],
       queryFn: expect.any(Function),
       enabled: expect.objectContaining({
@@ -127,6 +143,7 @@ describe('useSurveyResponsesQuery', () => {
     });
 
     expect(VueQuery.useQuery).toHaveBeenCalledWith({
+      meta: { composable: 'useSurveyResponsesQuery' },
       queryKey: ['survey-responses'],
       queryFn: expect.any(Function),
       enabled: expect.objectContaining({
@@ -136,5 +153,25 @@ describe('useSurveyResponsesQuery', () => {
     });
 
     expect(fetchSubcollection).not.toHaveBeenCalled();
+  });
+
+  it('propagates fetchSubcollection failures without logging in queryFn', async () => {
+    const mockUserId = nanoid();
+    const authStore = useAuthStore(piniaInstance);
+    authStore.getUserId = () => mockUserId;
+    authStore.userQueryKeyIndex = 1;
+
+    const networkError = new Error('subcollection failed');
+    vi.mocked(fetchSubcollection).mockRejectedValueOnce(networkError);
+
+    vi.spyOn(VueQuery, 'useQuery');
+
+    withSetup(() => useSurveyResponsesQuery({ enabled: false }), {
+      plugins: [[VueQuery.VueQueryPlugin, { queryClient }]],
+    });
+
+    const queryFn = vi.mocked(VueQuery.useQuery).mock.calls.at(-1)?.[0]?.queryFn as () => Promise<unknown>;
+    await expect(queryFn()).rejects.toThrow('subcollection failed');
+    expect(logger.error).not.toHaveBeenCalled();
   });
 });

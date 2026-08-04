@@ -12,6 +12,7 @@ const useSurveyResponsesQuery = (queryOptions = undefined, enabled) => {
   const { getUserId } = authStore;
 
   return useQuery({
+    meta: { composable: 'useSurveyResponsesQuery' },
     queryKey: ['surveyResponses', getUserId()],
     queryFn: () => fetchSubcollection(`users/${getUserId()}`, 'surveyResponses'),
     enabled: enabled,

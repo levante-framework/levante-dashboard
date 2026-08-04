@@ -4,6 +4,7 @@ import { ADMINISTRATIONS_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { hasArrayEntries } from '@/helpers/hasArrayEntries';
 import { fetchDocumentsById } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 
 /**
  * Administrations query.
@@ -19,7 +20,16 @@ const useAdministrationsQuery = (administrationIds, queryOptions?: UseQueryOptio
 
   return useQuery({
     queryKey: [ADMINISTRATIONS_QUERY_KEY, administrationIds],
-    queryFn: () => fetchDocumentsById(FIRESTORE_COLLECTIONS.ADMINISTRATIONS, administrationIds),
+    queryFn: async () => {
+      try {
+        return await fetchDocumentsById(FIRESTORE_COLLECTIONS.ADMINISTRATIONS, administrationIds);
+      } catch (error) {
+        logger.error(new Error('Failed to fetch administrations by ID', { cause: error }), {
+          tags: { function: 'useAdministrationsQuery' },
+        });
+        return [];
+      }
+    },
     enabled: isQueryEnabled,
     ...options,
   });

@@ -192,6 +192,35 @@ function sendTestError() {
     alert('Test error sent!');
   }
 }
+
+function sendOffloadSwallowError() {
+  const cause = new Error('Simulated batchGet failure (GH-1008 swallow path)');
+  logger.error(new Error('Failed to fetch districts by ID', { cause }), {
+    tags: { function: 'useDistrictsQuery' },
+  }, true);
+  alert('Sent swallow-path error (useDistrictsQuery). Check Sentry for title + function tag.');
+}
+
+function sendOffloadRethrowError() {
+  const cause = new Error('Simulated subcollection failure (GH-1008 rethrow path)');
+  logger.error(new Error('Query failed', { cause }), {
+    tags: { function: 'useSurveyResponsesQuery' },
+  }, true);
+  alert('Sent rethrow-path error (QueryCache / useSurveyResponsesQuery). Check Sentry for title + function tag.');
+}
+
+async function sendOffloadLiveAxiosError() {
+  try {
+    const { getAxiosInstance, getBaseDocumentPath } = await import('@/helpers/query/utils');
+    await getAxiosInstance().post(`${getBaseDocumentPath()}:__gh1008_invalid_method__`, {});
+    alert('Unexpected success — no Axios error to report.');
+  } catch (cause) {
+    logger.error(new Error('Failed to fetch districts by ID', { cause: cause as Error }), {
+      tags: { function: 'useDistrictsQuery', source: 'debug-live-axios' },
+    }, true);
+    alert('Live Axios failure caught and force-sent as useDistrictsQuery. Check Sentry (cause should be the Axios error).');
+  }
+}
 // -------------------------
 </script>
 
@@ -444,10 +473,39 @@ function sendTestError() {
       <div class="card-header bg-yellow-50 py-1 px-2">
         <h2 class="text-sm font-bold">Logger Tests</h2>
       </div>
-      <div class="card-body p-2 flex gap-2">
+      <div class="card-body p-2 flex gap-2 flex-wrap">
         <Button label="Send Test Event (Force)" severity="info" @click="sendTestEvent" />
         <Button label="Send Test Error (Force)" severity="danger" @click="sendTestError" />
       </div>
+    </div>
+
+    <div class="card mt-3 shadow-1">
+      <div class="card-header bg-yellow-50 py-1 px-2">
+        <h2 class="text-sm font-bold">GH-1008 Axios offload (force to Sentry)</h2>
+      </div>
+      <div class="card-body p-2 flex gap-2 flex-wrap">
+        <Button
+          label="Swallow path: useDistrictsQuery"
+          severity="warning"
+          @click="sendOffloadSwallowError"
+        />
+        <Button
+          label="Rethrow path: Query failed / survey"
+          severity="warning"
+          @click="sendOffloadRethrowError"
+        />
+        <Button
+          label="Live Axios fail → districts log"
+          severity="danger"
+          @click="sendOffloadLiveAxiosError"
+        />
+      </div>
+      <p class="text-xs text-color-secondary px-2 pb-2">
+        Uses logger.error(..., force=true). Expect Sentry titles
+        &quot;Failed to fetch districts by ID&quot; / &quot;Query failed&quot; with
+        tags.function = useDistrictsQuery or useSurveyResponsesQuery — not the old helper names.
+        Site-admin USERS permission misses are intentionally not logged.
+      </p>
     </div>
     <!-- End Logger Test Buttons -->
   </div>

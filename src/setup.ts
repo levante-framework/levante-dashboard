@@ -38,7 +38,7 @@ export const createAppInstance = (): VueApp<Element> => {
   // Register global variables.
   globalThis.Buffer = Buffer;
 
-  if (import.meta.env.MODE === 'production') {
+  if (import.meta.env.MODE === 'production' || import.meta.env.VITE_ENABLE_SENTRY === 'TRUE') {
     initSentry(app);
   }
 

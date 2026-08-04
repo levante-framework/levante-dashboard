@@ -289,10 +289,7 @@ export const orgFetchAll = async (
         let creatorsData = [];
         try {
           creatorsData = await fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, creatorIds, ['displayName', 'name']);
-        } catch (error) {
-          logger.error(new Error('Failed to fetch creator data from Firestore', { cause: error }), {
-            tags: { function: 'orgFetchAll' },
-          });
+        } catch {
           creatorsData = [];
         }
 

@@ -4,6 +4,7 @@ import { CLASSES_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { hasArrayEntries } from '@/helpers/hasArrayEntries';
 import { fetchDocumentsById } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 
 /**
  * Classes query.
@@ -19,7 +20,16 @@ const useClassesQuery = (classIds, queryOptions?: UseQueryOptions): UseQueryRetu
 
   return useQuery({
     queryKey: [CLASSES_QUERY_KEY, classIds],
-    queryFn: () => fetchDocumentsById(FIRESTORE_COLLECTIONS.CLASSES, classIds),
+    queryFn: async () => {
+      try {
+        return await fetchDocumentsById(FIRESTORE_COLLECTIONS.CLASSES, classIds);
+      } catch (error) {
+        logger.error(new Error('Failed to fetch classes by ID', { cause: error }), {
+          tags: { function: 'useClassesQuery' },
+        });
+        return [];
+      }
+    },
     enabled: isQueryEnabled,
     ...options,
   });

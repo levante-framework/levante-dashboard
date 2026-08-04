@@ -26,6 +26,7 @@ const useTasksQuery = (
   const queryFn = !_isEmpty(taskIds) ? () => fetchByTaskId(taskIds) : () => taskFetcher(registeredTasksOnly, true);
 
   return useQuery({
+    meta: { composable: 'useTasksQuery' },
     queryKey,
     queryFn,
     ...queryOptions,

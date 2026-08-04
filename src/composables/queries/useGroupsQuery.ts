@@ -4,6 +4,7 @@ import { GROUPS_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { hasArrayEntries } from '@/helpers/hasArrayEntries';
 import { fetchDocumentsById } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 
 /**
  * Group Query
@@ -19,7 +20,16 @@ const useGroupsQuery = (groupIds, queryOptions?: UseQueryOptions): UseQueryRetur
 
   return useQuery({
     queryKey: [GROUPS_QUERY_KEY, groupIds],
-    queryFn: () => fetchDocumentsById(FIRESTORE_COLLECTIONS.GROUPS, groupIds),
+    queryFn: async () => {
+      try {
+        return await fetchDocumentsById(FIRESTORE_COLLECTIONS.GROUPS, groupIds);
+      } catch (error) {
+        logger.error(new Error('Failed to fetch groups by ID', { cause: error }), {
+          tags: { function: 'useGroupsQuery' },
+        });
+        return [];
+      }
+    },
     enabled: isQueryEnabled,
     ...options,
   });

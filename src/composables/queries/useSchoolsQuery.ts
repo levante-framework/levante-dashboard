@@ -4,6 +4,7 @@ import { SCHOOLS_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { hasArrayEntries } from '@/helpers/hasArrayEntries';
 import { fetchDocumentsById } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 
 /**
  * School Query
@@ -19,7 +20,16 @@ const useSchoolsQuery = (schoolIds, queryOptions?: UseQueryOptions): UseQueryRet
 
   return useQuery({
     queryKey: [SCHOOLS_QUERY_KEY, schoolIds],
-    queryFn: () => fetchDocumentsById(FIRESTORE_COLLECTIONS.SCHOOLS, schoolIds),
+    queryFn: async () => {
+      try {
+        return await fetchDocumentsById(FIRESTORE_COLLECTIONS.SCHOOLS, schoolIds);
+      } catch (error) {
+        logger.error(new Error('Failed to fetch schools by ID', { cause: error }), {
+          tags: { function: 'useSchoolsQuery' },
+        });
+        return [];
+      }
+    },
     enabled: isQueryEnabled,
     ...options,
   });

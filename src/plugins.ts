@@ -42,25 +42,33 @@ const MyPreset = definePreset(Aura, {
 });
 
 // ──── Configure VueQueryPlugin ────
-function handleQueryError(error: unknown, meta?: Record<string, unknown>) {
-  // Log explicit firekit errors to Sentry
-  if (error && typeof error === 'object' && 'code' in error && 'data' in error) {
+function handleQueryError(error: unknown, meta?: Record<string, unknown>, source: 'query' | 'mutation' = 'query') {
+  const isFirekitError = error && typeof error === 'object' && 'code' in error && 'data' in error;
+
+  if (isFirekitError) {
     logger.error(new Error('Firekit query error', { cause: error }), {
-      tags: { function: 'handleQueryError', code: String(error.code) },
+      tags: { function: 'handleQueryError', code: String((error as { code: unknown }).code) },
       ...meta,
     });
-    // TODO signOut on functions/unauthenticated?
+    return;
+  }
+
+  if (source === 'query') {
+    const composable = typeof meta?.composable === 'string' ? meta.composable : 'handleQueryError';
+    logger.error(new Error('Query failed', { cause: error }), {
+      tags: { function: composable },
+    });
   }
 }
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error, query) => {
-      handleQueryError(error, query.meta);
+      handleQueryError(error, query.meta, 'query');
     },
   }),
   mutationCache: new MutationCache({
     onError: (error, _vars, _ctx, mutation) => {
-      handleQueryError(error, mutation.meta);
+      handleQueryError(error, mutation.meta, 'mutation');
     },
   }),
   defaultOptions: {

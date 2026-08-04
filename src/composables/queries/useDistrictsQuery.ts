@@ -4,6 +4,7 @@ import { DISTRICTS_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { hasArrayEntries } from '@/helpers/hasArrayEntries';
 import { fetchDocumentsById } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 
 /**
  * Districts query.
@@ -18,7 +19,16 @@ const useDistrictsQuery = (districtIds: string[], queryOptions?: UseQueryOptions
   const { isQueryEnabled, options } = computeQueryOverrides(conditions, queryOptions);
   return useQuery({
     queryKey: [DISTRICTS_QUERY_KEY, districtIds],
-    queryFn: () => fetchDocumentsById(FIRESTORE_COLLECTIONS.DISTRICTS, districtIds),
+    queryFn: async () => {
+      try {
+        return await fetchDocumentsById(FIRESTORE_COLLECTIONS.DISTRICTS, districtIds);
+      } catch (error) {
+        logger.error(new Error('Failed to fetch districts by ID', { cause: error }), {
+          tags: { function: 'useDistrictsQuery' },
+        });
+        return [];
+      }
+    },
     enabled: isQueryEnabled,
     ...options,
   });

@@ -19,6 +19,7 @@ const useSurveyResponsesQuery = (queryOptions?: UseQueryOptions): UseQueryReturn
   const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
 
   return useQuery({
+    meta: { composable: 'useSurveyResponsesQuery' },
     queryKey: [SURVEY_RESPONSES_QUERY_KEY],
     queryFn: () => fetchSubcollection(`${FIRESTORE_COLLECTIONS.USERS}/${getUserId()}`, 'surveyResponses'),
     enabled: isQueryEnabled,

@@ -4,11 +4,21 @@ import { nanoid } from 'nanoid';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
 import { fetchDocumentsById } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 import { withSetup } from '@/test-support/withSetup.js';
 import useDistrictsQuery from './useDistrictsQuery';
 
 vi.mock('@/helpers/query/utils', () => ({
   fetchDocumentsById: vi.fn().mockImplementation(() => []),
+}));
+
+vi.mock('@/logger', () => ({
+  logger: {
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  },
 }));
 
 vi.mock('@tanstack/vue-query', async (getModule) => {
@@ -24,6 +34,9 @@ describe('useDistrictsQuery', () => {
 
   beforeEach(() => {
     queryClient = new VueQuery.QueryClient();
+    vi.mocked(logger.error).mockClear();
+    vi.mocked(fetchDocumentsById).mockReset();
+    vi.mocked(fetchDocumentsById).mockImplementation(() => Promise.resolve([]));
   });
 
   afterEach(() => {
@@ -116,5 +129,25 @@ describe('useDistrictsQuery', () => {
     });
 
     expect(fetchDocumentsById).not.toHaveBeenCalled();
+  });
+
+  it('logs once and returns [] when fetchDocumentsById fails', async () => {
+    const districtIds = ref([nanoid()]);
+    const networkError = new Error('batchGet failed');
+    vi.mocked(fetchDocumentsById).mockRejectedValueOnce(networkError);
+
+    vi.spyOn(VueQuery, 'useQuery');
+
+    withSetup(() => useDistrictsQuery(districtIds, { enabled: false }), {
+      plugins: [[VueQuery.VueQueryPlugin, { queryClient }]],
+    });
+
+    const queryFn = vi.mocked(VueQuery.useQuery).mock.calls.at(-1)?.[0]?.queryFn as () => Promise<unknown>;
+    await expect(queryFn()).resolves.toEqual([]);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Failed to fetch districts by ID', cause: networkError }),
+      expect.objectContaining({ tags: { function: 'useDistrictsQuery' } }),
+    );
   });
 });
