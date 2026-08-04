@@ -195,17 +195,25 @@ function sendTestError() {
 
 function sendOffloadSwallowError() {
   const cause = new Error('Simulated batchGet failure (GH-1008 swallow path)');
-  logger.error(new Error('Failed to fetch districts by ID', { cause }), {
-    tags: { function: 'useDistrictsQuery' },
-  }, true);
+  logger.error(
+    new Error('Failed to fetch districts by ID', { cause }),
+    {
+      tags: { function: 'useDistrictsQuery' },
+    },
+    true,
+  );
   alert('Sent swallow-path error (useDistrictsQuery). Check Sentry for title + function tag.');
 }
 
 function sendOffloadRethrowError() {
   const cause = new Error('Simulated subcollection failure (GH-1008 rethrow path)');
-  logger.error(new Error('Query failed', { cause }), {
-    tags: { function: 'useSurveyResponsesQuery' },
-  }, true);
+  logger.error(
+    new Error('Query failed', { cause }),
+    {
+      tags: { function: 'useSurveyResponsesQuery' },
+    },
+    true,
+  );
   alert('Sent rethrow-path error (QueryCache / useSurveyResponsesQuery). Check Sentry for title + function tag.');
 }
 
@@ -215,10 +223,16 @@ async function sendOffloadLiveAxiosError() {
     await getAxiosInstance().post(`${getBaseDocumentPath()}:__gh1008_invalid_method__`, {});
     alert('Unexpected success — no Axios error to report.');
   } catch (cause) {
-    logger.error(new Error('Failed to fetch districts by ID', { cause: cause as Error }), {
-      tags: { function: 'useDistrictsQuery', source: 'debug-live-axios' },
-    }, true);
-    alert('Live Axios failure caught and force-sent as useDistrictsQuery. Check Sentry (cause should be the Axios error).');
+    logger.error(
+      new Error('Failed to fetch districts by ID', { cause: cause as Error }),
+      {
+        tags: { function: 'useDistrictsQuery', source: 'debug-live-axios' },
+      },
+      true,
+    );
+    alert(
+      'Live Axios failure caught and force-sent as useDistrictsQuery. Check Sentry (cause should be the Axios error).',
+    );
   }
 }
 // -------------------------

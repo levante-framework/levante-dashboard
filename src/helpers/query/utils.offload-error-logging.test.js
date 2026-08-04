@@ -59,9 +59,9 @@ describe('Axios helpers offload error logging', () => {
     const networkError = new Error('get doc failed');
     mockGet.mockRejectedValueOnce(networkError);
 
-    await expect(
-      fetchDocsById([{ collection: 'tasks', docId: 'task-1' }]),
-    ).rejects.toThrow('Failed to fetch documents by ID');
+    await expect(fetchDocsById([{ collection: 'tasks', docId: 'task-1' }])).rejects.toThrow(
+      'Failed to fetch documents by ID',
+    );
     expect(logger.error).not.toHaveBeenCalled();
   });
 
