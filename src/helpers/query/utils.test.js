@@ -1,3 +1,5 @@
+// TODO: improve test coverage for this file
+
 import axios from 'axios';
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
