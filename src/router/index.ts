@@ -322,6 +322,15 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
+    path: '/privacy-policy',
+    name: 'PrivacyPolicy',
+    component: () => import('@/pages/PrivacyPolicy.vue'),
+    meta: {
+      pageTitle: 'Privacy Policy',
+      allowedRoles: ['*'],
+    },
+  },
+  {
     path: '/survey-form-preview/:formType?',
     name: 'SurveyFormPreview',
     component: () => import('@/pages/SurveyFormPreview.vue'),
