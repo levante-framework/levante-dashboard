@@ -1,18 +1,18 @@
-import { storeToRefs } from 'pinia';
-import {
-  createRouter,
-  createWebHistory,
-  type NavigationGuardNext,
-  type RouteLocationNormalized,
-  type RouteRecordRaw,
-  type RouterScrollBehavior,
-} from 'vue-router';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
 import { ROLES } from '@/constants/roles';
 import { APP_ROUTES } from '@/constants/routes';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
-import type { Role } from '@/types';
+import { Role } from '@/types';
+import { storeToRefs } from 'pinia';
+import {
+  createRouter,
+  createWebHistory,
+  NavigationGuardNext,
+  RouteLocationNormalized,
+  RouteRecordRaw,
+  RouterScrollBehavior,
+} from 'vue-router';
 
 function removeQueryParams(to: RouteLocationNormalized) {
   if (Object.keys(to.query).length) return { path: to.path, query: {}, hash: to.hash };
@@ -322,12 +322,12 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
-    path: '/privacy-policy',
-    name: 'PrivacyPolicy',
-    component: () => import('@/pages/PrivacyPolicy.vue'),
+    path: '/survey-form-preview/:formType?',
+    name: 'SurveyFormPreview',
+    component: () => import('@/pages/SurveyFormPreview.vue'),
     meta: {
-      pageTitle: 'Privacy Policy',
-      allowedRoles: ['*'],
+      pageTitle: 'Survey Form Preview',
+      allowedRoles: [ROLES.SUPER_ADMIN],
     },
   },
 ];
