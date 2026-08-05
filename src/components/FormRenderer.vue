@@ -24,7 +24,10 @@
         v-for="field in currentSection.fields"
         :key="field.itemId"
         class="survey-form__field"
-        :class="{ 'survey-form__field--conditional': field.displayLogic }"
+        :class="{
+          'survey-form__field--conditional': field.displayLogic,
+          'survey-form__field--invalid': Boolean(fieldErrors[field.itemId]),
+        }"
       >
         <label :for="field.itemId" class="survey-form__label">
           <!-- eslint-disable-next-line vue/no-v-html -->
@@ -50,15 +53,21 @@
           :id="field.itemId"
           v-model="(model[field.variableName] as string)"
           class="w-full survey-form__textarea"
+          :class="{ 'p-invalid': fieldErrors[field.itemId] }"
           rows="3"
+          @update:model-value="clearFieldError(field.itemId)"
         />
 
-        <!-- number -->
-        <PvInputNumber
+        <!-- number: text input with digit filter (InputNumber breaks CJK IME) -->
+        <input
           v-else-if="field.kind === 'number'"
           :id="field.itemId"
-          v-model="(model[field.variableName] as number)"
-          class="w-full"
+          class="p-inputtext p-component w-full"
+          :class="{ 'p-invalid': fieldErrors[field.itemId] }"
+          inputmode="numeric"
+          :value="formatNumberField(field.variableName)"
+          @input="onNumberInput(field.itemId, field.variableName, $event)"
+          @blur="onNumberBlur(field.itemId)"
         />
 
         <!-- single-select -->
@@ -67,11 +76,13 @@
           :id="field.itemId"
           v-model="(model[field.variableName] as string)"
           class="w-full"
+          :invalid="Boolean(fieldErrors[field.itemId])"
           option-label="label"
           option-value="value"
           placeholder="Select an option"
           show-clear
           :options="field.options ?? []"
+          @update:model-value="clearFieldError(field.itemId)"
         />
 
         <!-- multi-select -->
@@ -80,13 +91,19 @@
           :id="field.itemId"
           v-model="(model[field.variableName] as string[])"
           class="w-full"
+          :invalid="Boolean(fieldErrors[field.itemId])"
           display="chip"
           option-label="label"
           option-value="value"
           placeholder="Select all that apply"
           :show-toggle-all="false"
           :options="field.options ?? []"
+          @update:model-value="clearFieldError(field.itemId)"
         />
+
+        <small v-if="fieldErrors[field.itemId]" class="survey-form__field-error">
+          {{ fieldErrors[field.itemId] }}
+        </small>
       </div>
     </section>
 
@@ -144,7 +161,6 @@ import { computed, reactive, ref, watch } from 'vue';
 import DOMPurify from 'dompurify';
 import PvButton from 'primevue/button';
 import PvDialog from 'primevue/dialog';
-import PvInputNumber from 'primevue/inputnumber';
 import PvMultiSelect from 'primevue/multiselect';
 import PvProgressBar from 'primevue/progressbar';
 import PvSelect from 'primevue/select';
@@ -200,6 +216,33 @@ function openExample(field: SurveyFormField) {
   exampleDialog.questionText = field.questionText;
   exampleDialog.text = field.infoExample ?? '';
   exampleDialog.visible = true;
+}
+
+function formatNumberField(variableName: string): string {
+  const value = model[variableName];
+  if (value == null) return '';
+  return String(value);
+}
+
+function onNumberInput(itemId: string, variableName: string, event: Event) {
+  const target = event.target as HTMLInputElement;
+  const raw = target.value;
+  const hasInvalidChars = /\D/.test(raw);
+  const digits = raw.replace(/\D/g, '');
+  // Write back to the DOM so rejected IME/letter keystrokes don't stick when
+  // the model value is unchanged (e.g. null → null).
+  target.value = digits;
+  model[variableName] = digits === '' ? null : Number(digits);
+
+  if (hasInvalidChars) {
+    fieldErrors[itemId] = 'Numbers only';
+    return;
+  }
+  clearFieldError(itemId);
+}
+
+function onNumberBlur(itemId: string) {
+  if (fieldErrors[itemId] === 'Numbers only') clearFieldError(itemId);
 }
 
 // One reactive value per field, keyed by variableName.
@@ -303,15 +346,53 @@ const stepLabel = computed(() => {
   return `Section ${currentSectionIndex.value + 1} of ${sections.value.length}`;
 });
 
+const REQUIRED_MESSAGE = 'This field is required';
+const fieldErrors = reactive<Record<string, string>>({});
+
+function isEmptyValue(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === 'string') return value.trim() === '';
+  if (Array.isArray(value)) return value.length === 0;
+  return false;
+}
+
+function clearFieldError(itemId: string) {
+  delete fieldErrors[itemId];
+}
+
+function clearAllFieldErrors() {
+  for (const itemId of Object.keys(fieldErrors)) {
+    delete fieldErrors[itemId];
+  }
+}
+
+/** Validates required fields on the current section page. Intro page always passes. */
+function validateCurrentSection(): boolean {
+  clearAllFieldErrors();
+  if (isIntroPage.value || !currentSection.value) return true;
+
+  let isValid = true;
+  for (const field of currentSection.value.fields) {
+    if (!field.required) continue;
+    if (!isEmptyValue(model[field.variableName])) continue;
+    fieldErrors[field.itemId] = REQUIRED_MESSAGE;
+    isValid = false;
+  }
+  return isValid;
+}
+
 function goNext() {
+  if (!validateCurrentSection()) return;
   if (!isLastPage.value) currentPageIndex.value += 1;
 }
 
 function goBack() {
+  clearAllFieldErrors();
   if (!isFirstPage.value) currentPageIndex.value -= 1;
 }
 
 function onSubmit() {
+  if (!validateCurrentSection()) return;
   emit('submit', { ...model });
 }
 
@@ -370,6 +451,11 @@ function onSave() {
   margin-left: 1.5rem;
   padding-left: 1rem;
   border-left: 2px solid var(--surface-border, #e5e7eb);
+}
+
+.survey-form__field-error {
+  color: var(--red-500, #ef4444);
+  font-size: 0.85rem;
 }
 
 .survey-form__label {
