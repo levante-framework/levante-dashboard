@@ -152,19 +152,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, reactive, ref, watch } from 'vue';
 import DOMPurify from 'dompurify';
 import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
 import PvMultiSelect from 'primevue/multiselect';
-import PvPopover from 'primevue/popover';
+import type PvPopover from 'primevue/popover';
 import PvProgressBar from 'primevue/progressbar';
 import PvSelect from 'primevue/select';
 import PvTextarea from 'primevue/textarea';
-import type {
-  SurveyFormField,
-  SurveyFormSection,
-} from '@/firebase/repositories/SurveyFormsRepository';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
+import type { SurveyFormField, SurveyFormSection } from '@/firebase/repositories/SurveyFormsRepository';
 
 interface RenderedSection {
   id: string;
@@ -337,20 +334,15 @@ const pageCount = computed(() => sections.value.length + (hasIntroPage.value ? 1
 
 const currentPageIndex = ref(0);
 
-watch(
-  pageCount,
-  (count) => {
-    if (currentPageIndex.value > count - 1) {
-      currentPageIndex.value = Math.max(0, count - 1);
-    }
-  },
-);
+watch(pageCount, (count) => {
+  if (currentPageIndex.value > count - 1) {
+    currentPageIndex.value = Math.max(0, count - 1);
+  }
+});
 
 const isIntroPage = computed(() => hasIntroPage.value && currentPageIndex.value === 0);
 
-const currentSectionIndex = computed(() =>
-  hasIntroPage.value ? currentPageIndex.value - 1 : currentPageIndex.value,
-);
+const currentSectionIndex = computed(() => (hasIntroPage.value ? currentPageIndex.value - 1 : currentPageIndex.value));
 
 const currentSection = computed<RenderedSection | undefined>(() =>
   isIntroPage.value ? undefined : sections.value[currentSectionIndex.value],
