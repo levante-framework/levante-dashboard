@@ -38,7 +38,7 @@
             type="button"
             class="survey-form__example-trigger"
             :aria-label="`Show an example for: ${toPlainText(field.questionText)}`"
-            @click="openExample(field)"
+            @click="openExample($event, field)"
           >
             ?
           </button>
@@ -55,15 +55,15 @@
           @update:model-value="clearFieldError(field.itemId)"
         />
 
-        <!-- number: text input with digit filter (InputNumber breaks CJK IME) -->
-        <input
+        <!-- number: InputText + digit filter (InputNumber breaks CJK IME) -->
+        <PvInputText
           v-else-if="field.kind === 'number'"
           :id="field.itemId"
-          class="p-inputtext p-component w-full"
-          :class="{ 'p-invalid': fieldErrors[field.itemId] }"
+          :model-value="formatNumberField(field.variableName)"
+          class="w-full"
+          :invalid="Boolean(fieldErrors[field.itemId])"
           inputmode="numeric"
-          :value="formatNumberField(field.variableName)"
-          @input="onNumberInput(field.itemId, field.variableName, $event)"
+          @update:model-value="(value) => onNumberInput(field.itemId, field.variableName, value)"
           @blur="onNumberBlur(field.itemId)"
         />
 
@@ -104,25 +104,23 @@
       </div>
     </section>
 
-    <PvDialog
-      v-model:visible="exampleDialog.visible"
-      modal
-      dismissable-mask
-      :style="{ width: '32rem', maxWidth: '90vw' }"
-    >
-      <template #header>
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <span class="survey-form__example-header" v-html="renderHtml(exampleDialog.questionText)"></span>
-      </template>
+    <PvPopover ref="examplePopover" append-to="body">
       <!-- eslint-disable-next-line vue/no-v-html -->
-      <p class="survey-form__example-text" v-html="renderHtml(exampleDialog.text)"></p>
-    </PvDialog>
+      <div class="survey-form__example-panel" v-html="exampleHtml"></div>
+    </PvPopover>
 
     <footer v-if="pageCount" class="survey-form__footer">
-      <PvProgressBar :value="progressValue" :show-value="false" class="survey-form__progress" />
-      <div class="survey-form__nav">
-        <span class="survey-form__step">{{ stepLabel }}</span>
+      <div v-if="!isIntroPage" class="survey-form__progress-row">
+        <PvProgressBar
+          :value="progressPercent"
+          :show-value="false"
+          class="survey-form__progress"
+        />
+        <span class="survey-form__progress-pct">{{ progressPercent }}%</span>
+      </div>
+      <div class="survey-form__nav" :class="{ 'survey-form__nav--intro': isIntroPage }">
         <div class="survey-form__nav-buttons">
+          <!-- Save persistence lands with #110; keep visible but disabled for now. -->
           <PvButton
             v-if="!isIntroPage"
             type="button"
@@ -130,7 +128,7 @@
             icon="pi pi-save"
             severity="secondary"
             outlined
-            @click="onSave"
+            disabled
           />
           <PvButton
             v-if="!isFirstPage"
@@ -146,7 +144,7 @@
             :label="isIntroPage ? 'Get started' : 'Next'"
             @click="goNext"
           />
-          <PvButton v-else type="submit" label="Submit (mock)" />
+          <PvButton v-else type="submit" label="Submit" />
         </div>
       </div>
     </footer>
@@ -154,11 +152,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import DOMPurify from 'dompurify';
 import PvButton from 'primevue/button';
-import PvDialog from 'primevue/dialog';
+import PvInputText from 'primevue/inputtext';
 import PvMultiSelect from 'primevue/multiselect';
+import PvPopover from 'primevue/popover';
 import PvProgressBar from 'primevue/progressbar';
 import PvSelect from 'primevue/select';
 import PvTextarea from 'primevue/textarea';
@@ -176,6 +175,11 @@ interface RenderedSection {
 
 const DEFAULT_SECTION_ID = '__default';
 
+const MESSAGES = {
+  required: 'This field is required',
+  numbersOnly: 'Numbers only',
+} as const;
+
 const props = defineProps<{
   fields: SurveyFormField[];
   generalPrompt?: string;
@@ -189,7 +193,8 @@ const sectionInfoById = computed(
 
 const emit = defineEmits<{
   submit: [values: Record<string, unknown>];
-  save: [values: Record<string, unknown>];
+  // Re-enable with onSave when leave-and-resume / saveSurveyResponses (#110) is wired.
+  // save: [values: Record<string, unknown>];
 }>();
 
 // Form definition text (questions, descriptions, examples) can deliberately
@@ -203,43 +208,65 @@ function toPlainText(value?: string): string {
   return (value ?? '').replace(/<[^>]*>/g, '');
 }
 
-const exampleDialog = reactive<{ visible: boolean; questionText: string; text: string }>({
-  visible: false,
-  questionText: '',
-  text: '',
-});
+/** Display-only: turn example lists into paragraphs without changing seed HTML. */
+function formatExampleHtml(value?: string): string {
+  const sanitized = DOMPurify.sanitize(value ?? '');
+  const doc = new DOMParser().parseFromString(`<div>${sanitized}</div>`, 'text/html');
+  const root = doc.body.firstElementChild;
+  if (!root) return sanitized;
 
-function openExample(field: SurveyFormField) {
-  exampleDialog.questionText = field.questionText;
-  exampleDialog.text = field.infoExample ?? '';
-  exampleDialog.visible = true;
+  root.querySelectorAll('ul, ol').forEach((list) => {
+    const fragment = doc.createDocumentFragment();
+    list.querySelectorAll(':scope > li').forEach((item) => {
+      const paragraph = doc.createElement('p');
+      paragraph.innerHTML = item.innerHTML;
+      fragment.appendChild(paragraph);
+    });
+    list.replaceWith(fragment);
+  });
+
+  return DOMPurify.sanitize(root.innerHTML);
+}
+
+const examplePopover = ref<InstanceType<typeof PvPopover> | null>(null);
+const exampleHtml = ref('');
+
+function openExample(event: Event, field: SurveyFormField) {
+  exampleHtml.value = formatExampleHtml(field.infoExample);
+  examplePopover.value?.toggle(event);
 }
 
 function formatNumberField(variableName: string): string {
+  if (variableName in numberDrafts) return numberDrafts[variableName] ?? '';
   const value = model[variableName];
   if (value == null) return '';
   return String(value);
 }
 
-function onNumberInput(itemId: string, variableName: string, event: Event) {
-  const target = event.target as HTMLInputElement;
-  const raw = target.value;
-  const hasInvalidChars = /\D/.test(raw);
-  const digits = raw.replace(/\D/g, '');
-  // Write back to the DOM so rejected IME/letter keystrokes don't stick when
-  // the model value is unchanged (e.g. null → null).
-  target.value = digits;
+const numberDrafts = reactive<Record<string, string>>({});
+
+async function onNumberInput(itemId: string, variableName: string, raw: string | undefined) {
+  const value = raw ?? '';
+  const hasInvalidChars = /\D/.test(value);
+  const digits = value.replace(/\D/g, '');
   model[variableName] = digits === '' ? null : Number(digits);
 
   if (hasInvalidChars) {
-    fieldErrors[itemId] = 'Numbers only';
+    fieldErrors[itemId] = MESSAGES.numbersOnly;
+    // Force the controlled input to drop rejected characters even when the
+    // underlying model value is unchanged (e.g. null → null).
+    numberDrafts[variableName] = `${digits}\u200b`;
+    await nextTick();
+    numberDrafts[variableName] = digits;
     return;
   }
+
   clearFieldError(itemId);
+  numberDrafts[variableName] = digits;
 }
 
 function onNumberBlur(itemId: string) {
-  if (fieldErrors[itemId] === 'Numbers only') clearFieldError(itemId);
+  if (fieldErrors[itemId] === MESSAGES.numbersOnly) clearFieldError(itemId);
 }
 
 // One reactive value per field, keyed by variableName.
@@ -332,18 +359,15 @@ const currentSection = computed<RenderedSection | undefined>(() =>
 const isFirstPage = computed(() => currentPageIndex.value === 0);
 const isLastPage = computed(() => currentPageIndex.value >= pageCount.value - 1);
 
-// Progress reflects only the section pages; the intro page is informational.
-const progressValue = computed(() => {
+// Percent = how much is finished (sections advanced past). Submit → 100%.
+const hasSubmitted = ref(false);
+
+const progressPercent = computed(() => {
   if (isIntroPage.value || !sections.value.length) return 0;
-  return Math.round(((currentSectionIndex.value + 1) / sections.value.length) * 100);
+  if (hasSubmitted.value) return 100;
+  return Math.round((currentSectionIndex.value / sections.value.length) * 100);
 });
 
-const stepLabel = computed(() => {
-  if (isIntroPage.value) return 'Introduction';
-  return `Section ${currentSectionIndex.value + 1} of ${sections.value.length}`;
-});
-
-const REQUIRED_MESSAGE = 'This field is required';
 const fieldErrors = reactive<Record<string, string>>({});
 
 function isEmptyValue(value: unknown): boolean {
@@ -372,7 +396,7 @@ function validateCurrentSection(): boolean {
   for (const field of currentSection.value.fields) {
     if (!field.required) continue;
     if (!isEmptyValue(model[field.variableName])) continue;
-    fieldErrors[field.itemId] = REQUIRED_MESSAGE;
+    fieldErrors[field.itemId] = MESSAGES.required;
     isValid = false;
   }
   return isValid;
@@ -385,18 +409,20 @@ function goNext() {
 
 function goBack() {
   clearAllFieldErrors();
+  hasSubmitted.value = false;
   if (!isFirstPage.value) currentPageIndex.value -= 1;
 }
 
 function onSubmit() {
   if (!validateCurrentSection()) return;
+  hasSubmitted.value = true;
   emit('submit', { ...model });
 }
 
-// Placeholder save action; wiring (persisting a partial response) comes later.
-function onSave() {
-  emit('save', { ...model });
-}
+// Placeholder until leave-and-resume / saveSurveyResponses (#110) is wired.
+// function onSave() {
+//   emit('save', { ...model });
+// }
 </script>
 
 <style scoped>
@@ -409,54 +435,70 @@ function onSave() {
 
 .survey-form__general-prompt {
   margin: 0;
-  font-size: 1.05rem;
-  line-height: 1.5;
+  max-width: 42rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-color, #1f2937);
 }
 
 .survey-form__section {
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  gap: 0;
 }
 
 .survey-form__section-header {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
 }
 
 .survey-form__section-title {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+  color: var(--text-color, #111827);
 }
 
 .survey-form__section-description {
   margin: 0;
-  color: var(--text-color-secondary, #6b7280);
+  max-width: 40rem;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text-color-secondary, #4b5563);
   white-space: pre-line;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .survey-form__field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.45rem;
+}
+
+.survey-form__field + .survey-form__field {
+  margin-top: 1.5rem;
 }
 
 .survey-form__field--conditional {
-  margin-left: 1.5rem;
-  padding-left: 1rem;
+  margin-left: 1.25rem;
+  padding-left: 0.9rem;
   border-left: 2px solid var(--surface-border, #e5e7eb);
 }
 
 .survey-form__field-error {
   color: var(--red-500, #ef4444);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .survey-form__label {
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text-color, #1f2937);
   white-space: pre-line;
 }
 
@@ -467,8 +509,7 @@ function onSave() {
 /* Rendered HTML inside form text should not carry heading/paragraph margins. */
 .survey-form__question-text :deep(p),
 .survey-form__section-description :deep(p),
-.survey-form__general-prompt :deep(p),
-.survey-form__example-text :deep(p) {
+.survey-form__general-prompt :deep(p) {
   margin: 0 0 0.5rem;
 }
 
@@ -481,16 +522,16 @@ function onSave() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.15rem;
-  height: 1.15rem;
-  margin-left: 0.3rem;
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-left: 0.25rem;
   padding: 0;
   border: none;
   border-radius: 9999px;
   background: var(--red-500, #ef4444);
   color: #ffffff;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.65rem;
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0;
@@ -506,10 +547,21 @@ function onSave() {
   outline: none;
 }
 
-.survey-form__example-text {
-  margin: 0;
-  white-space: pre-line;
-  line-height: 1.5;
+.survey-form__example-panel {
+  max-width: 22rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--text-color, #1f2937);
+}
+
+.survey-form__example-panel :deep(p) {
+  margin: 0 0 0.65rem;
+  line-height: 1.55;
+}
+
+.survey-form__example-panel :deep(p:last-child) {
+  margin-bottom: 0;
 }
 
 .required-asterisk {
@@ -522,27 +574,43 @@ function onSave() {
   bottom: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.65rem;
   margin-top: 1rem;
-  padding: 1rem 0;
-  background: var(--surface-0, #ffffff);
-  border-top: 1px solid var(--surface-border, #e5e7eb);
+  padding: 0.5rem 0 0.25rem;
+  background: color-mix(in srgb, var(--surface-0, #ffffff) 92%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.survey-form__progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .survey-form__progress {
-  height: 0.5rem;
+  flex: 1;
+  height: 0.25rem;
+}
+
+.survey-form__progress-pct {
+  flex-shrink: 0;
+  min-width: 2.5rem;
+  text-align: right;
+  color: var(--text-color-secondary, #6b7280);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .survey-form__nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 1rem;
 }
 
-.survey-form__step {
-  color: var(--text-color-secondary, #6b7280);
-  font-size: 0.9rem;
+.survey-form__nav--intro {
+  justify-content: flex-end;
 }
 
 .survey-form__nav-buttons {

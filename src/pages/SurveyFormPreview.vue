@@ -32,7 +32,7 @@
       />
 
       <section v-if="submittedValues" class="survey-preview__output">
-        <h2>Submitted values (mock)</h2>
+        <h2>Submitted values</h2>
         <pre>{{ submittedValuesJson }}</pre>
       </section>
     </div>
@@ -78,18 +78,19 @@ function onSubmit(values: Record<string, unknown>) {
 
 <style scoped>
 .survey-preview {
-  max-width: 760px;
+  max-width: 720px;
   margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
+  padding: 2.5rem 1.5rem 5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .survey-preview__header {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
+  padding-bottom: 0;
 }
 
 .survey-preview__loading {
@@ -102,12 +103,18 @@ function onSubmit(values: Record<string, unknown>) {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  margin: 0;
+  font-size: 1.625rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  color: var(--text-color, #111827);
 }
 
 .survey-preview__version-info {
-  color: var(--text-color-secondary, #6b7280);
+  color: var(--text-color-secondary, #9ca3af);
   cursor: help;
-  font-size: 1rem;
+  font-size: 0.85rem;
 }
 
 .survey-preview__output {
