@@ -47,14 +47,11 @@ class SurveyFormsRepository extends Repository {
     super();
   }
 
-  async loadFormDefinitions(
-    orgType: 'site' | 'school',
-    orgId = 'preview',
-  ): Promise<SurveyFormDefinition> {
-    return this.call<{ orgType: 'site' | 'school'; orgId: string }, SurveyFormDefinition>(
-      'loadFormDefinitions',
-      { orgType, orgId },
-    );
+  async loadFormDefinitions(orgType: 'site' | 'school', orgId = 'preview'): Promise<SurveyFormDefinition> {
+    return this.call<{ orgType: 'site' | 'school'; orgId: string }, SurveyFormDefinition>('loadFormDefinitions', {
+      orgType,
+      orgId,
+    });
   }
 }
 

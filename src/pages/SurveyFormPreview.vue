@@ -40,15 +40,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useRoute } from 'vue-router';
 import PvMessage from 'primevue/message';
 import PvProgressSpinner from 'primevue/progressspinner';
+import { computed, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import FormRenderer from '@/components/FormRenderer.vue';
-import {
-  useSurveyFormDefinitionQuery,
-  type SurveyFormType,
-} from '@/composables/queries/useSurveyFormDefinitionQuery';
+import { type SurveyFormType, useSurveyFormDefinitionQuery } from '@/composables/queries/useSurveyFormDefinitionQuery';
 
 const route = useRoute();
 
