@@ -33,18 +33,15 @@
           <!-- eslint-disable-next-line vue/no-v-html -->
           <span class="survey-form__question-text" v-html="renderHtml(field.questionText)"></span>
           <span v-if="field.required" class="required-asterisk">*</span>
-          <PvButton
+          <button
             v-if="field.infoExample"
             type="button"
-            icon="pi pi-question"
-            rounded
-            text
-            size="small"
-            severity="secondary"
             class="survey-form__example-trigger"
             :aria-label="`Show an example for: ${toPlainText(field.questionText)}`"
             @click="openExample(field)"
-          />
+          >
+            ?
+          </button>
         </label>
 
         <!-- text -->
@@ -481,10 +478,32 @@ function onSave() {
 }
 
 .survey-form__example-trigger {
-  width: 1.5rem !important;
-  height: 1.5rem !important;
-  margin-left: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-left: 0.3rem;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  background: var(--red-500, #ef4444);
+  color: #ffffff;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
   vertical-align: middle;
+  cursor: pointer;
+  -webkit-font-smoothing: antialiased;
+  text-shadow: 0 0 0.4px #ffffff;
+}
+
+.survey-form__example-trigger:hover,
+.survey-form__example-trigger:focus-visible {
+  background: var(--red-600, #dc2626);
+  outline: none;
 }
 
 .survey-form__example-text {
