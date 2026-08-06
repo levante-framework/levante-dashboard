@@ -59,24 +59,28 @@
           </div>
         </div>
         <!-- ASSIGNED CONDITIONS  -->
-        <div v-for="(condtion, index) in assignedConditions" :key="index">
+        <div v-for="(condition, index) in assignedConditions" :key="index">
           <div class="flex gap-2 align-content-start flex-grow-0 params-container mb-2">
             <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
               <PvSelect
-                v-model="condtion.field"
+                :model-value="condition.field"
                 :options="fieldOptions"
                 optionLabel="label"
+                optionValue="value"
                 class="w-full"
                 placeholder="Select a Field"
                 inputId="Field"
+                @update:model-value="(field) => handleFieldChange(assignedConditions, index, field)"
               />
             </div>
 
             <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
               <PvSelect
-                v-model="condtion.op"
-                :options="computedConditionOptions(condtion.field)"
+                :key="`assigned-op-${index}-${condition.field}`"
+                v-model="condition.op"
+                :options="computedConditionOptions(condition.field)"
                 optionLabel="label"
+                optionValue="value"
                 class="w-full"
                 placeholder="Condition"
                 inputId="Condition"
@@ -85,9 +89,11 @@
 
             <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
               <PvSelect
-                v-model="condtion.value"
-                :options="computedValueOptions(condtion.field)"
+                :key="`assigned-value-${index}-${condition.field}`"
+                v-model="condition.value"
+                :options="computedValueOptions(condition.field)"
                 optionLabel="label"
+                optionValue="value"
                 class="w-full"
                 placeholder="Value"
               />
@@ -146,24 +152,28 @@
               </div>
             </div>
 
-            <div v-for="(condtion, index) in optionalConditions" :key="index">
+            <div v-for="(condition, index) in optionalConditions" :key="index">
               <div class="flex gap-2 align-content-start flex-grow-0 params-container mb-2">
                 <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
                   <PvSelect
-                    v-model="condtion.field"
+                    :model-value="condition.field"
                     :options="fieldOptions"
                     optionLabel="label"
+                    optionValue="value"
                     class="w-full"
                     placeholder="Select a Field"
                     inputId="Field"
+                    @update:model-value="(field) => handleFieldChange(optionalConditions, index, field)"
                   />
                 </div>
 
                 <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
                   <PvSelect
-                    v-model="condtion.op"
-                    :options="computedConditionOptions(condtion.field)"
+                    :key="`optional-op-${index}-${condition.field}`"
+                    v-model="condition.op"
+                    :options="computedConditionOptions(condition.field)"
                     optionLabel="label"
+                    optionValue="value"
                     class="w-full"
                     placeholder="Condition"
                     inputId="Condition"
@@ -172,9 +182,11 @@
 
                 <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
                   <PvSelect
-                    v-model="condtion.value"
-                    :options="computedValueOptions(condtion.field)"
+                    :key="`optional-value-${index}-${condition.field}`"
+                    v-model="condition.value"
+                    :options="computedValueOptions(condition.field)"
                     optionLabel="label"
+                    optionValue="value"
                     class="w-full"
                     placeholder="Value"
                   />
@@ -274,9 +286,9 @@ interface ConditionOption {
 }
 
 interface Condition {
-  field: FieldOption | string;
-  op: ConditionOption | string;
-  value: ConditionOption | string;
+  field: string;
+  op: string;
+  value: string;
 }
 
 interface ConditionsStructure {
@@ -300,6 +312,7 @@ interface Task {
 
 interface Variant {
   name?: string;
+  conditions?: ConditionsStructure;
 }
 
 interface Assessment {
@@ -328,11 +341,17 @@ onMounted((): void => {
   // LEVANTE assigns surveys as assessments, so we add a defualt for child only so researchers
   // do not accidently assign tasks to parents and teachers
   if (isLevante && !props.assessment.task.id.toLowerCase().includes('survey')) {
-    assignedConditions.value.push({
-      field: { label: 'User Type', value: 'userType', project: 'LEVANTE' },
-      op: { label: 'Equal', value: 'EQUAL' },
-      value: { label: 'Child', value: 'student' },
-    });
+    const defaultCondition = { field: 'userType', op: 'EQUAL', value: 'student' };
+    const hasIdenticalCondition = assignedConditions.value.some(
+      (condition) =>
+        condition.field === defaultCondition.field &&
+        condition.op === defaultCondition.op &&
+        condition.value === defaultCondition.value,
+    );
+
+    if (!hasIdenticalCondition) {
+      assignedConditions.value.push({ ...defaultCondition });
+    }
   }
 });
 
@@ -342,12 +361,17 @@ const optionalConditions = ref<Condition[]>([]);
 // Store optional conditions in case the isOptionalForAll is toggled on and off again (prevents the form from resetting to the original state)
 const previousOptionalConditions = ref<Condition[]>([]);
 
-const computedValueOptions = (field: FieldOption | string): ConditionOption[] | undefined => {
+function resolveFieldValue(field: string | FieldOption | ConditionOption): string {
   const processedField = toRaw(field);
-  if (!processedField) return;
-  const selectedField = typeof processedField === 'string' ? processedField : processedField.label;
+  if (!processedField) return '';
+  return typeof processedField === 'string' ? processedField : processedField.value;
+}
 
-  if (selectedField === 'Age') {
+const computedValueOptions = (field: string): ConditionOption[] | undefined => {
+  const selectedField = resolveFieldValue(field);
+  if (!selectedField) return;
+
+  if (selectedField === 'age') {
     return [
       { label: '3', value: '3' },
       { label: '4', value: '4' },
@@ -360,7 +384,7 @@ const computedValueOptions = (field: FieldOption | string): ConditionOption[] | 
       { label: '11', value: '11' },
       { label: '12', value: '12' },
     ];
-  } else if (selectedField === 'User Type') {
+  } else if (selectedField === 'userType') {
     return [
       { label: 'Child', value: 'student' },
       { label: 'Caregiver', value: 'parent' },
@@ -369,12 +393,11 @@ const computedValueOptions = (field: FieldOption | string): ConditionOption[] | 
   }
 };
 
-const computedConditionOptions = (field: FieldOption | string): ConditionOption[] | undefined => {
-  const processedField = toRaw(field);
-  if (!processedField) return;
-  const selectedField = typeof processedField === 'string' ? processedField : processedField.label;
+const computedConditionOptions = (field: string): ConditionOption[] | undefined => {
+  const selectedField = resolveFieldValue(field);
+  if (!selectedField) return;
 
-  if (selectedField === 'Age') {
+  if (selectedField === 'age') {
     return [
       { label: 'Less Than', value: 'LESS_THAN' },
       { label: 'Greater Than', value: 'GREATER_THAN' },
@@ -383,13 +406,17 @@ const computedConditionOptions = (field: FieldOption | string): ConditionOption[
       { label: 'Equal', value: 'EQUAL' },
       { label: 'Not Equal', value: 'NOT_EQUAL' },
     ];
-  } else if (selectedField === 'User Type') {
+  } else if (selectedField === 'userType') {
     return [
       { label: 'Equal', value: 'EQUAL' },
       { label: 'Not Equal', value: 'NOT_EQUAL' },
     ];
   }
 };
+
+function handleFieldChange(conditions: Condition[], index: number, field: string): void {
+  conditions[index] = { field, op: '', value: '' };
+}
 
 const removeCondition = (conditions: Condition[], index: number): void => {
   conditions.splice(index, 1);
@@ -403,38 +430,47 @@ function getAllConditions(taskId: string): void {
   setOptionalConditions(existingOptionalConditions);
 }
 
-// Get the assigned and optional conditions from the pre-existing admin info
 function getAssignedConditions(taskId: string): Condition[] | undefined {
+  const fromVariant = props.assessment.variant?.conditions?.assigned?.conditions;
+  if (fromVariant?.length) return fromVariant;
+
   return props.preExistingAssessmentInfo.find((assessment) => assessment.taskId === taskId)?.conditions?.assigned
     ?.conditions;
 }
 
 function getOptionalConditions(taskId: string): Condition[] {
+  const variantOptional = props.assessment.variant?.conditions?.optional;
+
+  if (variantOptional && typeof variantOptional === 'object' && 'conditions' in variantOptional) {
+    isOptionalForAll.value = false;
+    return variantOptional.conditions;
+  }
+
+  if (variantOptional === true) {
+    isOptionalForAll.value = true;
+    return [];
+  }
+
   const task = props.preExistingAssessmentInfo.find((assessment) => assessment.taskId === taskId);
   const hasOptionalConditions = task?.conditions?.optional;
 
   if (hasOptionalConditions && typeof hasOptionalConditions === 'object' && 'conditions' in hasOptionalConditions) {
     isOptionalForAll.value = false;
     return hasOptionalConditions.conditions;
-  } else {
-    isOptionalForAll.value = !!task?.conditions?.optional;
-    return [];
   }
+
+  isOptionalForAll.value = !!task?.conditions?.optional;
+  return [];
 }
 
-// Set the assigned and optional conditions from the pre-existing admin info
 function setAssignedConditions(existingAssignedConditions: Condition[] | undefined): void {
   if (!existingAssignedConditions) return;
-  for (const condition of existingAssignedConditions) {
-    assignedConditions.value = [condition, ...assignedConditions.value];
-  }
+  assignedConditions.value = _cloneDeep(existingAssignedConditions);
 }
 
 function setOptionalConditions(existingOptionalConditions: Condition[]): void {
-  if (!existingOptionalConditions) return;
-  for (const condition of existingOptionalConditions) {
-    optionalConditions.value = [condition, ...optionalConditions.value];
-  }
+  if (!existingOptionalConditions.length) return;
+  optionalConditions.value = _cloneDeep(existingOptionalConditions);
 }
 
 const addOptionalCondition = (): void => {
@@ -470,6 +506,19 @@ const handleReset = (): void => {
   getAllConditions(props.assessment.task.id);
 };
 
+function hasDuplicateUserTypeConditions(conditions: Condition[]): boolean {
+  const seen = new Set<string>();
+
+  for (const condition of conditions) {
+    if (condition.field !== 'userType') continue;
+    const key = `${condition.op}:${condition.value}`;
+    if (seen.has(key)) return true;
+    seen.add(key);
+  }
+
+  return false;
+}
+
 const handleSave = (): void => {
   let error = false;
 
@@ -493,6 +542,16 @@ const handleSave = (): void => {
     }
   }
 
+  if (hasDuplicateUserTypeConditions(assignedConditions.value)) {
+    errorSubmitText.value = 'Duplicate User Type conditions in Assigned Conditions';
+    error = true;
+  }
+
+  if (hasDuplicateUserTypeConditions(optionalConditions.value)) {
+    errorSubmitText.value = 'Duplicate User Type conditions in Optional Conditions';
+    error = true;
+  }
+
   if (!error) {
     errorSubmitText.value = '';
     // If isOptionalForAll is true, then overwrite optional conditions by setting optional to true
@@ -510,29 +569,9 @@ const handleSave = (): void => {
   return;
 };
 
-// Conditions hold the object of the form { field: { lable: 'Grade', value: 'studentData.grade', project: ALL }, etc }
-// We need to convert the conditions to the form { field: 'studnetData.grade', etc }
+// Conditions are stored as string values; clone for the save payload.
 function conditionsToValues(): [Condition[], Condition[]] {
-  const assignedConditionsCopy = _cloneDeep(assignedConditions.value);
-  const optionalConditionsCopy = _cloneDeep(optionalConditions.value);
-
-  assignedConditionsCopy.forEach((condition) => {
-    for (const [key, value] of Object.entries(condition)) {
-      if (typeof value === 'object' && value !== null && 'value' in value) {
-        (condition as any)[key] = value.value;
-      }
-    }
-  });
-
-  optionalConditionsCopy.forEach((condition) => {
-    for (const [key, value] of Object.entries(condition)) {
-      if (typeof value === 'object' && value !== null && 'value' in value) {
-        (condition as any)[key] = value.value;
-      }
-    }
-  });
-
-  return [assignedConditionsCopy, optionalConditionsCopy];
+  return [_cloneDeep(assignedConditions.value), _cloneDeep(optionalConditions.value)];
 }
 
 const computedConditions = (assignedConditions: Condition[], optionalConditions: Condition[]): ConditionsStructure => {
