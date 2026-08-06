@@ -29,7 +29,7 @@ export interface SurveyFormSection {
 }
 
 /**
- * Definition of the registered survey returned by the build-survey callables.
+ * Definition of the registered survey returned by `loadFormDefinitions`.
  */
 export interface SurveyFormDefinition {
   formId: string;
@@ -55,14 +55,6 @@ class SurveyFormsRepository extends Repository {
       'loadFormDefinitions',
       { orgType, orgId },
     );
-  }
-
-  async buildSchoolSurvey(): Promise<SurveyFormDefinition> {
-    return this.loadFormDefinitions('school');
-  }
-
-  async buildSiteSurvey(): Promise<SurveyFormDefinition> {
-    return this.loadFormDefinitions('site');
   }
 }
 
