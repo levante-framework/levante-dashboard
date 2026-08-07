@@ -361,17 +361,10 @@ const optionalConditions = ref<Condition[]>([]);
 // Store optional conditions in case the isOptionalForAll is toggled on and off again (prevents the form from resetting to the original state)
 const previousOptionalConditions = ref<Condition[]>([]);
 
-function resolveFieldValue(field: string | FieldOption | ConditionOption): string {
-  const processedField = toRaw(field);
-  if (!processedField) return '';
-  return typeof processedField === 'string' ? processedField : processedField.value;
-}
-
 const computedValueOptions = (field: string): ConditionOption[] | undefined => {
-  const selectedField = resolveFieldValue(field);
-  if (!selectedField) return;
+  if (!field) return;
 
-  if (selectedField === 'age') {
+  if (field === 'age') {
     return [
       { label: '3', value: '3' },
       { label: '4', value: '4' },
@@ -384,7 +377,7 @@ const computedValueOptions = (field: string): ConditionOption[] | undefined => {
       { label: '11', value: '11' },
       { label: '12', value: '12' },
     ];
-  } else if (selectedField === 'userType') {
+  } else if (field === 'userType') {
     return [
       { label: 'Child', value: 'student' },
       { label: 'Caregiver', value: 'parent' },
@@ -394,10 +387,9 @@ const computedValueOptions = (field: string): ConditionOption[] | undefined => {
 };
 
 const computedConditionOptions = (field: string): ConditionOption[] | undefined => {
-  const selectedField = resolveFieldValue(field);
-  if (!selectedField) return;
+  if (!field) return;
 
-  if (selectedField === 'age') {
+  if (field === 'age') {
     return [
       { label: 'Less Than', value: 'LESS_THAN' },
       { label: 'Greater Than', value: 'GREATER_THAN' },
@@ -406,7 +398,7 @@ const computedConditionOptions = (field: string): ConditionOption[] | undefined 
       { label: 'Equal', value: 'EQUAL' },
       { label: 'Not Equal', value: 'NOT_EQUAL' },
     ];
-  } else if (selectedField === 'userType') {
+  } else if (field === 'userType') {
     return [
       { label: 'Equal', value: 'EQUAL' },
       { label: 'Not Equal', value: 'NOT_EQUAL' },
