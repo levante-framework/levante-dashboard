@@ -91,6 +91,36 @@ describe('EditVariantDialog.vue - stored condition rendering (regression #1013)'
     wrapper.unmount();
   });
 
+  it('resets the operation and value selects when the field changes', async () => {
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({
+          assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }] },
+        }),
+        updateVariant: vi.fn(),
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    // For a single assigned condition the selects render as [field, op, value].
+    const [fieldSelect] = wrapper.findAllComponents(PvSelect);
+    fieldSelect.vm.$emit('update:modelValue', 'age');
+    await nextTick();
+
+    const labels = selectLabels(wrapper);
+    expect(labels).toContain('Age');
+    // op and value fall back to their placeholders instead of the stale userType values.
+    expect(labels).toContain('Condition');
+    expect(labels).toContain('Value');
+    expect(labels).not.toContain('Equal');
+    expect(labels).not.toContain('Child');
+
+    wrapper.unmount();
+  });
+
   it('round-trips stored string conditions through save without object conversion', async () => {
     const updateVariant = vi.fn();
     const wrapper = mount(EditVariantDialog, {

@@ -76,7 +76,6 @@
 
             <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
               <PvSelect
-                :key="`assigned-op-${index}-${condition.field}`"
                 v-model="condition.op"
                 :options="computedConditionOptions(condition.field)"
                 optionLabel="label"
@@ -89,7 +88,6 @@
 
             <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
               <PvSelect
-                :key="`assigned-value-${index}-${condition.field}`"
                 v-model="condition.value"
                 :options="computedValueOptions(condition.field)"
                 optionLabel="label"
@@ -169,7 +167,6 @@
 
                 <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
                   <PvSelect
-                    :key="`optional-op-${index}-${condition.field}`"
                     v-model="condition.op"
                     :options="computedConditionOptions(condition.field)"
                     optionLabel="label"
@@ -182,7 +179,6 @@
 
                 <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
                   <PvSelect
-                    :key="`optional-value-${index}-${condition.field}`"
                     v-model="condition.value"
                     :options="computedValueOptions(condition.field)"
                     optionLabel="label"
