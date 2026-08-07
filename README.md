@@ -44,10 +44,14 @@ Common commands:
 
 Crowdin download during `npm run dev` and `npm run build` only occurs when `CROWDIN_API_TOKEN` is set; CSV→JSON always runs to ensure the app has messages available.
 
-## Survey PDF generation
+## Task cover images
 
-A helper is available to create PDFs from SurveyJS JSON:
+Task logos are resolved by [`src/helpers/taskImage.ts`](./src/helpers/taskImage.ts) and rendered with [`src/components/TaskImage.vue`](./src/components/TaskImage.vue).
 
-- [`src/helpers/surveyPdfGenerator.ts`](./src/helpers/surveyPdfGenerator.ts)
+- **Storage:** GCS `task-logos/` on the Levante assets bucket (`TASK_IMAGE_BASE_URL`)
+- **Firestore `task.image`:** full URL, path, or bare filename (e.g. `sre-logo.png` or `sre-logo`)
+- **Preference:** sibling `.webp` when available, then the stored raster (`.png` / `.jpg` / …); missing images use `/LEVANTE/Levante_Logo.png`
+- **Usage:** `<TaskImage :image="task.image" :alt="task.name" />`
 
-See usage notes and examples in [`README_SURVEY_PDF.md`](./README_SURVEY_PDF.md) (if present), or integrate the helper by importing it and passing the Survey JSON you wish to export. The helper avoids UI changes and can be called from admin-only flows or scripts.
+Upload WebP siblings next to existing files when ready (e.g. `task-logos/sre-logo.webp` beside `sre-logo.png`). No Firestore migration is required for full URLs already stored on tasks.
+
