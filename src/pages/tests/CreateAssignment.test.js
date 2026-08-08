@@ -77,7 +77,7 @@ describe('Create Assignment Page', () => {
     const wrapper = mount(CreateAssignment, {
       global: {
         plugins: [VueQuery.VueQueryPlugin, PrimeVue],
-        stubs: { GroupPicker: true },
+        stubs: { GroupPicker: true, TaskPicker: true },
       },
     });
 
@@ -88,7 +88,7 @@ describe('Create Assignment Page', () => {
     const wrapper = mount(CreateAssignment, {
       global: {
         plugins: [VueQuery.VueQueryPlugin, PrimeVue],
-        stubs: { GroupPicker: true },
+        stubs: { GroupPicker: true, TaskPicker: true },
       },
     });
 
@@ -118,7 +118,7 @@ describe('Create Assignment Page', () => {
     const wrapper = mount(CreateAssignment, {
       global: {
         plugins: [VueQuery.VueQueryPlugin, PrimeVue],
-        stubs: { GroupPicker: true },
+        stubs: { GroupPicker: true, TaskPicker: true },
       },
     });
 
@@ -210,7 +210,7 @@ describe('Create Assignment Page', () => {
     const wrapper = mount(CreateAssignment, {
       global: {
         plugins: [VueQuery.VueQueryPlugin, PrimeVue],
-        stubs: { GroupPicker: true },
+        stubs: { GroupPicker: true, TaskPicker: true },
       },
     });
 

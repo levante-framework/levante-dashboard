@@ -20,7 +20,6 @@ const props = defineProps({
 
 let levanteTaskLauncher;
 
-const taskId = props.taskId;
 const { version } = packageLockJson.packages['node_modules/@levante-framework/core-tasks'];
 const router = useRouter();
 const taskStarted = ref(false);
@@ -74,7 +73,7 @@ onMounted(async () => {
     );
     logger.error(new Error('Failed to import the game module', { cause: error }), {
       tags: { function: 'onMounted', component: 'TaskLevante' },
-      taskId,
+      taskId: props.taskId,
       userId: getUserId(),
     });
   }
@@ -112,9 +111,14 @@ async function startTask(selectedAdmin) {
       }
     }, 100);
 
-    const trialContainer = taskId === 'child-survey' ? 'surveyResponses' : 'runs';
+    const trialContainer = props.taskId === 'child-survey' ? 'surveyResponses' : 'runs';
 
-    const appKit = await authStore.roarfirekit.startAssessment(selectedAdmin.value.id, taskId, version, trialContainer);
+    const appKit = await authStore.roarfirekit.startAssessment(
+      selectedAdmin.value.id,
+      props.taskId,
+      version,
+      trialContainer,
+    );
 
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
@@ -132,7 +136,7 @@ async function startTask(selectedAdmin) {
       // Handle any post-game actions.
       await completeAssessmentMutate({
         adminId: selectedAdmin.value.id,
-        taskId,
+        taskId: props.taskId,
       });
 
       // Navigate to home, but first set the refresh flag to true.
@@ -146,7 +150,7 @@ async function startTask(selectedAdmin) {
     logger.error(new Error('Failed to start task', { cause: error }), {
       tags: { function: 'startTask', component: 'TaskLevante' },
       administrationId: selectedAdmin.value.id,
-      taskId,
+      taskId: props.taskId,
       userId: getUserId(),
     });
   }

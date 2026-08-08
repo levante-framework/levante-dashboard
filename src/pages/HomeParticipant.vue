@@ -108,15 +108,16 @@ import ParticipantSidebar from '@/components/ParticipantSidebar.vue';
 import SideBar from '@/components/SideBar.vue';
 import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
+import useSurveyResponsesQuery from '@/composables/queries/useSurveyResponsesQuery';
 import useTasksQuery from '@/composables/queries/useTasksQuery';
 import useUserAssignmentsQuery from '@/composables/queries/useUserAssignmentsQuery';
 import useUserDataQuery from '@/composables/queries/useUserDataQuery';
-import useSurveyResponsesQuery from '@/composables/useSurveyResponses/useSurveyResponses';
 import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
 import { formatDateWithLocale } from '@/helpers';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { fetchDocsById } from '@/helpers/query/utils';
 import { bootstrapSurveyInstance, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
+import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 import { useSurveyStore } from '@/store/survey';
@@ -238,7 +239,7 @@ watch(selectedAssignment, (newAdmin, oldAdmin) => {
 });
 
 const { data: surveyResponsesData } = useSurveyResponsesQuery({
-  enabled: hasSurvey && initialized,
+  enabled: computed(() => hasSurvey.value && initialized.value),
 });
 
 const isLoading = computed(() => {
@@ -567,7 +568,9 @@ watch(
           surveyStore.setSpecificSurveyRelationData(res);
         }
       } catch (error) {
-        console.error('Error fetching relation data:', error);
+        logger.error(new Error('Failed to fetch survey relation data', { cause: error }), {
+          tags: { component: 'HomeParticipant', function: 'watch' },
+        });
       }
     }
 

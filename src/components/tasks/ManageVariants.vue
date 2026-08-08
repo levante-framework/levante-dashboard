@@ -489,6 +489,7 @@ import useUpdateTaskVariantMutation from '@/composables/mutations/useUpdateTaskV
 import useTasksQuery from '@/composables/queries/useTasksQuery';
 import useTaskVariantsQuery from '@/composables/queries/useTaskVariantsQuery';
 import { getAllLanguageOptions, getLanguageInfo, getPrimaryLanguageOptions } from '@/helpers/languageDiscovery';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 const toast = useToast();
@@ -578,7 +579,7 @@ onMounted(() => {
   if (roarfirekit.value.restConfig) init();
 });
 
-const { isFetching: isFetchingTasks, data: tasks } = useTasksQuery({
+const { isFetching: isFetchingTasks, data: tasks } = useTasksQuery(true, null, {
   enabled: initialized,
 });
 
@@ -674,8 +675,8 @@ const moveToDeletedParams = (param) => {
 
 // Delete the param from the updatedVariantData object when updating a variant
 const deleteParam = (param) => {
-  if (updatedVariantData['params'][param] !== undefined) {
-    delete updatedVariantData['params'][param];
+  if (updatedVariantData.params[param] !== undefined) {
+    delete updatedVariantData.params[param];
   }
   delete updatedVariantData[param];
 };
@@ -727,7 +728,7 @@ const checkForDuplicates = (newItemsArray, currentDataObject) => {
 };
 
 function checkVariantExists(value) {
-  variants.value.forEach((item) => {
+  for (const item of variants.value) {
     if (value === item.variant?.name) {
       toast.add({
         severity: 'error',
@@ -735,10 +736,9 @@ function checkVariantExists(value) {
         detail: `Variant with name '${value}' already exists. Please choose a different name.`,
         life: 3000,
       });
-      return true;
+      return;
     }
-    return false;
-  });
+  }
 }
 
 // Helper function to check for errors before updating a task
@@ -830,7 +830,9 @@ const handleUpdateVariant = async () => {
         detail: 'Unable to update variant, please try again.',
         life: 3000,
       });
-      console.error('Failed to update task.', error);
+      logger.error(new Error('Failed to update variant', { cause: error }), {
+        tags: { component: 'ManageVariants', function: 'handleUpdateVariantSubmit' },
+      });
     },
   });
 };
@@ -892,7 +894,9 @@ const handleVariantSubmit = async (isFormValid) => {
         detail: 'Unable to create variant, please try again.',
         life: 3000,
       });
-      console.error('Failed to add variant.', error);
+      logger.error(new Error('Failed to add variant', { cause: error }), {
+        tags: { component: 'ManageVariants', function: 'handleVariantSubmit' },
+      });
     },
   });
 };

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/vue-query';
-import { type MaybeRefOrGetter, toValue } from 'vue';
+import { toValue } from 'vue';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { USER_ADMINISTRATION_ASSIGNMENTS_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';

@@ -122,7 +122,7 @@ const countMenuLinks = (menuItems = []) => {
   while (stack.length) {
     const item = stack.pop();
     count += 1;
-    if (item.items && item.items.length) {
+    if (item.items?.length) {
       stack.push(...item.items);
     }
   }
@@ -141,7 +141,9 @@ const buildMenuLabels = (actions = []) => {
     const headerItems = actions.filter((action) => action.category === header);
     if (headerItems.length) {
       labels.push(header);
-      headerItems.forEach((action) => labels.push(action.title));
+      headerItems.forEach((action) => {
+        labels.push(action.title);
+      });
     }
   });
 
@@ -174,8 +176,12 @@ describe('NavBar.vue', () => {
       expect(links.length).toBe(expectedLinkCount);
 
       const html = wrapper.html();
-      visibleLabels.forEach((label) => expect(html).toContain(label));
-      hiddenLabels.forEach((label) => expect(html).not.toContain(label));
+      visibleLabels.forEach((label) => {
+        expect(html).toContain(label);
+      });
+      hiddenLabels.forEach((label) => {
+        expect(html).not.toContain(label);
+      });
 
       expect(wrapper.vm.computedIsBasicView).toBe(false);
     });
@@ -193,8 +199,12 @@ describe('NavBar.vue', () => {
       const hiddenLabels = allMenuLabels.filter((label) => !visibleLabels.includes(label));
 
       expect(links.length).toBe(countMenuLinks(wrapper.vm.computedItems));
-      visibleLabels.forEach((label) => expect(wrapper.html()).toContain(label));
-      hiddenLabels.forEach((label) => expect(wrapper.html()).not.toContain(label));
+      visibleLabels.forEach((label) => {
+        expect(wrapper.html()).toContain(label);
+      });
+      hiddenLabels.forEach((label) => {
+        expect(wrapper.html()).not.toContain(label);
+      });
     });
   });
 
@@ -212,8 +222,12 @@ describe('NavBar.vue', () => {
       expect(links.length).toBe(countMenuLinks(wrapper.vm.computedItems));
 
       const html = wrapper.html();
-      visibleLabels.forEach((label) => expect(html).toContain(label));
-      hiddenLabels.forEach((label) => expect(html).not.toContain(label));
+      visibleLabels.forEach((label) => {
+        expect(html).toContain(label);
+      });
+      hiddenLabels.forEach((label) => {
+        expect(html).not.toContain(label);
+      });
     });
   });
 
@@ -231,8 +245,12 @@ describe('NavBar.vue', () => {
       expect(links.length).toBe(countMenuLinks(wrapper.vm.computedItems));
 
       const html = wrapper.html();
-      visibleLabels.forEach((label) => expect(html).toContain(label));
-      hiddenLabels.forEach((label) => expect(html).not.toContain(label));
+      visibleLabels.forEach((label) => {
+        expect(html).toContain(label);
+      });
+      hiddenLabels.forEach((label) => {
+        expect(html).not.toContain(label);
+      });
     });
   });
 
@@ -250,8 +268,12 @@ describe('NavBar.vue', () => {
       expect(links.length).toBe(countMenuLinks(wrapper.vm.computedItems));
       expect(wrapper.vm.computedIsBasicView).toBe(true);
       const html = wrapper.html();
-      visibleLabels.forEach((label) => expect(html).toContain(label));
-      hiddenLabels.forEach((label) => expect(html).not.toContain(label));
+      visibleLabels.forEach((label) => {
+        expect(html).toContain(label);
+      });
+      hiddenLabels.forEach((label) => {
+        expect(html).not.toContain(label);
+      });
     });
   });
 });

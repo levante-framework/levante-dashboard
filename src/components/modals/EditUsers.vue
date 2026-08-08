@@ -373,7 +373,7 @@ const setupUserData = (): UserData => {
       last: props.userData?.name?.last || null,
     },
     studentData: {
-      dob: !isNaN(new Date(props.userData?.studentData?.dob).getTime())
+      dob: !Number.isNaN(new Date(props.userData?.studentData?.dob).getTime())
         ? new Date(props.userData?.studentData?.dob)
         : null,
       grade: props.userData?.studentData?.grade || '',

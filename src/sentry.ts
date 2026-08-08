@@ -29,7 +29,7 @@ export function initSentry(app: App) {
   // skip if levante instance
   let dsn: string;
   let regex: RegExp;
-  let tracePropagationTargets;
+  let tracePropagationTargets: (string | RegExp)[];
   if (isLevante) {
     dsn = 'https://458fd3b1207c12df79f554b94f22833f@o4507250485035008.ingest.us.sentry.io/4508480347832320';
     regex = /https:\/\/hs-levante-admin-dev(--pr\d+-\w+)?\.web\.app/;

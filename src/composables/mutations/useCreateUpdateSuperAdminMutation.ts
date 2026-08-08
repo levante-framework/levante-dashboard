@@ -18,6 +18,7 @@ const useCreateUpdateSuperAdminMutation = (): UseMutationReturnType<
     mutationFn: async (payload: CreateUpdateSuperAdminPayload): Promise<unknown> => {
       return usersRepository.createUpdateSuperAdmin(payload);
     },
+    meta: { skipGlobalErrorLogging: true },
     onSuccess: (_data, payload): void => {
       queryClient.invalidateQueries({ queryKey: [ADMINS_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: [SUPER_ADMINS_QUERY_KEY] });
@@ -25,7 +26,7 @@ const useCreateUpdateSuperAdminMutation = (): UseMutationReturnType<
     },
     onError: (error: Error, payload: CreateUpdateSuperAdminPayload): void => {
       logger.error(new Error('Failed to create or update super admin', { cause: error }), {
-        tags: { function: 'useCreateUpdateSuperAdminMutation' },
+        tags: { composable: 'useCreateUpdateSuperAdminMutation' },
         adminUid: payload.adminUid,
       });
     },

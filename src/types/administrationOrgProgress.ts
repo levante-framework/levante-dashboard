@@ -27,11 +27,7 @@ export interface TaskProgressSummaryRow {
   completed: number;
 }
 
-export type UserTaskProgressStatus =
-  | 'notAssigned'
-  | 'notStarted'
-  | 'started'
-  | 'completed';
+export type UserTaskProgressStatus = 'notAssigned' | 'notStarted' | 'started' | 'completed';
 
 export interface UserTaskProgressRow {
   taskId: string;

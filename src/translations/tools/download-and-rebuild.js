@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { spawnSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,7 +44,9 @@ function rebuildFromConsolidated() {
     const { headers, rows } = readCsv(path.join(consolidatedRoot, csvName));
     // identifier,label,en,es-co,de,de-ch,en-so,fr-ca,nl
     const langHeaders = headers.slice(2);
-    langHeaders.forEach((h) => languageSet.add(h.toLowerCase()));
+    langHeaders.forEach((h) => {
+      languageSet.add(h.toLowerCase());
+    });
 
     const section = csvName.replace('dashboard-', '').replace('-translations.csv', '');
     // Group rows by component path in identifier like components/navbar.title

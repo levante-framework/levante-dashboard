@@ -67,40 +67,40 @@ let returnScoreTooltip = (colData, fieldPath) => {
 function handleToolTip(_taskId, _toolTip, _colData) {
   // Get the support level and flags, if they exist
   if (_colData.scores?.[_taskId]?.supportLevel) {
-    _toolTip += _colData.scores?.[_taskId]?.supportLevel + '\n' + '\n';
+    _toolTip += `${_colData.scores?.[_taskId]?.supportLevel}\n\n`;
     _toolTip += getFlags(_colData, _taskId);
   }
 
   // If the task does not have a raw score, then display no scores
   // if score exists
   if (
-    _colData.scores?.[_taskId]?.rawScore != undefined ||
+    _colData.scores?.[_taskId]?.rawScore != null ||
     _colData.scores?.[_taskId]?.percentCorrect ||
     _colData.scores?.[_taskId]?.correctIncorrectDifference ||
     _colData.scores?.[_taskId]?.numAttempted
   ) {
     if (tasksToDisplayCorrectIncorrectDifference.includes(_taskId)) {
-      _toolTip += 'Num Correct: ' + _colData.scores?.[_taskId]?.numCorrect + '\n';
-      _toolTip += 'Num Incorrect: ' + _colData.scores?.[_taskId]?.numIncorrect + '\n';
-      _toolTip += 'Correct - Incorrect: ' + _colData.scores?.[_taskId]?.correctIncorrectDifference + '\n';
+      _toolTip += `Num Correct: ${_colData.scores?.[_taskId]?.numCorrect}\n`;
+      _toolTip += `Num Incorrect: ${_colData.scores?.[_taskId]?.numIncorrect}\n`;
+      _toolTip += `Correct - Incorrect: ${_colData.scores?.[_taskId]?.correctIncorrectDifference}\n`;
     } else if (tasksToDisplayTotalCorrect.includes(_taskId)) {
       if (_colData.scores?.[_taskId]?.numCorrect === undefined) {
-        _toolTip += 'Num Correct: ' + 0 + '\n';
-        _toolTip += 'Num Attempted: ' + _colData.scores?.[_taskId]?.numAttempted + '\n';
+        _toolTip += `Num Correct: ${0}\n`;
+        _toolTip += `Num Attempted: ${_colData.scores?.[_taskId]?.numAttempted}\n`;
       } else {
-        _toolTip += 'Num Correct: ' + _colData.scores?.[_taskId]?.numCorrect + '\n';
-        _toolTip += 'Num Attempted: ' + _colData.scores?.[_taskId]?.numAttempted + '\n';
+        _toolTip += `Num Correct: ${_colData.scores?.[_taskId]?.numCorrect}\n`;
+        _toolTip += `Num Attempted: ${_colData.scores?.[_taskId]?.numAttempted}\n`;
       }
     } else if (tasksToDisplayPercentCorrect.includes(_taskId)) {
-      _toolTip += 'Num Correct: ' + _colData.scores?.[_taskId]?.numCorrect + '\n';
-      _toolTip += 'Num Attempted: ' + _colData.scores?.[_taskId]?.numAttempted + '\n';
-      _toolTip += 'Percent Correct: ' + _colData.scores?.[_taskId]?.percentCorrect + '\n';
+      _toolTip += `Num Correct: ${_colData.scores?.[_taskId]?.numCorrect}\n`;
+      _toolTip += `Num Attempted: ${_colData.scores?.[_taskId]?.numAttempted}\n`;
+      _toolTip += `Percent Correct: ${_colData.scores?.[_taskId]?.percentCorrect}\n`;
     } else if (rawOnlyTasks.includes(_taskId) && _colData.scores?.[_taskId]?.rawScore !== undefined) {
-      _toolTip += 'Raw Score: ' + _colData.scores?.[_taskId]?.rawScore + '\n';
+      _toolTip += `Raw Score: ${_colData.scores?.[_taskId]?.rawScore}\n`;
     } else {
-      _toolTip += 'Raw Score: ' + _colData.scores?.[_taskId]?.rawScore + '\n';
-      _toolTip += 'Percentile: ' + _colData.scores?.[_taskId]?.percentile + '\n';
-      _toolTip += 'Standardized Score: ' + _colData.scores?.[_taskId]?.standardScore + '\n';
+      _toolTip += `Raw Score: ${_colData.scores?.[_taskId]?.rawScore}\n`;
+      _toolTip += `Percentile: ${_colData.scores?.[_taskId]?.percentile}\n`;
+      _toolTip += `Standardized Score: ${_colData.scores?.[_taskId]?.standardScore}\n`;
     }
   }
   // If the task is in the rawOnlyTasks list, display only the raw score and that the scores are under development
@@ -125,14 +125,14 @@ function getFlags(colData, taskId) {
         return flagMessages[flag] || _lowerCase(flag);
       });
       if (reliabilityFlags.length === 0) return '';
-      return 'Unreliable Score' + '\n' + reliabilityFlags.join('\n') + '\n\n';
+      return `Unreliable Score\n${reliabilityFlags.join('\n')}\n\n`;
     } else {
       const reliabilityFlags = Object.keys(flags).map((flag) => {
         return flagMessages[flag] || _lowerCase(flag);
       });
       if (reliabilityFlags.length > 0) {
         // Join the returned flags with a newline character, then add two newlines for spacing
-        return 'Unreliable Score: ' + '\n' + reliabilityFlags.join('\n') + '\n\n';
+        return `Unreliable Score: \n${reliabilityFlags.join('\n')}\n\n`;
       }
       return '';
     }

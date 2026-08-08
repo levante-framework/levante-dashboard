@@ -19,7 +19,7 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
       db: false,
       functions: false,
     },
-    verboseLogging: isLevante ? false : true,
+    verboseLogging: !isLevante,
   });
   return await firekit.init();
 }

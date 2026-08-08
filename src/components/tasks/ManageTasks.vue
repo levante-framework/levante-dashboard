@@ -438,6 +438,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import useAddTaskMutation from '@/composables/mutations/useAddTaskMutation';
 import useUpdateTaskMutation from '@/composables/mutations/useUpdateTaskMutation';
 import useTasksQuery from '@/composables/queries/useTasksQuery';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 const toast = useToast();
@@ -593,8 +594,8 @@ const removeNewField = (field, array) => {
 
 // Deletes a parameter from the updatedTaskData object
 const deleteParam = (param) => {
-  if (updatedTaskData['gameConfig'][param] !== undefined) {
-    delete updatedTaskData['gameConfig'][param];
+  if (updatedTaskData.gameConfig[param] !== undefined) {
+    delete updatedTaskData.gameConfig[param];
   }
   delete updatedTaskData[param];
 };
@@ -695,7 +696,9 @@ const handleUpdateTask = async () => {
         detail: 'Unable to update task, please try again.',
         life: 3000,
       });
-      console.error('Failed to update task.', error);
+      logger.error(new Error('Failed to update task', { cause: error }), {
+        tags: { component: 'ManageTasks', function: 'handleUpdateTaskSubmit' },
+      });
     },
   });
 };
@@ -743,7 +746,9 @@ const handleNewTaskSubmit = async (isFormValid) => {
         detail: 'Unable to create task, please try again.',
         life: 3000,
       });
-      console.error('Failed to add task.', error);
+      logger.error(new Error('Failed to add task', { cause: error }), {
+        tags: { component: 'ManageTasks', function: 'handleNewTaskSubmit' },
+      });
     },
   });
 };

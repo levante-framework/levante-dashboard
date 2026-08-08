@@ -10,9 +10,6 @@ export const useGetSiteOverviewQuery = (
   const authStore = useAuthStore();
 
   return useQuery({
-    meta: {
-      composable: 'useGetSiteOverviewQuery',
-    },
     queryKey: computed(() => [SITE_OVERVIEW_QUERY_KEY, toValue(siteId)]),
     queryFn: async () => {
       const firekit = authStore.roarfirekit;
@@ -22,5 +19,12 @@ export const useGetSiteOverviewQuery = (
       return result.data;
     },
     enabled: () => !!toValue(siteId) && authStore.isFirekitInit() && toValue(enabled),
+    meta: {
+      errorMessage: 'Failed to get site overview',
+      errorContext: {
+        tags: { composable: 'useGetSiteOverviewQuery' },
+        siteId: toValue(siteId),
+      },
+    },
   });
 };
