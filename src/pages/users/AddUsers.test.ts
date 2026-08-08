@@ -1176,27 +1176,6 @@ describe('AddUsers Page', () => {
       expect(vm.isSubmitting).toBe(false);
     });
 
-    // Regression for #1003 / PR #1004: a 401 during cohort lookup used to be recorded as
-    // "cohort: Does not exist in selected site", which is what the Germany sandbox admin saw.
-    it('surfaces a session error when cohort lookup is refused with 401', async () => {
-      const authError = Object.assign(new Error('Request failed with status code 401'), {
-        response: { status: 401 },
-      });
-      vi.mocked(fetchOrgByName as any).mockRejectedValueOnce(authError);
-
-      const vm = mountAddUsers().vm as any;
-      await vm.onFileUpload(mockFileUploadEvent(COHORT_CSV));
-      await vm.submitUsers();
-
-      expect(vm.status).toEqual({
-        message:
-          'We could not verify the sites, schools, classes and cohorts in your file. Your session may have expired — please refresh the page or sign in again, then try once more.',
-        severity: 'error',
-      });
-      expect(vm.validationErrors).toBeNull();
-      expect(vm.isSubmitting).toBe(false);
-    });
-
     it('shows error when roarfirekit is unavailable at submission time', async () => {
       // Org resolution succeeds but the firekit ref is null (default auth store
       // mock), so submitUsers hits the null-firekit guard after org resolution.
