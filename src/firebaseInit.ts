@@ -15,9 +15,9 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
     dbPersistence: false,
     authPersistence: AuthPersistence.session,
     markRawConfig: {
-      auth: false,
-      db: false,
-      functions: false,
+      auth: true,
+      db: true,
+      functions: true,
     },
     verboseLogging: !isLevante,
   });
