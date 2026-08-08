@@ -28,6 +28,12 @@ const useAddTaskMutation = (): UseMutationReturnType<void, Error, TaskData, unkn
     mutationFn: async (task: TaskData): Promise<void> => {
       await authStore.roarfirekit.registerTaskVariant({ ...task });
     },
+    meta: {
+      errorMessage: 'Failed to add task',
+      errorContext: {
+        tags: { composable: 'useAddTaskMutation' },
+      },
+    },
     onSuccess: (): void => {
       queryClient.invalidateQueries({ queryKey: [TASKS_QUERY_KEY] });
     },

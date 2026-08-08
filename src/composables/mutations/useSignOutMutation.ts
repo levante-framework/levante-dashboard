@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/vue';
 import type { UseMutationReturnType } from '@tanstack/vue-query';
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { useRouter } from 'vue-router';
@@ -27,6 +26,12 @@ const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown>
     mutationFn: async (): Promise<void> => {
       await authStore.roarfirekit.signOut();
     },
+    meta: {
+      errorMessage: 'Failed to sign out',
+      errorContext: {
+        tags: { composable: 'useSignOutMutation' },
+      },
+    },
     onSuccess: async (): Promise<void> => {
       // Cancel all actively fetching queries.
       await queryClient.cancelQueries();
@@ -50,9 +55,6 @@ const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown>
 
       // Redirect to sign-in page.
       router.push({ path: APP_ROUTES.SIGN_IN });
-    },
-    onError: (err: Error): void => {
-      Sentry.captureException(err);
     },
   });
 };

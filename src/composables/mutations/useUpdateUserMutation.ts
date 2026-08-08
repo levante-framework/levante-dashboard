@@ -29,6 +29,12 @@ const useUpdateUserMutation = (): UseMutationReturnType<void, Error, UpdateUserP
       // Method no longer exists. Todo: Refactor to update users how we want
       await authStore.roarfirekit.updateUserData(userId, userData);
     },
+    meta: {
+      errorMessage: 'Failed to update user',
+      errorContext: {
+        tags: { composable: 'useUpdateUserMutation' },
+      },
+    },
     onSuccess: (): void => {
       // NB: This invalidation is too broad, but siteId is not available w/o refactoring
       queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY] });

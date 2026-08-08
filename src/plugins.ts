@@ -40,12 +40,13 @@ const MyPreset = definePreset(Aura, {
 });
 
 // ──── Configure VueQueryPlugin ────
+// Query/MutationCache onError: Sentry is opt-in via meta.
+// - meta.errorMessage (+ optional errorContext) → logger.error → Sentry
+// - meta.skipGlobalErrorLogging → caller logs itself (e.g. onError with per-call context)
+// - otherwise → console.error only
 function handleQueryError(error: unknown, meta?: Record<string, unknown>) {
-  // Opt-out for callers that log the error themselves (e.g. a mutation's own onError
-  // with per-call context) so we don't double-report to Sentry.
   if (meta?.skipGlobalErrorLogging) return;
 
-  // Log explicit query errors to Sentry
   if (typeof meta?.errorMessage === 'string') {
     const errorContext: Record<string, unknown> =
       meta.errorContext && typeof meta.errorContext === 'object' ? { ...meta.errorContext } : {};
