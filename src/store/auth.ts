@@ -155,6 +155,8 @@ export const useAuthStore = defineStore(
           roarfirekit.value.admin.auth as Auth,
           async (user: User | null) => {
             if (user) {
+              // Store raw so Vue doesn't proxy the Firebase User; proxying it
+              // breaks the SDK's internal token-refresh timers.
               firebaseUser.value.adminFirebaseUser = markRaw(user);
               logger.setUser({
                 uid: user.uid,
