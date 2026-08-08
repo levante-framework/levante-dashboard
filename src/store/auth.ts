@@ -150,9 +150,8 @@ export const useAuthStore = defineStore(
         adminAuthStateListener.value = onAuthStateChanged(
           // TODO: this cast is only necessary because there are three
           // different transitive @firebase/auth versions in the dependency
-          // tree: 0.23.2 from firkit, 1.7.9 from ROAR tasks, and 1.13.0 from
-          // permissions-core. Either align or pin to a specific version as a
-          // local npm dependency/override.
+          // tree, from firekit, ROAR tasks, and permissions-core. Either align
+          // or pin to a specific version as a local npm dependency/override.
           roarfirekit.value.admin.auth as Auth,
           async (user: User | null) => {
             if (user) {
