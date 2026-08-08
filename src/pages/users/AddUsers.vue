@@ -133,7 +133,6 @@ import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toast
 import { normalizeToLowercase } from '@/helpers';
 import { deriveNextCsvFilename, downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
 import { fetchOrgByName } from '@/helpers/query/orgs';
-import { isAuthError } from '@/helpers/query/utils';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { useLevanteStore } from '@/store/levante';
@@ -397,88 +396,68 @@ const submitUsers = async () => {
   const orgIdsPerUser: OrgIds[] = [];
   const orgErrors: { field: string; validatedIdx: number }[] = [];
   const getOrgId = createOrgIdResolver();
-  // A rejected org lookup must not be recorded as a missing org. Doing so tells the user their cohort
-  // does not exist at this site when the request was in fact refused, so auth failures abort the whole
-  // resolution pass and surface as a session error instead.
-  try {
-    for (const { user, validatedIdx } of unregistered) {
-      const orgIds: OrgIds = {
-        sites: [siteId],
-        schools: [],
-        classes: [],
-        cohorts: [],
-      };
-
-      // Get firestore ids for schools
-      let allSchoolsFound = true;
-      for (const schoolName of user.school) {
-        try {
-          const schoolId = await getOrgId('schools', schoolName, siteId);
-          orgIds.schools.push(schoolId);
-        } catch (error) {
-          if (isAuthError(error)) throw error;
-          allSchoolsFound = false;
-          orgErrors.push({
-            field: 'school',
-            validatedIdx,
-          });
-        }
-      }
-
-      // Get firestore ids for classes
-      if (allSchoolsFound) {
-        for (const className of user.class) {
-          let classFound = false;
-          for (const schoolId of orgIds.schools) {
-            try {
-              const classId = await getOrgId('classes', className, siteId, schoolId);
-              orgIds.classes.push(classId);
-              classFound = true;
-              break;
-            } catch (error) {
-              if (isAuthError(error)) throw error;
-            }
-          }
-          if (!classFound) {
-            orgErrors.push({
-              field: 'class',
-              validatedIdx,
-            });
-          }
-        }
-      }
-
-      // Get firestore ids for cohorts
-      for (const cohortName of user.cohort) {
-        try {
-          const cohortId = await getOrgId(
-            'groups', // NB: the backend expects groups for cohorts
-            cohortName,
-            siteId,
-          );
-          orgIds.cohorts.push(cohortId);
-        } catch (error) {
-          if (isAuthError(error)) throw error;
-          orgErrors.push({
-            field: 'cohort',
-            validatedIdx,
-          });
-        }
-      }
-
-      orgIdsPerUser.push(orgIds);
-    }
-  } catch (error) {
-    logger.error(new Error('Org lookup rejected while validating CSV', { cause: error }), {
-      tags: { component: 'AddUsers', function: 'submitUsers' },
-    });
-    status.value = {
-      message:
-        'We could not verify the sites, schools, classes and cohorts in your file. Your session may have expired — please refresh the page or sign in again, then try once more.',
-      severity: 'error',
+  for (const { user, validatedIdx } of unregistered) {
+    const orgIds: OrgIds = {
+      sites: [siteId],
+      schools: [],
+      classes: [],
+      cohorts: [],
     };
-    isSubmitting.value = false;
-    return;
+
+    // Get firestore ids for schools
+    let allSchoolsFound = true;
+    for (const schoolName of user.school) {
+      try {
+        const schoolId = await getOrgId('schools', schoolName, siteId);
+        orgIds.schools.push(schoolId);
+      } catch {
+        allSchoolsFound = false;
+        orgErrors.push({
+          field: 'school',
+          validatedIdx,
+        });
+      }
+    }
+
+    // Get firestore ids for classes
+    if (allSchoolsFound) {
+      for (const className of user.class) {
+        let classFound = false;
+        for (const schoolId of orgIds.schools) {
+          try {
+            const classId = await getOrgId('classes', className, siteId, schoolId);
+            orgIds.classes.push(classId);
+            classFound = true;
+            break;
+          } catch {}
+        }
+        if (!classFound) {
+          orgErrors.push({
+            field: 'class',
+            validatedIdx,
+          });
+        }
+      }
+    }
+
+    // Get firestore ids for cohorts
+    for (const cohortName of user.cohort) {
+      try {
+        const cohortId = await getOrgId(
+          'groups', // NB: the backend expects groups for cohorts
+          cohortName,
+          siteId,
+        );
+        orgIds.cohorts.push(cohortId);
+      } catch {
+        orgErrors.push({
+          field: 'cohort',
+          validatedIdx,
+        });
+      }
+    }
+
+    orgIdsPerUser.push(orgIds);
   }
   if (orgErrors.length > 0) {
     const combinedOrgErrors: Record<string, number[]> = {};

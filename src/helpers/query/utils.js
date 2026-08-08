@@ -9,7 +9,7 @@ import _union from 'lodash/union';
 import _without from 'lodash/without';
 import Papa from 'papaparse';
 import { storeToRefs } from 'pinia';
-import { toRaw, toValue } from 'vue';
+import { toValue } from 'vue';
 import { isEmulator } from '@/constants';
 import { FIRESTORE_BASE_URL, FIRESTORE_COLLECTIONS, FIRESTORE_DATABASES } from '@/constants/firebase';
 import { ROLES } from '@/constants/roles';
@@ -85,68 +85,6 @@ export const getBaseDocumentPath = () => {
   return `projects/${getProjectId()}/databases/(default)/documents`;
 };
 
-/**
- * Whether an error represents an authentication or authorization failure.
- *
- * Callers must not translate these into empty result sets. Reporting a rejected read as "no data" is
- * indistinguishable from a genuinely empty collection, which makes an expired session look like
- * deleted records.
- *
- * @param {unknown} error - The error to inspect.
- * @returns {Boolean} True for HTTP 401 and 403 responses.
- */
-export const isAuthError = (error) => [401, 403].includes(error?.response?.status);
-
-/**
- * Resolve the live Firebase user from the Firekit auth instance.
- *
- * Read through to `auth.currentUser` rather than the auth store's `firebaseUser`, which is persisted
- * to sessionStorage and therefore rehydrates as a plain object without the SDK's methods.
- *
- * @returns {Object|null} The Firebase user, or null when unavailable.
- */
-const getFirebaseUser = () => {
-  const authStore = useAuthStore();
-  const { roarfirekit } = storeToRefs(authStore);
-  const user = toRaw(roarfirekit.value?.admin?.auth?.currentUser);
-
-  return typeof user?.getIdToken === 'function' ? user : null;
-};
-
-/**
- * Keep the bearer token on an Axios instance current.
- *
- * `roarfirekit.restConfig` exposes a snapshot of the ID token taken the last time the SDK emitted a
- * token change. Attaching that snapshot at request time sends an expired credential whenever the
- * refresh did not land, so resolve the token per request instead and retry once on a 401 in case the
- * token expired in flight.
- *
- * @param {Object} instance - The Axios instance to decorate.
- */
-const attachTokenRefreshInterceptors = (instance) => {
-  instance.interceptors.request.use(async (config) => {
-    const user = getFirebaseUser();
-    if (user) {
-      config.headers.Authorization = `Bearer ${await user.getIdToken()}`;
-    }
-    return config;
-  });
-
-  instance.interceptors.response.use(undefined, async (error) => {
-    const { config } = error;
-    const user = getFirebaseUser();
-
-    if (error.response?.status !== 401 || !config || !user || config.hasRetriedAfterTokenRefresh) {
-      throw error;
-    }
-
-    config.hasRetriedAfterTokenRefresh = true;
-    config.headers.Authorization = `Bearer ${await user.getIdToken(true)}`;
-
-    return instance.request(config);
-  });
-};
-
 export const getAxiosInstance = (db = FIRESTORE_DATABASES.ADMIN, unauthenticated = false) => {
   const authStore = useAuthStore();
   const { roarfirekit } = storeToRefs(authStore);
@@ -177,13 +115,7 @@ export const getAxiosInstance = (db = FIRESTORE_DATABASES.ADMIN, unauthenticated
     throw new Error('Base URL is not set.');
   }
 
-  const instance = axios.create(axiosOptions);
-
-  if (!unauthenticated) {
-    attachTokenRefreshInterceptors(instance);
-  }
-
-  return instance;
+  return axios.create(axiosOptions);
 };
 
 export const exportCsv = (data, filename) => {
@@ -285,7 +217,6 @@ export const fetchDocumentsById = async (collection, docIds, select = [], db = F
       });
   } catch (error) {
     console.error('fetchDocumentsById: Error fetching documents by ID:', error);
-    if (isAuthError(error)) throw error;
     return [];
   }
 };
