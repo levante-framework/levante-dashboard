@@ -301,7 +301,8 @@ onMounted(() => {
       detail: 'Your session expired. Please sign in again.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
-    router.replace({ query: {} });
+    const { sessionExpired, ...query } = router.currentRoute.value.query;
+    router.replace({ query });
   }
 });
 
