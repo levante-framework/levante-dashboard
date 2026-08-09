@@ -5,7 +5,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
-import { fetchDocsById, fetchDocumentsById, fetchSubcollection, retryRequestWithFreshToken } from './utils';
+import { fetchDocsById, fetchDocumentsById, fetchSubcollection } from './utils';
 
 vi.mock('@/logger', () => ({
   logger: {
@@ -86,9 +86,14 @@ describe('Axios helpers offload error logging', () => {
 describe('retryRequestWithFreshToken', () => {
   let authStore;
   let getIdToken;
+  let retryRequestWithFreshToken;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     setActivePinia(createPinia());
+    // Reset the module so its `handlingSessionExpiry` guard doesn't leak between
+    // tests (the teardown case sets it and never clears it by design).
+    vi.resetModules();
+    ({ retryRequestWithFreshToken } = await import('./utils'));
     getIdToken = vi.fn().mockResolvedValue('fresh-token');
     authStore = {
       firebaseUser: { adminFirebaseUser: { getIdToken } },
