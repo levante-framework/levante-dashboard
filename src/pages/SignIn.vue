@@ -122,6 +122,7 @@ import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvImage from 'primevue/image';
 import PvPassword from 'primevue/password';
+import { useToast } from 'primevue/usetoast';
 import { computed, onBeforeUnmount, onMounted, ref, toRaw } from 'vue';
 import { useRouter } from 'vue-router';
 import SignIn from '@/components/auth/SignIn.vue';
@@ -130,6 +131,7 @@ import RoarModal from '@/components/modals/RoarModal.vue';
 import { isLevante } from '@/constants';
 import { AUTH_SSO_PROVIDERS } from '@/constants/auth';
 import { APP_ROUTES } from '@/constants/routes';
+import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { getUserAssignments } from '@/helpers/query/assignments';
@@ -142,6 +144,7 @@ const googleSignInErrorKey = ref('');
 const authStore = useAuthStore();
 const assignmentsStore = useAssignmentsStore();
 const router = useRouter();
+const toast = useToast();
 const adminSignIn = ref(false);
 
 const { spinner, ssoProvider, routeToProfile, roarfirekit } = storeToRefs(authStore);
@@ -287,6 +290,19 @@ const displaySignInMethods = computed(() => {
 
 onMounted(() => {
   document.body.classList.add('page-signin');
+
+  // Set by the REST auth-error handler when a session is torn down after its token
+  // could no longer be refreshed. Notify the user, then strip the flag so a manual
+  // refresh of the sign-in page doesn't show it again.
+  if (router.currentRoute.value.query.sessionExpired) {
+    toast.add({
+      severity: TOAST_SEVERITIES.WARN,
+      summary: 'Session expired',
+      detail: 'Your session expired. Please sign in again.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    router.replace({ query: {} });
+  }
 });
 
 onBeforeUnmount(() => {

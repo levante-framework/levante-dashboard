@@ -24,7 +24,13 @@ vi.mock('@/store/auth', () => ({
 vi.mock('vue-router', () => ({
   useRouter: vi.fn(() => ({
     push: vi.fn(),
+    replace: vi.fn(),
+    currentRoute: { value: { query: {} } },
   })),
+}));
+
+vi.mock('primevue/usetoast', () => ({
+  useToast: vi.fn(() => ({ add: vi.fn() })),
 }));
 
 vi.mock('@/constants', async (importActual) => ({
