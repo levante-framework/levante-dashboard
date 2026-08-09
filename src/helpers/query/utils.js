@@ -134,12 +134,15 @@ export const retryRequestWithFreshToken = async ({ error, axiosInstance, authSto
     throw error;
   }
 
+  // No user yet (e.g. an init/auth race where a read fires before auth settles) is
+  // not a dead session, so rethrow and let TanStack retry rather than tearing down.
+  const user = authStore.firebaseUser?.adminFirebaseUser;
+  if (!user) throw error;
+
   originalRequest._retriedAuth = true;
 
   let freshToken;
   try {
-    const user = authStore.firebaseUser?.adminFirebaseUser;
-    if (!user) throw new Error('No authenticated user to refresh the session token');
     freshToken = await user.getIdToken(true);
   } catch (refreshError) {
     await handleExpiredSession(authStore);

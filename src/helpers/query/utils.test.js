@@ -145,6 +145,25 @@ describe('retryRequestWithFreshToken', () => {
     expect(getIdToken).not.toHaveBeenCalled();
   });
 
+  it('rethrows without tearing down the session when there is no authenticated user', async () => {
+    const assignSpy = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    authStore.firebaseUser = { adminFirebaseUser: null };
+    const axiosInstance = vi.fn();
+    const error = { response: { status: 401 }, config: { headers: {} } };
+
+    await expect(retryRequestWithFreshToken({ error, axiosInstance, authStore, unauthenticated: false })).rejects.toBe(
+      error,
+    );
+
+    expect(getIdToken).not.toHaveBeenCalled();
+    expect(authStore.signOut).not.toHaveBeenCalled();
+    expect(assignSpy).not.toHaveBeenCalled();
+    expect(axiosInstance).not.toHaveBeenCalled();
+    expect(error.config._retriedAuth).toBeUndefined();
+
+    assignSpy.mockRestore();
+  });
+
   it('tears down the session when the token refresh fails', async () => {
     const assignSpy = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
     getIdToken.mockRejectedValueOnce(new Error('refresh token revoked'));
