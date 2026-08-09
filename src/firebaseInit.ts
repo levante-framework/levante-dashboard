@@ -14,10 +14,14 @@ export async function initNewFirekit(): Promise<RoarFirekit> {
     emulatorConfig,
     dbPersistence: false,
     authPersistence: AuthPersistence.session,
+    // This firekit instance is stored in a Vue ref, so mark the Firebase SDK
+    // objects raw to stop Vue from deep-proxying them. Proxying auth in
+    // particular breaks its internal token-refresh timers, silently expiring
+    // sessions.
     markRawConfig: {
-      auth: false,
-      db: false,
-      functions: false,
+      auth: true,
+      db: true,
+      functions: true,
     },
     verboseLogging: !isLevante,
   });

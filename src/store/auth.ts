@@ -1,8 +1,8 @@
 import type { RoarFirekit } from '@levante-framework/firekit';
 import { ROLES } from '@levante-framework/permissions-core';
-import { onAuthStateChanged, type Unsubscribe, type User } from 'firebase/auth';
+import { type Auth, onAuthStateChanged, type Unsubscribe, type User } from 'firebase/auth';
 import { acceptHMRUpdate, defineStore } from 'pinia';
-import { type Ref, ref } from 'vue';
+import { markRaw, type Ref, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { logger } from '@/logger';
 import posthogInstance from '@/plugins/posthog';
@@ -148,10 +148,16 @@ export const useAuthStore = defineStore(
     function setAuthStateListeners(): void {
       if (roarfirekit.value?.admin?.auth) {
         adminAuthStateListener.value = onAuthStateChanged(
-          roarfirekit.value.admin.auth as any,
+          // TODO: this cast is only necessary because there are three
+          // different transitive @firebase/auth versions in the dependency
+          // tree, from firekit, ROAR tasks, and permissions-core. Either align
+          // or pin to a specific version as a local npm dependency/override.
+          roarfirekit.value.admin.auth as Auth,
           async (user: User | null) => {
             if (user) {
-              firebaseUser.value.adminFirebaseUser = user;
+              // Store raw so Vue doesn't proxy the Firebase User; proxying it
+              // breaks the SDK's internal token-refresh timers.
+              firebaseUser.value.adminFirebaseUser = markRaw(user);
               logger.setUser({
                 uid: user.uid,
                 email: user.email ?? '',
