@@ -12,7 +12,9 @@ import { storeToRefs } from 'pinia';
 import { toValue } from 'vue';
 import { isEmulator } from '@/constants';
 import { FIRESTORE_BASE_URL, FIRESTORE_DATABASES } from '@/constants/firebase';
+import { APP_ROUTES } from '@/constants/routes';
 import { flattenObj } from '@/helpers';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 export const convertValues = (value) => {
@@ -85,6 +87,72 @@ export const getBaseDocumentPath = () => {
   return `projects/${getProjectId()}/databases/(default)/documents`;
 };
 
+// Guards against a redirect/sign-out storm when several parallel reads all 401.
+let handlingSessionExpiry = false;
+
+/**
+ * Tear down a session whose ID token can no longer be refreshed.
+ *
+ * A 401 that survives a forced token refresh means the refresh token itself is
+ * gone (revoked, user disabled, password changed), so the session is dead and
+ * cannot be revived. Just redirecting would leave the stale token in the SDK and
+ * the persisted `firebaseUser` in sessionStorage, so `isAuthenticated()` would
+ * stay truthy and the router guard would let the user back in on a doomed token.
+ * Sign out to clear the token, drop the persisted state, then hard-redirect so
+ * all in-memory Pinia and TanStack cache state is discarded.
+ */
+export const handleExpiredSession = async (authStore) => {
+  if (handlingSessionExpiry) return;
+  handlingSessionExpiry = true;
+
+  try {
+    await authStore.signOut();
+  } catch (error) {
+    logger.error(new Error('Failed to sign out after auth token refresh failed', { cause: error }), {
+      tags: { function: 'handleExpiredSession' },
+    });
+  }
+
+  sessionStorage.removeItem('authStore');
+  sessionStorage.removeItem('assignmentsStore');
+  window.location.assign(`${APP_ROUTES.SIGN_IN}?sessionExpired=true`);
+};
+
+/**
+ * Response-interceptor handler that recovers an authenticated request from a 401.
+ *
+ * Firestore returns 401 when the ID token is missing, expired, or invalid (403 is
+ * a rules/permission denial and is deliberately left alone). We force a fresh
+ * token straight from the SDK and retry the request once. If the refresh fails the
+ * session is unrecoverable, so we tear it down and surface the failure.
+ */
+export const retryRequestWithFreshToken = async ({ error, axiosInstance, authStore, unauthenticated }) => {
+  const originalRequest = error?.config;
+  const isAuthError = error?.response?.status === 401;
+
+  if (!isAuthError || unauthenticated || !originalRequest || originalRequest._retriedAuth) {
+    throw error;
+  }
+
+  // No user yet (e.g. an init/auth race where a read fires before auth settles) is
+  // not a dead session, so rethrow and let TanStack retry rather than tearing down.
+  const user = authStore.firebaseUser?.adminFirebaseUser;
+  if (!user) throw error;
+
+  originalRequest._retriedAuth = true;
+
+  let freshToken;
+  try {
+    freshToken = await user.getIdToken(true);
+  } catch (refreshError) {
+    await handleExpiredSession(authStore);
+    throw new Error('Session expired; unable to refresh auth token', { cause: refreshError });
+  }
+
+  originalRequest.headers = { ...originalRequest.headers, Authorization: `Bearer ${freshToken}` };
+  return axiosInstance(originalRequest);
+};
+
 export const getAxiosInstance = (db = FIRESTORE_DATABASES.ADMIN, unauthenticated = false) => {
   const authStore = useAuthStore();
   const { roarfirekit } = storeToRefs(authStore);
@@ -115,7 +183,14 @@ export const getAxiosInstance = (db = FIRESTORE_DATABASES.ADMIN, unauthenticated
     throw new Error('Base URL is not set.');
   }
 
-  return axios.create(axiosOptions);
+  const axiosInstance = axios.create(axiosOptions);
+
+  axiosInstance.interceptors.response.use(
+    (response) => response,
+    (error) => retryRequestWithFreshToken({ error, axiosInstance, authStore, unauthenticated }),
+  );
+
+  return axiosInstance;
 };
 
 export const exportCsv = (data, filename) => {
