@@ -74,13 +74,14 @@
         </div>
       </div>
     </div>
+
+    <ConsentModal
+      v-if="showConsent"
+      :consent-text="confirmText"
+      :consent-type="consentType"
+      :on-confirm="updateConsent"
+    />
   </div>
-  <ConsentModal
-    v-if="showConsent"
-    :consent-text="confirmText"
-    :consent-type="consentType"
-    :on-confirm="updateConsent"
-  />
 </template>
 
 <script setup>
