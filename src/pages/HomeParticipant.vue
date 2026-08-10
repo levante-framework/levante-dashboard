@@ -117,6 +117,7 @@ import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
 import { formatDateWithLocale } from '@/helpers';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { fetchDocsById } from '@/helpers/query/utils';
+import { getSpecificRelationIndexForEmptySpecificResume } from '@/helpers/survey';
 import { bootstrapSurveyInstance, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
@@ -529,6 +530,14 @@ watch(
             } else {
               surveyStore.setSpecificSurveyRelationIndex(surveyResponseDoc.specific.length);
             }
+          }
+        } else {
+          const resumeIndex = getSpecificRelationIndexForEmptySpecificResume(
+            surveyResponseDoc.general.isComplete,
+            surveyResponseDoc.specific?.length ?? 0,
+          );
+          if (resumeIndex !== null) {
+            surveyStore.setSpecificSurveyRelationIndex(resumeIndex);
           }
         }
 

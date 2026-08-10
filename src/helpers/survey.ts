@@ -85,6 +85,21 @@ export function getParsedLocale(locale: string | undefined | null): string {
   return findBestMatchingLocale(locale);
 }
 
+/**
+ * Home resume helper: after general is complete, if there are not yet any specific
+ * responses, force the relation index back to 0. Prevents a same-session stale bump
+ * (from an older general-save bug) from skipping or crashing the first child/class survey.
+ * Returns null when the caller should use existing specific[] resume logic instead.
+ */
+export function getSpecificRelationIndexForEmptySpecificResume(
+  isGeneralComplete: boolean,
+  specificLength: number,
+): number | null {
+  if (specificLength > 0) return null;
+  if (isGeneralComplete) return 0;
+  return null;
+}
+
 export function restoreSurveyData({
   surveyInstance,
   uid,
@@ -258,6 +273,9 @@ export async function saveFinalSurveyData({
 
   structuredResponses.isEntireSurveyCompleted = isEntireSurveyCompleted;
 
+  // Capture before mutating store flags after a successful save.
+  const wasGeneralComplete = surveyStore.isGeneralSurveyComplete;
+
   // turn on loading state
   surveyStore.setIsSavingSurveyResponses(true);
 
@@ -274,15 +292,18 @@ export async function saveFinalSurveyData({
     // update survey store to let survey tabs know
     if (userType === 'student') {
       surveyStore.setIsGeneralSurveyComplete(true);
+    } else if (!wasGeneralComplete) {
+      // Finished general: keep index at 0 so the first child/class survey starts correctly.
+      surveyStore.setIsGeneralSurveyComplete(true);
     } else {
-      if (!surveyStore.isGeneralSurveyComplete) {
-        surveyStore.setIsGeneralSurveyComplete(true);
-      } else if (surveyStore.specificSurveyRelationIndex === surveyStore.specificSurveyRelationData.length - 1) {
+      const relationCount = surveyStore.specificSurveyRelationData.length;
+      const currentIndex = surveyStore.specificSurveyRelationIndex;
+      if (currentIndex >= relationCount - 1) {
         surveyStore.setIsSpecificSurveyComplete(true);
+      } else {
+        surveyStore.setSpecificSurveyRelationIndex(currentIndex + 1);
       }
     }
-
-    surveyStore.setSpecificSurveyRelationIndex(surveyStore.specificSurveyRelationIndex + 1);
 
     queryClient.invalidateQueries({ queryKey: [SURVEY_RESPONSES_QUERY_KEY] });
 
