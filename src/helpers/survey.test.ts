@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getSpecificRelationIndexForEmptySpecificResume, saveFinalSurveyData } from './survey';
+import { saveFinalSurveyData } from './survey';
 
 vi.mock('@/logger', () => ({
   logger: {
@@ -125,21 +125,5 @@ describe('saveFinalSurveyData relation index', () => {
     expect(surveyStore.setIsSpecificSurveyComplete).toHaveBeenCalledWith(true);
     expect(surveyStore.setSpecificSurveyRelationIndex).not.toHaveBeenCalled();
     expect(surveyStore.specificSurveyRelationIndex).toBe(1);
-  });
-});
-
-describe('getSpecificRelationIndexForEmptySpecificResume (Home guard)', () => {
-  it('resets to 0 when general is complete and there are no specific responses yet', () => {
-    // Same-session recovery: Pinia may still hold a bumped index after general save.
-    expect(getSpecificRelationIndexForEmptySpecificResume(true, 0)).toBe(0);
-  });
-
-  it('does not override resume when specific responses already exist', () => {
-    expect(getSpecificRelationIndexForEmptySpecificResume(true, 1)).toBeNull();
-    expect(getSpecificRelationIndexForEmptySpecificResume(true, 2)).toBeNull();
-  });
-
-  it('does not force an index when general is still incomplete', () => {
-    expect(getSpecificRelationIndexForEmptySpecificResume(false, 0)).toBeNull();
   });
 });

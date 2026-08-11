@@ -85,21 +85,6 @@ export function getParsedLocale(locale: string | undefined | null): string {
   return findBestMatchingLocale(locale);
 }
 
-/**
- * Home resume helper: after general is complete, if there are not yet any specific
- * responses, force the relation index back to 0. Prevents a same-session stale bump
- * (from an older general-save bug) from skipping or crashing the first child/class survey.
- * Returns null when the caller should use existing specific[] resume logic instead.
- */
-export function getSpecificRelationIndexForEmptySpecificResume(
-  isGeneralComplete: boolean,
-  specificLength: number,
-): number | null {
-  if (specificLength > 0) return null;
-  if (isGeneralComplete) return 0;
-  return null;
-}
-
 export function restoreSurveyData({
   surveyInstance,
   uid,
