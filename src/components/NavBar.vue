@@ -12,9 +12,9 @@
 
             <template #buttonicon>
               <PvButton
-                icon="pi pi-bars"
-                class="bg-primary text-white p-2 mr-2 border-none border-round hover:bg-red-900"
-                @click="toggleMenu"
+                :icon="isNavBarOpen ? 'pi pi-times' : 'pi pi-bars'"
+                class="bg-primary text-white p-2 mr-2 border-none border-round"
+                @click="() => isNavBarOpen = !isNavBarOpen"
               />
             </template>
 
@@ -47,9 +47,8 @@ import { storeToRefs } from 'pinia';
 import Badge from 'primevue/badge';
 import PvButton from 'primevue/button';
 import PvMenubar from 'primevue/menubar';
-import { computed, onMounted, onUnmounted, type Ref, ref, watchEffect } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
 import { APP_ROUTES } from '@/constants/routes';
@@ -79,8 +78,8 @@ const { roarfirekit, userData, currentSite } = storeToRefs(authStore);
 const { userRole } = usePermissions();
 
 const initialized = ref<boolean>(false);
-const menu = ref();
 const navbarRef = ref<HTMLElement | null>(null);
+const isNavBarOpen = ref(false);
 const { height } = useElementSize(navbarRef);
 const screenWidth = ref<number>(window.innerWidth);
 let unsubscribe: (() => void) | undefined;
@@ -177,10 +176,6 @@ const rawActions = computed((): NavbarAction[] => {
     userRole: currentRoleObj?.role,
   }) as unknown as NavbarAction[];
 });
-
-const toggleMenu = (event: Event): void => {
-  menu.value.toggle(event);
-};
 </script>
 
 <style lang="scss" scoped>
