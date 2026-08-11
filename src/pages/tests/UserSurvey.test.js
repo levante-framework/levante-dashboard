@@ -59,7 +59,7 @@ function createSurveyStoreMock(overrides = {}) {
     survey: ref({ id: 'survey-1' }),
     isSavingSurveyResponses: ref(false),
     isGeneralSurveyComplete: ref(false),
-    isSurveyCompleted: ref(false),
+    isSurveyPartSubmitted: ref(false),
     specificSurveyRelationData: ref([]),
     specificSurveyRelationIndex: ref(0),
     ...overrides,
@@ -272,7 +272,7 @@ describe('UserSurvey.vue', () => {
     vi.mocked(useSurveyStore).mockReturnValue(
       createSurveyStoreMock({
         isGeneralSurveyComplete: ref(true),
-        isSurveyCompleted: ref(true),
+        isSurveyPartSubmitted: ref(true),
         specificSurveyRelationData: ref([{ birthMonth: 'March', birthYear: '2018', name: 'Alex' }]),
         specificSurveyRelationIndex: ref(0),
       }),

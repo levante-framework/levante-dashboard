@@ -292,7 +292,7 @@ export async function saveFinalSurveyData({
 
     // Flag completion so the relation header stops rendering over the SurveyJS "thank you"
     // page while the store flags for the next part update ahead of navigation.
-    surveyStore.setSurveyCompleted();
+    surveyStore.setSurveyPartSubmitted();
 
     queryClient.invalidateQueries({ queryKey: [SURVEY_RESPONSES_QUERY_KEY] });
 

@@ -15,7 +15,7 @@ const surveyStore = useSurveyStore();
 const {
   isGeneralSurveyComplete,
   isSavingSurveyResponses,
-  isSurveyCompleted,
+  isSurveyPartSubmitted,
   specificSurveyRelationData,
   specificSurveyRelationIndex,
   survey,
@@ -43,7 +43,7 @@ onMounted(() => {
 <template>
   <div v-if="survey && !isSavingSurveyResponses">
     <h1
-      v-if="userData.userType !== 'student' && isGeneralSurveyComplete && !isSurveyCompleted"
+      v-if="userData.userType !== 'student' && isGeneralSurveyComplete && !isSurveyPartSubmitted"
       class="text-2xl font-bold text-black text-center"
     >
       {{
