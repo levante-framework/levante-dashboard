@@ -25,6 +25,7 @@ export const useSurveyStore = defineStore('surveyStore', () => {
   function setSurvey(surveyInstance) {
     // Mark the survey instance as raw to prevent deep reactivity
     survey.value = markRaw(surveyInstance);
+    isSurveyCompleted.value = false;
   }
 
   function setNumberOfSurveyPages(numGeneral, numSpecific) {
