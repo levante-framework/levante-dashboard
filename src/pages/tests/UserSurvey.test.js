@@ -59,6 +59,7 @@ function createSurveyStoreMock(overrides = {}) {
     survey: ref({ id: 'survey-1' }),
     isSavingSurveyResponses: ref(false),
     isGeneralSurveyComplete: ref(false),
+    isSurveyPartSubmitted: ref(false),
     specificSurveyRelationData: ref([]),
     specificSurveyRelationIndex: ref(0),
     ...overrides,
@@ -253,6 +254,27 @@ describe('UserSurvey.vue', () => {
       createSurveyStoreMock({
         isGeneralSurveyComplete: ref(true),
         specificSurveyRelationData: ref([{ birthMonth: 'March', birthYear: '2018', name: 'Alex' }]),
+      }),
+    );
+
+    const wrapper = mountUserSurvey();
+
+    expect(wrapper.find('h1').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="survey-component"]').exists()).toBe(true);
+  });
+
+  it('hides the relation header once the survey is completed, so it does not overlap the thank-you page', () => {
+    vi.mocked(useAuthStore).mockReturnValue(
+      createAuthStoreMock({
+        userData: ref({ userType: 'parent' }),
+      }),
+    );
+    vi.mocked(useSurveyStore).mockReturnValue(
+      createSurveyStoreMock({
+        isGeneralSurveyComplete: ref(true),
+        isSurveyPartSubmitted: ref(true),
+        specificSurveyRelationData: ref([{ birthMonth: 'March', birthYear: '2018', name: 'Alex' }]),
+        specificSurveyRelationIndex: ref(0),
       }),
     );
 

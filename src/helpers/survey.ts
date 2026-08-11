@@ -258,6 +258,9 @@ export async function saveFinalSurveyData({
 
   structuredResponses.isEntireSurveyCompleted = isEntireSurveyCompleted;
 
+  // Capture before mutating store flags after a successful save.
+  const wasGeneralComplete = surveyStore.isGeneralSurveyComplete;
+
   // turn on loading state
   surveyStore.setIsSavingSurveyResponses(true);
 
@@ -274,15 +277,22 @@ export async function saveFinalSurveyData({
     // update survey store to let survey tabs know
     if (userType === 'student') {
       surveyStore.setIsGeneralSurveyComplete(true);
+    } else if (!wasGeneralComplete) {
+      // Finished general: keep index at 0 so the first child/class survey starts correctly.
+      surveyStore.setIsGeneralSurveyComplete(true);
     } else {
-      if (!surveyStore.isGeneralSurveyComplete) {
-        surveyStore.setIsGeneralSurveyComplete(true);
-      } else if (surveyStore.specificSurveyRelationIndex === surveyStore.specificSurveyRelationData.length - 1) {
+      const relationCount = surveyStore.specificSurveyRelationData.length;
+      const currentIndex = surveyStore.specificSurveyRelationIndex;
+      if (currentIndex >= relationCount - 1) {
         surveyStore.setIsSpecificSurveyComplete(true);
+      } else {
+        surveyStore.setSpecificSurveyRelationIndex(currentIndex + 1);
       }
     }
 
-    surveyStore.setSpecificSurveyRelationIndex(surveyStore.specificSurveyRelationIndex + 1);
+    // Flag completion so the relation header stops rendering over the SurveyJS "thank you"
+    // page while the store flags for the next part update ahead of navigation.
+    surveyStore.setSurveyPartSubmitted();
 
     queryClient.invalidateQueries({ queryKey: [SURVEY_RESPONSES_QUERY_KEY] });
 
