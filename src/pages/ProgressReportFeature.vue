@@ -3,7 +3,9 @@
     <section class="main-body">
       <div v-if="isPageLoading" class="loading-wrapper">
         <LevanteSpinner fullscreen />
-        <div class="uppercase text-sm text-gray-600 font-light">Loading Progress Datatable</div>
+        <div class="uppercase text-sm text-gray-600 font-light">
+          Loading Progress Datatable
+        </div>
       </div>
 
       <template v-else>
@@ -13,8 +15,12 @@
           style="min-height: calc(100vh - 8rem)"
         >
           <div style="max-width: 48rem; text-align: center">
-            <div class="text-lg font-semibold text-gray-700">There was a problem fetching the assignment details.</div>
-            <div class="mt-2 text-sm text-gray-500">Please refresh the page or try again later.</div>
+            <div class="text-lg font-semibold text-gray-700">
+              There was a problem fetching the assignment details.
+            </div>
+            <div class="mt-2 text-sm text-gray-500">
+              Please refresh the page or try again later.
+            </div>
           </div>
         </div>
 
@@ -22,29 +28,40 @@
           <div class="flex justify-content-between align-items-center">
             <div class="flex flex-column align-items-start mb-4 gap-2">
               <div>
-                <div class="uppercase font-light text-gray-500 text-md">{{ displayOrgType }} Progress Report</div>
+                <div class="uppercase font-light text-gray-500 text-md">
+                  {{ displayOrgType }} Progress Report
+                </div>
                 <div class="report-title">
                   {{ orgDoc?.name }}
                 </div>
               </div>
               <div>
-                <div class="uppercase font-light text-gray-500 text-md">Assignment</div>
+                <div class="uppercase font-light text-gray-500 text-md">
+                  Assignment
+                </div>
                 <div class="administration-name">
                   {{ assignmentDisplayName }}
                 </div>
               </div>
               <div>
-                <div class="uppercase font-light text-gray-500 text-md">Created by</div>
+                <div class="uppercase font-light text-gray-500 text-md">
+                  Created by
+                </div>
                 <div class="administration-creator">
                   {{ creatorName }}
                 </div>
               </div>
             </div>
-            <div v-if="!isLevante" class="flex flex-row align-items-center gap-4">
+            <div
+              v-if="!isLevante"
+              class="flex flex-row align-items-center gap-4"
+            >
               <div class="uppercase text-sm text-gray-600">VIEW</div>
               <PvSelectButton
                 v-model="reportView"
-                v-tooltip.top="getTooltip('View different report', { showDelay: 0 })"
+                v-tooltip.top="
+                  getTooltip('View different report', { showDelay: 0 })
+                "
                 :options="reportViews"
                 option-disabled="constant"
                 :allow-empty="false"
@@ -56,18 +73,28 @@
             </div>
           </div>
 
-          <div v-if="!progressUsers?.length || !totalChartStats" class="empty-user-list">
-            <div class="text-lg font-semibold text-gray-700">Could not find users for {{ orgDoc?.name }}.</div>
+          <div
+            v-if="!progressUsers?.length || !totalChartStats"
+            class="empty-user-list"
+          >
+            <div class="text-lg font-semibold text-gray-700">
+              Could not find users for {{ orgDoc?.name }}.
+            </div>
             <div class="mt-2 text-sm text-gray-500">
-              <a href="/add-users">Add users</a> to <span class="font-bold">{{ orgDoc?.name }}</span> to see the
+              <a href="/add-users">Add users</a> to
+              <span class="font-bold">{{ orgDoc?.name }}</span> to see the
               progress report.
             </div>
           </div>
 
           <div v-else>
-            <div class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card">
+            <div
+              class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card"
+            >
               <div class="flex flex-column gap-1 mx-5 mb-5">
-                <div class="text-sm uppercase text-gray-500">Progress by Task</div>
+                <div class="text-sm uppercase text-gray-500">
+                  Progress by Task
+                </div>
                 <div
                   v-for="taskId of orderedTaskIds"
                   :key="taskId"
@@ -85,11 +112,15 @@
                 </div>
               </div>
               <div class="flex flex-column mx-5">
-                <div class="text-sm uppercase text-gray-500">Total Progress</div>
+                <div class="text-sm uppercase text-gray-500">
+                  Total Progress
+                </div>
                 <div class="flex justify-content-between align-items-center">
                   <div class="text-xl font-bold text-gray-600 w-full">
                     Total
-                    <span class="font-light text-sm"> (Assigned to {{ totalAssignedCount }} users) </span>
+                    <span class="font-light text-sm">
+                      (Assigned to {{ totalAssignedCount }} users)
+                    </span>
                   </div>
                   <PvChart
                     type="bar"
@@ -100,27 +131,43 @@
                 </div>
               </div>
               <div class="flex flex-column align-items-center mx-5">
-                <div class="flex flex-wrap justify-content-around align-items-center px-2 py-1 rounded">
+                <div
+                  class="flex flex-wrap justify-content-around align-items-center px-2 py-1 rounded"
+                >
                   <div class="legend-entry">
-                    <div class="circle" style="background-color: var(--bright-green)" />
+                    <div
+                      class="circle"
+                      style="background-color: var(--bright-green)"
+                    />
                     <div>
                       <div>Completed</div>
                     </div>
                   </div>
                   <div class="legend-entry">
-                    <div class="circle" style="background-color: var(--yellow-100)" />
+                    <div
+                      class="circle"
+                      style="background-color: var(--yellow-100)"
+                    />
                     <div>
                       <div>Started</div>
                     </div>
                   </div>
                   <div class="legend-entry">
-                    <div class="circle" style="background-color: var(--surface-d)" />
+                    <div
+                      class="circle"
+                      style="background-color: var(--surface-d)"
+                    />
                     <div>
                       <div>Not Started</div>
                     </div>
                   </div>
                 </div>
-                <div v-if="!isLevante" class="font-light uppercase text-xs text-gray-500 my-1">Legend</div>
+                <div
+                  v-if="!isLevante"
+                  class="font-light uppercase text-xs text-gray-500 my-1"
+                >
+                  Legend
+                </div>
               </div>
             </div>
 
@@ -131,6 +178,7 @@
               :total-records="filteredTableData?.length"
               :loading="false"
               :page-limit="pageLimit"
+              data-key="user.userId"
               data-cy="roar-data-table"
               :allow-filtering="!isLevante"
               :reset-filters="resetFilters"
@@ -145,8 +193,12 @@
                 <div class="inline-flex gap-1">
                   <div class="w-8">
                     <PvFloatLabel>
-                      <PvInputText v-model="searchInput" class="w-full" :maxlength="50" />
-                      <label>Search login...</label>
+                      <PvInputText
+                        v-model="searchInput"
+                        class="w-full"
+                        :maxlength="50"
+                      />
+                      <label>Search UID or login...</label>
                     </PvFloatLabel>
                   </div>
                   <div class="w-5">
@@ -167,6 +219,29 @@
                   </div>
                 </div>
               </template>
+              <template #expansion="{ data: row }">
+                <PvDataTable
+                  :value="row.tasks"
+                  :row-hover="false"
+                  class="p-datatable-sm"
+                  size="small"
+                >
+                  <PvColumn field="name" header="Task" />
+                  <PvColumn field="statusLabel" header="Status">
+                    <template #body="{ data: task }">
+                      <PvTag
+                        :value="task.statusLabel"
+                        :icon="task.statusIcon"
+                        :severity="task.statusSeverity"
+                        class="progress-tag"
+                        rounded
+                      />
+                    </template>
+                  </PvColumn>
+                  <PvColumn field="startedAtLabel" header="Started at" />
+                  <PvColumn field="completedAtLabel" header="Finished at" />
+                </PvDataTable>
+              </template>
             </RoarDataTable>
           </div>
         </template>
@@ -176,33 +251,37 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useRoute, useRouter } from 'vue-router';
+import _capitalize from 'lodash/capitalize';
 import _get from 'lodash/get';
 import _kebabCase from 'lodash/kebabCase';
 import _map from 'lodash/map';
 import _startCase from 'lodash/startCase';
+import { storeToRefs } from 'pinia';
 import PvChart from 'primevue/chart';
+import PvColumn from 'primevue/column';
+import PvDataTable from 'primevue/datatable';
+import PvFloatLabel from 'primevue/floatlabel';
+import PvInputText from 'primevue/inputtext';
 import PvMultiSelect from 'primevue/multiselect';
 import PvSelectButton from 'primevue/selectbutton';
-import { useAuthStore } from '@/store/auth';
-import { useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
-import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
-import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
-import { exportCsv } from '@/helpers/query/utils';
-import { normalizeUserTypeForDisplay } from '@/helpers/userType';
-import { taskDisplayNames } from '@/helpers/reports';
-import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
-import { isLevante, getTooltip, normalizeToLowercase } from '@/helpers';
-import { APP_ROUTES } from '@/constants/routes';
-import RoarDataTable from '@/components/RoarDataTable.vue';
-import PvFloatLabel from 'primevue/floatlabel';
+import PvTag from 'primevue/tag';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import PvInputText from 'primevue/inputtext';
-import _capitalize from 'lodash/capitalize';
+import RoarDataTable from '@/components/RoarDataTable.vue';
+import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
+import { useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
+import { isLevante } from '@/constants';
+import { APP_ROUTES } from '@/constants/routes';
 import { administrationsRepository } from '@/firebase/repositories/AdministrationsRepository';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
+import { getTooltip, normalizeToLowercase } from '@/helpers';
+import { getDynamicRouterPath } from '@/helpers/getDynamicRouterPath';
+import { setBarChartData, setBarChartOptions } from '@/helpers/plotting';
+import { exportCsv } from '@/helpers/query/utils';
+import { taskDisplayNames } from '@/helpers/reports';
+import { normalizeUserTypeForDisplay } from '@/helpers/userType';
+import { useAuthStore } from '@/store/auth';
 
 const props = defineProps({
   administrationId: {
@@ -296,29 +375,35 @@ const statusForUserOnTask = (userId, taskId, taskProgress) => {
   return 'notStarted';
 };
 
-const progressCellFromStatus = (status) => {
+const taskStatusDisplay = (status) => {
   if (status === 'completed') {
     return {
-      value: 'Completed',
-      icon: 'pi pi-check-circle',
-      severity: 'success',
-      tags: ' Completed ',
+      statusLabel: 'Completed',
+      statusIcon: 'pi pi-check-circle',
+      statusSeverity: 'success',
     };
   }
+
   if (status === 'started') {
     return {
-      value: 'Started',
-      icon: 'pi pi-clock',
-      severity: 'warn',
-      tags: ' Started ',
+      statusLabel: 'Started',
+      statusIcon: 'pi pi-clock',
+      statusSeverity: 'warn',
     };
   }
+
   return {
-    value: 'Not Started',
-    icon: 'pi pi-minus-circle',
-    severity: 'warning',
-    tags: ' Not Started ',
+    statusLabel: 'Not Started',
+    statusIcon: 'pi pi-minus-circle',
+    statusSeverity: 'warning',
   };
+};
+
+const formatTaskDate = (iso) => {
+  if (!iso) return '--';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '--';
+  return d.toLocaleString();
 };
 
 const fetchProgressData = async () => {
@@ -462,27 +547,16 @@ const taskLabel = (taskId) => {
   return _startCase(taskId);
 };
 
-const getTaskColumnLabel = (taskId) => {
-  if (tasksDictionary.value?.[taskId]?.publicName) {
-    return tasksDictionary.value[taskId].publicName;
+const appendTaskProgressColumns = (row, tasks = []) => {
+  for (const task of tasks) {
+    row[`${task.name} Started at`] = task.startedAtLabel ?? '--';
+    row[`${task.name} Completed at`] = task.completedAtLabel ?? '--';
   }
-  if (tasksDictionary.value?.[taskId]?.name) {
-    return tasksDictionary.value[taskId].name;
-  }
-  return _startCase(taskId);
 };
 
-const appendTaskProgressColumns = (row, progress = {}) => {
-  const addTaskValue = (taskId) => {
-    const columnLabel = getTaskColumnLabel(taskId);
-    row[columnLabel] = progress?.[taskId]?.value ?? CSV_NOT_ASSIGNED_VALUE;
-  };
-
-  orderedTaskIds.value.forEach(addTaskValue);
-};
-
-const buildProgressExportRow = (user, progress = {}) => {
+const buildProgressExportRow = (user, tasks = []) => {
   const tableRow = {
+    UID: _get(user, 'userId') ?? '',
     'User Login': _get(user, 'username') ?? '',
     'User Type': _startCase(normalizeUserTypeForDisplay(_get(user, 'userType') ?? '')),
   };
@@ -491,14 +565,14 @@ const buildProgressExportRow = (user, progress = {}) => {
     tableRow.School = _get(user, 'schoolName') ?? '';
   }
 
-  appendTaskProgressColumns(tableRow, progress);
+  appendTaskProgressColumns(tableRow, tasks);
 
   return tableRow;
 };
 
 const buildExportData = (rows) => {
   if (!rows) return [];
-  return _map(rows, ({ user, progress }) => buildProgressExportRow(user, progress));
+  return _map(rows, ({ user, tasks }) => buildProgressExportRow(user, tasks));
 };
 
 const computedProgressData = computed(() => {
@@ -507,11 +581,21 @@ const computedProgressData = computed(() => {
   const rows = [];
 
   for (const u of progressUsers.value) {
-    const currRowProgress = {};
-    for (const taskId of orderedTaskIds.value) {
-      const st = statusForUserOnTask(u.userId, taskId, taskProgress);
-      currRowProgress[taskId] = progressCellFromStatus(st);
-    }
+    const apiTasks = u.tasks ?? [];
+    const tasks = orderedTaskIds.value.map((taskId) => {
+      const fromApi = apiTasks.find((t) => t.taskId.toLowerCase() === taskId.toLowerCase());
+      const status = fromApi?.status ?? statusForUserOnTask(u.userId, taskId, taskProgress);
+      return {
+        taskId,
+        name: taskLabel(taskId),
+        status,
+        ...taskStatusDisplay(status),
+        startedAt: fromApi?.startedAt ?? null,
+        completedAt: fromApi?.completedAt ?? null,
+        startedAtLabel: formatTaskDate(fromApi?.startedAt),
+        completedAtLabel: formatTaskDate(fromApi?.completedAt),
+      };
+    });
 
     rows.push({
       user: {
@@ -521,7 +605,7 @@ const computedProgressData = computed(() => {
         grade: undefined,
         assessmentPid: undefined,
       },
-      progress: currRowProgress,
+      tasks,
     });
   }
 
@@ -549,26 +633,29 @@ const exportAll = async () => {
 const progressReportColumns = computed(() => {
   if (isLoadingTasksDictionary.value || progressPayload.value === undefined) return [];
 
-  const tableColumns = [
-    { field: 'user.userId', header: 'UID', dataType: 'text', sort: true, filter: true },
-    { field: 'user.username', header: 'User Login', dataType: 'text', sort: true, filter: true },
-    { field: 'user.userType', header: 'User Type', dataType: 'text', sort: true, filter: true },
-  ];
-
-  for (const taskId of orderedTaskIds.value) {
-    tableColumns.push({
-      field: `progress.${taskId}.value`,
-      filterField: `progress.${taskId}.tags`,
-      header: tasksDictionary.value[taskId]?.name ?? getTaskColumnLabel(taskId),
-      dataType: 'progress',
-      tag: true,
-      severityField: `progress.${taskId}.severity`,
-      iconField: `progress.${taskId}.icon`,
+  return [
+    {
+      field: 'user.userId',
+      header: 'UID',
+      dataType: 'text',
       sort: true,
-    });
-  }
-
-  return tableColumns;
+      filter: true,
+    },
+    {
+      field: 'user.username',
+      header: 'User Login',
+      dataType: 'text',
+      sort: true,
+      filter: true,
+    },
+    {
+      field: 'user.userType',
+      header: 'User Type',
+      dataType: 'text',
+      sort: true,
+      filter: true,
+    },
+  ];
 });
 
 const filteredTableData = ref([]);
@@ -609,8 +696,10 @@ watch([searchInput, selectedUserTypes], ([newSearchInput, newSelectedUserTypes])
   if (newSearchInput) {
     const normalizedSearchInput = normalizeToLowercase(newSearchInput);
     filteredData = filteredData?.filter((data) => {
-      const normalizedUID = normalizeToLowercase(data?.user?.username);
-      return normalizedUID.includes(normalizedSearchInput);
+      const normalizedUID = normalizeToLowercase(data?.user?.userId);
+      const normalizedUsername = normalizeToLowercase(data?.user?.username);
+
+      return normalizedUID.includes(normalizedSearchInput) || normalizedUsername.includes(normalizedSearchInput);
     });
   }
 
@@ -702,6 +791,7 @@ onMounted(async () => {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
+
 .details-card {
   max-width: 100%;
 }
@@ -715,5 +805,13 @@ onMounted(async () => {
   padding: 1.5rem 0 0;
   border-top: 1px solid var(--gray-100);
   text-align: center;
+}
+
+.p-datatable-row-expansion {
+  background: var(--p-datatable-row-hover-background) !important;
+}
+
+.p-datatable .p-datatable-tbody > tr.p-datatable-row-expansion > td {
+  padding: 0 1rem 1rem !important;
 }
 </style>

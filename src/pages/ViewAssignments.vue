@@ -168,23 +168,23 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import PvAutoComplete from 'primevue/autocomplete';
 import PvBlockUI from 'primevue/blockui';
 import PvButton from 'primevue/button';
 import PvDataView from 'primevue/dataview';
-import PvSelect from 'primevue/select';
 import PvInputGroup from 'primevue/inputgroup';
-import { useAuthStore } from '@/store/auth';
-import { orderByNameASC } from '@/helpers/query/utils';
-import { getTitle } from '@/helpers/query/administrations';
-import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
+import PvSelect from 'primevue/select';
+import { computed, onMounted, ref, watch } from 'vue';
 import CardAdministration from '@/components/CardAdministration.vue';
 import DocsButton from '@/components/DocsButton.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import { useLevanteStore } from '@/store/levante';
+import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
 import { isCurrent, isPast, isUpcoming } from '@/helpers/assignments';
+import { getTitle } from '@/helpers/query/administrations';
+import { orderByNameASC } from '@/helpers/query/utils';
+import { useAuthStore } from '@/store/auth';
+import { useLevanteStore } from '@/store/levante';
 
 const initialized = ref(false);
 const pageLimit = ref(10);

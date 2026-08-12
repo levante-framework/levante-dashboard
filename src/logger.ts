@@ -1,5 +1,5 @@
-import posthogInstance from '@/plugins/posthog';
 import * as Sentry from '@sentry/vue';
+import posthogInstance from '@/plugins/posthog';
 // Get package info
 import packageJson from '../package.json';
 
@@ -9,6 +9,8 @@ interface UserData {
   // Add other user properties you might want to track
   [key: string]: any; // Allow other properties
 }
+
+const HIGH_ENTROPY_HINTS = ['architecture', 'bitness', 'model', 'platformVersion', 'fullVersionList', 'wow64'];
 
 const isProduction = import.meta.env.MODE === 'production';
 // const isProduction = import.meta.env.VITE_FIREBASE_PROJECT==='PROD'; // can be used for more accurate logging
@@ -25,6 +27,11 @@ function setAdditionalProperties(properties: Record<string, any>): void {
     ...currentProperties,
     ...properties,
   };
+}
+
+function clearUserScopedProperties(): void {
+  const { clientHints } = currentProperties;
+  currentProperties = clientHints ? { clientHints } : {};
 }
 
 /**
@@ -54,25 +61,34 @@ function capture(name: string, properties?: Record<string, any>, force: boolean 
 }
 
 /**
- * Logs an error.
- * In production, sends the error to Sentry.
- * Otherwise, logs to the console.
+ * Logs an error to Sentry (production) or the console (dev).
  *
- * @param error - The error object (Error or unknown).
- * @param context - Optional additional context for Sentry.
+ * @example
+ * logger.error(new Error('Failed to load groups', { cause: err }), {
+ *   tags: { function: 'listGroups' },
+ * });
  */
-function error(error: Error | unknown, context?: Record<string, any>, force: boolean = false): void {
+function error(
+  exception: Error,
+  context?: {
+    tags?: Record<string, string>;
+    [key: string]: unknown;
+  },
+  force = false,
+) {
+  const { tags, ...rest } = context ?? {};
   const extra = {
     appVersion,
     coreTasksVersion,
     commitHash,
-    ...context,
+    ...rest,
     ...currentProperties,
   };
+
   if (isProduction || force) {
-    Sentry.captureException(error, { extra });
+    Sentry.captureException(exception, { extra, tags });
   } else {
-    console.error('[Logger Error]', error, extra ?? '');
+    console.error('[Logger Error]', exception, extra);
   }
 }
 
@@ -99,20 +115,44 @@ function setUser(userData: UserData | null, force: boolean = false): void {
       currentUser = userData;
     } else {
       // Check for reset existence on posthogInstance due to mock in dev
-      if (typeof posthogInstance.reset === 'function' && !!currentUser?.uid) {
+      if (typeof posthogInstance.reset === 'function' && currentUser?.uid) {
         posthogInstance.reset();
       }
       Sentry.setUser(null);
       currentUser = null;
-      currentProperties = {};
+      clearUserScopedProperties();
     }
   } else {
     if (userData) {
       console.info('[Logger SetUser]', userData);
     } else {
       console.info('[Logger ResetUser]');
-      currentProperties = {};
+      clearUserScopedProperties();
     }
+  }
+}
+
+/** Attach UA Client Hints when available. Never throws if the API or fields are missing. */
+async function enrichClientHints(): Promise<void> {
+  try {
+    const ua = (navigator as Navigator & { userAgentData?: any }).userAgentData;
+    if (!ua) return;
+
+    const high =
+      typeof ua.getHighEntropyValues === 'function'
+        ? await ua.getHighEntropyValues(HIGH_ENTROPY_HINTS).catch(() => ({}))
+        : {};
+
+    setAdditionalProperties({
+      clientHints: {
+        brands: ua.brands,
+        mobile: ua.mobile,
+        platform: ua.platform,
+        ...high,
+      },
+    });
+  } catch {
+    // Never let telemetry enrichment break the app.
   }
 }
 
@@ -121,4 +161,5 @@ export const logger = {
   error,
   setUser,
   setAdditionalProperties,
+  enrichClientHints,
 };

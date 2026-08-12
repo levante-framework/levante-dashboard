@@ -1,11 +1,11 @@
-import { ref, type MaybeRefOrGetter } from 'vue';
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import type { RoarFirekit } from '@levante-framework/firekit';
 import { createTestingPinia, type TestingPinia } from '@pinia/testing';
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { flushPromises } from '@vue/test-utils';
-import { type RoarFirekit } from '@levante-framework/firekit';
-import { withSetup } from '@/test-support/withSetup.js';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+import { type MaybeRefOrGetter, ref } from 'vue';
 import { useAuthStore } from '@/store/auth';
+import { withSetup } from '@/test-support/withSetup.js';
 import { useGetSyncStatusQuery } from './useGetSyncStatusQuery';
 
 const idleStatus = { assignments: { pending: 0 }, users: { pending: 0 } };

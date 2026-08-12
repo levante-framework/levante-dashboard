@@ -1,10 +1,10 @@
-import { ref } from 'vue';
-import { describe, it, expect, vi } from 'vitest';
+import type { QueryClient } from '@tanstack/vue-query';
 import * as VueQuery from '@tanstack/vue-query';
-import { type QueryClient } from '@tanstack/vue-query';
 import { nanoid } from 'nanoid';
-import useOrgQuery from './useOrgQuery';
+import { describe, expect, it, vi } from 'vitest';
+import { ref } from 'vue';
 import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
+import useOrgQuery from './useOrgQuery';
 
 vi.mock('@/composables/queries/useDistrictsQuery', () => ({
   default: vi.fn(() => 'useDistrictsQuery'),

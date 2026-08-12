@@ -1,12 +1,9 @@
-import { query, where, getDocs, CollectionReference, DocumentData, Query } from 'firebase/firestore';
+import { type CollectionReference, getDocs, type Query, query, where } from 'firebase/firestore';
 import _fromPairs from 'lodash/fromPairs';
 import _invert from 'lodash/invert';
 import _toPairs from 'lodash/toPairs';
-import { TooltipOptions } from 'primevue/tooltip';
+import type { TooltipOptions } from 'primevue/tooltip';
 import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
-
-export const isLevante: boolean = import.meta.env.VITE_LEVANTE === 'TRUE';
-export const isEmulator: boolean = (import.meta.env.VITE_EMULATOR as string) === 'TRUE';
 
 export const isMobileBrowser = (): boolean => {
   const userAgent: string = navigator.userAgent || navigator.vendor || (window as any).opera;
@@ -33,7 +30,7 @@ export const getDocsFromQuery = async (
 
   if (querySnapshot.empty) {
     return null;
-  } else if (querySnapshot.size == 1) {
+  } else if (querySnapshot.size === 1) {
     return querySnapshot.docs[0].data();
   } else {
     return querySnapshot.docs.map((doc) => doc.data());
@@ -80,7 +77,7 @@ export const arrayRandom = <T>(array: T[]): T | undefined => {
 };
 
 export const getUniquePropsFromUsers = (users: any[], prop: string): { id: any }[] => {
-  const propArrays = users.map((user) => user[prop]).flat();
+  const propArrays = users.flatMap((user) => user[prop]);
   return [...new Set(propArrays)].map((item) => ({ id: item }));
 };
 
@@ -160,7 +157,7 @@ export async function formatDateWithLocale(
   if (!date) return '';
 
   const dateObj = date instanceof Date ? date : new Date(date);
-  if (isNaN(dateObj.getTime())) return '';
+  if (Number.isNaN(dateObj.getTime())) return '';
 
   const { format } = await import('date-fns');
 
@@ -179,14 +176,14 @@ export const flattenObj = (obj: any): Record<string, any> => {
   const result: Record<string, any> = {};
 
   for (const i in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, i)) {
+    if (Object.hasOwn(obj, i)) {
       // Add hasOwnProperty check
       if (typeof obj[i] === 'object' && !Array.isArray(obj[i]) && obj[i] !== null) {
         const temp = flattenObj(obj[i]);
         for (const j in temp) {
-          if (Object.prototype.hasOwnProperty.call(temp, j)) {
+          if (Object.hasOwn(temp, j)) {
             // Add hasOwnProperty check
-            result[camelCase(i + '.' + j)] = temp[j] === undefined || temp[j] === null ? '' : temp[j]; // More robust empty check
+            result[camelCase(`${i}.${j}`)] = temp[j] === undefined || temp[j] === null ? '' : temp[j]; // More robust empty check
           }
         }
       } else {
@@ -219,7 +216,6 @@ export const filterAdminOrgs = (
 };
 
 export const removeEmptyOrgs = (orgs: Record<string, any[]>): Record<string, any[]> => {
-  // eslint-disable-next-line no-unused-vars
   return _fromPairs(_toPairs(orgs).filter(([_, orgArray]) => orgArray.length > 0));
 };
 
@@ -316,7 +312,7 @@ export const convertToDate = (dateValue?: unknown): Date | null => {
 
   // Already a Date
   if (dateValue instanceof Date) {
-    return isNaN(dateValue.getTime()) ? null : dateValue;
+    return Number.isNaN(dateValue.getTime()) ? null : dateValue;
   }
 
   // Firestore Timestamp (preferred way)
@@ -338,7 +334,7 @@ export const convertToDate = (dateValue?: unknown): Date | null => {
   // String or number fallback
   if (typeof dateValue === 'string' || typeof dateValue === 'number') {
     const parsed = new Date(dateValue);
-    return isNaN(parsed.getTime()) ? null : parsed;
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   return null;

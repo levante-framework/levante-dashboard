@@ -74,55 +74,54 @@
         </div>
       </div>
     </div>
+
+    <ConsentModal
+      v-if="showConsent"
+      :consent-text="confirmText"
+      :consent-type="consentType"
+      :on-confirm="updateConsent"
+    />
   </div>
-  <ConsentModal
-    v-if="showConsent"
-    :consent-text="confirmText"
-    :consent-type="consentType"
-    :on-confirm="updateConsent"
-  />
 </template>
 
 <script setup>
-import { onMounted, ref, watch, computed, toRaw } from 'vue';
+import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import axios from 'axios';
+import { capitalize } from 'lodash';
 import _filter from 'lodash/filter';
-import _get from 'lodash/get';
 import _find from 'lodash/find';
-import _without from 'lodash/without';
+import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
+import _without from 'lodash/without';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
-import { useAuthStore } from '@/store/auth';
-import { useAssignmentsStore } from '@/store/assignments';
-import useUserDataQuery from '@/composables/queries/useUserDataQuery';
-import useUserAssignmentsQuery from '@/composables/queries/useUserAssignmentsQuery';
-import useTasksQuery from '@/composables/queries/useTasksQuery';
-import useSurveyResponsesQuery from '@/composables/useSurveyResponses/useSurveyResponses';
-import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
-import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
-import useDistrictsQuery from '@/composables/queries/useDistrictsQuery';
+import PvTag from 'primevue/tag';
+import { useToast } from 'primevue/usetoast';
+import { Converter } from 'showdown';
+import { Model, settings } from 'survey-core';
+import { computed, onMounted, ref, toRaw, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import ConsentModal from '@/components/ConsentModal.vue';
 import GameTabs from '@/components/GameTabs.vue';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import ParticipantSidebar from '@/components/ParticipantSidebar.vue';
 import SideBar from '@/components/SideBar.vue';
-import { useI18n } from 'vue-i18n';
-import axios from 'axios';
+import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
+import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
+import useSurveyResponsesQuery from '@/composables/queries/useSurveyResponsesQuery';
+import useTasksQuery from '@/composables/queries/useTasksQuery';
+import useUserAssignmentsQuery from '@/composables/queries/useUserAssignmentsQuery';
+import useUserDataQuery from '@/composables/queries/useUserDataQuery';
 import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
-import { Model, settings } from 'survey-core';
-import { Converter } from 'showdown';
-import { fetchAudioLinks } from '@/helpers/survey';
-import { useRouter } from 'vue-router';
-import { useToast } from 'primevue/usetoast';
-import { useQueryClient, useQuery } from '@tanstack/vue-query';
-import { bootstrapSurveyInstance, setupSurveyEventHandlers, setupStudentAudio } from '@/helpers/surveyInitialization';
-import { useSurveyStore } from '@/store/survey';
-import { fetchDocsById } from '@/helpers/query/utils';
-import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import { logger } from '@/logger';
 import { formatDateWithLocale } from '@/helpers';
-import PvTag from 'primevue/tag';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
-import { capitalize } from 'lodash';
+import { fetchDocsById } from '@/helpers/query/utils';
+import { bootstrapSurveyInstance, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
+import { logger } from '@/logger';
+import { useAssignmentsStore } from '@/store/assignments';
+import { useAuthStore } from '@/store/auth';
+import { useSurveyStore } from '@/store/survey';
 import 'survey-core/survey.i18n';
 
 const showConsent = ref(false);
@@ -162,14 +161,6 @@ unsubscribe = authStore.$subscribe(async (mutation, state) => {
 
 onMounted(async () => {
   if (roarfirekit.value.restConfig) init();
-});
-
-const {
-  data: districtsData,
-  isLoading: isLoadingDistricts,
-  isFetching: isFetchingDistricts,
-} = useDistrictsQuery(currentUserData.value?.districts?.current, {
-  enabled: initialized,
 });
 
 const {
@@ -249,15 +240,15 @@ watch(selectedAssignment, (newAdmin, oldAdmin) => {
 });
 
 const { data: surveyResponsesData } = useSurveyResponsesQuery({
-  enabled: hasSurvey && initialized,
+  enabled: computed(() => hasSurvey.value && initialized.value),
 });
 
 const isLoading = computed(() => {
-  return isLoadingUserData.value || isLoadingAssignments.value || isLoadingTasks.value || isLoadingDistricts.value;
+  return isLoadingUserData.value || isLoadingAssignments.value || isLoadingTasks.value;
 });
 
 const isFetching = computed(() => {
-  return isFetchingUserData.value || isFetchingAssignments.value || isFetchingTasks.value || isFetchingDistricts.value;
+  return isFetchingUserData.value || isFetchingAssignments.value || isFetchingTasks.value;
 });
 
 const hasAssignments = computed(() => {
@@ -308,23 +299,6 @@ async function updateConsent() {
 const userType = computed(() => {
   return toRaw(userData.value)?.userType?.toLowerCase();
 });
-
-// Watch for when districts data changes
-watch(
-  districtsData,
-  (newDistrictsData) => {
-    if (newDistrictsData) {
-      const rawDistrictsData = toRaw(newDistrictsData)?.[0];
-      if (rawDistrictsData?.name) {
-        logger.setAdditionalProperties({
-          siteId: rawDistrictsData?.id,
-          siteName: rawDistrictsData?.name,
-        });
-      }
-    }
-  },
-  { immediate: true },
-);
 
 // Watch for locale changes and reset survey to allow reinitialization with new locale
 watch(locale, (newLocale, oldLocale) => {
@@ -454,8 +428,6 @@ const { data: surveyData } = useQuery({
 
     if (userType === 'student') {
       const resSurvey = await axios.get(`${LEVANTE_BUCKET_URL}/surveys/child_survey.json`);
-      const resAudio = await fetchAudioLinks('child-survey');
-      surveyStore.setAudioLinkMap(resAudio);
       return {
         general: resSurvey.data,
       };
@@ -597,7 +569,9 @@ watch(
           surveyStore.setSpecificSurveyRelationData(res);
         }
       } catch (error) {
-        console.error('Error fetching relation data:', error);
+        logger.error(new Error('Failed to fetch survey relation data', { cause: error }), {
+          tags: { component: 'HomeParticipant', function: 'watch' },
+        });
       }
     }
 
@@ -634,10 +608,6 @@ watch(
     });
 
     surveyStore.setSurvey(surveyInstance);
-
-    if (userType.value === 'student') {
-      await setupStudentAudio(surveyInstance, locale.value, surveyStore.audioLinkMap, surveyStore);
-    }
   },
   { immediate: true },
 );

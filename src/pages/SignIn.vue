@@ -118,46 +118,49 @@
 </template>
 
 <script setup>
-import { onMounted, ref, toRaw, onBeforeUnmount, computed } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useRouter } from 'vue-router';
 import PvButton from 'primevue/button';
 import PvImage from 'primevue/image';
 import PvPassword from 'primevue/password';
-import { useAuthStore } from '@/store/auth';
-import { isMobileBrowser } from '@/helpers';
-import { fetchDocById } from '@/helpers/query/utils';
-import { isLevante } from '@/helpers';
-import { AUTH_SSO_PROVIDERS } from '@/constants/auth';
-import { APP_ROUTES } from '@/constants/routes';
-import RoarModal from '@/components/modals/RoarModal.vue';
+import { useToast } from 'primevue/usetoast';
+import { computed, onBeforeUnmount, onMounted, ref, toRaw } from 'vue';
+import { useRouter } from 'vue-router';
 import SignIn from '@/components/auth/SignIn.vue';
 import LanguageSelector from '@/components/LanguageSelector.vue';
-import { getUserAssignments } from '@/helpers/query/assignments';
-import { useAssignmentsStore } from '@/store/assignments';
+import RoarModal from '@/components/modals/RoarModal.vue';
+import { isLevante } from '@/constants';
+import { AUTH_SSO_PROVIDERS } from '@/constants/auth';
+import { APP_ROUTES } from '@/constants/routes';
+import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
+import { isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
+import { getUserAssignments } from '@/helpers/query/assignments';
+import { fetchDocById } from '@/helpers/query/utils';
+import { useAssignmentsStore } from '@/store/assignments';
+import { useAuthStore } from '@/store/auth';
 
 const incorrect = ref(false);
 const googleSignInErrorKey = ref('');
 const authStore = useAuthStore();
 const assignmentsStore = useAssignmentsStore();
 const router = useRouter();
+const toast = useToast();
 const adminSignIn = ref(false);
 
 const { spinner, ssoProvider, routeToProfile, roarfirekit } = storeToRefs(authStore);
 const warningModalOpen = ref(false);
 
-authStore.$subscribe(() => {
-  if (authStore.getUserId()) {
-    if (ssoProvider.value) {
-      router.push({ path: APP_ROUTES.SSO });
-    } else if (routeToProfile.value) {
-      router.push({ path: APP_ROUTES.ACCOUNT_PROFILE });
-    } else {
-      router.push({ path: APP_ROUTES.HOME });
-    }
+function redirectAfterLogin() {
+  if (!authStore.getUserId()) return;
+
+  if (ssoProvider.value) {
+    router.replace({ path: APP_ROUTES.SSO });
+  } else if (routeToProfile.value) {
+    router.replace({ path: APP_ROUTES.ACCOUNT_PROFILE });
+  } else {
+    router.replace({ path: APP_ROUTES.HOME });
   }
-});
+}
 
 const toggleAdminSignIn = () => {
   adminSignIn.value = !adminSignIn.value;
@@ -188,6 +191,8 @@ const authWithGoogle = () => {
             const sortedAssignments = sortAssignmentsByDateOpened(userAssignments);
             assignmentsStore.setUserAssignments(sortedAssignments);
           }
+
+          redirectAfterLogin();
         }
       })
       .catch((e) => {
@@ -243,6 +248,8 @@ const authWithEmail = async (state) => {
             const sortedAssignments = sortAssignmentsByDateOpened(userAssignments);
             assignmentsStore.setUserAssignments(sortedAssignments);
           }
+
+          redirectAfterLogin();
         }
       })
       .catch((e) => {
@@ -277,11 +284,26 @@ const displaySignInMethods = computed(() => {
   return signInMethods.value.map((method) => {
     if (method === 'password') return 'Password';
     if (method === AUTH_SSO_PROVIDERS.GOOGLE) return 'Google';
+    return method;
   });
 });
 
 onMounted(() => {
   document.body.classList.add('page-signin');
+
+  // Set by the REST auth-error handler when a session is torn down after its token
+  // could no longer be refreshed. Notify the user, then strip the flag so a manual
+  // refresh of the sign-in page doesn't show it again.
+  if (router.currentRoute.value.query.sessionExpired) {
+    toast.add({
+      severity: TOAST_SEVERITIES.WARN,
+      summary: 'Session expired',
+      detail: 'Your session expired. Please sign in again.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    const { sessionExpired, ...query } = router.currentRoute.value.query;
+    router.replace({ query });
+  }
 });
 
 onBeforeUnmount(() => {
@@ -296,7 +318,7 @@ onBeforeUnmount(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 10;
+  z-index: 9999;
   background-color: rgba(255, 255, 255, 0.7);
   padding-top: 21vh;
 }

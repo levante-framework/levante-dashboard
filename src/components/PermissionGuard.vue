@@ -7,12 +7,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import type { Action, AdminSubResource, GroupSubResource, Resource, Role } from '@levante-framework/permissions-core';
 import { storeToRefs } from 'pinia';
-import { useAuthStore } from '@/store/auth';
-import { usePermissions } from '@/composables/usePermissions';
+import { computed } from 'vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import type { Resource, Action, Role, GroupSubResource, AdminSubResource } from '@levante-framework/permissions-core';
+import { usePermissions } from '@/composables/usePermissions';
+import { useAuthStore } from '@/store/auth';
 
 interface Props {
   resource?: Resource;

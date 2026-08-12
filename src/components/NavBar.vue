@@ -3,7 +3,7 @@
     <nav class="flex flex-row align-items-center justify-content-between w-full">
       <div id="navBarRightEnd" class="flex flex-row align-items-center justify-content-start w-full gap-1">
         <div class="flex align-items-center justify-content-center w-full">
-          <PvMenubar :model="computedItems" class="w-full">
+          <PvMenubar ref="menubarRef" :model="computedItems" class="w-full">
             <template #start>
               <router-link :to="{ path: APP_ROUTES.HOME }">
                 <img src="/LEVANTE/Levante_Logo.png" alt="LEVANTE" class="levante-logo" />
@@ -12,9 +12,8 @@
 
             <template #buttonicon>
               <PvButton
-                icon="pi pi-bars"
-                class="bg-primary text-white p-2 mr-2 border-none border-round hover:bg-red-900"
-                @click="toggleMenu"
+                :icon="menubarRef?.mobileActive ? 'pi pi-times' : 'pi pi-bars'"
+                class="bg-primary text-white p-2 mr-2 border-none border-round"
               />
             </template>
 
@@ -42,20 +41,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, type Ref, watchEffect } from 'vue';
-import { useRouter } from 'vue-router';
-import { storeToRefs } from 'pinia';
 import { useElementSize } from '@vueuse/core';
+import { storeToRefs } from 'pinia';
+import Badge from 'primevue/badge';
 import PvButton from 'primevue/button';
 import PvMenubar from 'primevue/menubar';
-import { useAuthStore } from '@/store/auth';
-import { getNavbarActions } from '@/router/navbarActions';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import { APP_ROUTES } from '@/constants/routes';
-import Badge from 'primevue/badge';
-import UserActions from './UserActions.vue';
-import { ROLES } from '@/constants/roles';
+import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
+import { useRouter } from 'vue-router';
 import { usePermissions } from '@/composables/usePermissions';
+import { ROLES } from '@/constants/roles';
+import { APP_ROUTES } from '@/constants/routes';
+import { getNavbarActions } from '@/router/navbarActions';
+import { useAuthStore } from '@/store/auth';
+import UserActions from './UserActions.vue';
 
 interface NavbarAction {
   category: string;
@@ -79,7 +77,7 @@ const { roarfirekit, userData, currentSite } = storeToRefs(authStore);
 const { userRole } = usePermissions();
 
 const initialized = ref<boolean>(false);
-const menu = ref();
+const menubarRef = ref<{ mobileActive: boolean } | null>(null);
 const navbarRef = ref<HTMLElement | null>(null);
 const { height } = useElementSize(navbarRef);
 const screenWidth = ref<number>(window.innerWidth);
@@ -177,10 +175,6 @@ const rawActions = computed((): NavbarAction[] => {
     userRole: currentRoleObj?.role,
   }) as unknown as NavbarAction[];
 });
-
-const toggleMenu = (event: Event): void => {
-  menu.value.toggle(event);
-};
 </script>
 
 <style lang="scss" scoped>

@@ -1,10 +1,10 @@
-import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import type { UseMutationReturnType } from '@tanstack/vue-query';
+import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { ADMINISTRATION_DELETE_MUTATION_KEY } from '@/constants/mutationKeys';
 import {
-  ADMINISTRATIONS_QUERY_KEY,
-  ADMINISTRATIONS_LIST_QUERY_KEY,
   ADMINISTRATION_ASSIGNMENTS_QUERY_KEY,
+  ADMINISTRATIONS_LIST_QUERY_KEY,
+  ADMINISTRATIONS_QUERY_KEY,
   SITE_OVERVIEW_QUERY_KEY,
 } from '@/constants/queryKeys';
 import { useAuthStore } from '@/store/auth';
@@ -24,6 +24,12 @@ const useDeleteAdministrationMutation = (): UseMutationReturnType<void, Error, s
     mutationKey: ADMINISTRATION_DELETE_MUTATION_KEY,
     mutationFn: async (administrationId: string): Promise<void> => {
       await authStore.roarfirekit.deleteAdministration(administrationId);
+    },
+    meta: {
+      errorMessage: 'Failed to delete administration',
+      errorContext: {
+        tags: { composable: 'useDeleteAdministrationMutation' },
+      },
     },
     onSuccess: (): void => {
       // Invalidate the queries to refetch the administration data.

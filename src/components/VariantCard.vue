@@ -21,6 +21,7 @@
               class="pi pi-info-circle text-primary p-1 border-circle hover:text-100"
             ></i
           ></PvButton>
+          <i v-if="isUserSuperAdmin() && variant?.variant?.registered" class="pi pi-verified ml-1 text-primary"></i>
           <div v-if="variant?.variant?.params?.cat" class="flex ml-2 gap-2">
             <PvTag severity="warn" rounded><div class="font-semibold text-xs">Adaptive</div></PvTag>
           </div>
@@ -113,6 +114,7 @@
               class="pi pi-info-circle text-primary p-1 border-circle hover:text-100"
             ></i
           ></PvButton>
+          <i v-if="isUserSuperAdmin() && variant?.variant?.registered" class="pi pi-verified ml-1 text-primary"></i>
           <div v-if="variant?.variant?.params?.cat" class="flex ml-2 gap-2">
             <PvTag severity="warn" rounded><div class="font-semibold text-xs">Adaptive</div></PvTag>
           </div>
@@ -267,7 +269,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import _toPairs from 'lodash/toPairs';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
@@ -275,6 +276,7 @@ import PvDataTable from 'primevue/datatable';
 import PvDialog from 'primevue/dialog';
 import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
+import { computed, ref } from 'vue';
 import EditVariantDialog from '@/components/EditVariantDialog.vue';
 import { formattedVariantName, getTooltip } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
@@ -300,6 +302,7 @@ interface VariantData {
   name: string;
   params: Record<string, any>;
   conditions?: VariantConditions;
+  registered?: boolean;
 }
 
 interface TaskData {
@@ -307,7 +310,7 @@ interface TaskData {
   image?: string;
 }
 
-interface VariantObject {
+export interface VariantObject {
   id: string;
   variant: VariantData;
   task: TaskData;

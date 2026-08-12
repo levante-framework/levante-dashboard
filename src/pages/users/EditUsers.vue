@@ -90,19 +90,20 @@
 </template>
 
 <script setup>
-import { ref, toRaw } from 'vue';
-import { useToast } from 'primevue/usetoast';
-import { useAuthStore } from '@/store/auth';
-import EditUsersInfo from '@/components/userInfo/EditUsersInfo.vue';
+import _forEach from 'lodash/forEach';
+import _isEmpty from 'lodash/isEmpty';
+import _startCase from 'lodash/startCase';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
 import PvFileUpload from 'primevue/fileupload';
-import _forEach from 'lodash/forEach';
-import _startCase from 'lodash/startCase';
-import _isEmpty from 'lodash/isEmpty';
+import { useToast } from 'primevue/usetoast';
+import { ref, toRaw } from 'vue';
+import EditUsersInfo from '@/components/userInfo/EditUsersInfo.vue';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
 import { csvFileToJson, generateColumns } from '@/helpers/csv';
+import { logger } from '@/logger';
+import { useAuthStore } from '@/store/auth';
 
 const authStore = useAuthStore();
 const toast = useToast();
@@ -293,7 +294,9 @@ const submitEdits = async () => {
       });
     }
   } catch (error) {
-    console.error(error);
+    logger.error(new Error('Failed to edit users', { cause: error }), {
+      tags: { component: 'EditUsers', function: 'submitEdits' },
+    });
     toast.add({
       severity: 'error',
       summary: 'Error',

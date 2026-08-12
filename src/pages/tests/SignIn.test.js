@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { shallowMount } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SignIn from '@/pages/SignIn.vue';
 
 // Create mock auth store for testing
@@ -15,7 +15,6 @@ const authStoreMock = {
 
 // Mocking behavior setup - must be separate from the mock implementation
 let isMobileBrowserMock = false;
-let isEmulatorMock = false;
 
 // Mock all dependencies to avoid issues
 vi.mock('@/store/auth', () => ({
@@ -25,13 +24,23 @@ vi.mock('@/store/auth', () => ({
 vi.mock('vue-router', () => ({
   useRouter: vi.fn(() => ({
     push: vi.fn(),
+    replace: vi.fn(),
+    currentRoute: { value: { query: {} } },
   })),
 }));
 
-vi.mock('@/helpers', () => ({
+vi.mock('primevue/usetoast', () => ({
+  useToast: vi.fn(() => ({ add: vi.fn() })),
+}));
+
+vi.mock('@/constants', async (importActual) => ({
+  ...(await importActual()),
   isLevante: true,
+  isEmulator: false,
+}));
+
+vi.mock('@/helpers', () => ({
   isMobileBrowser: vi.fn(() => isMobileBrowserMock),
-  isEmulator: vi.fn(() => isEmulatorMock),
 }));
 
 vi.mock('@/helpers/query/utils', () => ({
@@ -50,25 +59,13 @@ vi.mock('@/constants/routes', () => ({
   },
 }));
 
-// Mock survey initialization to avoid AudioContext issues
 vi.mock('@/helpers/surveyInitialization', () => ({}));
 
 vi.mock('@/helpers/survey', () => ({
-  fetchAudioLinks: vi.fn(),
   getParsedLocale: vi.fn(),
   restoreSurveyData: vi.fn(),
   saveSurveyData: vi.fn(),
   saveFinalSurveyData: vi.fn(),
-  fetchBuffer: vi.fn(),
-  showAndPlaceAudioButton: vi.fn(),
-}));
-
-// Mock audio helpers that use AudioContext
-vi.mock('@/helpers/audio', () => ({
-  BufferLoader: vi.fn().mockImplementation(() => ({
-    load: vi.fn(),
-    loadBuffer: vi.fn(),
-  })),
 }));
 
 // Create a working stub for the SignIn component that can emit events

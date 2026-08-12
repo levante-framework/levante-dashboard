@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import Papa from 'papaparse';
 
 function ensureDir(dirPath) {
@@ -142,9 +142,9 @@ function main() {
   }
 
   // Ensure legacy 'es' is generated from 'es-CO' when 'es' is not present
-  if (!perLocaleMessages['es'] && perLocaleMessages['es-co']) {
-    perLocaleMessages['es'] = JSON.parse(JSON.stringify(perLocaleMessages['es-co']));
-    originalCaseMapping['es'] = 'es';
+  if (!perLocaleMessages.es && perLocaleMessages['es-co']) {
+    perLocaleMessages.es = JSON.parse(JSON.stringify(perLocaleMessages['es-co']));
+    originalCaseMapping.es = 'es';
   }
 
   // Write one JSON file per locale

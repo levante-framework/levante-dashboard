@@ -1,8 +1,8 @@
-import AssignmentCard from '@/components/assignments/AssignmentCard.vue';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import AssignmentCard from '@/components/assignments/AssignmentCard.vue';
 
 const mockOnClick = vi.fn();
 

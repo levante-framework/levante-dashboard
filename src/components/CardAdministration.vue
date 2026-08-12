@@ -158,10 +158,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, toValue, watchEffect } from 'vue';
-import { useConfirm } from 'primevue/useconfirm';
-import { useToast } from 'primevue/usetoast';
-import { useRouter } from 'vue-router';
+import { useQueryClient } from '@tanstack/vue-query';
 import _fromPairs from 'lodash/fromPairs';
 import _isEmpty from 'lodash/isEmpty';
 import _mapValues from 'lodash/mapValues';
@@ -173,25 +170,29 @@ import PvDataTable from 'primevue/datatable';
 import PvPopover from 'primevue/popover';
 import PvSpeedDial from 'primevue/speeddial';
 import PvTreeTable from 'primevue/treetable';
-import { batchGetDocs } from '@/helpers/query/utils';
-import { taskDisplayNames } from '@/helpers/reports';
-import useDsgfOrgQuery from '@/composables/queries/useDsgfOrgQuery';
-import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
+import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
+import { computed, onMounted, ref, toValue, watchEffect } from 'vue';
+import { useRouter } from 'vue-router';
+import SyncStatusBadge from '@/components/SyncStatusBadge.vue';
 import useDeleteAdministrationMutation from '@/composables/mutations/useDeleteAdministrationMutation';
 import useUpsertAdministrationMutation from '@/composables/mutations/useUpsertAdministrationMutation';
-import { buildRetryAdministrationArgs } from '@/helpers/administrations';
-import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
-import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
-import { isLevante, getTooltip } from '@/helpers';
-import { useQueryClient } from '@tanstack/vue-query';
 import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
-import { useAdministrationSyncStatus, type SyncStatus } from '@/composables/useAdministrationSyncStatus';
-import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY } from '@/constants/queryKeys';
-import { useAuthStore } from '@/store/auth';
-import SyncStatusBadge from '@/components/SyncStatusBadge.vue';
+import useDsgfOrgQuery from '@/composables/queries/useDsgfOrgQuery';
+import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
+import { type SyncStatus, useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
 import { usePermissions } from '@/composables/usePermissions';
+import { isLevante } from '@/constants';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
+import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY } from '@/constants/queryKeys';
 import { ROLES } from '@/constants/roles';
+import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
+import { getTooltip } from '@/helpers';
+import { buildRetryAdministrationArgs } from '@/helpers/administrations';
+import { batchGetDocs } from '@/helpers/query/utils';
+import { taskDisplayNames } from '@/helpers/reports';
+import { useAuthStore } from '@/store/auth';
 
 // TODO: Remove this once we have a proper delete option
 const SHOW_DELETE_OPTION = false;
@@ -267,10 +268,7 @@ const confirm = useConfirm();
 const toast = useToast();
 
 const { mutateAsync: deleteAdministration } = useDeleteAdministrationMutation();
-const {
-  mutate: upsertAdministration,
-  isPending: isRetrying,
-} = useUpsertAdministrationMutation();
+const { mutate: upsertAdministration, isPending: isRetrying } = useUpsertAdministrationMutation();
 
 const now = computed(() => new Date());
 

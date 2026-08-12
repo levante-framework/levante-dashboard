@@ -19,9 +19,6 @@ export const LEVANTE_BUCKET_STORAGE_LIST_API =
     ? 'https://storage.googleapis.com/storage/v1/b/levante-assets-dev/o'
     : 'https://storage.googleapis.com/storage/v1/b/levante-assets-prod/o';
 
-/** Only list `gs://…/audio/…` for survey audio discovery (not the whole bucket). */
-export const LEVANTE_BUCKET_SURVEY_AUDIO_PREFIX = 'audio/';
-
 export const LEVANTE_TRANSLATIONS = `${LEVANTE_BUCKET_URL}/translations/dashboard-consolidated-flat`;
 
 export const LEVANTE_TRANSLATION_LANGUAGES = `${LEVANTE_TRANSLATIONS}/languageoptions.json`;

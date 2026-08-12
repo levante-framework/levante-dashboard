@@ -1,7 +1,7 @@
-import { type MaybeRefOrGetter } from 'vue';
-import { useQuery, type UseQueryReturnType, type UseQueryOptions } from '@tanstack/vue-query';
-import { fetchUsersByOrg } from '@/helpers/query/users';
+import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
 import { ORG_USERS_QUERY_KEY } from '@/constants/queryKeys';
+import { fetchUsersByOrg } from '@/helpers/query/users';
+
 /**
  * Organisation Users query.
  *

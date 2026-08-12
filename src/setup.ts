@@ -1,9 +1,9 @@
-import { createApp, App as VueApp, Plugin } from 'vue';
 import { Buffer } from 'buffer';
-import { initSentry } from '@/sentry';
 import PvTooltip from 'primevue/tooltip';
+import { createApp, type Plugin, type App as VueApp } from 'vue';
 import App from '@/App.vue';
 import AppSpinner from '@/components/AppSpinner.vue';
+import { initSentry } from '@/sentry';
 import plugins from './plugins';
 import { PostHogPlugin } from './plugins/posthog';
 import './styles.css';
@@ -36,10 +36,9 @@ export const createAppInstance = (): VueApp<Element> => {
   app.directive('tooltip', PvTooltip);
 
   // Register global variables.
-  // eslint-disable-next-line no-undef
   globalThis.Buffer = Buffer;
 
-  if (import.meta.env.MODE === 'production') {
+  if (import.meta.env.MODE === 'production' || import.meta.env.VITE_ENABLE_SENTRY === 'TRUE') {
     initSentry(app);
   }
 

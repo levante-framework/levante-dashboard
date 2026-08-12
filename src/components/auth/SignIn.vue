@@ -157,16 +157,16 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
-import { storeToRefs } from 'pinia';
-import { required, requiredUnless } from '@vuelidate/validators';
 import { useVuelidate } from '@vuelidate/core';
+import { required, requiredUnless } from '@vuelidate/validators';
 import _debounce from 'lodash/debounce';
+import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvDivider from 'primevue/divider';
 import PvInputText from 'primevue/inputtext';
 import PvPassword from 'primevue/password';
 import PvSkeleton from 'primevue/skeleton';
+import { reactive, ref, watch } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import RoarModal from '../modals/RoarModal.vue';
 
@@ -233,7 +233,7 @@ const allowLink = ref<boolean>(true);
 const validateRoarEmail = _debounce(
   async (email: string): Promise<void> => {
     // Don't evaluate empty or invalid emails
-    if (!email || !email.includes('@')) {
+    if (!email?.includes('@')) {
       evaluatingEmail.value = false;
       return;
     }

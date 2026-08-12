@@ -1,6 +1,6 @@
-import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
 import { useQuery } from '@tanstack/vue-query';
 import axios from 'axios';
+import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
 
 export const TASK_DISPLAY_NAMES: { [key: string]: string } = {
   'child-survey': 'Child Survey',
@@ -38,6 +38,7 @@ const fetchBucketTaskList = async () => {
     params: {
       prefix: normalizedPrefix,
       delimiter: '/',
+      fields: 'prefixes,nextPageToken',
     },
   });
 

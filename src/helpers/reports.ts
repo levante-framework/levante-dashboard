@@ -1,5 +1,5 @@
-import html2canvas from 'html2canvas';
 import { getGrade } from '@bdelab/roar-utils';
+import html2canvas from 'html2canvas';
 
 /*
  *  Task Display Names
@@ -294,7 +294,7 @@ const pageWidth = 190; // Set page width for calculations
 const returnScaleFactor = (width) => pageWidth / width; // Calculate the scale factor
 // Helper function to add an element to a document and perform page break logic
 export const addElementToPdf = async (element, document, yCounter, offset = 0) => {
-  await html2canvas(element, { windowWidth: 1300, scale: 2 }).then(function (canvas) {
+  await html2canvas(element, { windowWidth: 1300, scale: 2 }).then((canvas) => {
     const imgData = canvas.toDataURL('image/jpeg', 0.7, {
       willReadFrequently: true,
     });
@@ -527,11 +527,11 @@ export const getSupportLevel = (grade, percentile, rawScore, taskId, optional = 
 };
 
 export function getScoreKeys(taskId, grade) {
-  let percentileScoreKey = undefined;
-  let percentileScoreDisplayKey = undefined;
-  let standardScoreKey = undefined;
-  let standardScoreDisplayKey = undefined;
-  let rawScoreKey = undefined;
+  let percentileScoreKey: string | undefined;
+  let percentileScoreDisplayKey: string | undefined;
+  let standardScoreKey: string | undefined;
+  let standardScoreDisplayKey: string | undefined;
+  let rawScoreKey: string | undefined;
   if (taskId === 'swr' || taskId === 'swr-es') {
     percentileScoreKey = 'wjPercentile';
     percentileScoreDisplayKey = 'wjPercentile';

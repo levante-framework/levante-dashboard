@@ -1,17 +1,35 @@
+import { contextLinesIntegration, extraErrorDataIntegration } from '@sentry/integrations';
 import * as Sentry from '@sentry/vue';
-import { captureConsoleIntegration, contextLinesIntegration, extraErrorDataIntegration } from '@sentry/integrations';
-import { formattedLocale, languageOptions } from './translations/i18n';
-import { isLevante } from '@/helpers';
-import { App } from 'vue';
+import type { App } from 'vue';
+import { isLevante } from '@/constants';
 import { useAuthStore } from '@/store/auth';
+import { formattedLocale, languageOptions } from './translations/i18n';
 
 const language = formattedLocale;
+
+type SentryEventLike = {
+  message?: string;
+  logentry?: { message?: string };
+  exception?: { values?: Array<{ type?: string; value?: string }> };
+};
+
+function eventTextHaystacks(event: SentryEventLike): string[] {
+  return [
+    event.message,
+    event.logentry?.message,
+    ...(event.exception?.values ?? []).flatMap((exception) => [exception.type, exception.value]),
+  ].filter((value): value is string => typeof value === 'string');
+}
+
+function isCrossOriginVueRefSecurityError(event: SentryEventLike): boolean {
+  return eventTextHaystacks(event).some((text) => text.includes('__v_isRef') && text.includes('cross-origin frame'));
+}
 
 export function initSentry(app: App) {
   // skip if levante instance
   let dsn: string;
   let regex: RegExp;
-  let tracePropagationTargets;
+  let tracePropagationTargets: (string | RegExp)[];
   if (isLevante) {
     dsn = 'https://458fd3b1207c12df79f554b94f22833f@o4507250485035008.ingest.us.sentry.io/4508480347832320';
     regex = /https:\/\/hs-levante-admin-dev(--pr\d+-\w+)?\.web\.app/;
@@ -31,15 +49,14 @@ export function initSentry(app: App) {
   Sentry.init({
     app,
     dsn,
+    environment:
+      (import.meta.env.VITE_FIREBASE_PROJECT ?? 'PROD').toUpperCase() === 'DEV' ? 'development' : 'production',
     integrations: [
       Sentry.replayIntegration({
         maskAllText: true,
         maskAllInputs: true,
       }),
       Sentry.browserTracingIntegration(),
-      captureConsoleIntegration({
-        levels: ['error'],
-      }),
       Sentry.feedbackIntegration({
         showBranding: false,
         showName: false,
@@ -65,13 +82,25 @@ export function initSentry(app: App) {
     // Session Replay
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
+    ignoreErrors: [/Failed to read a named property '__v_isRef' from 'Window'/],
     beforeSend(event) {
-      // Remove IP
+      if (isCrossOriginVueRefSecurityError(event)) {
+        return null;
+      }
+
       delete event.user?.ip_address;
 
-      // Remove derived contexts
       if (event.contexts?.geo) {
         delete event.contexts.geo;
+      }
+
+      // Drop benign Firestore permission-denied errors raised while unauthenticated
+      // (auth-transition / signout race). Genuine denials for signed-in users are kept.
+      const isPermissionDenied = (event.exception?.values ?? []).some(
+        (value) => typeof value.value === 'string' && /Missing or insufficient permissions/i.test(value.value),
+      );
+      if (isPermissionDenied && !authStore.isAuthenticated()) {
+        return null;
       }
 
       return event;

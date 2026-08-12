@@ -3,16 +3,16 @@
 </template>
 
 <script setup>
-import { onMounted, watch, ref, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router';
-import { storeToRefs } from 'pinia';
 import _get from 'lodash/get';
-import { useAuthStore } from '@/store/auth';
-import { useAssignmentsStore } from '@/store/assignments';
-import useUserChildDataQuery from '@/composables/queries/useUserChildDataQuery';
+import { storeToRefs } from 'pinia';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import useCompleteAssessmentMutation from '@/composables/mutations/useCompleteAssessmentMutation';
-import packageLockJson from '../../../package-lock.json';
+import useUserChildDataQuery from '@/composables/queries/useUserChildDataQuery';
 import { logger } from '@/logger';
+import { useAssignmentsStore } from '@/store/assignments';
+import { useAuthStore } from '@/store/auth';
+import packageLockJson from '../../../package-lock.json';
 
 const props = defineProps({
   taskId: { type: String, default: 'egma-math' },
@@ -20,7 +20,6 @@ const props = defineProps({
 
 let levanteTaskLauncher;
 
-const taskId = props.taskId;
 const { version } = packageLockJson.packages['node_modules/@levante-framework/core-tasks'];
 const router = useRouter();
 const taskStarted = ref(false);
@@ -72,9 +71,9 @@ onMounted(async () => {
     alert(
       'An error occurred while loading the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
     );
-    logger.error('Error importing the game module', {
-      error,
-      taskId,
+    logger.error(new Error('Failed to import the game module', { cause: error }), {
+      tags: { function: 'onMounted', component: 'TaskLevante' },
+      taskId: props.taskId,
       userId: getUserId(),
     });
   }
@@ -93,14 +92,7 @@ watch(
     const birthYear = _get(userData.value, 'birthYear');
     const hasAgeData = birthMonth !== undefined && birthYear !== undefined;
 
-    if (
-      newFirekitInitValue &&
-      !newLoadingUserData &&
-      hasAgeData &&
-      newIsCoreTasksReady &&
-      levanteTaskLauncher &&
-      !taskStarted.value
-    ) {
+    if (newFirekitInitValue && !newLoadingUserData && hasAgeData && newIsCoreTasksReady && !taskStarted.value) {
       taskStarted.value = true;
       await startTask(selectedAssignment);
     }
@@ -110,7 +102,7 @@ watch(
 
 async function startTask(selectedAdmin) {
   try {
-    let checkGameStarted = setInterval(function () {
+    let checkGameStarted = setInterval(() => {
       // Poll for the preload trials progress bar to exist and then begin the game
       let gameLoading = document.querySelector('.jspsych-content-wrapper');
       if (gameLoading) {
@@ -119,9 +111,14 @@ async function startTask(selectedAdmin) {
       }
     }, 100);
 
-    const trialContainer = taskId === 'child-survey' ? 'surveyResponses' : 'runs';
+    const trialContainer = props.taskId === 'child-survey' ? 'surveyResponses' : 'runs';
 
-    const appKit = await authStore.roarfirekit.startAssessment(selectedAdmin.value.id, taskId, version, trialContainer);
+    const appKit = await authStore.roarfirekit.startAssessment(
+      selectedAdmin.value.id,
+      props.taskId,
+      version,
+      trialContainer,
+    );
 
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
@@ -139,7 +136,7 @@ async function startTask(selectedAdmin) {
       // Handle any post-game actions.
       await completeAssessmentMutate({
         adminId: selectedAdmin.value.id,
-        taskId,
+        taskId: props.taskId,
       });
 
       // Navigate to home, but first set the refresh flag to true.
@@ -147,14 +144,13 @@ async function startTask(selectedAdmin) {
       router.push({ name: 'Home' });
     });
   } catch (error) {
-    console.error('An error occurred while starting the task:', error);
     alert(
       'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
     );
-    logger.error('Error starting task', {
-      error,
+    logger.error(new Error('Failed to start task', { cause: error }), {
+      tags: { function: 'startTask', component: 'TaskLevante' },
       administrationId: selectedAdmin.value.id,
-      taskId,
+      taskId: props.taskId,
       userId: getUserId(),
     });
   }

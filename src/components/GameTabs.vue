@@ -86,32 +86,32 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { storeToRefs } from 'pinia';
-import _find from 'lodash/find';
 // @ts-expect-error - @bdelab/roar-utils has no type declarations
 import { getAgeData } from '@bdelab/roar-utils';
-import { useRouter } from 'vue-router';
-import { useQueryClient } from '@tanstack/vue-query';
-import useSurveyResponsesQuery from '@/composables/queries/useSurveyResponsesQuery';
-import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
-import PvDialog from 'primevue/dialog';
-import { useAuthStore } from '@/store/auth';
-import { useSurveyStore } from '@/store/survey';
-import { useAssignmentsStore } from '@/store/assignments';
-import { ASSIGNMENT_STATUSES } from '@/constants';
-import { getAssignmentStatus } from '@/helpers/assignments';
-import { LEVANTE_TASK_IDS, ROAR_TASK_IDS } from '@/constants/coreTasks';
-import { logger } from '@/logger';
 import type { AdministrationType } from '@levante-framework/levante-zod';
-import type { DisplayGame, Game, SurveyResponseDoc } from '@/types/surveyGameCards';
+import { useQueryClient } from '@tanstack/vue-query';
+import _find from 'lodash/find';
+import { storeToRefs } from 'pinia';
+import PvDialog from 'primevue/dialog';
+import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
+import useSurveyResponsesQuery from '@/composables/queries/useSurveyResponsesQuery';
+import { ASSIGNMENT_STATUSES } from '@/constants';
+import { LEVANTE_TASK_IDS, ROAR_TASK_IDS } from '@/constants/coreTasks';
+import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
+import { getAssignmentStatus } from '@/helpers/assignments';
 import {
   expandGamesForDisplay,
   getSurveyPartProgress,
   isSurveyPartComplete,
   isSurveyPartLocked,
 } from '@/helpers/surveyGameCards';
+import { logger } from '@/logger';
+import { useAssignmentsStore } from '@/store/assignments';
+import { useAuthStore } from '@/store/auth';
+import { useSurveyStore } from '@/store/survey';
+import type { DisplayGame, Game, SurveyResponseDoc } from '@/types/surveyGameCards';
 
 interface SelectedAssignment extends AdministrationType {
   id: string;
@@ -296,10 +296,10 @@ const getRoutePath = (game: DisplayGame): string => {
     return '/survey';
   }
 
-  if (normalizedLevanteTaskIds.has(camelizedTaskId)) return '/game/core-tasks/' + taskId;
+  if (normalizedLevanteTaskIds.has(camelizedTaskId)) return `/game/core-tasks/${taskId}`;
 
   logger.capture(`Task ${camelizedTaskId} is not a core task`, { taskId });
-  return '/game/' + taskId;
+  return `/game/${taskId}`;
 };
 
 const getSurveyPartProgressValue = (game: DisplayGame): number => {
@@ -431,8 +431,8 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
     await authStore.completeAssessment(assignment.id, game.taskId);
   } else {
     url += `&participant=${props.userData.assessmentPid}${
-      props.userData.schools?.current?.length ? '&schoolId=' + props.userData.schools.current.join('"%2C"') : ''
-    }${props.userData.classes?.current?.length ? '&classId=' + props.userData.classes.current.join('"%2C"') : ''}`;
+      props.userData.schools?.current?.length ? `&schoolId=${props.userData.schools.current.join('"%2C"')}` : ''
+    }${props.userData.classes?.current?.length ? `&classId=${props.userData.classes.current.join('"%2C"')}` : ''}`;
 
     await authStore.completeAssessment(assignment.id, game.taskId);
     window.location.href = url;

@@ -1,6 +1,5 @@
-import { type MaybeRefOrGetter } from 'vue';
-import { toValue } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
+import { toValue } from 'vue';
 import { DSGF_ORGS_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { fetchTreeOrgs } from '@/helpers/query/orgs';

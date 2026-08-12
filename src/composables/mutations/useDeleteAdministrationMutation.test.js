@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { nanoid } from 'nanoid';
-import { withSetup } from '@/test-support/withSetup.js';
 import * as VueQuery from '@tanstack/vue-query';
+import { nanoid } from 'nanoid';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ADMINISTRATION_ASSIGNMENTS_QUERY_KEY,
   ADMINISTRATIONS_LIST_QUERY_KEY,
@@ -9,6 +8,7 @@ import {
   SITE_OVERVIEW_QUERY_KEY,
 } from '@/constants/queryKeys';
 import { useAuthStore } from '@/store/auth';
+import { withSetup } from '@/test-support/withSetup.js';
 import useDeleteAdministrationMutation from './useDeleteAdministrationMutation';
 
 vi.mock('@/store/auth', () => ({

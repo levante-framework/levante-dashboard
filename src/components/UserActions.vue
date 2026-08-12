@@ -61,16 +61,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { storeToRefs } from 'pinia';
-import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
+import PvAvatar from 'primevue/avatar';
 import PvButton from 'primevue/button';
 import PvSelect from 'primevue/select';
-import { useRouter } from 'vue-router';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
+import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import { APP_ROUTES } from '@/constants/routes';
 import { useAuthStore } from '@/store/auth';
-import PvAvatar from 'primevue/avatar';
 import SiteSelector from './SiteSelector.vue';
 
 interface Props {

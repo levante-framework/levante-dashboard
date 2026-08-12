@@ -15,12 +15,12 @@
 </template>
 
 <script setup>
+import PvConfirmDialog from 'primevue/confirmdialog';
 import { useConfirm } from 'primevue/useconfirm';
 import { useI18n } from 'vue-i18n';
-import PvConfirmDialog from 'primevue/confirmdialog';
-import useInactivityTimeout from '@/composables/useInactivityTimeout/useInactivityTimeout';
 import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
-import { AUTH_SESSION_TIMEOUT_IDLE_THRESHOLD, AUTH_SESSION_TIMEOUT_COUNTDOWN_DURATION } from '@/constants/auth';
+import useInactivityTimeout from '@/composables/useInactivityTimeout/useInactivityTimeout';
+import { AUTH_SESSION_TIMEOUT_COUNTDOWN_DURATION, AUTH_SESSION_TIMEOUT_IDLE_THRESHOLD } from '@/constants/auth';
 
 const confirm = useConfirm();
 const i18n = useI18n();

@@ -210,46 +210,46 @@
   />
 </template>
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, watchEffect } from 'vue';
 import * as Sentry from '@sentry/vue';
+import _debounce from 'lodash/debounce';
+import _get from 'lodash/get';
+import _head from 'lodash/head';
+import _kebabCase from 'lodash/kebabCase';
 import { storeToRefs } from 'pinia';
-import { useToast } from 'primevue/usetoast';
 import PvButton from 'primevue/button';
 import PvDialog from 'primevue/dialog';
-import PvSelect from 'primevue/select';
+import PvFloatLabel from 'primevue/floatlabel';
 import PvInputGroup from 'primevue/inputgroup';
 import PvInputText from 'primevue/inputtext';
+import PvSelect from 'primevue/select';
 import PvTab from 'primevue/tab';
 import PvTabList from 'primevue/tablist';
 import PvTabPanel from 'primevue/tabpanel';
 import PvTabPanels from 'primevue/tabpanels';
 import PvTabs from 'primevue/tabs';
-import _get from 'lodash/get';
-import _head from 'lodash/head';
-import _kebabCase from 'lodash/kebabCase';
-import _debounce from 'lodash/debounce';
-import { useAuthStore } from '@/store/auth';
-import { fetchUsersByOrg, countUsersByOrg } from '@/helpers/query/users';
-import { getAdministrationsByOrg } from '@/helpers/query/administrations';
-import { orderByDefault, exportCsv, fetchDocById } from '@/helpers/query/utils';
-import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
-import { useFullAdministrationsListQuery } from '@/composables/queries/useAdministrationsListQuery';
-import EditOrgsForm from '@/components/EditOrgsForm.vue';
-import RoarModal from '@/components/modals/RoarModal.vue';
-import { CSV_EXPORT_MAX_RECORD_COUNT } from '@/constants/csv';
-import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
-import RoarDataTable from '@/components/RoarDataTable.vue';
-import PvFloatLabel from 'primevue/floatlabel';
-import AddGroupModal from '@/components/modals/AddGroupModal.vue';
+import { useToast } from 'primevue/usetoast';
+import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
 import DocsButton from '@/components/DocsButton.vue';
+import EditOrgsForm from '@/components/EditOrgsForm.vue';
+import AddGroupModal from '@/components/modals/AddGroupModal.vue';
 import GroupAssignmentsModal from '@/components/modals/GroupAssignmentsModal.vue';
+import RoarModal from '@/components/modals/RoarModal.vue';
 import PermissionGuard from '@/components/PermissionGuard.vue';
-import { ROLES } from '@/constants/roles';
-import { normalizeToLowercase } from '@/helpers';
+import RoarDataTable from '@/components/RoarDataTable.vue';
 import _useDistrictsQuery from '@/composables/queries/_useDistrictsQuery';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
-import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
+import { useFullAdministrationsListQuery } from '@/composables/queries/useAdministrationsListQuery';
+import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
+import { CSV_EXPORT_MAX_RECORD_COUNT } from '@/constants/csv';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
+import { ROLES } from '@/constants/roles';
+import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
+import { normalizeToLowercase } from '@/helpers';
+import { getAdministrationsByOrg } from '@/helpers/query/administrations';
+import { countUsersByOrg, fetchUsersByOrg } from '@/helpers/query/users';
+import { exportCsv, fetchDocById, orderByDefault } from '@/helpers/query/utils';
+import { useAuthStore } from '@/store/auth';
 
 const initialized = ref(false);
 const selectedDistrict = ref(undefined);
@@ -385,7 +385,7 @@ const allAdministrations = computed(() => administrationsData.value?.administrat
 function copyToClipboard(text) {
   navigator.clipboard
     .writeText(text)
-    .then(function () {
+    .then(() => {
       toast.add({
         severity: TOAST_SEVERITIES.SUCCESS,
         summary: 'Hoorah!',
@@ -393,7 +393,7 @@ function copyToClipboard(text) {
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
     })
-    .catch(function () {
+    .catch(() => {
       toast.add({
         severity: TOAST_SEVERITIES.ERROR,
         summary: 'Error!',
@@ -587,7 +587,7 @@ watchEffect(async () => {
             orgType: activeOrgType.value,
             orgId: org.id,
             orgName: org?.name || '_',
-            tooltip: 'View Users in ' + org?.name || '',
+            tooltip: `View Users in ${org?.name}` || '',
           },
         };
       }),
@@ -711,7 +711,7 @@ const filteredTableData = computed(() => {
       const normalizedItemName = normalizeToLowercase(item?.name || '');
 
       // Filter by name
-      if (normalizedItemName && normalizedItemName.includes(normalizedSearchQuery)) {
+      if (normalizedItemName?.includes(normalizedSearchQuery)) {
         return true;
       }
 

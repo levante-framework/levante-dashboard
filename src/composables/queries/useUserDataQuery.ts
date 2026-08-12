@@ -1,11 +1,10 @@
-import { useQuery, type UseQueryReturnType, type UseQueryOptions } from '@tanstack/vue-query';
-import { storeToRefs } from 'pinia';
-import { useAuthStore } from '@/store/auth';
+import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
+import { computed, type MaybeRefOrGetter, unref } from 'vue';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { USER_DATA_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { fetchDocById } from '@/helpers/query/utils';
-import { USER_DATA_QUERY_KEY } from '@/constants/queryKeys';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
-import { computed, unref, type MaybeRefOrGetter } from 'vue';
+import { useAuthStore } from '@/store/auth';
 
 /**
  * User profile data query.

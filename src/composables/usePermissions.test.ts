@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { nextTick } from 'vue';
-import { flushPromises } from '@vue/test-utils';
 import { createTestingPinia } from '@pinia/testing';
-import { withSetup } from '@/test-support/withSetup.js';
+import { flushPromises } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import { useAuthStore } from '@/store/auth';
+import { withSetup } from '@/test-support/withSetup.js';
 import { usePermissions } from './usePermissions';
 
 // Mock the permissions-core package
@@ -49,9 +49,15 @@ vi.mock('lodash/mapValues', () => ({
 }));
 
 describe('usePermissions', () => {
-  let piniaInstance;
-  let mockPermissionService;
-  let mockAuthStore;
+  let piniaInstance: ReturnType<typeof createTestingPinia>;
+  let mockPermissionService: {
+    loadPermissions: ReturnType<typeof vi.fn>;
+    canPerformSiteAction: ReturnType<typeof vi.fn>;
+    canPerformGlobalAction: ReturnType<typeof vi.fn>;
+    getUserSiteRole: ReturnType<typeof vi.fn>;
+    hasMinimumRole: ReturnType<typeof vi.fn>;
+  };
+  let mockAuthStore: Record<string, unknown>;
 
   beforeEach(async () => {
     piniaInstance = createTestingPinia({

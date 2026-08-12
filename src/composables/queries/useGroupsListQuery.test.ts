@@ -1,11 +1,11 @@
-import { nextTick, ref } from 'vue';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { QueryClient } from '@tanstack/vue-query';
 import * as VueQuery from '@tanstack/vue-query';
-import { type QueryClient } from '@tanstack/vue-query';
-import { withSetup } from '@/test-support/withSetup.js';
-import { orgFetcher } from '@/helpers/query/orgs';
-import useGroupsListQuery from './useGroupsListQuery';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick, ref } from 'vue';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
+import { orgFetcher } from '@/helpers/query/orgs';
+import { withSetup } from '@/test-support/withSetup.js';
+import useGroupsListQuery from './useGroupsListQuery';
 
 vi.mock('@/helpers/query/orgs', () => ({
   orgFetcher: vi.fn().mockImplementation(() => []),

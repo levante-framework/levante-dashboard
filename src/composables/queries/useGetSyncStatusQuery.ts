@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/vue-query';
-import { computed, toValue, type MaybeRefOrGetter } from 'vue';
+import { computed, type MaybeRefOrGetter, toValue } from 'vue';
 import { SYNC_STATUS_QUERY_KEY } from '@/constants/queryKeys';
 import { useAuthStore } from '@/store/auth';
 
@@ -7,9 +7,6 @@ export const useGetSyncStatusQuery = (siteId: MaybeRefOrGetter<string>, enabled:
   const authStore = useAuthStore();
 
   return useQuery({
-    meta: {
-      composable: 'useGetSyncStatusQuery',
-    },
     queryKey: computed(() => [SYNC_STATUS_QUERY_KEY, toValue(siteId)]),
     queryFn: async () => {
       const firekit = authStore.roarfirekit;
@@ -23,5 +20,12 @@ export const useGetSyncStatusQuery = (siteId: MaybeRefOrGetter<string>, enabled:
       query.state.data && (query.state.data.assignments.pending > 0 || query.state.data.users.pending > 0)
         ? 5000
         : false,
+    meta: {
+      errorMessage: 'Failed to get sync status',
+      errorContext: {
+        tags: { composable: 'useGetSyncStatusQuery' },
+        siteId: toValue(siteId),
+      },
+    },
   });
 };

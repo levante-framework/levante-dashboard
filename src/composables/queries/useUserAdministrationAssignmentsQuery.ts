@@ -1,10 +1,9 @@
-import { type MaybeRefOrGetter } from 'vue';
-import { toValue } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
+import { toValue } from 'vue';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { USER_ADMINISTRATION_ASSIGNMENTS_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { fetchDocById } from '@/helpers/query/utils';
-import { USER_ADMINISTRATION_ASSIGNMENTS_QUERY_KEY } from '@/constants/queryKeys';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 
 /**
  * User administration assignments query.

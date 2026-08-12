@@ -1,19 +1,21 @@
-import { toValue } from 'vue';
 import axios from 'axios';
-import Papa from 'papaparse';
+import _fromPairs from 'lodash/fromPairs';
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
-import _fromPairs from 'lodash/fromPairs';
 import _last from 'lodash/last';
 import _mapValues from 'lodash/mapValues';
 import _toPairs from 'lodash/toPairs';
 import _union from 'lodash/union';
 import _without from 'lodash/without';
+import Papa from 'papaparse';
 import { storeToRefs } from 'pinia';
+import { toValue } from 'vue';
+import { isEmulator } from '@/constants';
+import { FIRESTORE_BASE_URL, FIRESTORE_DATABASES } from '@/constants/firebase';
+import { APP_ROUTES } from '@/constants/routes';
+import { flattenObj } from '@/helpers';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
-import { flattenObj, isEmulator } from '@/helpers';
-import { FIRESTORE_BASE_URL, FIRESTORE_COLLECTIONS, FIRESTORE_DATABASES } from '@/constants/firebase';
-import { ROLES } from '@/constants/roles';
 
 export const convertValues = (value) => {
   const passThroughKeys = [
@@ -36,6 +38,7 @@ export const convertValues = (value) => {
     } else if (key === 'mapValue') {
       return _fromPairs(_toPairs(_value.fields).map(([mapKey, mapValue]) => [mapKey, convertValues(mapValue)]));
     }
+    return undefined;
   })[0];
 };
 
@@ -84,6 +87,72 @@ export const getBaseDocumentPath = () => {
   return `projects/${getProjectId()}/databases/(default)/documents`;
 };
 
+// Guards against a redirect/sign-out storm when several parallel reads all 401.
+let handlingSessionExpiry = false;
+
+/**
+ * Tear down a session whose ID token can no longer be refreshed.
+ *
+ * A 401 that survives a forced token refresh means the refresh token itself is
+ * gone (revoked, user disabled, password changed), so the session is dead and
+ * cannot be revived. Just redirecting would leave the stale token in the SDK and
+ * the persisted `firebaseUser` in sessionStorage, so `isAuthenticated()` would
+ * stay truthy and the router guard would let the user back in on a doomed token.
+ * Sign out to clear the token, drop the persisted state, then hard-redirect so
+ * all in-memory Pinia and TanStack cache state is discarded.
+ */
+export const handleExpiredSession = async (authStore) => {
+  if (handlingSessionExpiry) return;
+  handlingSessionExpiry = true;
+
+  try {
+    await authStore.signOut();
+  } catch (error) {
+    logger.error(new Error('Failed to sign out after auth token refresh failed', { cause: error }), {
+      tags: { function: 'handleExpiredSession' },
+    });
+  }
+
+  sessionStorage.removeItem('authStore');
+  sessionStorage.removeItem('assignmentsStore');
+  window.location.assign(`${APP_ROUTES.SIGN_IN}?sessionExpired=true`);
+};
+
+/**
+ * Response-interceptor handler that recovers an authenticated request from a 401.
+ *
+ * Firestore returns 401 when the ID token is missing, expired, or invalid (403 is
+ * a rules/permission denial and is deliberately left alone). We force a fresh
+ * token straight from the SDK and retry the request once. If the refresh fails the
+ * session is unrecoverable, so we tear it down and surface the failure.
+ */
+export const retryRequestWithFreshToken = async ({ error, axiosInstance, authStore, unauthenticated }) => {
+  const originalRequest = error?.config;
+  const isAuthError = error?.response?.status === 401;
+
+  if (!isAuthError || unauthenticated || !originalRequest || originalRequest._retriedAuth) {
+    throw error;
+  }
+
+  // No user yet (e.g. an init/auth race where a read fires before auth settles) is
+  // not a dead session, so rethrow and let TanStack retry rather than tearing down.
+  const user = authStore.firebaseUser?.adminFirebaseUser;
+  if (!user) throw error;
+
+  originalRequest._retriedAuth = true;
+
+  let freshToken;
+  try {
+    freshToken = await user.getIdToken(true);
+  } catch (refreshError) {
+    await handleExpiredSession(authStore);
+    throw new Error('Session expired; unable to refresh auth token', { cause: refreshError });
+  }
+
+  originalRequest.headers = { ...originalRequest.headers, Authorization: `Bearer ${freshToken}` };
+  return axiosInstance(originalRequest);
+};
+
 export const getAxiosInstance = (db = FIRESTORE_DATABASES.ADMIN, unauthenticated = false) => {
   const authStore = useAuthStore();
   const { roarfirekit } = storeToRefs(authStore);
@@ -114,7 +183,14 @@ export const getAxiosInstance = (db = FIRESTORE_DATABASES.ADMIN, unauthenticated
     throw new Error('Base URL is not set.');
   }
 
-  return axios.create(axiosOptions);
+  const axiosInstance = axios.create(axiosOptions);
+
+  axiosInstance.interceptors.response.use(
+    (response) => response,
+    (error) => retryRequestWithFreshToken({ error, axiosInstance, authStore, unauthenticated }),
+  );
+
+  return axiosInstance;
 };
 
 export const exportCsv = (data, filename) => {
@@ -197,27 +273,22 @@ export const fetchDocumentsById = async (collection, docIds, select = [], db = F
     requestBody.mask = { fieldPaths: select };
   }
 
-  try {
-    const response = await axiosInstance.post(`${getBaseDocumentPath()}:batchGet`, requestBody);
+  const response = await axiosInstance.post(`${getBaseDocumentPath()}:batchGet`, requestBody);
 
-    return response.data
-      .filter(({ found }) => found)
-      .map(({ found }) => {
-        // Deconstruct the document path as Firebase conveniently doesn't return basic information like the record ID as
-        // part of the documentation data. Whilst this is a bit hacky, it works.
-        const pathParts = found.name.split('/');
-        const documentId = pathParts.pop();
-        const collectionName = pathParts.pop();
-        return {
-          id: documentId,
-          collection: collectionName,
-          ..._mapValues(found.fields, (value) => convertValues(value)),
-        };
-      });
-  } catch (error) {
-    console.error('fetchDocumentsById: Error fetching documents by ID:', error);
-    return [];
-  }
+  return response.data
+    .filter(({ found }) => found)
+    .map(({ found }) => {
+      // Deconstruct the document path as Firebase conveniently doesn't return basic information like the record ID as
+      // part of the documentation data. Whilst this is a bit hacky, it works.
+      const pathParts = found.name.split('/');
+      const documentId = pathParts.pop();
+      const collectionName = pathParts.pop();
+      return {
+        id: documentId,
+        collection: collectionName,
+        ..._mapValues(found.fields, (value) => convertValues(value)),
+      };
+    });
 };
 
 // @TODO: Depreceate fetchDocsById and use fetchDocumentsById instead once the last queries are updated as well. This
@@ -230,6 +301,7 @@ export const fetchDocsById = async (documents, db = FIRESTORE_DATABASES.ADMIN) =
   }
   const axiosInstance = getAxiosInstance(db);
   const promises = [];
+  const failures = [];
 
   for (const { collection, docId, select } of documents) {
     const docPath = `/${collection}/${docId}`;
@@ -246,12 +318,16 @@ export const fetchDocsById = async (documents, db = FIRESTORE_DATABASES.ADMIN) =
           };
         })
         .catch((error) => {
-          console.error('fetchDocsById: Error fetching document:', error);
+          failures.push({ collection, docId, error });
           return [];
         }),
     );
   }
-  return Promise.all(promises);
+  const results = await Promise.all(promises);
+  if (failures.length > 0) {
+    throw new Error('Failed to fetch documents by ID', { cause: failures[0].error });
+  }
+  return results;
 };
 
 export const batchGetDocs = async (docPaths, select = [], db = FIRESTORE_DATABASES.ADMIN) => {
@@ -302,7 +378,7 @@ export const matchMode2Op = {
  * @returns {Object} - Mapped data with converted values
  */
 export const mapToValues = (data) => {
-  if (!data || !data.fields) {
+  if (!data?.fields) {
     return data; // Return as-is if no fields to convert
   }
 
@@ -322,21 +398,14 @@ export const fetchSubcollection = async (
   const queryParams = select.map((field) => `mask.fieldPaths=${field}`).join('&');
   const queryString = queryParams ? `?${queryParams}` : '';
 
-  try {
-    const response = await axiosInstance.get(getBaseDocumentPath() + subcollectionPath + queryString);
+  const response = await axiosInstance.get(getBaseDocumentPath() + subcollectionPath + queryString);
 
-    // Check if the API returns an array of document data in the subcollection
-    const documents = response.data.documents ?? [];
+  // Check if the API returns an array of document data in the subcollection
+  const documents = response.data.documents ?? [];
 
-    // Map and return the documents with the required format
-    return documents.map((doc) => ({
-      id: doc.name.split('/').pop(), // Extract document ID from the document name/path
-      ..._mapValues(doc.fields, (value) => convertValues(value)),
-    }));
-  } catch (error) {
-    console.error('Failed to fetch subcollection: ', error);
-    return {
-      error: error.response?.status === 404 ? 'Subcollection not found' : error.message,
-    };
-  }
+  // Map and return the documents with the required format
+  return documents.map((doc) => ({
+    id: doc.name.split('/').pop(), // Extract document ID from the document name/path
+    ..._mapValues(doc.fields, (value) => convertValues(value)),
+  }));
 };

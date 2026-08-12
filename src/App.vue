@@ -33,21 +33,22 @@
 </template>
 
 <script setup>
-import { nextTick, computed, onBeforeMount, onMounted, ref, defineAsyncComponent, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
 import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
-import { useAuthStore } from '@/store/auth';
-import { fetchDocById } from '@/helpers/query/utils';
-import { i18n, getTranslations, getLanguages } from '@/translations/i18n';
+import { slk } from 'survey-core';
+import { computed, defineAsyncComponent, nextTick, onBeforeMount, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import NavBar from '@/components/NavBar.vue';
-import { FOOTER_BLACKLIST, NAVBAR_BLACKLIST } from './constants';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
-import { useI18n } from 'vue-i18n';
-import { slk } from 'survey-core';
+import { fetchDocById } from '@/helpers/query/utils';
+import { logger } from '@/logger';
+import { useAuthStore } from '@/store/auth';
+import { getLanguages, getTranslations, i18n } from '@/translations/i18n';
 import Footer from './components/Footer.vue';
+import { FOOTER_BLACKLIST, NAVBAR_BLACKLIST } from './constants';
 
 const SessionTimer = defineAsyncComponent(() => import('@/containers/SessionTimer/SessionTimer.vue'));
 const VueQueryDevtools = defineAsyncComponent(() =>
@@ -72,13 +73,17 @@ const footerVariant = computed(() => {
 });
 
 async function recoverFromProfileFetchFailure(error) {
-  console.error('Error fetching user claims or user data', error);
+  logger.error(new Error('Failed to fetch user claims or user data', { cause: error }), {
+    tags: { component: 'App', function: 'recoverFromProfileFetchFailure' },
+  });
   try {
     if (authStore.isFirekitInit()) {
       await authStore.signOut();
     }
   } catch (signOutError) {
-    console.error('Error signing out after profile fetch failure', signOutError);
+    logger.error(new Error('Failed to sign out after profile fetch failure', { cause: signOutError }), {
+      tags: { component: 'App', function: 'recoverFromProfileFetchFailure' },
+    });
   }
   authStore.$reset();
   await authStore.initFirekit();
@@ -145,13 +150,17 @@ onBeforeMount(async () => {
       }
     })
     .catch((error) => {
-      console.error('Error initializing auth store', error);
+      logger.error(new Error('Failed to initialize auth store from redirect', { cause: error }), {
+        tags: { component: 'App', function: 'initStateFromRedirect' },
+      });
     });
 
   isAuthStoreReady.value = true;
 });
 
 onMounted(() => {
+  void logger.enrichClientHints();
+
   const isLocal = import.meta.env.MODE === 'development';
   const shouldShowDevTools = import.meta.env.VITE_SHOW_DEV_TOOLS === 'true';
   const isDevToolsEnabled = import.meta.env.VITE_QUERY_DEVTOOLS_ENABLED === 'true';

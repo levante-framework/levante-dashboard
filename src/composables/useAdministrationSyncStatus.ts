@@ -1,5 +1,5 @@
-import { type Ref, computed, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
+import { computed, type Ref, watch } from 'vue';
 import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
 
 export type SyncStatus = 'pending' | 'complete' | 'failed';

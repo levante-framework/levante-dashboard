@@ -1,9 +1,10 @@
-import { toValue } from 'vue';
 import _mapValues from 'lodash/mapValues';
 import _uniq from 'lodash/uniq';
 import _without from 'lodash/without';
-import { convertValues, getAxiosInstance, mapFields, fetchDocsById, getBaseDocumentPath } from './utils';
-import { FIRESTORE_DATABASES, FIRESTORE_COLLECTIONS } from '../../constants/firebase';
+import { toValue } from 'vue';
+import { logger } from '@/logger';
+import { FIRESTORE_COLLECTIONS, FIRESTORE_DATABASES } from '../../constants/firebase';
+import { convertValues, fetchDocsById, getAxiosInstance, getBaseDocumentPath, mapFields } from './utils';
 
 export const getTasksRequestBody = ({
   registered = true,
@@ -211,7 +212,9 @@ export const variantsFetcher = async (registered = false) => {
       });
     })
     .catch((error) => {
-      console.error(error);
+      logger.error(new Error('Failed to fetch task variants', { cause: error }), {
+        tags: { function: 'variantsFetcher' },
+      });
       return [];
     });
 };

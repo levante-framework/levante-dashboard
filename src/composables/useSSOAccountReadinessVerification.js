@@ -1,12 +1,11 @@
-import { ref, onUnmounted } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useRouter } from 'vue-router';
 import { useQueryClient } from '@tanstack/vue-query';
 import { StatusCodes } from 'http-status-codes';
-import { useAuthStore } from '@/store/auth';
+import { onUnmounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import useUserDataQuery from '@/composables/queries/useUserDataQuery';
 import { AUTH_USER_TYPE } from '@/constants/auth';
 import { APP_ROUTES } from '@/constants/routes';
+import { useAuthStore } from '@/store/auth';
 
 const POLLING_INTERVAL = 600;
 
@@ -79,7 +78,7 @@ const useSSOAccountReadinessVerification = () => {
       router.push({ path: APP_ROUTES.HOME });
     } catch (error) {
       // If the error is a 401, we assume the backend is still processing the user document setup and we should retry.
-      if (error.status == StatusCodes.UNAUTHORIZED) return;
+      if (error.status === StatusCodes.UNAUTHORIZED) return;
 
       // Otherwise throw the error as it's unexpected.
       throw error;

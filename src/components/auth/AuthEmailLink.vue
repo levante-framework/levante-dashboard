@@ -10,14 +10,14 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
-import { useAuthStore } from '@/store/auth';
-import { fetchDocById } from '@/helpers/query/utils';
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import { fetchDocById } from '@/helpers/query/utils';
 import { logger } from '@/logger';
+import { useAuthStore } from '@/store/auth';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -44,7 +44,9 @@ const loginFromEmailLink = async (email) => {
     })
     .catch((error) => {
       isError.value = true;
-      console.error('error logging in:', error);
+      logger.error(new Error('Failed to sign in with email link', { cause: error }), {
+        tags: { component: 'AuthEmailLink', function: 'loginFromEmailLink' },
+      });
     });
 };
 
@@ -66,8 +68,9 @@ onMounted(async () => {
     try {
       await loginFromEmailLink(email);
     } catch (error) {
-      console.error('error logging in:', error);
-      logger.capture('Error logging in with email link', { error });
+      logger.error(new Error('Failed to sign in with email link', { cause: error }), {
+        tags: { component: 'AuthEmailLink', function: 'onMounted' },
+      });
       isError.value = true;
     }
   } else {

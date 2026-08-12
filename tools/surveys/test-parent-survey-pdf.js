@@ -1,8 +1,8 @@
 // Test script to generate PDF from caregiver_survey_family.json
 // This is a Node.js script to test the PDF generation
 
+import fs from 'node:fs';
 import fetch from 'node-fetch';
-import fs from 'fs';
 
 // Mock the browser environment for jsPDF
 global.window = {};

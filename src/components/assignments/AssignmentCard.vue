@@ -26,10 +26,10 @@
 </template>
 
 <script lang="ts" setup>
-import { ASSIGNMENT_STATUSES } from '@/constants';
-import { AdministrationType } from '@levante-framework/levante-zod';
+import type { AdministrationType } from '@levante-framework/levante-zod';
 import { format } from 'date-fns';
 import { computed } from 'vue';
+import { ASSIGNMENT_STATUSES } from '@/constants';
 
 interface Props {
   data: AdministrationType;

@@ -185,16 +185,6 @@
 </template>
 
 <script setup lang="ts">
-import AppSpinner from '@/components/AppSpinner.vue';
-import LanguageSelector from '@/components/LanguageSelector.vue';
-import RoarModal from '@/components/modals/RoarModal.vue';
-import { APP_ROUTES } from '@/constants/routes';
-import { isEmailValid, isMobileBrowser } from '@/helpers';
-import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
-import { getUserAssignments } from '@/helpers/query/assignments';
-import { fetchDocById } from '@/helpers/query/utils';
-import { useAssignmentsStore } from '@/store/assignments';
-import { useAuthStore, UserClaims, UserData } from '@/store/auth';
 import useVuelidate from '@vuelidate/core';
 import { helpers, required, requiredUnless } from '@vuelidate/validators';
 import { storeToRefs } from 'pinia';
@@ -204,6 +194,17 @@ import PvMessage from 'primevue/message';
 import PvPassword from 'primevue/password';
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import AppSpinner from '@/components/AppSpinner.vue';
+import LanguageSelector from '@/components/LanguageSelector.vue';
+import RoarModal from '@/components/modals/RoarModal.vue';
+import { APP_ROUTES } from '@/constants/routes';
+import { isEmailValid, isMobileBrowser } from '@/helpers';
+import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
+import { getUserAssignments } from '@/helpers/query/assignments';
+import { fetchDocById } from '@/helpers/query/utils';
+import { logger } from '@/logger';
+import { useAssignmentsStore } from '@/store/assignments';
+import { type UserClaims, type UserData, useAuthStore } from '@/store/auth';
 
 const MODES = {
   participant: 'participant',
@@ -225,7 +226,6 @@ const router = useRouter();
 const { setUserAssignments } = assignmentsStore;
 const { roarfirekit, routeToProfile, spinner, ssoProvider, userClaims } = storeToRefs(authStore);
 const {
-  $subscribe,
   getUserId,
   initiateLoginWithEmailLink,
   isUserAdmin,
@@ -237,17 +237,17 @@ const {
   signInWithGoogleRedirect,
 } = authStore;
 
-$subscribe(() => {
-  if (getUserId()) {
-    if (ssoProvider.value) {
-      router.push({ path: APP_ROUTES.SSO });
-    } else if (routeToProfile.value) {
-      router.push({ path: APP_ROUTES.ACCOUNT_PROFILE });
-    } else {
-      router.push({ path: APP_ROUTES.HOME });
-    }
+function redirectAfterLogin() {
+  if (!getUserId()) return;
+
+  if (ssoProvider.value) {
+    router.replace({ path: APP_ROUTES.SSO });
+  } else if (routeToProfile.value) {
+    router.replace({ path: APP_ROUTES.ACCOUNT_PROFILE });
+  } else {
+    router.replace({ path: APP_ROUTES.HOME });
   }
-});
+}
 
 const forgotEmail = ref('');
 const googleSignInErrorKey = ref('');
@@ -308,6 +308,8 @@ const authWithEmailOrUsername = async () => {
       if (!isUserAdmin() && !isUserSuperAdmin()) {
         await getAuthUserAssignments();
       }
+
+      redirectAfterLogin();
     })
     .catch((e) => {
       const errorCodes = ['auth/invalid-email', 'auth/user-not-found', 'auth/wrong-password'];
@@ -340,6 +342,8 @@ const authWithGoogle = async () => {
       if (!isUserAdmin() && !isUserSuperAdmin()) {
         await getAuthUserAssignments();
       }
+
+      redirectAfterLogin();
     })
     .catch((e) => {
       console.log('ERROR', e);
@@ -370,7 +374,9 @@ const getAuthUserAssignments = async () => {
     const sortedAssignments = sortAssignmentsByDateOpened(userAssignments);
     setUserAssignments(sortedAssignments);
   } catch (error) {
-    console.error('Failed to get user assignments', error);
+    logger.error(new Error('Failed to get user assignments', { cause: error }), {
+      tags: { component: 'Login', function: 'getAuthUserAssignments' },
+    });
   }
 };
 
@@ -379,7 +385,9 @@ const getAuthUserClaims = async () => {
     const userClaims = await fetchDocById('userClaims', getUserId()!);
     setUserClaims(userClaims as UserClaims);
   } catch (error) {
-    console.error('Failed to get user claims', error);
+    logger.error(new Error('Failed to get user claims', { cause: error }), {
+      tags: { component: 'Login', function: 'getAuthUserClaims' },
+    });
   }
 };
 
@@ -388,7 +396,9 @@ const getAuthUserData = async () => {
     const userData = await fetchDocById('users', getUserId()!);
     setUserData(userData as UserData);
   } catch (error) {
-    console.error('Failed to get user data', error);
+    logger.error(new Error('Failed to get user data', { cause: error }), {
+      tags: { component: 'Login', function: 'getAuthUserData' },
+    });
   }
 };
 
@@ -427,7 +437,7 @@ const sendResetPasswordEmail = () => {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 10;
+  z-index: 9999;
 }
 
 .language-selector-wrapper {

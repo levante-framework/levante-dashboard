@@ -1,13 +1,13 @@
+import * as child from 'node:child_process';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { fileURLToPath, URL } from 'node:url';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
-import { fileURLToPath, URL } from 'url';
-import { createRequire } from 'module';
-import path from 'path';
-import { defineConfig } from 'vite';
+import UnheadVite from '@unhead/addons/vite';
 import Vue from '@vitejs/plugin-vue';
+import { defineConfig } from 'vite';
 import mkcert from 'vite-plugin-mkcert';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
-import UnheadVite from '@unhead/addons/vite';
-import * as child from 'child_process';
 
 const require = createRequire(import.meta.url);
 const commitHash = child.execSync('git rev-parse --short HEAD').toString();
@@ -44,7 +44,14 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
-    dedupe: ['firebase', '@firebase/app', '@firebase/auth', '@firebase/firestore', '@firebase/functions', '@firebase/storage'],
+    dedupe: [
+      'firebase',
+      '@firebase/app',
+      '@firebase/auth',
+      '@firebase/firestore',
+      '@firebase/functions',
+      '@firebase/storage',
+    ],
     preserveSymlinks: true,
   },
 
@@ -65,9 +72,6 @@ export default defineConfig({
           tanstack: ['@tanstack/vue-query'],
           chartJs: ['chart.js'],
           sentry: ['@sentry/browser', '@sentry/integrations', '@sentry/vue'],
-          phoneme: ['@bdelab/roar-pa'],
-          sre: ['@bdelab/roar-sre'],
-          swr: ['@bdelab/roar-swr'],
           utils: ['@bdelab/roar-utils'],
         },
       },

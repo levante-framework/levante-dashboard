@@ -1,4 +1,3 @@
-import AddGroupModal from '@/components/modals/AddGroupModal.vue';
 import * as VueQuery from '@tanstack/vue-query';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
@@ -11,6 +10,7 @@ import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
+import AddGroupModal from '@/components/modals/AddGroupModal.vue';
 
 const { mockUseUpsertOrgMutation, mockExistingOrgs } = vi.hoisted(() => ({
   mockUseUpsertOrgMutation: vi.fn(),
@@ -176,8 +176,7 @@ describe('AddGroupModal.vue', () => {
     await nextTick();
 
     // Programmatically select the Site org type (more stable than simulating PrimeVue dropdown in tests)
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.vm.orgType = { firestoreCollection: 'districts', singular: 'district', label: 'Site' };
     await nextTick();
     await flushPromises();
@@ -213,8 +212,7 @@ describe('AddGroupModal.vue', () => {
     await nextTick();
 
     // Switch to "Cohort" (groups) so the dynamic message uses that label instead of "site".
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.vm.orgType = { firestoreCollection: 'groups', singular: 'group', label: 'Cohort' };
     await nextTick();
     await flushPromises();
@@ -241,8 +239,7 @@ describe('AddGroupModal.vue', () => {
     await nextTick();
 
     // Programmatically select the Site org type (more stable than simulating PrimeVue dropdown in tests)
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.vm.orgType = { firestoreCollection: 'districts', singular: 'district', label: 'Site' };
     await nextTick();
     await flushPromises();
@@ -278,8 +275,7 @@ describe('AddGroupModal.vue', () => {
     await nextTick();
 
     // Programmatically select the Site org type (more stable than simulating PrimeVue dropdown in tests)
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.vm.orgType = { firestoreCollection: 'districts', singular: 'district', label: 'Site' };
     await nextTick();
     await flushPromises();
@@ -317,8 +313,7 @@ describe('AddGroupModal.vue', () => {
     const wrapper = mount(AddGroupModal, mountOptions);
     await nextTick();
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.vm.orgType = { firestoreCollection: 'districts', singular: 'district', label: 'Site' };
     await nextTick();
     await flushPromises();

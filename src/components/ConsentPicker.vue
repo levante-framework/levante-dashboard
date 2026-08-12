@@ -259,28 +259,27 @@
     :style="{ width: '65vw' }"
     :breakpoints="{ '1199px': '85vw', '575px': '95vw' }"
   >
-    <!-- eslint-disable-next-line vue/no-v-html -->
     <div v-html="confirmText"></div>
   </PvDialog>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue';
-import { marked } from 'marked';
 import _forEach from 'lodash/forEach';
-import { isLevante } from '@/helpers';
-import PvFloatLabel from 'primevue/floatlabel';
+import { marked } from 'marked';
 import PvButton from 'primevue/button';
 import PvCheckbox from 'primevue/checkbox';
 import PvDialog from 'primevue/dialog';
-import PvSelect from 'primevue/select';
+import PvFieldset from 'primevue/fieldset';
+import PvFloatLabel from 'primevue/floatlabel';
 import PvInputText from 'primevue/inputtext';
 import PvPanel from 'primevue/panel';
 import PvRadioButton from 'primevue/radiobutton';
-import PvFieldset from 'primevue/fieldset';
-import { useAuthStore } from '@/store/auth';
+import PvSelect from 'primevue/select';
+import { computed, onMounted, ref, watch } from 'vue';
 import useLegalDocsQuery from '@/composables/queries/useLegalDocsQuery';
+import { isLevante } from '@/constants';
 import { getTooltip } from '@/helpers';
+import { useAuthStore } from '@/store/auth';
 
 interface DefaultParam {
   name: string;

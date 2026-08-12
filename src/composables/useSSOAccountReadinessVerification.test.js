@@ -10,15 +10,15 @@
 // - User data query hook for fetching user information
 // - The main composable being tested for SSO account verification
 
-import { ref, nextTick } from 'vue';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createTestingPinia } from '@pinia/testing';
 import * as VueQuery from '@tanstack/vue-query';
-import { useRouter } from 'vue-router';
 import { nanoid } from 'nanoid';
-import { withSetup } from '@/test-support/withSetup.js';
-import { useAuthStore } from '@/store/auth';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import useUserDataQuery from '@/composables/queries/useUserDataQuery';
+import { useAuthStore } from '@/store/auth';
+import { withSetup } from '@/test-support/withSetup.js';
 import useSSOAccountReadinessVerification from './useSSOAccountReadinessVerification';
 
 vi.mock('vue-router', () => ({

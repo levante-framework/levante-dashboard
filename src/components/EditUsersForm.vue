@@ -223,18 +223,18 @@
   </div>
 </template>
 <script setup lang="ts">
-import { watch, ref, onMounted, computed } from 'vue';
-import { useAuthStore } from '@/store/auth';
-import { storeToRefs } from 'pinia';
-import _isEmpty from 'lodash/isEmpty';
 import _get from 'lodash/get';
+import _isEmpty from 'lodash/isEmpty';
+import { storeToRefs } from 'pinia';
 import PvAutoComplete from 'primevue/autocomplete';
-import PvDatePicker from 'primevue/datepicker';
 import PvCheckbox from 'primevue/checkbox';
-import PvSelect from 'primevue/select';
+import PvDatePicker from 'primevue/datepicker';
 import PvInputText from 'primevue/inputtext';
+import PvSelect from 'primevue/select';
+import { computed, onMounted, ref, watch } from 'vue';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { getTooltip } from '@/helpers';
+import { useAuthStore } from '@/store/auth';
 
 interface Name {
   first?: string | null;
@@ -357,7 +357,7 @@ const setupUserData = (): void => {
       last: props.userData?.name?.last || null,
     },
     studentData: {
-      dob: !isNaN(new Date(props.userData?.studentData?.dob as string).getTime())
+      dob: !Number.isNaN(new Date(props.userData?.studentData?.dob as string).getTime())
         ? new Date(props.userData?.studentData?.dob as string)
         : null,
       grade: props.userData?.studentData?.grade || '',

@@ -1,3 +1,12 @@
+import {
+  collection,
+  type DocumentData,
+  getDocs,
+  type QueryDocumentSnapshot,
+  query,
+  Timestamp,
+  where,
+} from 'firebase/firestore';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { ROLES } from '@/constants/roles';
 import { Repository } from '@/firebase/Repository';
@@ -8,15 +17,6 @@ import type {
   GetAdministrationOrgProgressPayload,
   GetAdministrationOrgProgressResult,
 } from '@/types/administrationOrgProgress';
-import {
-  collection,
-  getDocs,
-  query,
-  Timestamp,
-  where,
-  type DocumentData,
-  type QueryDocumentSnapshot,
-} from 'firebase/firestore';
 
 export interface CreateUpdateSuperAdminNamePayload {
   first: string;
@@ -90,10 +90,6 @@ function serializeUserSnapshot(doc: QueryDocumentSnapshot<DocumentData>): Docume
 }
 
 class UsersRepository extends Repository {
-  constructor() {
-    super();
-  }
-
   async fetchAdminUsers(options: { superAdminsOnly?: boolean } = {}): Promise<(DocumentData & { id: string })[]> {
     const { superAdminsOnly = false } = options;
 
@@ -110,8 +106,10 @@ class UsersRepository extends Repository {
 
       return users;
     } catch (error) {
-      console.error('fetchAdminUsers: Error fetching admin users from Firestore:', error);
-      logger.error(error, { context: { function: 'fetchAdminUsers', superAdminsOnly } });
+      logger.error(new Error('Failed to fetch admin users', { cause: error }), {
+        tags: { function: 'fetchAdminUsers' },
+        superAdminsOnly,
+      });
       throw error;
     }
   }

@@ -1,9 +1,9 @@
+import { createTestingPinia } from '@pinia/testing';
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
+import { flushPromises, mount } from '@vue/test-utils';
+import PrimeVue from 'primevue/config';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
-import { mount, flushPromises } from '@vue/test-utils';
-import { createTestingPinia } from '@pinia/testing';
-import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
-import PrimeVue from 'primevue/config';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
 import { useGetSiteOverviewQuery } from '@/composables/queries/useGetSiteOverviewQuery';
 import HomeAdministrator from '@/pages/HomeAdministrator.vue';

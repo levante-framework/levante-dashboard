@@ -1,4 +1,4 @@
-import { doc, getDoc, type DocumentData } from 'firebase/firestore';
+import { type DocumentData, doc, getDoc } from 'firebase/firestore';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { Repository } from '@/firebase/Repository';
 import { FirebaseService } from '@/firebase/Service';
@@ -25,10 +25,6 @@ const ORG_COLLECTION_BY_ROUTE_TYPE: Record<string, string> = {
 };
 
 class AdministrationsRepository extends Repository {
-  constructor() {
-    super();
-  }
-
   async getAdministrations(params?: GetAdministrationsParams): Promise<Administration[]> {
     const response = await this.call<GetAdministrationsParams, GetAdministrationsResponse>(
       'getAdministrations',
@@ -47,8 +43,10 @@ class AdministrationsRepository extends Repository {
       }
       return { id: snapshot.id, ...snapshot.data() };
     } catch (error) {
-      console.error('fetchAdministrationById: Error fetching administration from Firestore:', error);
-      logger.error(error, { context: { function: 'fetchAdministrationById', administrationId } });
+      logger.error(new Error('Failed to fetch administration by ID', { cause: error }), {
+        tags: { function: 'fetchAdministrationById' },
+        administrationId,
+      });
       throw error;
     }
   }
@@ -66,8 +64,11 @@ class AdministrationsRepository extends Repository {
       }
       return { id: snapshot.id, ...snapshot.data() };
     } catch (error) {
-      console.error('fetchOrgBySingularRouteType: Error fetching org from Firestore:', error);
-      logger.error(error, { context: { function: 'fetchOrgBySingularRouteType', orgType, orgId } });
+      logger.error(new Error('Failed to fetch org by singular route type', { cause: error }), {
+        tags: { function: 'fetchOrgBySingularRouteType' },
+        orgType,
+        orgId,
+      });
       throw error;
     }
   }

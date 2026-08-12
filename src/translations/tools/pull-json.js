@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { spawnSync } from 'child_process';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,11 +40,11 @@ function ensureDir(dirPath) {
 function createBackup() {
   const backupDir = path.join(consolidatedRoot, '.backup');
   ensureDir(backupDir);
-  
+
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const backupPath = path.join(backupDir, `pre-sync-${timestamp}`);
   ensureDir(backupPath);
-  
+
   // Backup consolidated files
   if (fs.existsSync(consolidatedRoot)) {
     const files = fs.readdirSync(consolidatedRoot);
@@ -56,12 +56,12 @@ function createBackup() {
       }
     }
   }
-  
+
   // Backup component files
   if (fs.existsSync(consolidatedComponents)) {
     const componentBackupDir = path.join(backupPath, 'components');
     ensureDir(componentBackupDir);
-    
+
     const files = fs.readdirSync(consolidatedComponents);
     for (const file of files) {
       if (file.endsWith('.csv')) {
@@ -71,7 +71,7 @@ function createBackup() {
       }
     }
   }
-  
+
   console.log(`📦 Created backup at ${backupPath}`);
   return backupPath;
 }
@@ -79,7 +79,7 @@ function createBackup() {
 function syncCsvsToConsolidated() {
   // Create backup before syncing
   const backupPath = createBackup();
-  
+
   ensureDir(consolidatedRoot);
   ensureDir(consolidatedComponents);
 
@@ -132,5 +132,3 @@ function main() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }
-
-

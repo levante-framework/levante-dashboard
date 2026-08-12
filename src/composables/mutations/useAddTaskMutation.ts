@@ -1,8 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import type { UseMutationReturnType } from '@tanstack/vue-query';
-import { useAuthStore } from '@/store/auth';
-import { TASKS_QUERY_KEY } from '@/constants/queryKeys';
+import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { TASK_ADD_MUTATION_KEY } from '@/constants/mutationKeys';
+import { TASKS_QUERY_KEY } from '@/constants/queryKeys';
+import { useAuthStore } from '@/store/auth';
 
 interface TaskData {
   [key: string]: any;
@@ -28,6 +28,7 @@ const useAddTaskMutation = (): UseMutationReturnType<void, Error, TaskData, unkn
     mutationFn: async (task: TaskData): Promise<void> => {
       await authStore.roarfirekit.registerTaskVariant({ ...task });
     },
+    meta: { skipGlobalErrorLogging: true },
     onSuccess: (): void => {
       queryClient.invalidateQueries({ queryKey: [TASKS_QUERY_KEY] });
     },

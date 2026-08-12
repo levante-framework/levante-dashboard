@@ -4,7 +4,7 @@
 // - Checks edge cases like missing claims
 // - Uses Vue's computed refs to simulate reactive user claims data
 // - Imports required testing utilities from Vitest
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { computed } from 'vue';
 import { AUTH_USER_TYPE } from '@/constants/auth';
 import useUserType from './useUserType';

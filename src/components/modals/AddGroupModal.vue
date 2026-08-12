@@ -83,35 +83,35 @@
 </template>
 
 <script setup lang="ts">
-import _capitalize from 'lodash/capitalize';
-import { computed, ref, toRaw, watch } from 'vue';
-import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
-import { normalizeToLowercase } from '@/helpers';
-import { helpers, required, requiredIf } from '@vuelidate/validators';
-import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
-import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
-import { useToast } from 'primevue/usetoast';
 import {
   CreateClassSchema,
   CreateDistrictSchema,
   CreateGroupSchema,
-  CreateOrgType,
+  type CreateOrgType,
   CreateSchoolSchema,
 } from '@levante-framework/levante-zod';
+import { useQueryClient } from '@tanstack/vue-query';
+import useVuelidate from '@vuelidate/core';
+import { helpers, required, requiredIf } from '@vuelidate/validators';
+import _capitalize from 'lodash/capitalize';
 import PvButton from 'primevue/button';
 import PvDialog from 'primevue/dialog';
 import PvFloatLabel from 'primevue/floatlabel';
 import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
-import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
+import { useToast } from 'primevue/usetoast';
+import { computed, ref, toRaw, watch } from 'vue';
 import useUpsertOrgMutation from '@/composables/mutations/useUpsertOrgMutation';
-import useVuelidate from '@vuelidate/core';
-import { usePermissions } from '@/composables/usePermissions';
-import { useAuthStore } from '@/store/auth';
-import { ROLES } from '@/constants/roles';
-import { useQueryClient } from '@tanstack/vue-query';
-import { DISTRICTS_QUERY_KEY, ORGS_TABLE_QUERY_KEY, SCHOOLS_QUERY_KEY } from '@/constants/queryKeys';
+import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
 import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
+import { usePermissions } from '@/composables/usePermissions';
+import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
+import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
+import { DISTRICTS_QUERY_KEY, ORGS_TABLE_QUERY_KEY, SCHOOLS_QUERY_KEY } from '@/constants/queryKeys';
+import { ROLES } from '@/constants/roles';
+import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import { normalizeToLowercase } from '@/helpers';
+import { useAuthStore } from '@/store/auth';
 
 interface OrgType {
   firestoreCollection: string;
@@ -131,9 +131,7 @@ interface Props {
   preSelectedSchool?: SelectedOrg;
 }
 
-interface Emits {
-  (event: 'close'): void;
-}
+type Emits = (event: 'close') => void;
 
 const props = withDefaults(defineProps<Props>(), {
   activeTabOrg: () => ({
@@ -293,8 +291,8 @@ const resetForm = () => {
 };
 
 const parseCreateOrgData = (data: CreateOrgType) => {
-  let formatted;
-  let parsed;
+  let formatted: Record<string, unknown>;
+  let parsed: ReturnType<typeof CreateClassSchema.safeParse>;
 
   const { districtId, name, normalizedName, parentOrgId, schoolId, tags, type, createdBy, siteId } = data;
   const commonFields = {

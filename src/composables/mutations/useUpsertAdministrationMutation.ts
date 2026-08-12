@@ -1,10 +1,10 @@
-import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import type { UseMutationReturnType } from '@tanstack/vue-query';
+import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { ADMINISTRATION_UPSERT_MUTATION_KEY } from '@/constants/mutationKeys';
 import {
-  ADMINISTRATIONS_QUERY_KEY,
-  ADMINISTRATIONS_LIST_QUERY_KEY,
   ADMINISTRATION_ASSIGNMENTS_QUERY_KEY,
+  ADMINISTRATIONS_LIST_QUERY_KEY,
+  ADMINISTRATIONS_QUERY_KEY,
   SITE_OVERVIEW_QUERY_KEY,
   SYNC_STATUS_QUERY_KEY,
 } from '@/constants/queryKeys';
@@ -31,6 +31,7 @@ const useUpsertAdministrationMutation = (): UseMutationReturnType<void, Error, A
     mutationFn: async (data: AdministrationData): Promise<void> => {
       await authStore.roarfirekit.upsertAdministration(data);
     },
+    meta: { skipGlobalErrorLogging: true },
     onSuccess: (_, data: AdministrationData): void => {
       // Invalidate the queries to refetch the administration data.
       // @NOTE: Usually we would apply a more granular invalidation strategy including updating the specific
@@ -50,7 +51,10 @@ const useUpsertAdministrationMutation = (): UseMutationReturnType<void, Error, A
       logger.capture('Admin: Create Administration', { data });
     },
     onError: (error: Error, data: AdministrationData): void => {
-      logger.error('Error creating administration', { data, error });
+      logger.error(new Error('Failed to upsert administration', { cause: error }), {
+        tags: { composable: 'useUpsertAdministrationMutation' },
+        data,
+      });
     },
   });
 };

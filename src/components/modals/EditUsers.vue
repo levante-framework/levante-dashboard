@@ -206,19 +206,20 @@
 
 <script setup lang="ts">
 // NOT used. Todo: Refactor to update users how we want
-import { watch, ref, onMounted, computed } from 'vue';
-import { useToast } from 'primevue/usetoast';
+
 import { storeToRefs } from 'pinia';
-import { useAuthStore } from '@/store/auth';
 import PvAutoComplete from 'primevue/autocomplete';
 import PvButton from 'primevue/button';
-import PvDatePicker from 'primevue/datepicker';
 import PvCheckbox from 'primevue/checkbox';
+import PvDatePicker from 'primevue/datepicker';
 import PvDialog from 'primevue/dialog';
-import PvSelect from 'primevue/select';
 import PvInputText from 'primevue/inputtext';
+import PvSelect from 'primevue/select';
+import { useToast } from 'primevue/usetoast';
+import { computed, onMounted, ref, watch } from 'vue';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { getTooltip } from '@/helpers';
+import { useAuthStore } from '@/store/auth';
 
 interface StudentData {
   dob: Date | null;
@@ -252,9 +253,7 @@ interface Props {
   userType?: string;
 }
 
-interface Emits {
-  (e: 'modalClosed'): void;
-}
+type Emits = (e: 'modalClosed') => void;
 
 interface DropdownOption {
   label: string;
@@ -374,7 +373,7 @@ const setupUserData = (): UserData => {
       last: props.userData?.name?.last || null,
     },
     studentData: {
-      dob: !isNaN(new Date(props.userData?.studentData?.dob).getTime())
+      dob: !Number.isNaN(new Date(props.userData?.studentData?.dob).getTime())
         ? new Date(props.userData?.studentData?.dob)
         : null,
       grade: props.userData?.studentData?.grade || '',

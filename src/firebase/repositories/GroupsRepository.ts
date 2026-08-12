@@ -7,10 +7,6 @@ interface GroupsParams {
 }
 
 class GroupsRepository extends Repository {
-  constructor() {
-    super();
-  }
-
   async upsertOrg(params?: GroupsParams): Promise<void> {
     await this.call<GroupsParams>('upsertOrg', params);
   }

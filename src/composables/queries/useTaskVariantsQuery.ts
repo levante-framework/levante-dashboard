@@ -1,8 +1,7 @@
-import { type MaybeRefOrGetter } from 'vue';
-import { toValue } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { variantsFetcher } from '@/helpers/query/tasks';
+import { toValue } from 'vue';
 import { TASK_VARIANTS_QUERY_KEY } from '@/constants/queryKeys';
+import { variantsFetcher } from '@/helpers/query/tasks';
 
 /**
  * Tasks Variants query.

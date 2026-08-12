@@ -99,6 +99,16 @@
 </template>
 
 <script setup lang="ts">
+import {
+  AddUserCsvHeaderSchema,
+  CreateUsersParamsSchema,
+  combineUserCsvIssues,
+  makeCustomIssue,
+  UserCsvSchema,
+  type UserCsvType,
+  type ZodIssue,
+} from '@levante-framework/levante-zod';
+import { useQueryClient } from '@tanstack/vue-query';
 import _chunk from 'lodash/chunk';
 import _cloneDeep from 'lodash/cloneDeep';
 import { storeToRefs } from 'pinia';
@@ -108,18 +118,8 @@ import PvDivider from 'primevue/divider';
 import type { FileUploadUploaderEvent } from 'primevue/fileupload';
 import PvMessage from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
-import { useQueryClient } from '@tanstack/vue-query';
 import { computed, nextTick, ref, toRaw, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import {
-  AddUserCsvHeaderSchema,
-  CreateUsersParamsSchema,
-  UserCsvSchema,
-  UserCsvType,
-  combineUserCsvIssues,
-  makeCustomIssue,
-  type ZodIssue,
-} from '@levante-framework/levante-zod';
 import AppSpinner from '@/components/AppSpinner.vue';
 import CsvTable from '@/components/CsvTable.vue';
 import CsvUploader from '@/components/CsvUploader.vue';
@@ -429,9 +429,7 @@ const submitUsers = async () => {
             orgIds.classes.push(classId);
             classFound = true;
             break;
-          } catch {
-            continue;
-          }
+          } catch {}
         }
         if (!classFound) {
           orgErrors.push({
@@ -496,7 +494,17 @@ const submitUsers = async () => {
     })),
   });
   if (!params.success) {
-    logger.error('CreateUsersParamsSchema parse failed unexpectedly', { issues: params.error.issues });
+    logger.error(
+      new Error('CreateUsersParamsSchema parse failed unexpectedly', {
+        cause: params.error,
+      }),
+      {
+        tags: {
+          component: 'AddUsers',
+          function: 'submitUsers',
+        },
+      },
+    );
     status.value = { message: 'An unexpected error occurred. Please contact support.', severity: 'error' };
     isSubmitting.value = false;
     return;
@@ -527,7 +535,13 @@ const submitUsers = async () => {
           uid: createdUser.uid ?? '',
         };
       } else {
-        logger.error('Unexpected created user', { uid: createdUser.uid });
+        logger.error(new Error('Unexpected created user'), {
+          tags: {
+            component: 'AddUsers',
+            function: 'submitUsers',
+          },
+          uid: createdUser.uid,
+        });
       }
     });
     registeredUsers.value = mergedUsers;
@@ -584,7 +598,13 @@ const submitUsers = async () => {
       // - functions/invalid-argument/schema
       // - functions/invalid-argument/org-site-mismatch
       // - functions/not-found/orgs
-      logger.error(new Error(`Unexpected createUsers app-error: ${error.code}/${error.details.code}`), error);
+      logger.error(new Error('Unexpected createUsers app-error', { cause: error }), {
+        tags: {
+          component: 'AddUsers',
+          function: 'submitUsers',
+          errorCode: `${error.code}/${error.details.code}`,
+        },
+      });
       status.value = {
         message:
           'An unexpected error occurred. Please refresh the page and try again. If the problem persists, contact support.',
@@ -592,13 +612,12 @@ const submitUsers = async () => {
       };
     }
   } else {
-    if (result.code === 'functions-error' || result.code === 'firebase-error') {
-      logger.error(new Error(`Unexpected createUsers ${result.code}: ${result.data.code}`), result.data);
-    } else if (result.code === 'error') {
-      logger.error(`Unexpected createUsers error: ${result.data.message}`, {
-        error: JSON.stringify(result.data, null, 2),
-      });
-    }
+    logger.error(new Error(`Unexpected createUsers ${result.code}`, { cause: result.data }), {
+      tags: {
+        component: 'AddUsers',
+        function: 'submitUsers',
+      },
+    });
     status.value = { message: 'An unexpected error occurred. Please contact support.', severity: 'error' };
   }
 

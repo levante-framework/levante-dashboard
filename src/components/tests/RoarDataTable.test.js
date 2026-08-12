@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createPinia, setActivePinia } from 'pinia';
 import RoarDataTable from '../RoarDataTable.vue';
 
 vi.mock('@bdelab/roar-utils', () => ({
@@ -127,5 +127,20 @@ describe('RoarDataTable.vue', () => {
     // Then we keep only 2 selected
     wrapper.vm.onColumnToggle([columns[0], columns[1]]);
     expect(wrapper.vm.selectedColumns.length).toBe(2);
+  });
+
+  it('should render an expander when an expansion slot is provided', () => {
+    const wrapper = mount(RoarDataTable, {
+      ...mountOptions,
+      props: {
+        ...mountOptions.props,
+        dataKey: 'col_1',
+      },
+      slots: {
+        expansion: '<div data-testid="expansion-content">Expanded</div>',
+      },
+    });
+
+    expect(wrapper.find('.p-datatable-row-toggle-button').exists()).toBe(true);
   });
 });

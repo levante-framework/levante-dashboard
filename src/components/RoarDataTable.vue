@@ -11,11 +11,11 @@
         class="text-red-700 cursor-pointer options-toggle"
         @click.prevent="toggleControls"
       >
-        {{ showOptions ? 'Hide Options' : 'Show Options' }}
+        {{ isOptionsVisible ? 'Hide Options' : 'Show Options' }}
       </button>
     </div>
     <div
-      v-if="showOptions && shouldRenderToolbar"
+      v-if="isOptionsVisible && shouldRenderToolbar"
       class="w-full gap-1 pt-1 flex justify-content-center align-items-center flex-wrap mb-4"
     >
       <div
@@ -86,9 +86,11 @@
           ref="dataTable"
           v-model:filters="refFilters"
           v-model:selection="selectedRows"
+          v-model:expandedRows="expandedRows"
           class="scrollable-container"
           :class="{ compressed: compressedRows }"
           :value="data"
+          :data-key="dataKey"
           :row-hover="true"
           :reorderable-columns="true"
           :resizable-columns="true"
@@ -117,6 +119,14 @@
             v-if="props.allowRowSelection"
             selection-mode="multiple"
             header-style="background-color: var(--primary-color); border:none;"
+            :reorderable-column="false"
+            frozen
+          />
+          <PvColumn
+            v-if="hasExpansion"
+            expander
+            header-style="background-color: var(--primary-color); border:none;"
+            style="width: 3rem"
             :reorderable-column="false"
             frozen
           />
@@ -401,6 +411,9 @@
               >
             </div>
           </template>
+          <template v-if="hasExpansion" #expansion="slotProps">
+            <slot name="expansion" v-bind="slotProps" />
+          </template>
         </PvDataTable>
       </span>
     </div>
@@ -408,32 +421,32 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
+import _find from 'lodash/find';
+import _forEach from 'lodash/forEach';
+import _get from 'lodash/get';
+import _map from 'lodash/map';
+import _startCase from 'lodash/startCase';
+import _toUpper from 'lodash/toUpper';
+import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
-import PvDatePicker from 'primevue/datepicker';
 import PvChip from 'primevue/chip';
 import PvColumn from 'primevue/column';
 import PvDataTable from 'primevue/datatable';
+import PvDatePicker from 'primevue/datepicker';
 import PvFloatLabel from 'primevue/floatlabel';
-import PvSelect from 'primevue/select';
 import PvInputNumber from 'primevue/inputnumber';
 import PvInputText from 'primevue/inputtext';
 import PvMultiSelect from 'primevue/multiselect';
+import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
-import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
-import _get from 'lodash/get';
-import _map from 'lodash/map';
-import _forEach from 'lodash/forEach';
-import _find from 'lodash/find';
-import _toUpper from 'lodash/toUpper';
-import _startCase from 'lodash/startCase';
-import { supportLevelColors, progressTags } from '@/helpers/reports';
-import SkeletonTable from '@/components/SkeletonTable.vue';
+import { computed, ref, useSlots } from 'vue';
 import TableScoreTag from '@/components/reports/TableScoreTag.vue';
-import { getTooltip } from '@/helpers';
+import SkeletonTable from '@/components/SkeletonTable.vue';
 import { ROLES } from '@/constants/roles';
+import { getTooltip } from '@/helpers';
+import { progressTags, supportLevelColors } from '@/helpers/reports';
 import { useAuthStore } from '@/store/auth';
-import { storeToRefs } from 'pinia';
 
 const props = defineProps({
   columns: { type: Array, required: true },
@@ -456,8 +469,12 @@ const props = defineProps({
   showOptions: { type: Boolean, default: false },
   rowClass: { type: Function, default: null },
   allowRowSelection: { type: Boolean, default: true },
+  dataKey: { type: String, default: undefined },
 });
 
+const slots = useSlots();
+const hasExpansion = computed(() => Boolean(slots.expansion));
+const expandedRows = ref([]);
 /*
 Using the DataTable
 Required Props: columns, data
@@ -483,10 +500,10 @@ Array of objects consisting of a field and header at minimum.
 */
 const shouldRenderToolbar = computed(() => props.allowFiltering || props.allowColumnSelection || props.allowExport);
 
-const showOptions = ref(props.showOptions && shouldRenderToolbar.value);
+const isOptionsVisible = ref(props.showOptions && shouldRenderToolbar.value);
 const toggleControls = () => {
   if (!props.showOptionsControl || !shouldRenderToolbar.value) return;
-  showOptions.value = !showOptions.value;
+  isOptionsVisible.value = !isOptionsVisible.value;
 };
 const authStore = useAuthStore();
 const { currentSite } = storeToRefs(authStore);
@@ -564,7 +581,7 @@ const computedFilters = computed(() => {
   _forEach(computedColumns.value, (column) => {
     // Check if header text is supplied; if not, generate.
     if (!_get(column, 'header')) {
-      column['header'] = _startCase(_get(column, 'field'));
+      column.header = _startCase(_get(column, 'field'));
     }
     // Choose whether to default to field or a custom filterField (e.g. tag based filters)
     const fieldOrFilterField = column?.filterField ? column.filterField : column.field;
@@ -808,6 +825,11 @@ g {
     font-size: 0.8rem;
     padding: 0.3rem 0.5rem !important;
   }
+}
+
+.p-datatable-hoverable .p-datatable-tbody > tr:has(+ .p-datatable-row-expansion):not(.p-datatable-row-selected) {
+  background: var(--p-datatable-row-hover-background);
+  color: var(--p-datatable-row-hover-color);
 }
 
 .p-datatable-popover-filter {

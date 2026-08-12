@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { spawnSync } from 'child_process';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,7 +23,7 @@ function readCsv(filePath) {
   const headers = headerLine.split(',').map((h) => h.trim().replace(/^"(.*)"$/, '$1'));
   return {
     headers,
-    rows: rows.map((r) => r.split(',').map((cell) => cell.trim().replace(/^"(.*)"$/, '$1')))
+    rows: rows.map((r) => r.split(',').map((cell) => cell.trim().replace(/^"(.*)"$/, '$1'))),
   };
 }
 
@@ -44,7 +44,9 @@ function rebuildFromConsolidated() {
     const { headers, rows } = readCsv(path.join(consolidatedRoot, csvName));
     // identifier,label,en,es-co,de,de-ch,en-so,fr-ca,nl
     const langHeaders = headers.slice(2);
-    langHeaders.forEach((h) => languageSet.add(h.toLowerCase()));
+    langHeaders.forEach((h) => {
+      languageSet.add(h.toLowerCase());
+    });
 
     const section = csvName.replace('dashboard-', '').replace('-translations.csv', '');
     // Group rows by component path in identifier like components/navbar.title
@@ -73,7 +75,7 @@ function rebuildFromConsolidated() {
         for (const entry of entries) {
           const key = entry.identifier.split('.').slice(1).join('.');
           const langIndex = Array.from(langHeaders).findIndex((h) => h.toLowerCase() === lang.toLowerCase());
-          const value = langIndex >= 0 ? entry.perLang[langIndex] ?? '' : '';
+          const value = langIndex >= 0 ? (entry.perLang[langIndex] ?? '') : '';
           if (key) messages[key] = value;
         }
         writeJson(outFile, messages);

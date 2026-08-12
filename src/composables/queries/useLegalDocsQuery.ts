@@ -1,7 +1,6 @@
-import { type MaybeRefOrGetter } from 'vue';
-import { useQuery, type UseQueryReturnType, type UseQueryOptions } from '@tanstack/vue-query';
-import { fetchLegalDocs } from '@/helpers/query/legal';
+import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
 import { LEGAL_DOCS_QUERY_KEY } from '@/constants/queryKeys';
+import { fetchLegalDocs } from '@/helpers/query/legal';
 
 /**
  * Legal docs query.

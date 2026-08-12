@@ -47,14 +47,14 @@
   </div>
 </template>
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { storeToRefs } from 'pinia';
 import _isEmpty from 'lodash/isEmpty';
 import _union from 'lodash/union';
-import { useAuthStore } from '@/store/auth';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import { isLevante } from '@/helpers';
+import { storeToRefs } from 'pinia';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
+import { isLevante } from '@/constants';
+import { useAuthStore } from '@/store/auth';
 
 const { t } = useI18n();
 const authStore = useAuthStore();

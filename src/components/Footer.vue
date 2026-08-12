@@ -1,21 +1,21 @@
 <template>
   <footer ref="footer" :class="`footer footer--${props.variant}`">
     <div class="footer__copyright">
-      &copy; {{ fullYear }}
+      {{ fullYear }}
       <a href="https://levante-network.org/" target="_blank" class="footer__link">{{ APP_NAME }}</a> — Dashboard adapted
       from
       <a href="https://roar.stanford.edu/" target="_blank" class="footer__link">ROAR</a>
     </div>
 
     <div class="footer__privacy-policy">
-      <router-link :to="{ path: '/privacy-policy' }" class="footer__link">Privacy Policy</router-link>
+      <router-link :to="{ name: 'PrivacyPolicy' }" class="footer__link">Privacy Policy</router-link>
     </div>
   </footer>
 </template>
 
 <script setup lang="ts">
-import { APP_NAME } from '@/constants';
 import { computed, ref } from 'vue';
+import { APP_NAME } from '@/constants';
 
 interface Props {
   variant?: 'primary' | 'secondary';

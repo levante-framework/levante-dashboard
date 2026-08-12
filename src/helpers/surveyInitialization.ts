@@ -1,19 +1,17 @@
+import type { QueryClient } from '@tanstack/vue-query';
+import type { ToastServiceMethods } from 'primevue/toastservice';
+import type { CompleteEvent, PageModel, Question, SurveyModel } from 'survey-core';
+import type { Router } from 'vue-router';
+import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 import {
   getParsedLocale,
-  fetchBuffer,
-  showAndPlaceAudioButton,
+  type LocalStorageSurveyData,
+  type RoarfirekitType,
   restoreSurveyData,
   saveFinalSurveyData,
   saveSurveyData,
-  type AudioLinkMap,
-  type RoarfirekitType,
-  type LocalStorageSurveyData,
 } from '@/helpers/survey';
-import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
-import type { SurveyModel, PageModel, Question, CompleteEvent } from 'survey-core';
-import type { Router } from 'vue-router';
-import type { ToastServiceMethods } from 'primevue/toastservice';
-import type { QueryClient } from '@tanstack/vue-query';
+import { logger } from '@/logger';
 import type { useAssignmentsStore } from '@/store/assignments';
 
 interface UserData {
@@ -22,7 +20,6 @@ interface UserData {
   surveyResponsesData: any;
   childIds?: (string | number)[];
   classes?: { current: (string | number)[] };
-  currentSurveyAudioSource: { stop: () => void } | null;
   isGeneralSurveyComplete: boolean;
   specificSurveyRelationIndex: number;
 }
@@ -31,10 +28,6 @@ interface SurveyStore {
   setAllSurveyPages: (pages: PageModel[]) => void;
   setAllSpecificPages: (pages: PageModel[]) => void;
   setNumberOfSurveyPages: (general: number, specific: number) => void;
-  setSurveyAudioLoading: (loading: boolean) => void;
-  setSurveyAudioPlayerBuffers: (locale: string, buffers: AudioBuffer[]) => void;
-  surveyAudioPlayerBuffers: Record<string, AudioBuffer[]>;
-  currentSurveyAudioSource: { stop: () => void } | null;
   isGeneralSurveyComplete: boolean;
   specificSurveyRelationIndex: number;
 }
@@ -43,7 +36,7 @@ interface SurveyData {
   pages: PageModel[];
 }
 
-/** Restore persisted/server data, SurveyJS locale, and page metadata (no audio). */
+/** Restore persisted/server data, SurveyJS locale, and page metadata. */
 interface BootstrapSurveyInstanceParams {
   surveyInstance: SurveyModel;
   userType: string;
@@ -51,12 +44,8 @@ interface BootstrapSurveyInstanceParams {
   userData: UserData;
   surveyStore: SurveyStore;
   generalSurveyData: SurveyData;
-  /** Dashboard i18n locale → SurveyJS / audio locale via `getParsedLocale`. */
+  /** Dashboard i18n locale → SurveyJS locale via `getParsedLocale`. */
   locale: string | undefined | null;
-}
-
-interface InitializeSurveyParams extends BootstrapSurveyInstanceParams {
-  audioLinkMap: AudioLinkMap;
 }
 
 interface SetupSurveyEventHandlersParams {
@@ -100,65 +89,6 @@ export function bootstrapSurveyInstance({
   const numGeneralPages = allGeneralPages.length;
   const numSpecificPages = allSpecificPages.length;
   surveyStore.setNumberOfSurveyPages(numGeneralPages, numSpecificPages);
-}
-
-export async function initializeSurvey({
-  surveyInstance,
-  userType,
-  specificSurveyData,
-  userData,
-  surveyStore,
-  locale,
-  audioLinkMap,
-  generalSurveyData,
-}: InitializeSurveyParams): Promise<void> {
-  bootstrapSurveyInstance({
-    surveyInstance,
-    userType,
-    specificSurveyData,
-    userData,
-    surveyStore,
-    generalSurveyData,
-    locale,
-  });
-
-  if (userType === 'student') {
-    await setupStudentAudio(surveyInstance, locale, audioLinkMap, surveyStore as any);
-  }
-}
-
-export async function setupStudentAudio(
-  surveyInstance: SurveyModel,
-  locale: string | undefined | null,
-  audioLinkMap: AudioLinkMap,
-  surveyStore: SurveyStore,
-): Promise<void> {
-  const parsedLocale = getParsedLocale(locale);
-  await fetchBuffer({
-    parsedLocale,
-    setSurveyAudioLoading: surveyStore.setSurveyAudioLoading,
-    audioLinks: audioLinkMap,
-    surveyAudioBuffers: surveyStore.surveyAudioPlayerBuffers,
-    setSurveyAudioPlayerBuffers: surveyStore.setSurveyAudioPlayerBuffers as (
-      locale: string,
-      buffers: AudioBuffer[],
-    ) => void,
-  });
-
-  surveyInstance.onAfterRenderPage.add((sender: SurveyModel, options: { htmlElement: HTMLElement }) => {
-    const questionElements = options.htmlElement.querySelectorAll('div[id^=sq_]');
-    if (surveyStore.currentSurveyAudioSource) {
-      surveyStore.currentSurveyAudioSource.stop();
-    }
-    questionElements.forEach((el) => {
-      const htmlEl = el as HTMLElement;
-      const playAudioButton = document.getElementById('audio-button-' + htmlEl.dataset.name);
-      showAndPlaceAudioButton({
-        playAudioButton: playAudioButton as HTMLElement | null,
-        el: htmlEl,
-      });
-    });
-  });
 }
 
 export function setupSurveyEventHandlers({
@@ -236,10 +166,9 @@ export function setupSurveyEventHandlers({
               administrationId: selectedAdminId,
             });
           } catch (error: unknown) {
-            console.error(
-              'Error saving previous page responses: ',
-              error instanceof Error ? error.message : String(error),
-            );
+            logger.error(new Error('Failed to save previous page survey responses', { cause: error }), {
+              tags: { function: 'setupSurveyEventHandlers' },
+            });
           }
         }
       }

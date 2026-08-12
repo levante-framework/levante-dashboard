@@ -14,8 +14,9 @@
   </div>
 </template>
 <script setup>
-import { onMounted, onBeforeUnmount } from 'vue';
 import PvImage from 'primevue/image';
+import { onBeforeUnmount, onMounted } from 'vue';
+import { isLevante } from '@/constants';
 
 onMounted(() => {
   document.body.classList.add('page-signin');

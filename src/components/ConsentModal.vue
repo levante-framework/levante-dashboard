@@ -10,7 +10,6 @@
     <template #message>
       <div class="scrolling-box">
         <!-- @TODO: Add sanitization! -->
-        <!-- eslint-disable-next-line vue/no-v-html -->
         <div v-html="markdownToHtml"></div>
       </div>
     </template>
@@ -18,18 +17,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-import * as Sentry from '@sentry/vue';
-import { useConfirm } from 'primevue/useconfirm';
-import { useToast } from 'primevue/usetoast';
-import PvConfirmDialog from 'primevue/confirmdialog';
-import PvToast from 'primevue/toast';
-import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import _lowerCase from 'lodash/lowerCase';
-import { TOAST_SEVERITIES, TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import { marked } from 'marked';
+import PvConfirmDialog from 'primevue/confirmdialog';
+import PvToast from 'primevue/toast';
+import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
+import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
+import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 interface Props {
@@ -99,7 +98,9 @@ onMounted((): void => {
           life: TOAST_DEFAULT_LIFE_DURATION,
         });
 
-        Sentry.captureException(error);
+        logger.error(new Error('Failed to update consent status', { cause: error }), {
+          tags: { component: 'ConsentModal', function: 'accept' },
+        });
 
         return Promise.resolve(false);
       } finally {

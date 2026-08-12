@@ -1,12 +1,11 @@
-import { computed, Ref, toValue } from 'vue';
-import { useQuery } from '@tanstack/vue-query';
-import { UseQueryReturnType } from '@tanstack/vue-query';
+import { type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
-import { computeQueryOverrides, QueryOptionsWithEnabled } from '@/helpers/computeQueryOverrides';
-import { administrationPageFetcher } from '@/helpers/query/administrations';
-import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
-import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
+import { computed, type Ref, toValue } from 'vue';
+import { ADMINISTRATIONS_LIST_QUERY_KEY } from '@/constants/queryKeys';
+import { computeQueryOverrides, type QueryOptionsWithEnabled } from '@/helpers/computeQueryOverrides';
+import { administrationPageFetcher } from '@/helpers/query/administrations';
+import { useAuthStore } from '@/store/auth';
 
 /**
  * Administrations list query.
