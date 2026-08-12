@@ -20,7 +20,7 @@ Use `logger` from `@/logger`. In production `logger.error` reports to Sentry; in
 
 ## Shape the call
 
-Always wrap the caught error in a new `Error` with a fixed, descriptive message, passing the original via `cause`: this gives a stable Sentry title (one root cause → one issue), preserves the original stack, and sidesteps the `unknown` type of a caught error. Put low-cardinality, filterable labels in `tags` (Sentry indexes them); put IDs/payloads as extra context fields — unique values in `tags` bloat the index instead of aiding search. Common tags: `function` (the function logging the error) and `component` (the Vue component, for errors in `.vue` files).
+Always wrap the caught error in a new `Error` with a fixed, descriptive message, passing the original via `cause`: this gives a stable Sentry title (one root cause → one issue), preserves the original stack, and sidesteps the `unknown` type of a caught error. Put low-cardinality, filterable labels in `tags` (Sentry indexes them); put IDs/payloads as extra context fields — unique values in `tags` bloat the index instead of aiding search. Common tags: `function` (the function logging the error), `component` (the Vue component, for errors in `.vue` files), and `composable` (the composable, for errors in query/mutation composables).
 
 ```ts
 // DO — descriptive title + original stack via cause
