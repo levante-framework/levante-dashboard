@@ -10,11 +10,12 @@ export type SurveyFormType = 'school' | 'site';
  */
 export const useSurveyFormDefinitionQuery = (
   formType: MaybeRefOrGetter<SurveyFormType>,
+  orgId: MaybeRefOrGetter<string> = 'preview',
   enabled: MaybeRefOrGetter<boolean> = true,
 ) => {
   return useQuery<SurveyFormDefinition>({
-    queryKey: computed(() => [SURVEY_FORM_DEFINITION_QUERY_KEY, toValue(formType)]),
-    queryFn: () => surveyFormsRepository.loadFormDefinitions(toValue(formType)),
+    queryKey: computed(() => [SURVEY_FORM_DEFINITION_QUERY_KEY, toValue(formType), toValue(orgId)]),
+    queryFn: () => surveyFormsRepository.loadFormDefinitions(toValue(formType), toValue(orgId)),
     enabled: () => toValue(enabled),
     staleTime: Infinity,
   });

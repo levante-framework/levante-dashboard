@@ -53,6 +53,16 @@ class SurveyFormsRepository extends Repository {
       orgId,
     });
   }
+
+  async saveOrgInformation(params: {
+    orgType: 'site' | 'school';
+    orgId: string;
+    formVersion: string;
+    responses: Record<string, unknown>;
+    status: 'draft' | 'submitted';
+  }): Promise<{ path: string; status: 'draft' | 'submitted' }> {
+    return this.call('saveOrgInformation', params);
+  }
 }
 
 export const surveyFormsRepository = new SurveyFormsRepository();
