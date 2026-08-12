@@ -1,6 +1,12 @@
 <template>
   <form class="survey-form" @submit.prevent="onSubmit">
-    <section v-if="isIntroPage" class="survey-form__section">
+    <section v-if="isComplete" class="survey-form__complete">
+      <h2 class="survey-form__complete-title">Submitted</h2>
+      <p class="survey-form__complete-text">Your responses have been saved.</p>
+      <PvButton type="button" label="Close" class="survey-form__complete-close" @click="emit('close')" />
+    </section>
+
+    <section v-else-if="isIntroPage" class="survey-form__section">
       <!-- eslint-disable-next-line vue/no-v-html -->
       <p v-if="generalPrompt" class="survey-form__general-prompt" v-html="renderHtml(generalPrompt)"></p>
     </section>
@@ -109,16 +115,9 @@
       <div class="survey-form__example-panel" v-html="exampleHtml"></div>
     </PvPopover>
 
-    <footer v-if="pageCount" class="survey-form__footer">
-      <div v-if="!isIntroPage" class="survey-form__progress-row">
-        <PvProgressBar
-          :value="progressPercent"
-          :show-value="false"
-          class="survey-form__progress"
-        />
-        <span class="survey-form__progress-pct">{{ progressPercent }}%</span>
-      </div>
+    <footer v-if="pageCount && !isComplete" class="survey-form__footer">
       <div class="survey-form__nav" :class="{ 'survey-form__nav--intro': isIntroPage }">
+        <span v-if="!isIntroPage" class="survey-form__step">{{ stepLabel }}</span>
         <div class="survey-form__nav-buttons">
           <PvButton
             v-if="!isIntroPage"
@@ -160,7 +159,6 @@ import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
 import PvMultiSelect from 'primevue/multiselect';
 import PvPopover from 'primevue/popover';
-import PvProgressBar from 'primevue/progressbar';
 import PvSelect from 'primevue/select';
 import PvTextarea from 'primevue/textarea';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
@@ -185,6 +183,7 @@ const props = defineProps<{
   generalPrompt?: string;
   sectionInfo?: SurveyFormSection[];
   isSaving?: boolean;
+  isComplete?: boolean;
 }>();
 
 // `sectionInfo` arrives as an ordered array; index it by id for quick lookup.
@@ -195,6 +194,7 @@ const sectionInfoById = computed(
 const emit = defineEmits<{
   submit: [values: Record<string, unknown>];
   save: [values: Record<string, unknown>, options?: { silent?: boolean }];
+  close: [];
 }>();
 
 // Form definition text (questions, descriptions, examples) can deliberately
@@ -354,13 +354,9 @@ const currentSection = computed<RenderedSection | undefined>(() =>
 const isFirstPage = computed(() => currentPageIndex.value === 0);
 const isLastPage = computed(() => currentPageIndex.value >= pageCount.value - 1);
 
-// Percent = how much is finished (sections advanced past). Submit → 100%.
-const hasSubmitted = ref(false);
-
-const progressPercent = computed(() => {
-  if (isIntroPage.value || !sections.value.length) return 0;
-  if (hasSubmitted.value) return 100;
-  return Math.round((currentSectionIndex.value / sections.value.length) * 100);
+const stepLabel = computed(() => {
+  if (isIntroPage.value || !sections.value.length) return '';
+  return `Section ${currentSectionIndex.value + 1} of ${sections.value.length}`;
 });
 
 const fieldErrors = reactive<Record<string, string>>({});
@@ -424,13 +420,11 @@ function onSave() {
 
 function goBack() {
   clearAllFieldErrors();
-  hasSubmitted.value = false;
   if (!isFirstPage.value) currentPageIndex.value -= 1;
 }
 
 function onSubmit() {
   if (!validateCurrentSection()) return;
-  hasSubmitted.value = true;
   emit('submit', collectValues(visibleFields.value));
 }
 </script>
@@ -481,6 +475,36 @@ function onSubmit() {
   color: var(--text-color-secondary, #4b5563);
   white-space: pre-line;
   line-height: 1.6;
+}
+
+.survey-form__complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 18rem;
+  text-align: center;
+}
+
+.survey-form__complete-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+  color: var(--text-color, #111827);
+}
+
+.survey-form__complete-text {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-color-secondary, #4b5563);
+}
+
+.survey-form__complete-close {
+  margin-top: 0.75rem;
 }
 
 .survey-form__field {
@@ -591,36 +615,21 @@ function onSubmit() {
   backdrop-filter: blur(6px);
 }
 
-.survey-form__progress-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.survey-form__progress {
-  flex: 1;
-  height: 0.25rem;
-}
-
-.survey-form__progress-pct {
-  flex-shrink: 0;
-  min-width: 2.5rem;
-  text-align: right;
-  color: var(--text-color-secondary, #6b7280);
-  font-size: 0.75rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
 .survey-form__nav {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 1rem;
 }
 
 .survey-form__nav--intro {
   justify-content: flex-end;
+}
+
+.survey-form__step {
+  color: var(--text-color-secondary, #6b7280);
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .survey-form__nav-buttons {
