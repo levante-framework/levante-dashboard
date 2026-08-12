@@ -56,6 +56,13 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
     category: 'Researchers',
   },
+  {
+    title: 'Data Dashboard',
+    icon: 'pi pi-chart-bar',
+    buttonLink: { name: 'DataDashboard' },
+    allowedRoles: [ROLES.SUPER_ADMIN],
+    category: 'Data',
+  },
 ] as const;
 
 interface GetNavbarActionsParams {

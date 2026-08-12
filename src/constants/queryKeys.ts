@@ -16,6 +16,7 @@ export const LEGAL_DOCS_QUERY_KEY: string = 'legal-docs';
 export const ORG_MUTATION_KEY: string = 'org-mutation';
 export const ORG_USERS_QUERY_KEY: string = 'org-users';
 export const ORGS_TABLE_QUERY_KEY: string = 'orgs-table';
+export const REDIVIS_SCORES_QUERY_KEY: string = 'redivis-scores';
 export const SCHOOL_CLASSES_QUERY_KEY: string = 'school-classes';
 export const SCHOOLS_QUERY_KEY: string = 'schools';
 export const SITE_OVERVIEW_QUERY_KEY: string = 'site-overview';
