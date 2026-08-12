@@ -1,6 +1,6 @@
 <template>
   <div class="survey-preview">
-    <header class="survey-preview__header">
+    <header v-if="!isComplete" class="survey-preview__header">
       <h1 class="survey-preview__title">
         {{ title }}
         <i
@@ -29,8 +29,10 @@
         :general-prompt="data.generalPrompt"
         :section-info="data.sectionInfo"
         :is-saving="isSaving"
+        :is-complete="isComplete"
         @save="onSave"
         @submit="onSubmit"
+        @close="onClose"
       />
     </div>
   </div>
@@ -41,12 +43,13 @@ import PvMessage from 'primevue/message';
 import PvProgressSpinner from 'primevue/progressspinner';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import FormRenderer from '@/components/FormRenderer.vue';
 import { type SurveyFormType, useSurveyFormDefinitionQuery } from '@/composables/queries/useSurveyFormDefinitionQuery';
 import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsRepository';
 
 const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
 const formType = computed<SurveyFormType>(() =>
@@ -71,13 +74,14 @@ const versionTooltip = computed(() => {
 });
 
 const isSaving = ref(false);
+const isComplete = ref(false);
 
 async function persist(
   responses: Record<string, unknown>,
   status: 'draft' | 'submitted',
   options?: { silent?: boolean },
-) {
-  if (!data.value) return;
+): Promise<boolean> {
+  if (!data.value) return false;
   isSaving.value = true;
   try {
     await surveyFormsRepository.saveOrgInformation({
@@ -87,13 +91,14 @@ async function persist(
       responses,
       status,
     });
-    if (options?.silent) return;
+    if (options?.silent || status === 'submitted') return true;
     toast.add({
       severity: 'success',
-      summary: status === 'submitted' ? 'Submitted' : 'Saved',
-      detail: status === 'submitted' ? 'Form submitted.' : 'Responses saved.',
+      summary: 'Saved',
+      detail: 'Responses saved.',
       life: 3000,
     });
+    return true;
   } catch (err) {
     toast.add({
       severity: 'error',
@@ -101,6 +106,7 @@ async function persist(
       detail: err instanceof Error ? err.message : 'Failed to save responses.',
       life: 5000,
     });
+    return false;
   } finally {
     isSaving.value = false;
   }
@@ -111,7 +117,11 @@ function onSave(values: Record<string, unknown>, options?: { silent?: boolean })
 }
 
 async function onSubmit(values: Record<string, unknown>) {
-  await persist(values, 'submitted');
+  isComplete.value = await persist(values, 'submitted');
+}
+
+function onClose() {
+  void router.push({ name: 'Home' });
 }
 </script>
 
