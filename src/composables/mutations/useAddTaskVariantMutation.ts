@@ -28,12 +28,7 @@ const useAddTaskVariantMutation = (): UseMutationReturnType<void, Error, TaskVar
     mutationFn: async (variant: TaskVariantData): Promise<void> => {
       await authStore.roarfirekit.registerTaskVariant({ ...variant });
     },
-    meta: {
-      errorMessage: 'Failed to add task variant',
-      errorContext: {
-        tags: { composable: 'useAddTaskVariantMutation' },
-      },
-    },
+    meta: { skipGlobalErrorLogging: true },
     onSuccess: (): void => {
       queryClient.invalidateQueries({ queryKey: [TASKS_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: [TASK_VARIANTS_QUERY_KEY] });

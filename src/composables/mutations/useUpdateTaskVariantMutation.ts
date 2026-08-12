@@ -28,12 +28,7 @@ const useUpdateTaskVariantMutation = (): UseMutationReturnType<void, Error, Task
     mutationFn: async (variant: TaskVariantData): Promise<void> => {
       await authStore.roarfirekit.updateTaskOrVariant(variant);
     },
-    meta: {
-      errorMessage: 'Failed to update task variant',
-      errorContext: {
-        tags: { composable: 'useUpdateTaskVariantMutation' },
-      },
-    },
+    meta: { skipGlobalErrorLogging: true },
     onSuccess: (): void => {
       queryClient.invalidateQueries({ queryKey: [TASKS_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: [TASK_VARIANTS_QUERY_KEY] });
