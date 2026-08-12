@@ -27,6 +27,11 @@ const permissionService = new PermissionService(cache);
 const permissionsLoaded = ref(false);
 let isFetchingPermissions = false;
 
+export const resetPermissionsState = () => {
+  permissionsLoaded.value = false;
+  isFetchingPermissions = false;
+};
+
 export const usePermissions = () => {
   const authStore = useAuthStore();
   const { isAuthenticated } = authStore;
