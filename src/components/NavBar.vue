@@ -3,7 +3,7 @@
     <nav class="flex flex-row align-items-center justify-content-between w-full">
       <div id="navBarRightEnd" class="flex flex-row align-items-center justify-content-start w-full gap-1">
         <div class="flex align-items-center justify-content-center w-full">
-          <PvMenubar :model="computedItems" class="w-full">
+          <PvMenubar ref="menubarRef" :model="computedItems" class="w-full">
             <template #start>
               <router-link :to="{ path: APP_ROUTES.HOME }">
                 <img src="/LEVANTE/Levante_Logo.png" alt="LEVANTE" class="levante-logo" />
@@ -12,9 +12,8 @@
 
             <template #buttonicon>
               <PvButton
-                icon="pi pi-bars"
-                class="bg-primary text-white p-2 mr-2 border-none border-round hover:bg-red-900"
-                @click="toggleMenu"
+                :icon="menubarRef?.mobileActive ? 'pi pi-times' : 'pi pi-bars'"
+                class="bg-primary text-white p-2 mr-2 border-none border-round"
               />
             </template>
 
@@ -47,9 +46,8 @@ import { storeToRefs } from 'pinia';
 import Badge from 'primevue/badge';
 import PvButton from 'primevue/button';
 import PvMenubar from 'primevue/menubar';
-import { computed, onMounted, onUnmounted, type Ref, ref, watchEffect } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
-import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
 import { APP_ROUTES } from '@/constants/routes';
@@ -79,7 +77,7 @@ const { roarfirekit, userData, currentSite } = storeToRefs(authStore);
 const { userRole } = usePermissions();
 
 const initialized = ref<boolean>(false);
-const menu = ref();
+const menubarRef = ref<{ mobileActive: boolean } | null>(null);
 const navbarRef = ref<HTMLElement | null>(null);
 const { height } = useElementSize(navbarRef);
 const screenWidth = ref<number>(window.innerWidth);
@@ -177,10 +175,6 @@ const rawActions = computed((): NavbarAction[] => {
     userRole: currentRoleObj?.role,
   }) as unknown as NavbarAction[];
 });
-
-const toggleMenu = (event: Event): void => {
-  menu.value.toggle(event);
-};
 </script>
 
 <style lang="scss" scoped>
