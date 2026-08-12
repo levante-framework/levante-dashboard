@@ -17,7 +17,6 @@
 </template>
 
 <script setup lang="ts">
-import * as Sentry from '@sentry/vue';
 import DOMPurify from 'dompurify';
 import _lowerCase from 'lodash/lowerCase';
 import { marked } from 'marked';
@@ -29,6 +28,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 interface Props {
@@ -98,7 +98,9 @@ onMounted((): void => {
           life: TOAST_DEFAULT_LIFE_DURATION,
         });
 
-        Sentry.captureException(error);
+        logger.error(new Error('Failed to update consent status', { cause: error }), {
+          tags: { component: 'ConsentModal', function: 'accept' },
+        });
 
         return Promise.resolve(false);
       } finally {
