@@ -120,7 +120,6 @@
       </div>
       <div class="survey-form__nav" :class="{ 'survey-form__nav--intro': isIntroPage }">
         <div class="survey-form__nav-buttons">
-          <!-- Save persistence lands with #110; keep visible but disabled for now. -->
           <PvButton
             v-if="!isIntroPage"
             type="button"
@@ -128,7 +127,9 @@
             icon="pi pi-save"
             severity="secondary"
             outlined
-            disabled
+            :loading="isSaving"
+            :disabled="isSaving"
+            @click="onSave"
           />
           <PvButton
             v-if="!isFirstPage"
@@ -142,9 +143,11 @@
             v-if="!isLastPage"
             type="button"
             :label="isIntroPage ? 'Get started' : 'Next'"
+            :loading="isSaving"
+            :disabled="isSaving"
             @click="goNext"
           />
-          <PvButton v-else type="submit" label="Submit" />
+          <PvButton v-else type="submit" label="Submit" :loading="isSaving" :disabled="isSaving" />
         </div>
       </div>
     </footer>
@@ -156,7 +159,7 @@ import DOMPurify from 'dompurify';
 import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
 import PvMultiSelect from 'primevue/multiselect';
-import type PvPopover from 'primevue/popover';
+import PvPopover from 'primevue/popover';
 import PvProgressBar from 'primevue/progressbar';
 import PvSelect from 'primevue/select';
 import PvTextarea from 'primevue/textarea';
@@ -181,6 +184,7 @@ const props = defineProps<{
   fields: SurveyFormField[];
   generalPrompt?: string;
   sectionInfo?: SurveyFormSection[];
+  isSaving?: boolean;
 }>();
 
 // `sectionInfo` arrives as an ordered array; index it by id for quick lookup.
@@ -190,8 +194,7 @@ const sectionInfoById = computed(
 
 const emit = defineEmits<{
   submit: [values: Record<string, unknown>];
-  // Re-enable with onSave when leave-and-resume / saveSurveyResponses (#110) is wired.
-  // save: [values: Record<string, unknown>];
+  save: [values: Record<string, unknown>, options?: { silent?: boolean }];
 }>();
 
 // Form definition text (questions, descriptions, examples) can deliberately
@@ -394,9 +397,29 @@ function validateCurrentSection(): boolean {
   return isValid;
 }
 
+function collectValues(fields: SurveyFormField[]): Record<string, unknown> {
+  const values: Record<string, unknown> = {};
+  for (const field of fields) {
+    const value = model[field.variableName];
+    if (isEmptyValue(value)) continue;
+    values[field.variableName] = value;
+  }
+  return values;
+}
+
+function currentPageValues(): Record<string, unknown> {
+  return collectValues(currentSection.value?.fields ?? []);
+}
+
 function goNext() {
   if (!validateCurrentSection()) return;
+  if (!isIntroPage.value) emit('save', currentPageValues(), { silent: true });
   if (!isLastPage.value) currentPageIndex.value += 1;
+}
+
+function onSave() {
+  if (!validateCurrentSection()) return;
+  emit('save', currentPageValues());
 }
 
 function goBack() {
@@ -408,13 +431,8 @@ function goBack() {
 function onSubmit() {
   if (!validateCurrentSection()) return;
   hasSubmitted.value = true;
-  emit('submit', { ...model });
+  emit('submit', collectValues(visibleFields.value));
 }
-
-// Placeholder until leave-and-resume / saveSurveyResponses (#110) is wired.
-// function onSave() {
-//   emit('save', { ...model });
-// }
 </script>
 
 <style scoped>

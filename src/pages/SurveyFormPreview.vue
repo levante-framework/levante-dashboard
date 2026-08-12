@@ -28,6 +28,8 @@
         :fields="data.fullFields"
         :general-prompt="data.generalPrompt"
         :section-info="data.sectionInfo"
+        :is-saving="isSaving"
+        @save="onSave"
         @submit="onSubmit"
       />
 
@@ -42,22 +44,30 @@
 <script setup lang="ts">
 import PvMessage from 'primevue/message';
 import PvProgressSpinner from 'primevue/progressspinner';
+import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import FormRenderer from '@/components/FormRenderer.vue';
 import { type SurveyFormType, useSurveyFormDefinitionQuery } from '@/composables/queries/useSurveyFormDefinitionQuery';
+import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsRepository';
 
 const route = useRoute();
+const toast = useToast();
 
 const formType = computed<SurveyFormType>(() =>
   (route.params.formType as SurveyFormType) === 'site' ? 'site' : 'school',
 );
 
+const orgId = computed(() => {
+  const value = route.query.orgId;
+  return typeof value === 'string' && value.trim() ? value.trim() : 'preview';
+});
+
 const title = computed(() =>
   formType.value === 'site' ? 'Additional Site Information' : 'Additional School Information',
 );
 
-const { data, isLoading, isError, error } = useSurveyFormDefinitionQuery(formType);
+const { data, isLoading, isError, error } = useSurveyFormDefinitionQuery(formType, orgId);
 
 const versionTooltip = computed(() => {
   if (!data.value) return '';
@@ -67,8 +77,49 @@ const versionTooltip = computed(() => {
 
 const submittedValues = ref<Record<string, unknown> | null>(null);
 const submittedValuesJson = computed(() => JSON.stringify(submittedValues.value, null, 2));
+const isSaving = ref(false);
 
-function onSubmit(values: Record<string, unknown>) {
+async function persist(
+  responses: Record<string, unknown>,
+  status: 'draft' | 'submitted',
+  options?: { silent?: boolean },
+) {
+  if (!data.value) return;
+  isSaving.value = true;
+  try {
+    await surveyFormsRepository.saveOrgInformation({
+      orgType: formType.value,
+      orgId: orgId.value,
+      formVersion: data.value.versionId,
+      responses,
+      status,
+    });
+    if (options?.silent) return;
+    toast.add({
+      severity: 'success',
+      summary: status === 'submitted' ? 'Submitted' : 'Saved',
+      detail: status === 'submitted' ? 'Form submitted.' : 'Responses saved.',
+      life: 3000,
+    });
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Save failed',
+      detail: err instanceof Error ? err.message : 'Failed to save responses.',
+      life: 5000,
+    });
+    throw err;
+  } finally {
+    isSaving.value = false;
+  }
+}
+
+function onSave(values: Record<string, unknown>, options?: { silent?: boolean }) {
+  void persist(values, 'draft', options);
+}
+
+async function onSubmit(values: Record<string, unknown>) {
+  await persist(values, 'submitted');
   submittedValues.value = values;
 }
 </script>
