@@ -32,11 +32,6 @@
         @save="onSave"
         @submit="onSubmit"
       />
-
-      <section v-if="submittedValues" class="survey-preview__output">
-        <h2>Submitted values</h2>
-        <pre>{{ submittedValuesJson }}</pre>
-      </section>
     </div>
   </div>
 </template>
@@ -75,8 +70,6 @@ const versionTooltip = computed(() => {
   return `${formId} · version ${versionNumber} (${versionId}) · ${fullFields.length} fields`;
 });
 
-const submittedValues = ref<Record<string, unknown> | null>(null);
-const submittedValuesJson = computed(() => JSON.stringify(submittedValues.value, null, 2));
 const isSaving = ref(false);
 
 async function persist(
@@ -108,7 +101,6 @@ async function persist(
       detail: err instanceof Error ? err.message : 'Failed to save responses.',
       life: 5000,
     });
-    throw err;
   } finally {
     isSaving.value = false;
   }
@@ -120,7 +112,6 @@ function onSave(values: Record<string, unknown>, options?: { silent?: boolean })
 
 async function onSubmit(values: Record<string, unknown>) {
   await persist(values, 'submitted');
-  submittedValues.value = values;
 }
 </script>
 
@@ -163,18 +154,5 @@ async function onSubmit(values: Record<string, unknown>) {
   color: var(--text-color-secondary, #9ca3af);
   cursor: help;
   font-size: 0.85rem;
-}
-
-.survey-preview__output {
-  margin-top: 2rem;
-  border-top: 1px solid var(--surface-border, #e5e7eb);
-  padding-top: 1rem;
-}
-
-.survey-preview__output pre {
-  background: var(--surface-100, #f3f4f6);
-  padding: 1rem;
-  border-radius: 0.5rem;
-  overflow-x: auto;
 }
 </style>
