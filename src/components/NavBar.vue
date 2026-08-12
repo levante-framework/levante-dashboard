@@ -3,7 +3,7 @@
     <nav class="flex flex-row align-items-center justify-content-between w-full">
       <div id="navBarRightEnd" class="flex flex-row align-items-center justify-content-start w-full gap-1">
         <div class="flex align-items-center justify-content-center w-full">
-          <PvMenubar :model="computedItems" class="w-full">
+          <PvMenubar ref="menubarRef" :model="computedItems" class="w-full">
             <template #start>
               <router-link :to="{ path: APP_ROUTES.HOME }">
                 <img src="/LEVANTE/Levante_Logo.png" alt="LEVANTE" class="levante-logo" />
@@ -12,9 +12,8 @@
 
             <template #buttonicon>
               <PvButton
-                :icon="isNavBarOpen ? 'pi pi-times' : 'pi pi-bars'"
+                :icon="menubarRef?.mobileActive ? 'pi pi-times' : 'pi pi-bars'"
                 class="bg-primary text-white p-2 mr-2 border-none border-round"
-                @click="() => isNavBarOpen = !isNavBarOpen"
               />
             </template>
 
@@ -78,8 +77,8 @@ const { roarfirekit, userData, currentSite } = storeToRefs(authStore);
 const { userRole } = usePermissions();
 
 const initialized = ref<boolean>(false);
+const menubarRef = ref<{ mobileActive: boolean } | null>(null);
 const navbarRef = ref<HTMLElement | null>(null);
-const isNavBarOpen = ref(false);
 const { height } = useElementSize(navbarRef);
 const screenWidth = ref<number>(window.innerWidth);
 let unsubscribe: (() => void) | undefined;
