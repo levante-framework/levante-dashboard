@@ -3,14 +3,9 @@
     <div class="card-admin-body w-full">
       <div class="flex flex-row w-full md:h-2rem sm:h-3rem">
         <div class="flex-grow-1 pr-3 mr-2 p-0 m-0">
-          <h2 data-cy="h2-card-admin-title" class="sm:text-lg lg:text-lx m-0 h2-card-admin-title">
-            {{ title }}
-          </h2>
-          <div class="flex flex-wrap align-items-center gap-2">
-            <small class="m-0 ml-1">
-              — Created by <span class="font-bold">{{ props.creatorName }}</span></small
-            >
+          <div class="flex flex-wrap align-items-center gap-3">
             <SyncStatusBadge :status="displayedSyncStatus" class="status-badge" />
+            <h2 data-cy="h2-card-admin-title" class="sm:text-lg lg:text-lx m-0 h2-card-admin-title">{{ title }}</h2>
           </div>
         </div>
         <div
@@ -42,7 +37,11 @@
           <PvConfirmPopup />
         </div>
       </div>
-      <div class="card-admin-details">
+      <div class="card-details">
+        <span class="mr-1"><strong>Created by</strong>:</span>
+        <span>{{ props.creatorName }}</span>
+      </div>
+      <div class="card-details">
         <span class="mr-1"><strong>Availability</strong>:</span>
         <span>
           {{ processedDates.start.toLocaleDateString() }} —
@@ -52,19 +51,21 @@
           {{ administrationStatus }}
         </span>
       </div>
-      <div class="card-admin-assessments">
+      <div class="card-details">
         <span class="mr-1"><strong>Tasks</strong>:</span>
         <template v-if="!isLoadingTasksDictionary">
-          <span v-for="assessmentId in assessmentIds" :key="assessmentId" class="card-inline-list-item">
-            <span>{{ tasksDictionary[assessmentId]?.name ?? assessmentId }}</span>
-            <span
-              v-if="showParams"
-              v-tooltip.top="getTooltip('View parameters')"
-              class="pi pi-info-circle cursor-pointer ml-1"
-              style="font-size: 0.8rem"
-              @click="toggleParams($event, assessmentId)"
-            />
-          </span>
+          <div class="flex flex-items-center gap-1">
+            <span v-for="assessmentId in assessmentIds" :key="assessmentId" class="card-inline-list-item">
+              <span>{{ tasksDictionary[assessmentId]?.name ?? assessmentId }}</span>
+              <span
+                v-if="showParams"
+                v-tooltip.top="getTooltip('View parameters')"
+                class="pi pi-info-circle cursor-pointer ml-1"
+                style="font-size: 0.8rem"
+                @click="toggleParams($event, assessmentId)"
+              />
+            </span>
+          </div>
         </template>
 
         <div v-if="showParams">
@@ -605,10 +606,6 @@ const onExpand = async (node: TreeNode): Promise<void> => {
   background-color: var(--red-900);
 }
 
-.card-admin-assessments {
-  margin-top: 10px;
-}
-
 .p-dataview-paginator-top {
   border-bottom: 0px solid transparent !important;
 }
@@ -676,10 +673,12 @@ const onExpand = async (node: TreeNode): Promise<void> => {
   }
 }
 
-.card-admin-details {
+.card-details {
   display: flex;
   justify-content: start;
   align-items: center;
+  margin: 10px 0 0;
+  font-size: 14px;
 }
 
 .status-badge {
