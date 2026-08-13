@@ -32,13 +32,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const authStore = useAuthStore();
 const { shouldUsePermissions: shouldUsePermissionsRef } = storeToRefs(authStore);
-const { can, hasRole, permissionsLoaded } = usePermissions();
+const { can, hasRole, isLoadingPermissions } = usePermissions();
 
 const shouldUsePermissions = computed(() => Boolean(shouldUsePermissionsRef.value));
-
-const isLoadingPermissions = computed(() => {
-  return shouldUsePermissions.value && !permissionsLoaded.value;
-});
 
 const shouldCheckPermissions = computed(() => {
   return shouldUsePermissions.value && (props.resource || props.subResource || props.requiredRole);
