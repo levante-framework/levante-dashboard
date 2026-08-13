@@ -162,13 +162,13 @@ import PvPopover from 'primevue/popover';
 import PvSelect from 'primevue/select';
 import PvTextarea from 'primevue/textarea';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
-import type { SurveyFormField, SurveyFormSection } from '@/firebase/repositories/SurveyFormsRepository';
+import type { FormSectionInfo, InformationFormField } from '@/firebase/repositories/SurveyFormsRepository';
 
 interface RenderedSection {
   id: string;
   title?: string;
   description?: string;
-  fields: SurveyFormField[];
+  fields: InformationFormField[];
 }
 
 const DEFAULT_SECTION_ID = '__default';
@@ -179,9 +179,9 @@ const MESSAGES = {
 } as const;
 
 const props = defineProps<{
-  fields: SurveyFormField[];
+  fields: InformationFormField[];
   generalPrompt?: string;
-  sectionInfo?: SurveyFormSection[];
+  sectionInfo?: FormSectionInfo[];
   isSaving?: boolean;
   isComplete?: boolean;
 }>();
@@ -231,7 +231,7 @@ function formatExampleHtml(value?: string): string {
 const examplePopover = ref<InstanceType<typeof PvPopover> | null>(null);
 const exampleHtml = ref('');
 
-function openExample(event: Event, field: SurveyFormField) {
+function openExample(event: Event, field: InformationFormField) {
   exampleHtml.value = formatExampleHtml(field.infoExample);
   examplePopover.value?.toggle(event);
 }
@@ -393,7 +393,7 @@ function validateCurrentSection(): boolean {
   return isValid;
 }
 
-function collectValues(fields: SurveyFormField[]): Record<string, unknown> {
+function collectValues(fields: InformationFormField[]): Record<string, unknown> {
   const values: Record<string, unknown> = {};
   for (const field of fields) {
     const value = model[field.variableName];

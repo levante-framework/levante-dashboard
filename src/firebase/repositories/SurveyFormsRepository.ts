@@ -2,11 +2,10 @@ import { Repository } from '@/firebase/Repository';
 
 /**
  * A single field within an org-information form version.
- * Mirrors `FullInformationFormField` in the firebase-functions firestore schema.
  *
- * @TODO Replace with the shared zod contract once it exists.
+ * @TODO Replace with the shared zod contract once it is published.
  */
-export interface SurveyFormField {
+export interface InformationFormField {
   itemId: string;
   variableName: string;
   kind: 'text' | 'number' | 'single-select' | 'multi-select';
@@ -22,7 +21,7 @@ export interface SurveyFormField {
 /**
  * Title and description shown at the start of a section, identified by `sectionId`.
  */
-export interface SurveyFormSection {
+export interface FormSectionInfo {
   sectionId: string;
   title?: string;
   description?: string;
@@ -31,15 +30,15 @@ export interface SurveyFormSection {
 /**
  * Definition of the registered survey returned by `loadFormDefinitions`.
  */
-export interface SurveyFormDefinition {
+export interface LoadFormDefinitionsResult {
   formId: string;
   versionId: string;
   versionNumber: number;
   formDescription: string;
   generalPrompt?: string;
-  sectionInfo?: SurveyFormSection[];
+  sectionInfo?: FormSectionInfo[];
   fieldsDescription: Record<string, string>;
-  fullFields: SurveyFormField[];
+  fullFields: InformationFormField[];
 }
 
 class SurveyFormsRepository extends Repository {
@@ -47,8 +46,8 @@ class SurveyFormsRepository extends Repository {
     super();
   }
 
-  async loadFormDefinitions(orgType: 'site' | 'school', orgId = 'preview'): Promise<SurveyFormDefinition> {
-    return this.call<{ orgType: 'site' | 'school'; orgId: string }, SurveyFormDefinition>('loadFormDefinitions', {
+  async loadFormDefinitions(orgType: 'site' | 'school', orgId = 'preview'): Promise<LoadFormDefinitionsResult> {
+    return this.call<{ orgType: 'site' | 'school'; orgId: string }, LoadFormDefinitionsResult>('loadFormDefinitions', {
       orgType,
       orgId,
     });
