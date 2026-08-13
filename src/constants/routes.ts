@@ -9,6 +9,7 @@
 export const APP_ROUTES = {
   ACCOUNT_PROFILE: '/profile',
   CHILD_REPORT: '/scores/:administrationId/:orgType/:orgId/user/:userId',
+  DATA_DASHBOARD: '/data-dashboard',
   HOME: '/',
   LIST_ORGS: '/list-orgs',
   PROGRESS_REPORT: '/administration/:administrationId/:orgType/:orgId',

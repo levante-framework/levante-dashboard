@@ -155,6 +155,17 @@ const computedItems = computed((): MenuItem[] => {
       },
     });
   }
+
+  const dataDashboardAction = rawActions.value.find((action) => action.category === 'Data');
+  if (dataDashboardAction) {
+    items.push({
+      label: dataDashboardAction.title,
+      icon: dataDashboardAction.icon,
+      command: () => {
+        router.push(dataDashboardAction.buttonLink);
+      },
+    });
+  }
   return items;
 });
 
