@@ -79,7 +79,7 @@
                 </div>
               </div>
               <div class="flex flex-column align-items-center mx-5">
-                <div class="flex flex-wrap justify-content-around align-items-center px-2 py-1 rounded">
+                <div class="flex flex-wrap justify-content-around align-items-center gap-3 px-2 py-1 rounded">
                   <div class="legend-entry">
                     <div class="circle" style="background-color: var(--bright-green)" />
                     <div>
