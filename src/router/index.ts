@@ -330,6 +330,15 @@ const routes: Array<RouteRecordRaw> = [
       allowedRoles: ['*'],
     },
   },
+  {
+    path: '/survey-form-preview/:formType?',
+    name: 'SurveyFormPreview',
+    component: () => import('@/pages/SurveyFormPreview.vue'),
+    meta: {
+      pageTitle: 'Survey Form Preview',
+      allowedRoles: [ROLES.SUPER_ADMIN],
+    },
+  },
 ];
 
 const scrollBehavior: RouterScrollBehavior = (to, from, savedPosition) => {
