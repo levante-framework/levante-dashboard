@@ -1,7 +1,7 @@
 <template>
   <footer ref="footer" :class="`footer footer--${props.variant}`">
     <div class="footer__copyright">
-      &copy; {{ fullYear }}
+      {{ fullYear }}
       <a href="https://levante-network.org/" target="_blank" class="footer__link">{{ APP_NAME }}</a> — Dashboard adapted
       from
       <a href="https://roar.stanford.edu/" target="_blank" class="footer__link">ROAR</a>

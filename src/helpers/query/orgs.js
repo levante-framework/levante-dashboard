@@ -15,6 +15,7 @@ import {
   mapFields,
   orderByNameASC,
 } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 
 export const getOrgsRequestBody = ({
   aggregationQuery,
@@ -176,11 +177,11 @@ export const orgFetcher = async (orgType, selectedDistrict, isSuperAdmin, adminO
       });
 
       // Then add all of the district IDs listed in the docs for each school and class in adminOrgs.
-      const schoolPromises = (adminOrgs.value['schools'] ?? []).map((schoolId) => {
+      const schoolPromises = (adminOrgs.value.schools ?? []).map((schoolId) => {
         return fetchDocById('schools', schoolId, ['districtId']);
       });
 
-      const classPromises = (adminOrgs.value['classes'] ?? []).map((classId) => {
+      const classPromises = (adminOrgs.value.classes ?? []).map((classId) => {
         return fetchDocById('classes', classId, ['districtId']);
       });
 
@@ -196,19 +197,19 @@ export const orgFetcher = async (orgType, selectedDistrict, isSuperAdmin, adminO
       return Promise.all(promises);
     } else if (orgType === 'schools') {
       const districtDoc = await fetchDocById('districts', districtId, ['schools']);
-      if ((adminOrgs.value['districts'] ?? []).includes(districtId)) {
+      if ((adminOrgs.value.districts ?? []).includes(districtId)) {
         const promises = (districtDoc.schools ?? []).map((schoolId) => {
           return fetchDocById('schools', schoolId, select);
         });
         return Promise.all(promises);
-      } else if ((adminOrgs.value['schools'] ?? []).length > 0) {
-        const schoolIds = _intersection(adminOrgs.value['schools'], districtDoc.schools);
+      } else if ((adminOrgs.value.schools ?? []).length > 0) {
+        const schoolIds = _intersection(adminOrgs.value.schools, districtDoc.schools);
         const promises = (schoolIds ?? []).map((schoolId) => {
           return fetchDocById('schools', schoolId, select);
         });
         return Promise.all(promises);
-      } else if ((adminOrgs.value['classes'] ?? []).length > 0) {
-        const classPromises = (adminOrgs.value['classes'] ?? []).map((classId) => {
+      } else if ((adminOrgs.value.classes ?? []).length > 0) {
+        const classPromises = (adminOrgs.value.classes ?? []).map((classId) => {
           return fetchDocById('classes', classId, ['schoolId']);
         });
         const classes = await Promise.all(classPromises);
@@ -246,7 +247,9 @@ export const orgFetchAll = async (
       const district = await fetchDocById(ORG_TYPES.DISTRICTS, districtId, select);
       orgs = district ? [district] : [];
     } catch (error) {
-      console.error('orgFetchAll: Error fetching district by ID:', error);
+      logger.error(new Error('Failed to fetch district by ID', { cause: error }), {
+        tags: { function: 'orgFetchAll' },
+      });
       return [];
     }
   } else {
@@ -267,7 +270,9 @@ export const orgFetchAll = async (
         return mapFields(data);
       });
     } catch (error) {
-      console.error('orgFetchAll: Error fetching orgs:', error);
+      logger.error(new Error('Failed to fetch orgs', { cause: error }), {
+        tags: { function: 'orgFetchAll' },
+      });
       return [];
     }
   }
@@ -284,8 +289,10 @@ export const orgFetchAll = async (
         let creatorsData = [];
         try {
           creatorsData = await fetchDocumentsById(FIRESTORE_COLLECTIONS.USERS, creatorIds, ['displayName', 'name']);
-        } catch (error) {
-          console.error('orgFetchAll: Error fetching creator data from Firestore:', error);
+        } catch {
+          // Best-effort: creator names are low-value UI decoration with an "Unknown User" fallback,
+          // so we swallow any failure. The common expected case is a non-super-admin fetching a
+          // super-admin's USERS doc (super admins don't belong to sites), which they can't read.
           creatorsData = [];
         }
 
@@ -303,7 +310,7 @@ export const orgFetchAll = async (
             if (creatorData) {
               if (creatorData.displayName) {
                 creatorName = creatorData.displayName;
-              } else if (creatorData.name && creatorData.name.first && creatorData.name.last) {
+              } else if (creatorData.name?.first && creatorData.name.last) {
                 creatorName = `${creatorData.name.first} ${creatorData.name.last}`;
               }
             }
@@ -320,7 +327,9 @@ export const orgFetchAll = async (
         });
       }
     } catch (error) {
-      console.error('orgFetchAll: Error fetching creator data:', error);
+      logger.error(new Error('Failed to fetch creator data', { cause: error }), {
+        tags: { function: 'orgFetchAll' },
+      });
       // Continue without creator data if fetching fails
     }
   }

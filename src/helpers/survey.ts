@@ -7,6 +7,7 @@ import { toRaw } from 'vue';
 import type { Router } from 'vue-router';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
+import { logger } from '@/logger';
 import type { useAssignmentsStore } from '@/store/assignments';
 // @ts-expect-error - Will be resolved when store file is converted to TS
 import type { UseSurveyStore } from '@/store/survey';
@@ -215,7 +216,9 @@ export async function saveFinalSurveyData({
 
   const unansweredQuestions: Record<string, null> = {};
 
-  allQuestions.forEach((question) => (unansweredQuestions[question.name] = null));
+  allQuestions.forEach((question) => {
+    unansweredQuestions[question.name] = null;
+  });
 
   // NOTE: Values from the second object overwrite values from the first
   const responsesWithAllQuestions = _merge({}, unansweredQuestions, questionsFromStorage);
@@ -238,7 +241,7 @@ export async function saveFinalSurveyData({
     structuredResponses.specificId = specificIds[specificIndex];
   }
 
-  let isEntireSurveyCompleted;
+  let isEntireSurveyCompleted: boolean;
   if (userType === 'student') {
     isEntireSurveyCompleted = true;
   } else {
@@ -254,6 +257,9 @@ export async function saveFinalSurveyData({
   }
 
   structuredResponses.isEntireSurveyCompleted = isEntireSurveyCompleted;
+
+  // Capture before mutating store flags after a successful save.
+  const wasGeneralComplete = surveyStore.isGeneralSurveyComplete;
 
   // turn on loading state
   surveyStore.setIsSavingSurveyResponses(true);
@@ -271,15 +277,22 @@ export async function saveFinalSurveyData({
     // update survey store to let survey tabs know
     if (userType === 'student') {
       surveyStore.setIsGeneralSurveyComplete(true);
+    } else if (!wasGeneralComplete) {
+      // Finished general: keep index at 0 so the first child/class survey starts correctly.
+      surveyStore.setIsGeneralSurveyComplete(true);
     } else {
-      if (!surveyStore.isGeneralSurveyComplete) {
-        surveyStore.setIsGeneralSurveyComplete(true);
-      } else if (surveyStore.specificSurveyRelationIndex === surveyStore.specificSurveyRelationData.length - 1) {
+      const relationCount = surveyStore.specificSurveyRelationData.length;
+      const currentIndex = surveyStore.specificSurveyRelationIndex;
+      if (currentIndex >= relationCount - 1) {
         surveyStore.setIsSpecificSurveyComplete(true);
+      } else {
+        surveyStore.setSpecificSurveyRelationIndex(currentIndex + 1);
       }
     }
 
-    surveyStore.setSpecificSurveyRelationIndex(surveyStore.specificSurveyRelationIndex + 1);
+    // Flag completion so the relation header stops rendering over the SurveyJS "thank you"
+    // page while the store flags for the next part update ahead of navigation.
+    surveyStore.setSurveyPartSubmitted();
 
     queryClient.invalidateQueries({ queryKey: [SURVEY_RESPONSES_QUERY_KEY] });
 
@@ -287,10 +300,12 @@ export async function saveFinalSurveyData({
     router.push({ name: 'Home' });
   } catch (error: unknown) {
     surveyStore.setIsSavingSurveyResponses(false);
-    console.error(error);
+    logger.error(new Error('Failed to save survey responses', { cause: error }), {
+      tags: { function: 'saveFinalSurveyData' },
+    });
     toast.add({
       severity: 'error',
-      summary: 'Error saving survey responses: ' + (error instanceof Error ? error.message : String(error)),
+      summary: `Error saving survey responses: ${error instanceof Error ? error.message : String(error)}`,
       life: 3000,
     });
   } finally {

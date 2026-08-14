@@ -11,14 +11,9 @@ export class Repository {
   }
 
   protected async call<TData = unknown, TResponse = unknown>(functionName: string, data?: TData): Promise<TResponse> {
-    try {
-      const callable = httpsCallable<TData, TResponse>(FirebaseService.functions, functionName);
-      const response: HttpsCallableResult<TResponse> = await callable(data);
-      return response?.data;
-    } catch (error) {
-      console.error(`[${functionName}]`, error);
-      throw error;
-    }
+    const callable = httpsCallable<TData, TResponse>(FirebaseService.functions, functionName);
+    const response: HttpsCallableResult<TResponse> = await callable(data);
+    return response?.data;
   }
 
   protected async callWithTimeout<TData = unknown, TResponse = unknown>(
@@ -26,15 +21,10 @@ export class Repository {
     data: TData | undefined,
     timeoutMs: number,
   ): Promise<TResponse> {
-    try {
-      const callable = httpsCallable<TData, TResponse>(FirebaseService.functions, functionName, {
-        timeout: timeoutMs,
-      });
-      const response: HttpsCallableResult<TResponse> = await callable(data);
-      return response?.data;
-    } catch (error) {
-      console.error(`[${functionName}]`, error);
-      throw error;
-    }
+    const callable = httpsCallable<TData, TResponse>(FirebaseService.functions, functionName, {
+      timeout: timeoutMs,
+    });
+    const response: HttpsCallableResult<TResponse> = await callable(data);
+    return response?.data;
   }
 }

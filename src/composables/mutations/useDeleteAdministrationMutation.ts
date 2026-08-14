@@ -25,6 +25,12 @@ const useDeleteAdministrationMutation = (): UseMutationReturnType<void, Error, s
     mutationFn: async (administrationId: string): Promise<void> => {
       await authStore.roarfirekit.deleteAdministration(administrationId);
     },
+    meta: {
+      errorMessage: 'Failed to delete administration',
+      errorContext: {
+        tags: { composable: 'useDeleteAdministrationMutation' },
+      },
+    },
     onSuccess: (): void => {
       // Invalidate the queries to refetch the administration data.
       queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_QUERY_KEY] });

@@ -1,6 +1,6 @@
 import { definePreset } from '@primevue/themes';
 import Aura from '@primevue/themes/aura';
-import { MutationCache, Query, QueryCache, QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
+import { MutationCache, QueryCache, QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { createHead } from '@unhead/vue';
 import { createPinia } from 'pinia';
 import piniaPluginPersistedState from 'pinia-plugin-persistedstate';
@@ -10,9 +10,7 @@ import ToastService from 'primevue/toastservice';
 import { surveyPlugin } from 'survey-vue3-ui';
 import TextClamp from 'vue3-text-clamp';
 import { logger } from '@/logger';
-// @ts-expect-error - Linter struggles with resolving .js file via alias here, but build works
 import router from '@/router/index';
-// @ts-expect-error - Linter struggles with resolving .ts file via alias here, but build works
 import { i18n } from '@/translations/i18n';
 
 const pinia = createPinia().use(piniaPluginPersistedState);
@@ -42,12 +40,29 @@ const MyPreset = definePreset(Aura, {
 });
 
 // ──── Configure VueQueryPlugin ────
+// Query/MutationCache onError: Sentry is opt-in via meta.
+// - meta.errorMessage (+ optional errorContext) → logger.error → Sentry
+// - meta.skipGlobalErrorLogging → caller logs itself (e.g. onError with per-call context)
+// - otherwise → console.error only
 function handleQueryError(error: unknown, meta?: Record<string, unknown>) {
-  // Log explicit firekit errors to Sentry
-  if (error && typeof error === 'object' && 'code' in error && 'data' in error) {
-    logger.error(error, meta);
-    // TODO signOut on functions/unauthenticated?
+  if (meta?.skipGlobalErrorLogging) return;
+
+  if (typeof meta?.errorMessage === 'string') {
+    const errorContext: Record<string, unknown> =
+      meta.errorContext && typeof meta.errorContext === 'object' ? { ...meta.errorContext } : {};
+
+    // Firekit errors carry a low-cardinality `code` worth filtering on in Sentry, so add it as a tag
+    if (error && typeof error === 'object' && 'code' in error) {
+      const tags = errorContext.tags && typeof errorContext.tags === 'object' ? errorContext.tags : {};
+      errorContext.tags = { ...tags, code: String(error.code) };
+    }
+
+    logger.error(new Error(meta.errorMessage, { cause: error }), errorContext);
+    return;
   }
+
+  // No meta: keep it out of Sentry, but surface it in the console for visibility
+  console.error(error, meta);
 }
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -62,8 +77,8 @@ const queryClient = new QueryClient({
   }),
   defaultOptions: {
     queries: {
-      staleTime: (window as any).Cypress ? 0 : 10 * 60 * 1000,
-      gcTime: (window as any).Cypress ? 0 : 15 * 60 * 1000,
+      staleTime: 'Cypress' in window ? 0 : 10 * 60 * 1000,
+      gcTime: 'Cypress' in window ? 0 : 15 * 60 * 1000,
       refetchOnWindowFocus: false,
     },
   },

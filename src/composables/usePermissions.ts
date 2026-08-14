@@ -1,5 +1,4 @@
 // composables/usePermissions.ts
-
 import {
   type Action,
   type AdminSubResource,
@@ -9,13 +8,13 @@ import {
   type PermissionDocument,
   PermissionService,
   type Resource,
-  ROLES,
   type Role,
 } from '@levante-framework/permissions-core';
 import _mapValues from 'lodash/mapValues';
 import { storeToRefs } from 'pinia';
-import { computed, onMounted, readonly, ref, toValue } from 'vue';
+import { computed, readonly, ref, watch } from 'vue';
 import { convertValues, getAxiosInstance, getBaseDocumentPath } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 interface UserData {
@@ -26,7 +25,12 @@ interface UserData {
 const cache = new CacheService(300000); // 5 minutes
 const permissionService = new PermissionService(cache);
 const permissionsLoaded = ref(false);
-let isLoadingPermissions = false;
+let isFetchingPermissions = false;
+
+export const resetPermissionsState = () => {
+  permissionsLoaded.value = false;
+  isFetchingPermissions = false;
+};
 
 export const usePermissions = () => {
   const authStore = useAuthStore();
@@ -43,8 +47,8 @@ export const usePermissions = () => {
   });
 
   const loadPermissions = async () => {
-    if (permissionsLoaded.value || isLoadingPermissions) return;
-    isLoadingPermissions = true;
+    if (permissionsLoaded.value || isFetchingPermissions) return;
+    isFetchingPermissions = true;
 
     try {
       const axiosInstance = getAxiosInstance();
@@ -55,20 +59,31 @@ export const usePermissions = () => {
       permissionsLoaded.value = true;
 
       if (!success) {
-        console.error('Failed to load permissions:', errors);
+        logger.error(new Error('Failed to load permissions'), {
+          tags: { function: 'loadPermissions' },
+          errors,
+        });
       }
     } finally {
-      isLoadingPermissions = false;
+      isFetchingPermissions = false;
     }
   };
 
-  onMounted(() => {
-    if (permissionsLoaded.value) return;
+  watch(
+    [shouldUsePermissions, () => isAuthenticated()],
+    ([usePermissions, authed]) => {
+      if (permissionsLoaded.value || !authed) return;
 
-    if (shouldUsePermissions.value && isAuthenticated()) {
-      loadPermissions();
-    }
-  });
+      if (usePermissions) {
+        loadPermissions();
+      } else {
+        permissionsLoaded.value = true;
+      }
+    },
+    { immediate: true },
+  );
+
+  const isLoadingPermissions = computed(() => shouldUsePermissions.value && !permissionsLoaded.value);
 
   const userRole = computed<Role | null>(() => {
     if (!shouldUsePermissions.value || !permissionsLoaded.value || !user.value || !currentSite.value) return null;
@@ -128,5 +143,6 @@ export const usePermissions = () => {
     userRole,
     permissions,
     permissionsLoaded: readonly(permissionsLoaded),
+    isLoadingPermissions,
   };
 };

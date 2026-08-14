@@ -183,13 +183,13 @@ describe('AddUsers Page', () => {
       expect(child.month).toBe(5);
       expect(child.year).toBe(2018);
       expect(child.school).toEqual(['Test School']);
-      expect(child['class']).toEqual(['Class A']);
+      expect(child.class).toEqual(['Class A']);
       expect(child.cohort).toEqual([]);
 
       expect(caregiver.userType).toBe('caregiver');
       expect(caregiver.id).toBe('2');
       expect(caregiver.school).toEqual(['Test School']);
-      expect(caregiver['class']).toEqual(['Class A']);
+      expect(caregiver.class).toEqual(['Class A']);
 
       expect(vm.status).toEqual({
         message: 'File successfully uploaded. See table for summary of users to be added.',
@@ -504,7 +504,7 @@ describe('AddUsers Page', () => {
       expect(user.month).toBe(5);
       expect(user.year).toBe(2018);
       expect(user.school).toEqual(['Test School']);
-      expect(user['class']).toEqual(['Class A']);
+      expect(user.class).toEqual(['Class A']);
     });
 
     describe('setShouldUserConfirm', () => {

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
-import { computed, type MaybeRefOrGetter } from 'vue';
+import { computed } from 'vue';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import useUserType from '@/composables/useUserType';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';

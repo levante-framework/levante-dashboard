@@ -1,33 +1,45 @@
-import { useQuery } from '@tanstack/vue-query';
+import { type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
 import _isEmpty from 'lodash/isEmpty';
 import { type MaybeRefOrGetter, toValue } from 'vue';
 import { TASKS_QUERY_KEY } from '@/constants/queryKeys';
+import type { QueryOptionsWithEnabled } from '@/helpers/computeQueryOverrides';
 import { fetchByTaskId, taskFetcher } from '@/helpers/query/tasks';
 
 /**
  * Tasks query.
  *
- * @param {ref<Boolean>} [registeredTasksOnly=false] – Whether to fetch only registered tasks.
- * @param {ref<Array<String>>|undefined} [taskIds=undefined] – An optional array of task IDs to fetch.
- * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.
- * @returns {UseQueryResult} The TanStack query result.
+ * @param registeredTasksOnly – Whether to fetch only registered tasks.
+ * @param taskIds – An optional array of task IDs to fetch.
+ * @param queryOptions – Optional TanStack query options.
+ * @returns The TanStack query result.
  */
 const useTasksQuery = (
-  registeredTasksOnly = false,
-  taskIds = undefined,
-  queryOptions?: UseQueryOptions,
-): UseQueryReturnType => {
+  registeredTasksOnly: MaybeRefOrGetter<boolean> = false,
+  taskIds: MaybeRefOrGetter<string[] | null | undefined> = undefined,
+  queryOptions?: QueryOptionsWithEnabled,
+): UseQueryReturnType<any, Error> => {
+  const hasTaskIds = !_isEmpty(toValue(taskIds));
+
   const queryKey = toValue(registeredTasksOnly)
     ? [TASKS_QUERY_KEY, 'registered']
-    : !_isEmpty(taskIds)
+    : hasTaskIds
       ? [TASKS_QUERY_KEY, taskIds]
       : [TASKS_QUERY_KEY];
 
-  const queryFn = !_isEmpty(taskIds) ? () => fetchByTaskId(taskIds) : () => taskFetcher(registeredTasksOnly, true);
+  const queryFn = hasTaskIds
+    ? () => fetchByTaskId(toValue(taskIds) ?? [])
+    : () => taskFetcher(toValue(registeredTasksOnly), true);
 
   return useQuery({
     queryKey,
     queryFn,
+    meta: {
+      errorMessage: 'Failed to fetch tasks',
+      errorContext: {
+        tags: { composable: 'useTasksQuery' },
+        taskIds: toValue(taskIds),
+      },
+    },
     ...queryOptions,
   });
 };

@@ -202,6 +202,7 @@ import { isEmailValid, isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { getUserAssignments } from '@/helpers/query/assignments';
 import { fetchDocById } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { type UserClaims, type UserData, useAuthStore } from '@/store/auth';
 
@@ -373,7 +374,9 @@ const getAuthUserAssignments = async () => {
     const sortedAssignments = sortAssignmentsByDateOpened(userAssignments);
     setUserAssignments(sortedAssignments);
   } catch (error) {
-    console.error('Failed to get user assignments', error);
+    logger.error(new Error('Failed to get user assignments', { cause: error }), {
+      tags: { component: 'Login', function: 'getAuthUserAssignments' },
+    });
   }
 };
 
@@ -382,7 +385,9 @@ const getAuthUserClaims = async () => {
     const userClaims = await fetchDocById('userClaims', getUserId()!);
     setUserClaims(userClaims as UserClaims);
   } catch (error) {
-    console.error('Failed to get user claims', error);
+    logger.error(new Error('Failed to get user claims', { cause: error }), {
+      tags: { component: 'Login', function: 'getAuthUserClaims' },
+    });
   }
 };
 
@@ -391,7 +396,9 @@ const getAuthUserData = async () => {
     const userData = await fetchDocById('users', getUserId()!);
     setUserData(userData as UserData);
   } catch (error) {
-    console.error('Failed to get user data', error);
+    logger.error(new Error('Failed to get user data', { cause: error }), {
+      tags: { component: 'Login', function: 'getAuthUserData' },
+    });
   }
 };
 

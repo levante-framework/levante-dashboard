@@ -1,6 +1,7 @@
 import { createI18n } from 'vue-i18n';
-import { LEVANTE_TRANSLATION_LANGUAGES, LEVANTE_TRANSLATIONS } from '@/constants/bucket';
 import { isLevante } from '@/constants';
+import { LEVANTE_TRANSLATION_LANGUAGES, LEVANTE_TRANSLATIONS } from '@/constants/bucket';
+import { logger } from '@/logger';
 
 export interface LanguageOption {
   languageMenu: string;
@@ -68,7 +69,7 @@ export function findBestMatchingLocale(locale: string | undefined | null): strin
   const languagePrefix = normalizedLocale.split('-')[0];
 
   // Find the first available locale that starts with the same language prefix
-  const prefixMatch = availableLocales.find((available) => available.toLowerCase().startsWith(languagePrefix + '-'));
+  const prefixMatch = availableLocales.find((available) => available.toLowerCase().startsWith(`${languagePrefix}-`));
   if (prefixMatch) return prefixMatch;
 
   // If no match found, default to en-US
@@ -161,7 +162,11 @@ async function fetchTranslations(bucket: 'test' | 'live', locale: string): Promi
     remoteCache.set(cacheKey, data as Translations);
     return data as Translations;
   } catch (error) {
-    console.error(`Failed to fetch ${bucket.toLowerCase()} translations`, error);
+    logger.error(new Error('Failed to fetch translations', { cause: error }), {
+      tags: { function: 'fetchTranslations' },
+      bucket,
+      locale: parsedLocale,
+    });
     return null;
   }
 }

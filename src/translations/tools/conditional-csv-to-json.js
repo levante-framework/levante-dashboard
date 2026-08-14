@@ -1,7 +1,7 @@
-import { spawnSync } from 'child_process';
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
+import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 
 function listCsvFiles() {
   const roots = [
