@@ -89,9 +89,9 @@
 
           <div v-else>
             <div
-              class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card"
+              class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-4 details-card"
             >
-              <div class="flex flex-column gap-1 mx-5 mb-5">
+              <div class="flex flex-column gap-1">
                 <div class="text-sm uppercase text-gray-500">
                   Progress by Task
                 </div>
@@ -111,7 +111,7 @@
                   />
                 </div>
               </div>
-              <div class="flex flex-column mx-5">
+              <div class="flex flex-column">
                 <div class="text-sm uppercase text-gray-500">
                   Total Progress
                 </div>
@@ -794,6 +794,7 @@ onMounted(async () => {
 
 .details-card {
   max-width: 100%;
+  border-radius: 1.5rem;
 }
 
 .empty-user-list {
