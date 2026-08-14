@@ -1,5 +1,5 @@
 <template>
-  <a :href="href" target="_blank" rel="noopener noreferrer" class="docs-button" data-cy="docs-button">
+  <a :href="href" target="_blank" rel="noopener noreferrer" class="docs-button --djs-docs-button" data-cy="docs-button">
     <i class="pi pi-book" />
     <span>{{ label }}</span>
   </a>
