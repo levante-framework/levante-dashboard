@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   surveyModels: [],
   surveyPDFs: [],
   creators: [],
+  markdownConverterSurveys: [],
 }));
 
 vi.mock('vue-i18n', () => ({
@@ -71,6 +72,9 @@ vi.mock('@/composables/queries/useSurveyQuery', () => ({
 vi.mock('@/helpers/survey', () => ({
   getParsedLocale: (locale) => locale.toUpperCase(),
   getPlainSurveyData: (survey) => ({ ...survey }),
+  setupSurveyMarkdownConverter: (survey) => {
+    state.markdownConverterSurveys.push(survey);
+  },
 }));
 
 vi.mock('@/components/LanguageSelector.vue', () => ({
@@ -104,6 +108,7 @@ vi.mock('survey-core', () => ({
   Model: class MockModel {
     constructor(data) {
       this.data = data;
+      this.onTextMarkdown = { add: vi.fn() };
       state.surveyModels.push(data);
     }
   },
@@ -120,6 +125,7 @@ vi.mock('survey-creator-core', () => ({
       this.text = '{}';
       this.saveSurveyFunc = null;
       this.applyCreatorTheme = vi.fn();
+      this.onSurveyInstanceCreated = { add: vi.fn() };
       state.creators.push(this);
     }
 
@@ -215,6 +221,7 @@ describe('SurveyManager.vue', () => {
     state.surveyModels.length = 0;
     state.surveyPDFs.length = 0;
     state.creators.length = 0;
+    state.markdownConverterSurveys.length = 0;
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -304,6 +311,7 @@ describe('SurveyManager.vue', () => {
         locale: 'FR-CA',
       },
     ]);
+    expect(state.markdownConverterSurveys).toHaveLength(1);
   });
 
   it('redirects from preview mode when no survey is selected', async () => {

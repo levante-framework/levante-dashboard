@@ -97,7 +97,6 @@ import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvTag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
-import { Converter } from 'showdown';
 import { Model, settings } from 'survey-core';
 import { computed, onMounted, ref, toRaw, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -117,6 +116,7 @@ import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
 import { formatDateWithLocale } from '@/helpers';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { fetchDocsById } from '@/helpers/query/utils';
+import { setupSurveyMarkdownConverter } from '@/helpers/survey';
 import { bootstrapSurveyInstance, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
@@ -473,15 +473,6 @@ function createSurveyInstance(surveyDataToStartAt) {
   return surveyInstance;
 }
 
-function setupMarkdownConverter(surveyInstance) {
-  const converter = new Converter();
-  surveyInstance.onTextMarkdown.add((_survey, options) => {
-    let str = converter.makeHtml(options.text);
-    str = str.substring(3, str.length - 4);
-    options.html = str;
-  });
-}
-
 watch(
   [surveyDependenciesLoaded, selectedAssignment],
   async ([isLoaded]) => {
@@ -581,7 +572,7 @@ watch(
         : surveyData.value.specific;
 
     const surveyInstance = createSurveyInstance(surveyDataToStartAt);
-    setupMarkdownConverter(surveyInstance);
+    setupSurveyMarkdownConverter(surveyInstance);
 
     bootstrapSurveyInstance({
       surveyInstance,
