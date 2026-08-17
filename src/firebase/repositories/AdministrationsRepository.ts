@@ -3,6 +3,11 @@ import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { Repository } from '@/firebase/Repository';
 import { FirebaseService } from '@/firebase/Service';
 import { logger } from '@/logger';
+import type {
+  GetAdministrationProgressApiResponse,
+  GetAdministrationProgressPayload,
+  GetAdministrationProgressResult,
+} from '@/types/administrationOrgProgress';
 
 interface GetAdministrationsParams {
   idsOnly: boolean;
@@ -71,6 +76,19 @@ class AdministrationsRepository extends Repository {
       });
       throw error;
     }
+  }
+
+  async getAdministrationProgress(payload: GetAdministrationProgressPayload): Promise<GetAdministrationProgressResult> {
+    const response = await this.call<GetAdministrationProgressPayload, GetAdministrationProgressApiResponse>(
+      'getAdministrationProgress',
+      payload,
+    );
+
+    if (response?.status !== 'ok' || response.data == null) {
+      throw new Error('getAdministrationProgress: invalid response from server');
+    }
+
+    return response.data;
   }
 }
 
