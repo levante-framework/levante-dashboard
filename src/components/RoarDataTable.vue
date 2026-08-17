@@ -2,7 +2,7 @@
   <div v-if="!props.data">
     <SkeletonTable />
   </div>
-  <div v-else class="options-container">
+  <div v-else class="roar-data-table options-container">
     <div class="flex justify-content-end mr-3 mt-2 button-container">
       <button
         v-if="props.showOptionsControl && shouldRenderToolbar"
@@ -727,226 +727,228 @@ defineExpose({ onColumnToggle, selectedColumns });
 </script>
 
 <style lang="scss">
-.column-button {
-  color: black !important;
-}
+.roar-data-table {
+  .column-button {
+    color: black !important;
+  }
 
-.column-button > .p-button-label {
-  font-weight: normal !important;
-}
+  .column-button > .p-button-label {
+    font-weight: normal !important;
+  }
 
-.options-container {
-  .button-container {
+  .options-container {
+    .button-container {
+      position: relative;
+      min-height: 34px;
+    }
+
+    .options-toggle {
+      position: absolute;
+      top: 10px;
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 0;
+      margin: 0;
+      font: inherit;
+      cursor: pointer;
+    }
+  }
+
+  .small-circle {
+    border-color: white;
+    display: inline-block;
+    border-radius: 50%;
+    border-width: 5px;
+    height: 15px;
+    width: 15px;
+    vertical-align: middle;
+    margin-right: 5px;
+    margin-left: 5px;
+    margin-top: 3px;
+    margin-bottom: 3px;
+  }
+
+  .circle {
+    border-color: white;
+    display: inline-block;
+    border-radius: 50%;
+    border-width: 5px;
+    height: 25px;
+    width: 25px;
+    vertical-align: middle;
+    margin-right: 10px;
+    margin-left: 10px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+  }
+
+  .p-component {
     position: relative;
-    min-height: 34px;
   }
 
-  .options-toggle {
+  button.p-button.p-component.softer {
+    background: #f3adad;
+    color: black;
+  }
+
+  button.p-button.p-component.p-button-outlined.p-button-sm.p-button-outlined.p-button-sm,
+  button.p-button.p-component.p-button-sm.p-button-sm {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem;
+    margin: 0.5rem;
+    border-radius: 0.35rem;
+  }
+
+  button.p-column-filter-menu-button.p-link,
+  g {
+    color: white;
+    padding: 5px;
+    margin-left: 10px;
+  }
+
+  .p-datatable .p-datatable-thead > tr > th {
+    min-height: 3rem !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+
+  .p-datatable .p-datatable-tbody > tr > td {
+    text-align: left;
+    border: 1px solid var(--surface-c);
+    border-width: 0 0 1px 0;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    padding: 0.6rem 1rem !important;
+
+    @media (max-width: 768px) {
+      font-size: 0.8rem;
+      padding: 0.3rem 0.5rem !important;
+    }
+  }
+
+  .p-datatable-hoverable .p-datatable-tbody > tr:has(+ .p-datatable-row-expansion):not(.p-datatable-row-selected) {
+    background: var(--p-datatable-row-hover-background);
+    color: var(--p-datatable-row-hover-color);
+  }
+
+  .p-datatable-popover-filter {
+    display: none !important;
+  }
+
+  .export-wrapper {
+    max-height: 4rem;
+  }
+
+  .view-label {
+    background-color: white;
+    font-size: smaller;
+    color: var(--surface-500);
+  }
+
+  .view-label2 {
     position: absolute;
-    top: 10px;
-    background: transparent;
-    border: 1px solid transparent;
-    padding: 0;
-    margin: 0;
-    font: inherit;
-    cursor: pointer;
+    top: -15px;
+    left: 5px;
+    background-color: white;
+    z-index: 1;
+    font-size: smaller;
+    color: var(--surface-500);
+    width: 110px;
   }
-}
 
-.small-circle {
-  border-color: white;
-  display: inline-block;
-  border-radius: 50%;
-  border-width: 5px;
-  height: 15px;
-  width: 15px;
-  vertical-align: middle;
-  margin-right: 5px;
-  margin-left: 5px;
-  margin-top: 3px;
-  margin-bottom: 3px;
-}
-
-.circle {
-  border-color: white;
-  display: inline-block;
-  border-radius: 50%;
-  border-width: 5px;
-  height: 25px;
-  width: 25px;
-  vertical-align: middle;
-  margin-right: 10px;
-  margin-left: 10px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-}
-
-.p-component {
-  position: relative;
-}
-
-button.p-button.p-component.softer {
-  background: #f3adad;
-  color: black;
-}
-
-button.p-button.p-component.p-button-outlined.p-button-sm.p-button-outlined.p-button-sm,
-button.p-button.p-component.p-button-sm.p-button-sm {
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  padding: 0.5rem;
-  margin: 0.5rem;
-  border-radius: 0.35rem;
-}
-
-button.p-column-filter-menu-button.p-link,
-g {
-  color: white;
-  padding: 5px;
-  margin-left: 10px;
-}
-
-.p-datatable .p-datatable-thead > tr > th {
-  min-height: 3rem !important;
-  padding-top: 0.75rem !important;
-  padding-bottom: 0.75rem !important;
-}
-
-.p-datatable .p-datatable-tbody > tr > td {
-  text-align: left;
-  border: 1px solid var(--surface-c);
-  border-width: 0 0 1px 0;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0.6rem 1rem !important;
-
-  @media (max-width: 768px) {
-    font-size: 0.8rem;
-    padding: 0.3rem 0.5rem !important;
+  button.p-column-filter-menu-button.p-link:hover {
+    background: var(--surface-500);
   }
-}
 
-.p-datatable-hoverable .p-datatable-tbody > tr:has(+ .p-datatable-row-expansion):not(.p-datatable-row-selected) {
-  background: var(--p-datatable-row-hover-background);
-  color: var(--p-datatable-row-hover-color);
-}
-
-.p-datatable-popover-filter {
-  display: none !important;
-}
-
-.export-wrapper {
-  max-height: 4rem;
-}
-
-.view-label {
-  background-color: white;
-  font-size: smaller;
-  color: var(--surface-500);
-}
-
-.view-label2 {
-  position: absolute;
-  top: -15px;
-  left: 5px;
-  background-color: white;
-  z-index: 1;
-  font-size: smaller;
-  color: var(--surface-500);
-  width: 110px;
-}
-
-button.p-column-filter-menu-button.p-link:hover {
-  background: var(--surface-500);
-}
-
-.compressed .p-datatable .p-datatable-tbody > tr > td {
-  text-align: left;
-  border: 1px solid var(--surface-c);
-  border-width: 0 0 3px 0;
-  padding: 0.6rem 1rem !important;
-}
-
-.filter-content {
-  width: 12rem;
-}
-
-.filter-button-override .p-column-filter-menu-button:not(.p-column-filter-menu-button-active) {
-  display: none;
-}
-
-.p-column-filter-matchmode-dropdown {
-  /* Our current filtering queries do not support options other than equals
-     for strings. To reduce confusion for end users, remove the dropdown
-     offering different matchmodes */
-  display: none;
-}
-
-.p-datatable-emptyMessage {
-  width: auto; /* or set it to a specific width */
-  margin: 0 auto; /* Center the message horizontally */
-}
-
-.scrollable-container::-webkit-scrollbar {
-  width: 10px;
-}
-
-.scrollable-container::-webkit-scrollbar-thumb,
-.scrollable-container::-webkit-scrollbar-track {
-  background-color: var(--primary-color);
-}
-
-.scrollable-container {
-  scrollbar-color: var(--primary-color) white;
-}
-
-/* Add standardized styling for progress tags */
-.progress-tag {
-  min-width: 7rem !important;
-  display: inline-block !important;
-  text-align: center !important;
-  font-weight: bold !important;
-}
-
-/* Add spacing between icon and text in tags */
-.progress-tag .p-tag-icon {
-  margin-right: 0.5rem !important;
-}
-
-.user-type-value {
-  text-transform: capitalize;
-}
-
-.role-tag {
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: center;
-  font-size: 12px !important;
-  text-transform: capitalize;
-
-  .pi {
-    margin: 0 0.25rem 0 0;
-    font-weight: inherit;
+  .compressed .p-datatable .p-datatable-tbody > tr > td {
+    text-align: left;
+    border: 1px solid var(--surface-c);
+    border-width: 0 0 3px 0;
+    padding: 0.6rem 1rem !important;
   }
-}
 
-.actions {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-
-  .action--edit {
-    color: inherit;
+  .filter-content {
+    width: 12rem;
   }
-}
 
-.p-datatable .p-datatable-tbody > tr.current-user-row {
-  background-color: #fef2f2 !important;
-}
+  .filter-button-override .p-column-filter-menu-button:not(.p-column-filter-menu-button-active) {
+    display: none;
+  }
 
-.p-datatable .p-datatable-tbody > tr.current-user-row > td:first-child {
-  border-left: 3px solid var(--primary-color) !important;
+  .p-column-filter-matchmode-dropdown {
+    /* Our current filtering queries do not support options other than equals
+      for strings. To reduce confusion for end users, remove the dropdown
+      offering different matchmodes */
+    display: none;
+  }
+
+  .p-datatable-emptyMessage {
+    width: auto; /* or set it to a specific width */
+    margin: 0 auto; /* Center the message horizontally */
+  }
+
+  .scrollable-container::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .scrollable-container::-webkit-scrollbar-thumb,
+  .scrollable-container::-webkit-scrollbar-track {
+    background-color: var(--primary-color);
+  }
+
+  .scrollable-container {
+    scrollbar-color: var(--primary-color) white;
+  }
+
+  /* Add standardized styling for progress tags */
+  .progress-tag {
+    min-width: 7rem !important;
+    display: inline-block !important;
+    text-align: center !important;
+    font-weight: bold !important;
+  }
+
+  /* Add spacing between icon and text in tags */
+  .progress-tag .p-tag-icon {
+    margin-right: 0.5rem !important;
+  }
+
+  .user-type-value {
+    text-transform: capitalize;
+  }
+
+  .role-tag {
+    display: inline-flex;
+    justify-content: flex-start;
+    align-items: center;
+    font-size: 12px !important;
+    text-transform: capitalize;
+
+    .pi {
+      margin: 0 0.25rem 0 0;
+      font-weight: inherit;
+    }
+  }
+
+  .actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+
+    .action--edit {
+      color: inherit;
+    }
+  }
+
+  .p-datatable .p-datatable-tbody > tr.current-user-row {
+    background-color: #fef2f2 !important;
+  }
+
+  .p-datatable .p-datatable-tbody > tr.current-user-row > td:first-child {
+    border-left: 3px solid var(--primary-color) !important;
+  }
 }
 </style>
