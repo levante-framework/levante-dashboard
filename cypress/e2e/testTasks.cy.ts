@@ -1,22 +1,5 @@
 import 'cypress-real-events';
 
-// Flag: when true, read URL and credentials from Cypress env; otherwise use defaults
-const useEnvFlag: boolean = (() => {
-  const v = Cypress.env('E2E_USE_ENV');
-  return v === true || v === 'TRUE' || v === 'true' || v === 1 || v === '1';
-})();
-
-const defaultUrl = 'https://localhost:5173/signin';
-
-function normalizeUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    return u.toString();
-  } catch {
-    return 'https://localhost:5173/signin';
-  }
-}
-
 // Force use of known working credentials for now
 const dashboardUrl: string = 'http://localhost:5173/signin';
 const username: string = 'quqa2y1jss@levante.com';

@@ -25,7 +25,7 @@ config.global.mocks = {
 // Suppress unhandled promise rejections in tests
 // These are often caused by async operations that continue after test completion
 if (typeof process !== 'undefined') {
-  process.on('unhandledRejection', (reason, promise) => {
+  process.on('unhandledRejection', (_reason, _promise) => {
     // Silently ignore unhandled rejections in test environment
     // This prevents CI from failing on non-critical async timing issues
   });

@@ -78,7 +78,7 @@ function createBackup() {
 
 function syncCsvsToConsolidated() {
   // Create backup before syncing
-  const backupPath = createBackup();
+  createBackup();
 
   ensureDir(consolidatedRoot);
   ensureDir(consolidatedComponents);

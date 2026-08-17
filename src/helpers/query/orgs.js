@@ -344,7 +344,7 @@ export const orgFetchAll = async (
  * @param {Object} assignedOrgs – The orgs assigned to the administration being processed.
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of org objects.
  */
-export const fetchTreeOrgs = async (administrationId, assignedOrgs) => {
+export const fetchTreeOrgs = async (_administrationId, assignedOrgs) => {
   const orgTypes = [ORG_TYPES.DISTRICTS, ORG_TYPES.SCHOOLS, ORG_TYPES.GROUPS, ORG_TYPES.FAMILIES];
 
   const orgPaths = _flattenDeep(

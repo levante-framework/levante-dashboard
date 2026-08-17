@@ -1,10 +1,6 @@
 import posthog from 'posthog-js';
 import type { App, Plugin } from 'vue';
 
-interface PostHogPlugin {
-  install: (app: App, options: { apiKey: string; host: string }) => void;
-}
-
 interface PostHogMock {
   identify: (...args: any[]) => void;
   capture: (...args: any[]) => void;

@@ -64,7 +64,6 @@ interface SetupSurveyEventHandlersParams {
 
 export function bootstrapSurveyInstance({
   surveyInstance,
-  userType,
   specificSurveyData,
   userData,
   surveyStore,
@@ -125,7 +124,7 @@ export function setupSurveyEventHandlers({
 
   surveyInstance.onCurrentPageChanged.add(
     (
-      sender: SurveyModel,
+      _sender: SurveyModel,
       options: {
         oldCurrentPage: PageModel | null;
         newCurrentPage: PageModel;
@@ -175,7 +174,7 @@ export function setupSurveyEventHandlers({
     },
   );
 
-  surveyInstance.onComplete.add((sender: SurveyModel, options: CompleteEvent) =>
+  surveyInstance.onComplete.add((sender: SurveyModel, _options: CompleteEvent) =>
     saveFinalSurveyData({
       sender,
       roarfirekit,

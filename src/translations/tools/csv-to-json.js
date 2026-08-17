@@ -76,19 +76,6 @@ function listCsvFiles() {
   return files;
 }
 
-function mergeDeep(target, source) {
-  for (const key of Object.keys(source)) {
-    const value = source[key];
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      if (!target[key] || typeof target[key] !== 'object') target[key] = {};
-      mergeDeep(target[key], value);
-    } else {
-      target[key] = value;
-    }
-  }
-  return target;
-}
-
 function validateCsvRows(rows, filePath) {
   if (!rows.length) return;
   const headers = Object.keys(rows[0]);

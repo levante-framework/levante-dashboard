@@ -85,7 +85,7 @@ const SignInStub = {
 
 // Mock storeToRefs since this is causing issues
 vi.mock('pinia', () => ({
-  defineStore: vi.fn((name, setup) => {
+  defineStore: vi.fn((_name, _setup) => {
     // Return a function that returns the store
     return () => ({
       // Add any default store properties/methods that might be needed

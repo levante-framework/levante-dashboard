@@ -332,7 +332,7 @@ const routes: Array<RouteRecordRaw> = [
   },
 ];
 
-const scrollBehavior: RouterScrollBehavior = (to, from, savedPosition) => {
+const scrollBehavior: RouterScrollBehavior = (to, _from, savedPosition) => {
   if (savedPosition) {
     return savedPosition;
   } else if (to.hash) {
@@ -351,7 +351,7 @@ const router = createRouter({
   scrollBehavior,
 });
 
-router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
+router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormalized, next: NavigationGuardNext) => {
   const authStore = useAuthStore();
   const { shouldUsePermissions, userData } = storeToRefs(authStore);
   const { isAuthenticated } = authStore;
