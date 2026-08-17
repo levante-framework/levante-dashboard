@@ -1,0 +1,546 @@
+import { flushPromises, mount } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { defineComponent, h, nextTick, ref } from 'vue';
+import AdministrationProgressReport from '../AdministrationProgressReport.vue';
+
+const { mockExportCsv, mockFetchAdministrationById, mockGetAdministrationProgress, mockRouterReplace } = vi.hoisted(
+  () => ({
+    mockExportCsv: vi.fn(),
+    mockFetchAdministrationById: vi.fn(),
+    mockGetAdministrationProgress: vi.fn(),
+    mockRouterReplace: vi.fn(),
+  }),
+);
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    replace: mockRouterReplace,
+  }),
+}));
+
+vi.mock('@bdelab/roar-utils', () => ({
+  default: {
+    //
+  },
+}));
+
+vi.mock('primevue/chart', () => ({
+  default: {
+    name: 'PvChart',
+    props: ['data', 'options', 'type'],
+    template: '<div class="pv-chart" />',
+  },
+}));
+
+vi.mock('primevue/floatlabel', () => ({
+  default: {
+    name: 'PvFloatLabel',
+    template: '<div><slot /></div>',
+  },
+}));
+
+vi.mock('primevue/inputtext', () => ({
+  default: {
+    name: 'PvInputText',
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+  },
+}));
+
+vi.mock('primevue/multiselect', () => ({
+  default: {
+    name: 'PvMultiSelect',
+    template: '<div class="pv-multiselect" />',
+  },
+}));
+
+vi.mock('@/store/auth', () => ({
+  useAuthStore: vi.fn(() => ({
+    $subscribe: vi.fn(),
+    roarfirekit: ref({
+      restConfig: true,
+    }),
+  })),
+}));
+
+vi.mock('@/composables/queries/useTasksDictionaryQuery', () => ({
+  default: () => ({
+    data: ref({
+      math: {
+        name: 'Math',
+        publicName: 'Math Public',
+      },
+      vocab: {
+        name: 'Vocabulary',
+        publicName: 'Vocabulary Public',
+      },
+    }),
+    isLoading: ref(false),
+  }),
+}));
+
+vi.mock('@/composables/useAdministrationSyncStatus', () => ({
+  useAdministrationSyncStatus: () => ({
+    displayedSyncStatus: ref(undefined),
+  }),
+}));
+
+vi.mock('@/firebase/repositories/AdministrationsRepository', () => ({
+  administrationsRepository: {
+    fetchAdministrationById: mockFetchAdministrationById,
+    getAdministrationProgress: mockGetAdministrationProgress,
+  },
+}));
+
+vi.mock('@/constants', async (importActual) => ({
+  ...(await importActual()),
+  isLevante: false,
+}));
+
+vi.mock('@/helpers', () => ({
+  normalizeToLowercase: (value) => String(value ?? '').toLowerCase(),
+}));
+
+vi.mock('@/helpers/query/utils', () => ({
+  exportCsv: mockExportCsv,
+}));
+
+vi.mock('@/helpers/userType', () => ({
+  normalizeUserTypeForDisplay: (userType) => userType,
+}));
+
+vi.mock('@/components/RoarDataTable.vue', () => ({
+  default: defineComponent({
+    name: 'RoarDataTable',
+    props: {
+      allowExport: Boolean,
+      allowFiltering: Boolean,
+      columns: {
+        type: Array,
+        default: () => [],
+      },
+      data: {
+        type: Array,
+        default: () => [],
+      },
+      dataKey: String,
+      lazyPreSorting: {
+        type: Array,
+        default: () => [],
+      },
+      totalRecords: Number,
+    },
+    emits: ['export-all', 'export-selected'],
+    setup(props, { emit, slots }) {
+      return () =>
+        h('div', { 'data-cy': 'roar-data-table' }, [
+          h('button', { 'data-testid': 'export-all', onClick: () => emit('export-all') }, 'Export All'),
+          h(
+            'button',
+            {
+              'data-testid': 'export-selected',
+              onClick: () => emit('export-selected', props.data.slice(0, 1)),
+            },
+            'Export Selected',
+          ),
+          slots.filterbar?.(),
+          props.data[0] ? slots.expansion?.({ data: props.data[0] }) : null,
+        ]);
+    },
+  }),
+}));
+
+vi.mock('primevue/datatable', () => ({
+  default: {
+    name: 'PvDataTable',
+    props: ['value'],
+    template: '<div class="pv-data-table"><slot /></div>',
+  },
+}));
+
+vi.mock('primevue/column', () => ({
+  default: {
+    name: 'PvColumn',
+    props: ['field', 'header'],
+    template: "<div><slot name='body' :data='{}' /></div>",
+  },
+}));
+
+vi.mock('primevue/tag', () => ({
+  default: {
+    name: 'PvTag',
+    props: ['value', 'icon', 'severity'],
+    template: '<span class="pv-tag">{{ value }}</span>',
+  },
+}));
+
+const administration = {
+  assessments: [{ taskId: 'vocab' }, { taskId: 'math' }],
+  creatorName: 'Dr. Ada Lovelace',
+  name: 'Winter Progress Assignment',
+};
+
+const progressPayload = {
+  taskProgress: [
+    {
+      counts: {
+        completed: 1,
+        notStarted: 1,
+        started: 1,
+      },
+      taskId: 'vocab',
+      userIds: {
+        completed: ['student-1'],
+        started: ['student-2'],
+      },
+      variantName: 'Vocabulary Variant',
+    },
+    {
+      counts: {
+        completed: 1,
+        notStarted: 1,
+        started: 1,
+      },
+      taskId: 'math',
+      userIds: {
+        completed: ['teacher-1'],
+        started: ['student-1'],
+      },
+      variantName: 'Math Variant',
+    },
+  ],
+  users: [
+    {
+      email: 'alice@example.com',
+      status: 'completed',
+      userId: 'student-1',
+      userType: 'student',
+      tasks: [
+        {
+          taskId: 'vocab',
+          status: 'completed',
+          startedAt: '2024-01-10T00:00:00.000Z',
+          completedAt: '2024-01-12T00:00:00.000Z',
+        },
+        {
+          taskId: 'math',
+          status: 'started',
+          startedAt: '2024-01-11T00:00:00.000Z',
+          completedAt: null,
+        },
+      ],
+    },
+    {
+      email: 'bob@example.com',
+      status: 'started',
+      userId: 'student-2',
+      userType: 'student',
+      tasks: [
+        {
+          taskId: 'vocab',
+          status: 'started',
+          startedAt: '2024-01-15T00:00:00.000Z',
+          completedAt: null,
+        },
+        {
+          taskId: 'math',
+          status: 'notStarted',
+          startedAt: null,
+          completedAt: null,
+        },
+      ],
+    },
+    {
+      email: 'teacher@example.com',
+      status: 'notStarted',
+      userId: 'teacher-1',
+      userType: 'teacher',
+      tasks: [
+        {
+          taskId: 'vocab',
+          status: 'notStarted',
+          startedAt: null,
+          completedAt: null,
+        },
+        {
+          taskId: 'math',
+          status: 'completed',
+          startedAt: '2024-01-08T00:00:00.000Z',
+          completedAt: '2024-01-09T00:00:00.000Z',
+        },
+      ],
+    },
+  ],
+};
+
+const defaultProps = {
+  administrationId: 'admin-123',
+};
+
+function mountProgressReport(props = {}) {
+  return mount(AdministrationProgressReport, {
+    global: {
+      directives: {
+        tooltip: {},
+      },
+      stubs: {
+        LevanteSpinner: true,
+      },
+    },
+    props: {
+      ...defaultProps,
+      ...props,
+    },
+  });
+}
+
+async function mountLoadedProgressReport(props = {}) {
+  const wrapper = mountProgressReport(props);
+
+  await flushPromises();
+  await nextTick();
+
+  return wrapper;
+}
+
+beforeEach(() => {
+  setActivePinia(createPinia());
+
+  mockExportCsv.mockClear();
+  mockFetchAdministrationById.mockResolvedValue(administration);
+  mockGetAdministrationProgress.mockResolvedValue(progressPayload);
+  mockRouterReplace.mockClear();
+});
+
+describe('AdministrationProgressReport.vue', () => {
+  it('fetches administration progress and renders the loaded report', async () => {
+    const wrapper = await mountLoadedProgressReport();
+    const table = wrapper.findComponent({ name: 'RoarDataTable' });
+
+    expect(mockFetchAdministrationById).toHaveBeenCalledWith('admin-123');
+    expect(mockGetAdministrationProgress).toHaveBeenCalledWith({
+      administrationId: 'admin-123',
+    });
+    expect(wrapper.text()).toContain('Assignment Progress Report');
+    expect(wrapper.text()).toContain('Winter Progress Assignment');
+    expect(wrapper.text()).toContain('Dr. Ada Lovelace');
+    expect(wrapper.text()).toContain('Total');
+    expect(wrapper.text()).toContain('Assigned to 3 users');
+    expect(table.exists()).toBe(true);
+    expect(table.props('allowFiltering')).toBe(true);
+    expect(table.props('totalRecords')).toBe(3);
+    expect(table.props('lazyPreSorting')).toEqual([
+      { order: '1', field: 'user.grade' },
+      { order: '1', field: 'user.lastName' },
+    ]);
+  });
+
+  it('builds table rows with expandable tasks from the progress payload', async () => {
+    const wrapper = await mountLoadedProgressReport();
+    const table = wrapper.findComponent({ name: 'RoarDataTable' });
+    const columnHeaders = table.props('columns').map((column) => column.header);
+
+    expect(columnHeaders).toEqual(['UID', 'User Login', 'User Type']);
+    expect(table.props('dataKey')).toBe('user.userId');
+    expect(table.props('data')).toEqual([
+      {
+        tasks: [
+          {
+            taskId: 'math',
+            name: 'Math Public',
+            status: 'started',
+            statusLabel: 'Started',
+            statusIcon: 'pi pi-clock',
+            statusSeverity: 'warn',
+            startedAt: '2024-01-11T00:00:00.000Z',
+            completedAt: null,
+            startedAtLabel: new Date('2024-01-11T00:00:00.000Z').toLocaleString(),
+            completedAtLabel: '--',
+          },
+          {
+            taskId: 'vocab',
+            name: 'Vocabulary Public',
+            status: 'completed',
+            statusLabel: 'Completed',
+            statusIcon: 'pi pi-check-circle',
+            statusSeverity: 'success',
+            startedAt: '2024-01-10T00:00:00.000Z',
+            completedAt: '2024-01-12T00:00:00.000Z',
+            startedAtLabel: new Date('2024-01-10T00:00:00.000Z').toLocaleString(),
+            completedAtLabel: new Date('2024-01-12T00:00:00.000Z').toLocaleString(),
+          },
+        ],
+        user: {
+          assessmentPid: undefined,
+          grade: undefined,
+          userId: 'student-1',
+          userType: 'student',
+          username: 'alice@example.com',
+        },
+      },
+      {
+        tasks: [
+          {
+            taskId: 'math',
+            name: 'Math Public',
+            status: 'notStarted',
+            statusLabel: 'Not Started',
+            statusIcon: 'pi pi-minus-circle',
+            statusSeverity: 'warning',
+            startedAt: null,
+            completedAt: null,
+            startedAtLabel: '--',
+            completedAtLabel: '--',
+          },
+          {
+            taskId: 'vocab',
+            name: 'Vocabulary Public',
+            status: 'started',
+            statusLabel: 'Started',
+            statusIcon: 'pi pi-clock',
+            statusSeverity: 'warn',
+            startedAt: '2024-01-15T00:00:00.000Z',
+            completedAt: null,
+            startedAtLabel: new Date('2024-01-15T00:00:00.000Z').toLocaleString(),
+            completedAtLabel: '--',
+          },
+        ],
+        user: {
+          assessmentPid: undefined,
+          grade: undefined,
+          userId: 'student-2',
+          userType: 'student',
+          username: 'bob@example.com',
+        },
+      },
+      {
+        tasks: [
+          {
+            taskId: 'math',
+            name: 'Math Public',
+            status: 'completed',
+            statusLabel: 'Completed',
+            statusIcon: 'pi pi-check-circle',
+            statusSeverity: 'success',
+            startedAt: '2024-01-08T00:00:00.000Z',
+            completedAt: '2024-01-09T00:00:00.000Z',
+            startedAtLabel: new Date('2024-01-08T00:00:00.000Z').toLocaleString(),
+            completedAtLabel: new Date('2024-01-09T00:00:00.000Z').toLocaleString(),
+          },
+          {
+            taskId: 'vocab',
+            name: 'Vocabulary Public',
+            status: 'notStarted',
+            statusLabel: 'Not Started',
+            statusIcon: 'pi pi-minus-circle',
+            statusSeverity: 'warning',
+            startedAt: null,
+            completedAt: null,
+            startedAtLabel: '--',
+            completedAtLabel: '--',
+          },
+        ],
+        user: {
+          assessmentPid: undefined,
+          grade: undefined,
+          userId: 'teacher-1',
+          userType: 'teacher',
+          username: 'teacher@example.com',
+        },
+      },
+    ]);
+    expect(wrapper.findComponent({ name: 'PvDataTable' }).exists()).toBe(true);
+  });
+
+  it('filters table rows by login search input', async () => {
+    const wrapper = await mountLoadedProgressReport();
+
+    wrapper.vm.searchInput = 'bob';
+    await nextTick();
+
+    const table = wrapper.findComponent({ name: 'RoarDataTable' });
+
+    expect(table.props('data')).toHaveLength(1);
+    expect(table.props('data')[0].user.username).toBe('bob@example.com');
+  });
+
+  it('exports all and selected progress rows as CSV data', async () => {
+    const wrapper = await mountLoadedProgressReport();
+
+    await wrapper.find('[data-testid="export-all"]').trigger('click');
+    await wrapper.find('[data-testid="export-selected"]').trigger('click');
+
+    expect(mockExportCsv).toHaveBeenNthCalledWith(
+      1,
+      [
+        {
+          'Math Public Started at': new Date('2024-01-11T00:00:00.000Z').toLocaleString(),
+          'Math Public Completed at': '--',
+          UID: 'student-1',
+          'User Login': 'alice@example.com',
+          'User Type': 'Student',
+          'Vocabulary Public Started at': new Date('2024-01-10T00:00:00.000Z').toLocaleString(),
+          'Vocabulary Public Completed at': new Date('2024-01-12T00:00:00.000Z').toLocaleString(),
+        },
+        {
+          'Math Public Started at': '--',
+          'Math Public Completed at': '--',
+          UID: 'student-2',
+          'User Login': 'bob@example.com',
+          'User Type': 'Student',
+          'Vocabulary Public Started at': new Date('2024-01-15T00:00:00.000Z').toLocaleString(),
+          'Vocabulary Public Completed at': '--',
+        },
+        {
+          'Math Public Started at': new Date('2024-01-08T00:00:00.000Z').toLocaleString(),
+          'Math Public Completed at': new Date('2024-01-09T00:00:00.000Z').toLocaleString(),
+          UID: 'teacher-1',
+          'User Login': 'teacher@example.com',
+          'User Type': 'Teacher',
+          'Vocabulary Public Started at': '--',
+          'Vocabulary Public Completed at': '--',
+        },
+      ],
+      'progress-report-winter-progress-assignment.csv',
+    );
+    expect(mockExportCsv).toHaveBeenNthCalledWith(
+      2,
+      [
+        {
+          'Math Public Started at': new Date('2024-01-11T00:00:00.000Z').toLocaleString(),
+          'Math Public Completed at': '--',
+          UID: 'student-1',
+          'User Login': 'alice@example.com',
+          'User Type': 'Student',
+          'Vocabulary Public Started at': new Date('2024-01-10T00:00:00.000Z').toLocaleString(),
+          'Vocabulary Public Completed at': new Date('2024-01-12T00:00:00.000Z').toLocaleString(),
+        },
+      ],
+      'progress-selected.csv',
+    );
+  });
+
+  it('renders the empty state when there are no users', async () => {
+    mockGetAdministrationProgress.mockResolvedValue({
+      taskProgress: [],
+      users: [],
+    });
+
+    const wrapper = await mountLoadedProgressReport();
+
+    expect(wrapper.text()).toContain('Could not find users for this assignment.');
+    expect(wrapper.findComponent({ name: 'RoarDataTable' }).exists()).toBe(false);
+  });
+
+  it('renders the fetch error state when progress data cannot be loaded', async () => {
+    mockGetAdministrationProgress.mockRejectedValue(new Error('Progress fetch failed'));
+
+    const wrapper = await mountLoadedProgressReport();
+
+    expect(wrapper.text()).toContain('There was a problem fetching the assignment details.');
+    expect(wrapper.text()).toContain('Please refresh the page or try again later.');
+    expect(wrapper.findComponent({ name: 'RoarDataTable' }).exists()).toBe(false);
+  });
+});
