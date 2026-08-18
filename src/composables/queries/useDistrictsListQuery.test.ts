@@ -51,7 +51,7 @@ describe('useDistrictsListQuery', () => {
     });
     vi.spyOn(VueQuery, 'useQuery');
 
-    const [result] = withSetup(() => useDistrictsListQuery(), {
+    withSetup(() => useDistrictsListQuery(), {
       plugins: [[VueQuery.VueQueryPlugin, { queryClient }]],
     });
 

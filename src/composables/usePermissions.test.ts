@@ -317,7 +317,7 @@ describe('usePermissions', () => {
     });
 
     it('should compute permissions object correctly when permissions are loaded', async () => {
-      mockPermissionService.canPerformSiteAction.mockImplementation((user, site, resource, action) => {
+      mockPermissionService.canPerformSiteAction.mockImplementation((_user, _site, resource, action) => {
         return resource === 'groups' && action === 'read';
       });
 

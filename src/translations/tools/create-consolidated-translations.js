@@ -18,7 +18,7 @@ function readJsonSafe(filePath) {
   try {
     const text = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(text);
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -99,7 +99,7 @@ function buildRows(langs) {
     perLangFlat[lang] = {};
 
     // Traverse the nested JSON structure to extract values for known paths
-    Object.entries(namespaceMap).forEach(([legacyKey, modulePath]) => {
+    Object.entries(namespaceMap).forEach(([_legacyKey, modulePath]) => {
       const pathParts = modulePath.split('/');
       let current = json;
 
@@ -120,19 +120,6 @@ function buildRows(langs) {
     });
   }
   return { allIdentifiers: Array.from(allIdentifiers).sort(), perLangFlat };
-}
-
-function groupBySection(identifiers) {
-  const groups = new Map(); // section -> identifiers[]
-  identifiers.forEach((id) => {
-    // identifier looks like: "components/navbar.something" or "auth/consent.something"
-    const firstToken = id.split('.')[0]; // e.g., "components/navbar" or "auth/consent"
-    const section = firstToken.split('/')[0]; // e.g., "components" or "auth"
-    const list = groups.get(section) ?? [];
-    list.push(id);
-    groups.set(section, list);
-  });
-  return groups;
 }
 
 function toCsvLine(values) {

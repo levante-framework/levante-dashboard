@@ -138,7 +138,6 @@ describe('VariantCard.vue - Language Variant Testing', () => {
     mockLanguages.forEach((language) => {
       it(`should render variant card successfully for ${language.displayName} (${language.variantCode})`, async () => {
         const mockVariant = createMockVariant(language);
-        let testPassed = false;
         let errorMessage = '';
 
         try {
@@ -174,7 +173,6 @@ describe('VariantCard.vue - Language Variant Testing', () => {
           const infoButton = wrapper.find('i.pi-info-circle');
           expect(infoButton.exists()).toBe(true);
 
-          testPassed = true;
           testResults.push({
             language: language.displayName,
             code: language.variantCode,
