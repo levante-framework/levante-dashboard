@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,7 +18,7 @@ function readJsonSafe(filePath) {
   try {
     const text = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(text);
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -99,7 +99,7 @@ function buildRows(langs) {
     perLangFlat[lang] = {};
 
     // Traverse the nested JSON structure to extract values for known paths
-    Object.entries(namespaceMap).forEach(([legacyKey, modulePath]) => {
+    Object.entries(namespaceMap).forEach(([_legacyKey, modulePath]) => {
       const pathParts = modulePath.split('/');
       let current = json;
 
@@ -122,19 +122,6 @@ function buildRows(langs) {
   return { allIdentifiers: Array.from(allIdentifiers).sort(), perLangFlat };
 }
 
-function groupBySection(identifiers) {
-  const groups = new Map(); // section -> identifiers[]
-  identifiers.forEach((id) => {
-    // identifier looks like: "components/navbar.something" or "auth/consent.something"
-    const firstToken = id.split('.')[0]; // e.g., "components/navbar" or "auth/consent"
-    const section = firstToken.split('/')[0]; // e.g., "components" or "auth"
-    const list = groups.get(section) ?? [];
-    list.push(id);
-    groups.set(section, list);
-  });
-  return groups;
-}
-
 function toCsvLine(values) {
   return values
     .map((v) => {
@@ -142,7 +129,7 @@ function toCsvLine(values) {
       // Escape newlines, carriage returns, and quotes for CSV
       const escaped = s.replace(/\r?\n/g, '\\n').replace(/\r/g, '\\r');
       return escaped.includes(',') || escaped.includes('"') || s.includes('\n') || s.includes('\r')
-        ? '"' + escaped.replace(/"/g, '""') + '"'
+        ? `"${escaped.replace(/"/g, '""')}"`
         : escaped;
     })
     .join(',');
@@ -210,7 +197,9 @@ function writeConsolidatedCSVs({ allIdentifiers, perLangFlat }, langs) {
     mainIds.sort().forEach((id) => {
       const label = id.split('.').slice(-1)[0];
       const row = [id, label];
-      OUTPUT_LANGS.forEach((lang) => row.push(getValue(id, lang)));
+      OUTPUT_LANGS.forEach((lang) => {
+        row.push(getValue(id, lang));
+      });
       out.push(toCsvLine(row));
     });
     const file = path.join(consolidatedRoot, 'dashboard-translations.csv');
@@ -227,7 +216,9 @@ function writeConsolidatedCSVs({ allIdentifiers, perLangFlat }, langs) {
     ids.sort().forEach((id) => {
       const label = id.split('.').slice(-1)[0];
       const row = [id, label];
-      OUTPUT_LANGS.forEach((lang) => row.push(getValue(id, lang)));
+      OUTPUT_LANGS.forEach((lang) => {
+        row.push(getValue(id, lang));
+      });
       out.push(toCsvLine(row));
     });
     const safeName = componentName.replace(/[\\/]/g, '-');

@@ -23,10 +23,10 @@ import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
 import { usePermissions } from '@/composables/usePermissions';
 import useUserType from '@/composables/useUserType';
+import { isLevante } from '@/constants';
 import { CONSENT_TYPES } from '@/constants/consentTypes';
 import { ROLES } from '@/constants/roles';
 import { APP_ROUTES } from '@/constants/routes';
-import { isLevante } from '@/constants';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 
@@ -36,7 +36,7 @@ const ConsentModal = defineAsyncComponent(() => import('@/components/ConsentModa
 
 const authStore = useAuthStore();
 const { roarfirekit, ssoProvider, userClaims, userData } = storeToRefs(authStore);
-const { hasRole, permissionsLoaded } = usePermissions();
+const { hasRole, isLoadingPermissions } = usePermissions();
 
 const router = useRouter();
 const i18n = useI18n();
@@ -74,7 +74,7 @@ const isLoading = computed(() => {
   // @NOTE: In addition to the loading states, we also check if user data and user claims are loaded as due to the
   // current application initialization flow, the userData and userClaims queries initially reset. Once this is improved
   // these additional checks can be removed.
-  return !initialized.value || !userData.value || !userClaims.value || !permissionsLoaded.value;
+  return !initialized.value || !userData.value || !userClaims.value || isLoadingPermissions.value;
 });
 
 const showConsent = ref(false);

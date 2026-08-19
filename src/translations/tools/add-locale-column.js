@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import fs from 'fs';
+import fs from 'node:fs';
+import path from 'node:path';
 import Papa from 'papaparse';
-import path from 'path';
 
 const consolidatedRoot = path.join('src', 'translations', 'consolidated');
 
@@ -29,7 +29,7 @@ function toCsvLine(values) {
       const s = v == null ? '' : String(v);
       const escaped = s.replace(/\r?\n/g, '\\n').replace(/\r/g, '\\r');
       return escaped.includes(',') || escaped.includes('"') || s.includes('\n') || s.includes('\r')
-        ? '"' + escaped.replace(/"/g, '""') + '"'
+        ? `"${escaped.replace(/"/g, '""')}"`
         : escaped;
     })
     .join(',');
@@ -39,7 +39,9 @@ function writeCsv(filePath, rows) {
   if (!rows.length) return;
   const headers = Object.keys(rows[0]);
   const out = [toCsvLine(headers)];
-  rows.forEach((r) => out.push(toCsvLine(headers.map((h) => r[h] ?? ''))));
+  rows.forEach((r) => {
+    out.push(toCsvLine(headers.map((h) => r[h] ?? '')));
+  });
   fs.writeFileSync(filePath, out.join('\n'));
 }
 

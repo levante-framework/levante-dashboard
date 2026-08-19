@@ -1,7 +1,7 @@
 {
   "name": "roar-dashboard",
   "private": true,
-  "version": "3.8.0-dev",
+  "version": "3.9.0-dev",
   "type": "module",
   "scripts": {
     "survey:pdf": "node -e \"(async()=>{const {loadSurveyFromFile}=await import('./dist/helpers/surveyLoader.js'); const {generateSurveyPdfFromJson}=await import('./dist/helpers/surveyPdfGenerator.js'); const fp=process.env.SURVEY_JSON||'surveys/demo.json'; const survey=await loadSurveyFromFile(fp); await generateSurveyPdfFromJson(survey,{filename:(process.env.OUTPUT||'survey.pdf')});})().catch(e=>{console.error(e);process.exit(1);})\"",
@@ -36,15 +36,19 @@
     "i18n:safety-check": "node src/translations/tools/translation-safety-check.js",
     "i18n:add-locale": "node src/translations/tools/add-locale-column.js",
     "i18n:sync": "npm run i18n:consolidate && npm run i18n:crowdin:upload && npm run i18n:crowdin:download && npm run i18n:csv-to-json && npm run i18n:validate",
-    "repository:new": "bash scripts/generate-repository.sh"
+    "repository:new": "bash scripts/generate-repository.sh",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
   },
   "dependencies": {
     "@bdelab/roar-pa": "5.1.0",
     "@bdelab/roar-sre": "3.0.2",
     "@bdelab/roar-swr": "1.15.0",
     "@bdelab/roar-utils": "^1.2.1",
-    "@levante-framework/core-tasks": "^1.3.9",
-    "@levante-framework/firekit": "^9.6.4",
+    "@levante-framework/core-tasks": "^1.3.14",
+    "@levante-framework/firekit": "^9.7.0",
     "@levante-framework/levante-zod": "github:levante-framework/levante-zod#task-management",
     "@levante-framework/permissions-core": "^1.2.0",
     "@primevue/core": "^4.2.4",
@@ -112,6 +116,7 @@
     "firebase-tools": "^15.22.2",
     "happy-dom": "^14.12.3",
     "husky": "^9.1.6",
+    "lint-staged": "^17.3.0",
     "nanoid": "^5.0.7",
     "sass": "^1.50.1",
     "typescript": "^5.9.2",

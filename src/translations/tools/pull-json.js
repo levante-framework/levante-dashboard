@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { spawnSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,7 +78,7 @@ function createBackup() {
 
 function syncCsvsToConsolidated() {
   // Create backup before syncing
-  const backupPath = createBackup();
+  createBackup();
 
   ensureDir(consolidatedRoot);
   ensureDir(consolidatedComponents);

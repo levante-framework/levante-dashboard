@@ -6,6 +6,15 @@ This project is a fork of ROAR, with additional support for the Levante environm
 
 ## NPM Scripts for LEVANTE are listed in [package.json](./package.json)
 
+```shell
+npm install          # also installs the Biome pre-commit hook via husky
+npm run check        # same check CI runs
+npm run check:fix  # auto-fix format issues
+```
+
+Pre-commit runs `lint-staged` → `biome check --write` on staged files so format
+mismatches are fixed before they hit CI.
+
 ## Legacy Data Flow Diagram from ROAR
 
 See the legacy [ROAR/ROAD Data Flow Diagram here](https://miro.com/app/board/uXjVNY-_qDA=/?share_link_id=967374624080).

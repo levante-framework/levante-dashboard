@@ -141,8 +141,13 @@ export const fetchAdminsBySite = async (siteId, siteName) => {
       });
     });
   } catch (error) {
-    console.error('fetchAdminsBySite: Error fetching admins by siteId:', error);
-    logger.error(error, { context: { function: 'fetchAdminsBySite', siteId, siteName } });
+    logger.error(new Error('Failed to fetch admins by siteId', { cause: error }), {
+      tags: {
+        function: 'fetchAdminsBySite',
+      },
+      siteId,
+      siteName,
+    });
     throw error;
   }
 };

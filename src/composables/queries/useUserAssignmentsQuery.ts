@@ -1,6 +1,4 @@
 import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
-import { storeToRefs } from 'pinia';
-import type { MaybeRefOrGetter } from 'vue';
 import { USER_ASSIGNMENTS_QUERY_KEY } from '@/constants/queryKeys';
 import { computeQueryOverrides } from '@/helpers/computeQueryOverrides';
 import { getUserAssignments } from '@/helpers/query/assignments';

@@ -27,8 +27,11 @@ const useUpdateTaskVariantMutation = (): UseMutationReturnType<
       });
     },
     onError: (error: Error, payload: UpdateTaskVariantParams): void => {
-      logger.error(error, { payload });
+      logger.error(new Error('Failed to update Task Variant', { cause: error }), {
+        tags: { function: 'useUpdateTaskVariantMutation', payload },
+      });
     },
+    meta: { skipGlobalErrorLogging: true },
   });
 };
 

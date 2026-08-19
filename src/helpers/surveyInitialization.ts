@@ -11,6 +11,7 @@ import {
   saveFinalSurveyData,
   saveSurveyData,
 } from '@/helpers/survey';
+import { logger } from '@/logger';
 import type { useAssignmentsStore } from '@/store/assignments';
 
 interface UserData {
@@ -63,7 +64,6 @@ interface SetupSurveyEventHandlersParams {
 
 export function bootstrapSurveyInstance({
   surveyInstance,
-  userType,
   specificSurveyData,
   userData,
   surveyStore,
@@ -124,7 +124,7 @@ export function setupSurveyEventHandlers({
 
   surveyInstance.onCurrentPageChanged.add(
     (
-      sender: SurveyModel,
+      _sender: SurveyModel,
       options: {
         oldCurrentPage: PageModel | null;
         newCurrentPage: PageModel;
@@ -165,17 +165,16 @@ export function setupSurveyEventHandlers({
               administrationId: selectedAdminId,
             });
           } catch (error: unknown) {
-            console.error(
-              'Error saving previous page responses: ',
-              error instanceof Error ? error.message : String(error),
-            );
+            logger.error(new Error('Failed to save previous page survey responses', { cause: error }), {
+              tags: { function: 'setupSurveyEventHandlers' },
+            });
           }
         }
       }
     },
   );
 
-  surveyInstance.onComplete.add((sender: SurveyModel, options: CompleteEvent) =>
+  surveyInstance.onComplete.add((sender: SurveyModel, _options: CompleteEvent) =>
     saveFinalSurveyData({
       sender,
       roarfirekit,

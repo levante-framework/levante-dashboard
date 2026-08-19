@@ -119,6 +119,9 @@
         font-size: 28px;
         font-weight: bold;
         cursor: pointer;
+        background: none;
+        border: none;
+        padding: 0;
       }
 
       .close:hover {
@@ -290,6 +293,7 @@
         "
       >
         <button
+          type="button"
           onclick="analyzeSurvey()"
           style="
             background-color: #007bff;
@@ -303,6 +307,7 @@
           📊 Analyze Survey
         </button>
         <button
+          type="button"
           onclick="generatePDF()"
           style="
             background-color: #28a745;
@@ -316,6 +321,7 @@
           📄 Generate Printable PDF
         </button>
         <button
+          type="button"
           onclick="generateFillablePDF()"
           style="
             background-color: #fd7e14;
@@ -329,6 +335,7 @@
           📝 Generate Form-Style PDF
         </button>
         <button
+          type="button"
           onclick="openHtmlForm()"
           style="
             background-color: #6f42c1;
@@ -342,6 +349,7 @@
           💻 Open HTML Form
         </button>
         <button
+          type="button"
           onclick="generateTrueFillablePDF()"
           style="
             background-color: #dc3545;
@@ -363,7 +371,7 @@
     <!-- HTML Form Modal -->
     <div id="htmlFormModal" class="modal">
       <div class="modal-content">
-        <span class="close" onclick="closeHtmlForm()">&times;</span>
+        <button type="button" class="close" onclick="closeHtmlForm()">&times;</button>
         <h2>Digital Caregiver Survey - Child</h2>
         <div id="htmlFormContent"></div>
       </div>
@@ -386,13 +394,13 @@
           // FIRST: Look for English under 'en' key
           if (textObj.en) {
             const englishText = extractTextWithEnglishPriority(textObj.en);
-            if (englishText && englishText.trim()) return englishText;
+            if (englishText?.trim()) return englishText;
           }
 
           // SECOND: Look for 'default' but check if it's English
           if (textObj.default) {
             const defaultText = extractTextWithEnglishPriority(textObj.default);
-            if (defaultText && defaultText.trim()) {
+            if (defaultText?.trim()) {
               // Skip if it's clearly Spanish
               if (!defaultText.toLowerCase().includes('sí') && !defaultText.toLowerCase().includes('no')) {
                 return defaultText;
@@ -427,7 +435,7 @@
               }
               if (typeof textObj[key] === 'object') {
                 const nested = extractTextWithEnglishPriority(textObj[key]);
-                if (nested && nested.trim()) return nested;
+                if (nested?.trim()) return nested;
               }
             }
           }
@@ -1622,14 +1630,6 @@
       }
 
       // Helper functions for PDF generation
-      function parseHtmlToText(html) {
-        if (!html) return '';
-        // Create a temporary div to parse HTML
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        return tempDiv.textContent || tempDiv.innerText || '';
-      }
-
       function wrapText(text, maxLength) {
         if (!text) return [];
         const words = text.split(' ');

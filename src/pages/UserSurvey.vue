@@ -1,47 +1,69 @@
 <script setup>
-import 'survey-core/survey-core.css';
-import { SurveyComponent } from 'survey-vue3-ui';
-import { onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { storeToRefs } from 'pinia';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { useAuthStore } from '@/store/auth';
 import { useSurveyStore } from '@/store/survey';
+import 'survey-core/survey-core.css';
+import { SurveyComponent } from 'survey-vue3-ui';
+import { computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 
-const authStore = useAuthStore();
 const router = useRouter();
+const authStore = useAuthStore();
+const { userData } = storeToRefs(authStore);
 const surveyStore = useSurveyStore();
+const {
+  isGeneralSurveyComplete,
+  isSavingSurveyResponses,
+  isSurveyPartSubmitted,
+  specificSurveyRelationData,
+  specificSurveyRelationIndex,
+  survey,
+} = storeToRefs(surveyStore);
+
+const birthMonth = computed(() => {
+  return specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.birthMonth ?? '--';
+});
+
+const birthYear = computed(() => {
+  return specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.birthYear ?? '--';
+});
+
+const name = computed(() => {
+  return specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.name ?? '--';
+});
 
 onMounted(() => {
-  if (!surveyStore.survey) {
+  if (!survey.value) {
     router.push({ name: 'Home' });
   }
 });
 </script>
 
 <template>
-  <div v-if="surveyStore.survey && !surveyStore.isSavingSurveyResponses">
+  <div v-if="survey && !isSavingSurveyResponses">
     <h1
-      v-if="authStore.userData.userType !== 'student' && surveyStore.isGeneralSurveyComplete"
+      v-if="userData.userType !== 'student' && isGeneralSurveyComplete && !isSurveyPartSubmitted"
       class="text-2xl font-bold text-black text-center"
     >
       {{
-        authStore.userData.userType === 'parent'
+        userData.userType === 'parent'
           ? `${$t('userSurvey.specificRelationDescriptionChildA')} ${
-              surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex].birthMonth
+              birthMonth
             } ${$t('userSurvey.specificRelationDescriptionChildB')} ${
-              surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex].birthYear
+              birthYear
             }`
           : `${$t('userSurvey.specificRelationDescriptionClass')} ${
-              surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex].name
+              name
             }`
       }}
     </h1>
 
-    <SurveyComponent :model="surveyStore.survey" />
+    <SurveyComponent :model="survey" />
   </div>
 
   <LevanteSpinner
-    v-if="!surveyStore.survey || surveyStore.isSavingSurveyResponses"
+    v-if="!survey || isSavingSurveyResponses"
     fullscreen
   />
 </template>

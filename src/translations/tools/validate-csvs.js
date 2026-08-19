@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import fs from 'fs';
+import fs from 'node:fs';
+import path from 'node:path';
 import Papa from 'papaparse';
-import path from 'path';
 
 const consolidatedRoot = path.join('src', 'translations', 'consolidated');
 
@@ -49,7 +49,9 @@ function main() {
   for (const file of files) {
     const rows = readCsv(file);
     const { locales } = validateHeaders(rows, file);
-    locales.forEach((l) => allLocales.add(l));
+    locales.forEach((l) => {
+      allLocales.add(l);
+    });
 
     for (const row of rows) {
       const id = (row.identifier || '').trim();

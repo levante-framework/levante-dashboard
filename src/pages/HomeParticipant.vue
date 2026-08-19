@@ -74,13 +74,14 @@
         </div>
       </div>
     </div>
+
+    <ConsentModal
+      v-if="showConsent"
+      :consent-text="confirmText"
+      :consent-type="consentType"
+      :on-confirm="updateConsent"
+    />
   </div>
-  <ConsentModal
-    v-if="showConsent"
-    :consent-text="confirmText"
-    :consent-type="consentType"
-    :on-confirm="updateConsent"
-  />
 </template>
 
 <script setup>
@@ -108,10 +109,10 @@ import ParticipantSidebar from '@/components/ParticipantSidebar.vue';
 import SideBar from '@/components/SideBar.vue';
 import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
+import useSurveyResponsesQuery from '@/composables/queries/useSurveyResponsesQuery';
 import useTasksQuery from '@/composables/queries/useTasksQuery';
 import useUserAssignmentsQuery from '@/composables/queries/useUserAssignmentsQuery';
 import useUserDataQuery from '@/composables/queries/useUserDataQuery';
-import useSurveyResponsesQuery from '@/composables/useSurveyResponses/useSurveyResponses';
 import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
 import { formatDateWithLocale } from '@/helpers';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
@@ -239,7 +240,7 @@ watch(selectedAssignment, (newAdmin, oldAdmin) => {
 });
 
 const { data: surveyResponsesData } = useSurveyResponsesQuery({
-  enabled: hasSurvey && initialized,
+  enabled: computed(() => hasSurvey.value && initialized.value),
 });
 
 const isLoading = computed(() => {
@@ -298,21 +299,6 @@ async function updateConsent() {
 const userType = computed(() => {
   return toRaw(userData.value)?.userType?.toLowerCase();
 });
-
-// Derive site for telemetry from the user's own roles; participants cannot read district docs (403).
-watch(
-  currentUserData,
-  (user) => {
-    const currentDistrictId = user?.districts?.current?.[0];
-    if (!currentDistrictId) return;
-    const roles = user?.roles ?? [];
-    const matchingRole = roles.find((role) => role?.siteId === currentDistrictId) ?? roles[0];
-    const siteId = matchingRole?.siteId ?? currentDistrictId;
-    const siteName = matchingRole?.siteName;
-    logger.setAdditionalProperties({ siteId, ...(siteName ? { siteName } : {}) });
-  },
-  { immediate: true },
-);
 
 // Watch for locale changes and reset survey to allow reinitialization with new locale
 watch(locale, (newLocale, oldLocale) => {
@@ -583,7 +569,9 @@ watch(
           surveyStore.setSpecificSurveyRelationData(res);
         }
       } catch (error) {
-        console.error('Error fetching relation data:', error);
+        logger.error(new Error('Failed to fetch survey relation data', { cause: error }), {
+          tags: { component: 'HomeParticipant', function: 'watch' },
+        });
       }
     }
 

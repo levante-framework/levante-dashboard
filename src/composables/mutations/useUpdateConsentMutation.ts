@@ -32,6 +32,7 @@ const useUpdateConsentMutation = (): UseMutationReturnType<void, Error, ConsentU
 
       await authStore.roarfirekit.updateConsentStatus(consentType, consentVersion, consentParams);
     },
+    meta: { skipGlobalErrorLogging: true },
     onSuccess: (): void => {
       queryClient.invalidateQueries({ queryKey: [USER_DATA_QUERY_KEY] });
     },

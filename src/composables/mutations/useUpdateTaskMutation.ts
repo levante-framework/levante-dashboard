@@ -28,6 +28,7 @@ const useUpdateTaskMutation = (): UseMutationReturnType<void, Error, TaskData, u
     mutationFn: async (task: TaskData): Promise<void> => {
       await authStore.roarfirekit.updateTaskOrVariant(task);
     },
+    meta: { skipGlobalErrorLogging: true },
     onSuccess: (): void => {
       queryClient.invalidateQueries({ queryKey: [TASKS_QUERY_KEY] });
     },

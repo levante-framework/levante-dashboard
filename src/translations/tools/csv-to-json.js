@@ -1,6 +1,6 @@
-import fs from 'fs';
+import fs from 'node:fs';
+import path from 'node:path';
 import Papa from 'papaparse';
-import path from 'path';
 
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
@@ -76,19 +76,6 @@ function listCsvFiles() {
   return files;
 }
 
-function mergeDeep(target, source) {
-  for (const key of Object.keys(source)) {
-    const value = source[key];
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      if (!target[key] || typeof target[key] !== 'object') target[key] = {};
-      mergeDeep(target[key], value);
-    } else {
-      target[key] = value;
-    }
-  }
-  return target;
-}
-
 function validateCsvRows(rows, filePath) {
   if (!rows.length) return;
   const headers = Object.keys(rows[0]);
@@ -142,9 +129,9 @@ function main() {
   }
 
   // Ensure legacy 'es' is generated from 'es-CO' when 'es' is not present
-  if (!perLocaleMessages['es'] && perLocaleMessages['es-co']) {
-    perLocaleMessages['es'] = JSON.parse(JSON.stringify(perLocaleMessages['es-co']));
-    originalCaseMapping['es'] = 'es';
+  if (!perLocaleMessages.es && perLocaleMessages['es-co']) {
+    perLocaleMessages.es = JSON.parse(JSON.stringify(perLocaleMessages['es-co']));
+    originalCaseMapping.es = 'es';
   }
 
   // Write one JSON file per locale

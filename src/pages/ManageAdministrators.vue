@@ -196,6 +196,7 @@ import useSuperAdminsQuery from '@/composables/queries/useSuperAdminsQuery';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
 import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
 interface AdministratorName {
@@ -525,7 +526,10 @@ async function executeAdministratorRemoval() {
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
 
-    console.error('Error removing researcher from site.', error);
+    logger.error(new Error('Failed to remove researcher from site', { cause: error }), {
+      tags: { component: 'ManageAdministrators', function: 'removeAdministratorFromSite' },
+      siteId,
+    });
   } finally {
     administrator.value = null;
     closeRemovalVerificationModal();

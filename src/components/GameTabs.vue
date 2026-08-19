@@ -296,10 +296,10 @@ const getRoutePath = (game: DisplayGame): string => {
     return '/survey';
   }
 
-  if (normalizedLevanteTaskIds.has(camelizedTaskId)) return '/game/core-tasks/' + taskId;
+  if (normalizedLevanteTaskIds.has(camelizedTaskId)) return `/game/core-tasks/${taskId}`;
 
   logger.capture(`Task ${camelizedTaskId} is not a core task`, { taskId });
-  return '/game/' + taskId;
+  return `/game/${taskId}`;
 };
 
 const getSurveyPartProgressValue = (game: DisplayGame): number => {
@@ -431,8 +431,8 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
     await authStore.completeAssessment(assignment.id, game.taskId);
   } else {
     url += `&participant=${props.userData.assessmentPid}${
-      props.userData.schools?.current?.length ? '&schoolId=' + props.userData.schools.current.join('"%2C"') : ''
-    }${props.userData.classes?.current?.length ? '&classId=' + props.userData.classes.current.join('"%2C"') : ''}`;
+      props.userData.schools?.current?.length ? `&schoolId=${props.userData.schools.current.join('"%2C"')}` : ''
+    }${props.userData.classes?.current?.length ? `&classId=${props.userData.classes.current.join('"%2C"')}` : ''}`;
 
     await authStore.completeAssessment(assignment.id, game.taskId);
     window.location.href = url;

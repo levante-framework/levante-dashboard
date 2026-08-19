@@ -15,16 +15,17 @@ export const useSurveyStore = defineStore('surveyStore', () => {
   const specificSurveyRelationIndex = ref(0);
   const isGeneralSurveyComplete = ref(false);
   const isSpecificSurveyComplete = ref(false);
-  const isSurveyCompleted = ref(false);
+  const isSurveyPartSubmitted = ref(false);
 
   // Actions
-  function setSurveyCompleted() {
-    isSurveyCompleted.value = true;
+  function setSurveyPartSubmitted() {
+    isSurveyPartSubmitted.value = true;
   }
 
   function setSurvey(surveyInstance) {
     // Mark the survey instance as raw to prevent deep reactivity
     survey.value = markRaw(surveyInstance);
+    isSurveyPartSubmitted.value = false;
   }
 
   function setNumberOfSurveyPages(numGeneral, numSpecific) {
@@ -77,7 +78,7 @@ export const useSurveyStore = defineStore('surveyStore', () => {
     specificSurveyRelationIndex.value = 0;
     isGeneralSurveyComplete.value = false;
     isSpecificSurveyComplete.value = false;
-    isSurveyCompleted.value = false;
+    isSurveyPartSubmitted.value = false;
   }
 
   return {
@@ -94,10 +95,10 @@ export const useSurveyStore = defineStore('surveyStore', () => {
     specificSurveyRelationIndex,
     isGeneralSurveyComplete,
     isSpecificSurveyComplete,
-    isSurveyCompleted,
+    isSurveyPartSubmitted,
 
     // Actions
-    setSurveyCompleted,
+    setSurveyPartSubmitted,
     setSurvey,
     setNumberOfSurveyPages,
     setIsSavingSurveyResponses,

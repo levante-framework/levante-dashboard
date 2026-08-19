@@ -40,9 +40,6 @@ const getRunInfoCommon = (mergedRun) => {
         //supportLevel: thetaToSupportSWR(run.runInfoOrig.thetaEstimate, run.runInfoOrig.grade),
         supportLevel: percentileToSupportClassification('pa', normedPercentile, mergedRun.grade),
       };
-
-    case 'sre':
-    case 'vocab':
     default:
       console.log('TODO: add', mergedRun.taskId, ' to getRunInfoCommon()');
       break;
@@ -111,7 +108,7 @@ export function parseGrade(grade) {
   if (!grade) {
     // null, undefined, or empty string
     return 'NA';
-  } else if (isNaN(grade)) {
+  } else if (Number.isNaN(Number(grade))) {
     // parse as a string
     if (grade.toLowerCase() === 'k') {
       return 'k';
@@ -125,11 +122,11 @@ export function parseGrade(grade) {
       return 'jk';
     } else if (grade.substring(0, 3).toLowerCase() === 'kin') {
       return 'k';
-    } else if (grade.toLowerCase() == 'adult') {
+    } else if (grade.toLowerCase() === 'adult') {
       return 'adult';
-    } else if (!isNaN(parseInt(grade))) {
+    } else if (!Number.isNaN(parseInt(grade, 10))) {
       // this catches strings like 1st, 2nd, 3rd
-      const gradeNum = parseInt(grade);
+      const gradeNum = parseInt(grade, 10);
       return gradeNum.toString();
     } else {
       console.warn(grade, 'not recognized as a grade');
@@ -137,7 +134,7 @@ export function parseGrade(grade) {
     }
   } else {
     // parse as a number
-    const gradeNum = parseInt(grade);
+    const gradeNum = parseInt(grade, 10);
 
     if (gradeNum < 0) {
       return 'pk';
@@ -155,7 +152,7 @@ export function thetaToSupportSWR(percentile, grade) {
   let support;
 
   // we report automaticity instead of support for grades K/1
-  if (grade == 'K' || grade == '1') {
+  if (grade === 'K' || grade === '1') {
     support = percentile < 50 ? 'Limited' : 'Average or Above Average';
   } else {
     support =
@@ -175,7 +172,7 @@ export function percentileToSupportClassification(taskId, percentile, grade = 1)
 
   switch (taskId) {
     case 'pa':
-      if (grade == 'K' || grade <= '4') {
+      if (grade === 'K' || grade <= '4') {
         support =
           percentile < 25
             ? 'Extra Support Needed'
@@ -194,7 +191,7 @@ export function percentileToSupportClassification(taskId, percentile, grade = 1)
 
     case 'swr':
       // we report automaticity instead of support for grades K/1
-      if (grade == 'K' || grade == '1') {
+      if (grade === 'K' || grade === '1') {
         support = percentile < 50 ? 'Limited' : 'Average or Above Average';
       } else {
         support =

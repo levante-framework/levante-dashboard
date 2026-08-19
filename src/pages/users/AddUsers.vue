@@ -494,7 +494,17 @@ const submitUsers = async () => {
     })),
   });
   if (!params.success) {
-    logger.error('CreateUsersParamsSchema parse failed unexpectedly', { issues: params.error.issues });
+    logger.error(
+      new Error('CreateUsersParamsSchema parse failed unexpectedly', {
+        cause: params.error,
+      }),
+      {
+        tags: {
+          component: 'AddUsers',
+          function: 'submitUsers',
+        },
+      },
+    );
     status.value = { message: 'An unexpected error occurred. Please contact support.', severity: 'error' };
     isSubmitting.value = false;
     return;
@@ -525,7 +535,13 @@ const submitUsers = async () => {
           uid: createdUser.uid ?? '',
         };
       } else {
-        logger.error('Unexpected created user', { uid: createdUser.uid });
+        logger.error(new Error('Unexpected created user'), {
+          tags: {
+            component: 'AddUsers',
+            function: 'submitUsers',
+          },
+          uid: createdUser.uid,
+        });
       }
     });
     registeredUsers.value = mergedUsers;
@@ -582,7 +598,13 @@ const submitUsers = async () => {
       // - functions/invalid-argument/schema
       // - functions/invalid-argument/org-site-mismatch
       // - functions/not-found/orgs
-      logger.error(new Error(`Unexpected createUsers app-error: ${error.code}/${error.details.code}`), error);
+      logger.error(new Error('Unexpected createUsers app-error', { cause: error }), {
+        tags: {
+          component: 'AddUsers',
+          function: 'submitUsers',
+          errorCode: `${error.code}/${error.details.code}`,
+        },
+      });
       status.value = {
         message:
           'An unexpected error occurred. Please refresh the page and try again. If the problem persists, contact support.',
@@ -590,13 +612,12 @@ const submitUsers = async () => {
       };
     }
   } else {
-    if (result.code === 'functions-error' || result.code === 'firebase-error') {
-      logger.error(new Error(`Unexpected createUsers ${result.code}: ${result.data.code}`), result.data);
-    } else if (result.code === 'error') {
-      logger.error(`Unexpected createUsers error: ${result.data.message}`, {
-        error: JSON.stringify(result.data, null, 2),
-      });
-    }
+    logger.error(new Error(`Unexpected createUsers ${result.code}`, { cause: result.data }), {
+      tags: {
+        component: 'AddUsers',
+        function: 'submitUsers',
+      },
+    });
     status.value = { message: 'An unexpected error occurred. Please contact support.', severity: 'error' };
   }
 

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { withSetup } from '@/test-support/withSetup.js';
-import { usePermissions } from './usePermissions';
+import { resetPermissionsState, usePermissions } from './usePermissions';
 
 // Mock the permissions-core package
 vi.mock('@levante-framework/permissions-core', () => ({
@@ -49,11 +49,19 @@ vi.mock('lodash/mapValues', () => ({
 }));
 
 describe('usePermissions', () => {
-  let piniaInstance;
-  let mockPermissionService;
-  let mockAuthStore;
+  let piniaInstance: ReturnType<typeof createTestingPinia>;
+  let mockPermissionService: {
+    loadPermissions: ReturnType<typeof vi.fn>;
+    canPerformSiteAction: ReturnType<typeof vi.fn>;
+    canPerformGlobalAction: ReturnType<typeof vi.fn>;
+    getUserSiteRole: ReturnType<typeof vi.fn>;
+    hasMinimumRole: ReturnType<typeof vi.fn>;
+  };
+  let mockAuthStore: Record<string, unknown>;
 
   beforeEach(async () => {
+    resetPermissionsState();
+
     piniaInstance = createTestingPinia({
       createSpy: vi.fn,
       stubActions: false,
@@ -75,6 +83,7 @@ describe('usePermissions', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    resetPermissionsState();
   });
 
   describe('when user is not authenticated', () => {
@@ -118,12 +127,14 @@ describe('usePermissions', () => {
           authStore.userData = { roles: [] };
           authStore.currentSite = 'test-site';
 
-          const { can, canGlobal, hasRole, permissions } = usePermissions();
+          const { can, canGlobal, hasRole, permissions, permissionsLoaded, isLoadingPermissions } = usePermissions();
 
           expect(can('groups', 'read')).toBe(false);
           expect(canGlobal('users', 'create')).toBe(false);
           expect(hasRole('admin')).toBe(false);
           expect(permissions.value).toEqual({});
+          expect(permissionsLoaded.value).toBe(true);
+          expect(isLoadingPermissions.value).toBe(false);
         },
         {
           plugins: [[piniaInstance]],
@@ -156,9 +167,10 @@ describe('usePermissions', () => {
           const authStore = useAuthStore(piniaInstance);
           Object.assign(authStore, mockAuthStore);
 
-          const { permissionsLoaded } = usePermissions();
+          const { permissionsLoaded, isLoadingPermissions } = usePermissions();
 
           expect(permissionsLoaded.value).toBe(false);
+          expect(isLoadingPermissions.value).toBe(true);
         },
         {
           plugins: [[piniaInstance]],
@@ -305,7 +317,7 @@ describe('usePermissions', () => {
     });
 
     it('should compute permissions object correctly when permissions are loaded', async () => {
-      mockPermissionService.canPerformSiteAction.mockImplementation((user, site, resource, action) => {
+      mockPermissionService.canPerformSiteAction.mockImplementation((_user, _site, resource, action) => {
         return resource === 'groups' && action === 'read';
       });
 
@@ -370,21 +382,45 @@ describe('usePermissions', () => {
       );
     });
 
-    it('should return empty permissions object when permissions are not loaded', async () => {
-      await withSetup(
-        async () => {
+    it('should return empty permissions object when permissions are not loaded', () => {
+      withSetup(
+        () => {
           const authStore = useAuthStore(piniaInstance);
           Object.assign(authStore, mockAuthStore);
 
-          const { permissions, permissionsLoaded } = usePermissions();
+          const { permissions, permissionsLoaded, isLoadingPermissions } = usePermissions();
 
           expect(permissionsLoaded.value).toBe(false);
+          expect(isLoadingPermissions.value).toBe(true);
           expect(permissions.value).toEqual({});
         },
         {
           plugins: [[piniaInstance]],
         },
       );
+    });
+
+    it('should clear loading state after permissions finish loading', async () => {
+      const [result] = withSetup(
+        () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, mockAuthStore);
+
+          return usePermissions();
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
+
+      expect(result.isLoadingPermissions.value).toBe(true);
+
+      await nextTick();
+      await flushPromises();
+      await nextTick();
+
+      expect(result.permissionsLoaded.value).toBe(true);
+      expect(result.isLoadingPermissions.value).toBe(false);
     });
   });
 
