@@ -36,7 +36,7 @@
 import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
 import { slk } from 'survey-core';
-import { computed, defineAsyncComponent, nextTick, onBeforeMount, onMounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, nextTick, onBeforeMount, onMounted, provide, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
@@ -175,4 +175,6 @@ onMounted(() => {
     };
   }
 });
+
+provide('footerHeight', footerHeight);
 </script>
