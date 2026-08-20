@@ -66,3 +66,19 @@ export interface GetAdministrationOrgProgressApiResponse {
   status: 'ok';
   data: GetAdministrationOrgProgressResult;
 }
+
+export interface GetAdministrationProgressResult {
+  administrationId: string;
+  taskProgress: TaskProgressBreakdown[];
+  taskSummary: TaskProgressSummaryRow[];
+  users: UserAdministrationProgressRow[];
+}
+
+export interface GetAdministrationProgressPayload {
+  administrationId: string;
+}
+
+export interface GetAdministrationProgressApiResponse {
+  status: 'ok';
+  data: GetAdministrationProgressResult;
+}
