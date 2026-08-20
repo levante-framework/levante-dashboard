@@ -56,6 +56,13 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
     category: 'Researchers',
   },
+  {
+    title: 'Manage Tasks',
+    icon: 'pi pi-pencil',
+    buttonLink: { name: 'ManageTasksVariants' },
+    allowedRoles: [ROLES.SUPER_ADMIN],
+    category: 'Tasks',
+  },
 ] as const;
 
 interface GetNavbarActionsParams {

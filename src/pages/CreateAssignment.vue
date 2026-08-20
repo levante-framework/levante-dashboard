@@ -619,6 +619,7 @@ const hasAssignmentChanges = () => {
     return {
       taskId: assessment.taskId,
       variantId: assessment.variantId,
+      variantName: assessment.variantName,
       params: removeNull(assessment.params ?? {}),
       conditions: assessment.conditions ? removeNull(assessment.conditions) : undefined,
     };
@@ -629,6 +630,7 @@ const hasAssignmentChanges = () => {
       return normalizeAssessment({
         taskId: variant.task.id,
         variantId: variant.variant.id,
+        variantName: variant.variant.displayName ?? variant.variant.name,
         params: toRaw(variant.variant.params),
         conditions: toRaw(variant.variant.conditions),
       });
@@ -723,7 +725,7 @@ const submit = async () => {
   const submittedAssessments = variants.value.map((assessment) =>
     removeUndefined({
       variantId: assessment.variant.id,
-      variantName: assessment.variant.name,
+      variantName: assessment.variant.displayName ?? assessment.variant.name,
       taskId: assessment.task.id,
       params: toRaw(assessment.variant.params),
       ...(toRaw(assessment.variant.conditions || undefined) && {
