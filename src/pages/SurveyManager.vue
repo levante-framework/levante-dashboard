@@ -1,6 +1,6 @@
 <template>
   <div v-if="isPreview">
-    <SurveyComponent v-if="surveyPreviewModel" :model="surveyPreviewModel" class="survey-preview" style="height: auto;" />
+    <SurveyComponent v-if="surveyPreviewModel" :model="surveyPreviewModel" class="survey-preview" />
   </div>
 
   <div v-else class="survey-manager" :style="{ height: `calc(100dvh - ${footerHeight}px)` }">
@@ -365,6 +365,8 @@ watchEffect(() => {
 }
 
 .survey-preview {
+  height: auto;
+  
   .sd-container-modern__title {
     border-top: 6px solid var(--primary-color);
   }
