@@ -4,6 +4,7 @@ import _merge from 'lodash/merge';
 import type { ToastServiceMethods } from 'primevue/toastservice';
 import { Converter } from 'showdown';
 import type { Question, SurveyModel } from 'survey-core';
+import { SC2020 } from 'survey-creator-core/themes';
 import { toRaw } from 'vue';
 import type { Router } from 'vue-router';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
@@ -328,4 +329,55 @@ export type { RoarFirekit as RoarfirekitType } from '@bdelab/roar-firekit';
 
 export const getPlainSurveyData = (raw: unknown) => {
   return typeof structuredClone === 'function' ? structuredClone(toRaw(raw)) : JSON.parse(JSON.stringify(toRaw(raw)));
+};
+
+const defaultSurveyTitles: Record<string, string> = {
+  default: '[Survey Name Here]',
+  child_survey: '[Child Survey Name Here]',
+  parent_survey_child: 'For child X with Birth month A and Birth Year B',
+  parent_survey_family: '[Caregiver Survey Name Here]',
+  teacher_survey_classroom: 'For [Clasroom Name Here]',
+  teacher_survey_general: '[Teacher Survey Name Here]',
+};
+
+export const getSurveyDataWithDefaults = (surveyId: string, surveyData: Record<string, any>): Record<string, any> => {
+  const title = surveyData?.title || defaultSurveyTitles[surveyId || 'default'];
+  const hasMultiplePages = surveyData?.pages?.length > 2; // Start page does not count
+
+  // In case the JSON file does not contain any of the following props
+  const fallbackOptions = {
+    firstPageIsStartPage: true,
+    progressBarLocation: 'belowHeader',
+    showProgressBar: hasMultiplePages,
+    title,
+    widthMode: 'responsive',
+  };
+
+  // Every survey should have showTitle == true
+  const defaultOptions = {
+    showTitle: true,
+  };
+
+  const surveyDataWithFallback = _merge({}, fallbackOptions, surveyData);
+  const surveyDataWithDefaults = _merge({}, surveyDataWithFallback, defaultOptions);
+
+  return surveyDataWithDefaults;
+};
+
+export const getSurveyTheme = (customStyles: Record<string, unknown> = {}): Record<string, unknown> => {
+  const defaultStyles = {
+    ...SC2020,
+    cssVariables: {
+      ...SC2020.cssVariables,
+      '--sjs-font-family': 'Inter',
+      '--sjs-corner-radius': '8px',
+      '--sjs-primary-backcolor-dark': 'rgba(162, 45, 16, 1)',
+      '--sjs-primary-backcolor-light': 'rgba(218, 61, 22, 0.1)',
+      '--sjs-primary-backcolor': 'rgba(218, 61, 22, 1)',
+      '--sjs-primary-background-500': 'rgba(218, 61, 22, 1)',
+      '--sjs-secondary-background-500': 'rgba(218, 61, 22, 1)',
+    },
+  };
+
+  return _merge({}, defaultStyles, customStyles);
 };
