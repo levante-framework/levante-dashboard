@@ -22,3 +22,6 @@ export const LEVANTE_BUCKET_STORAGE_LIST_API =
 export const LEVANTE_TRANSLATIONS = `${LEVANTE_BUCKET_URL}/translations/dashboard-consolidated-flat`;
 
 export const LEVANTE_TRANSLATION_LANGUAGES = `${LEVANTE_TRANSLATIONS}/languageoptions.json`;
+
+/** Default GCS folder for task cover images when Firestore stores a bare filename (`task-logos/`). */
+export const TASK_IMAGE_BASE_URL = `${LEVANTE_BUCKET_URL}/task-logos`;

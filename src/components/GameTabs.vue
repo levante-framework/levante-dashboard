@@ -8,7 +8,12 @@
           :to="{ path: getRoutePath(game) }"
           @click="onGameCardClick($event, game)"
         >
-          <div class="game-card__thumbnail" :style="{ backgroundImage: `url(${game.taskData.image})` }">
+          <div class="game-card__thumbnail">
+            <TaskImage
+              class="game-card__thumbnail-img"
+              :image="game.taskData.image"
+              :alt="getTaskImageAlt(game)"
+            />
             <div class="game-card__btn game-card__btn--play">
               <i v-if="getSurveyPartProgressValue(game) <= 0" class="pi pi-play"></i>
               <i v-else class="pi pi-angle-double-right"></i>
@@ -40,7 +45,12 @@
             'game-card--locked': !isTaskComplete(game) && !isTaskAvailable(game),
           }"
         >
-          <div class="game-card__thumbnail" :style="{ backgroundImage: `url(${game.taskData.image})` }">
+          <div class="game-card__thumbnail">
+            <TaskImage
+              class="game-card__thumbnail-img"
+              :image="game.taskData.image"
+              :alt="getTaskImageAlt(game)"
+            />
             <div v-if="isTaskComplete(game)" class="game-card__btn game-card__btn--complete">
               <i class="pi pi-check"></i>
             </div>
@@ -100,6 +110,7 @@ import useSurveyResponsesQuery from '@/composables/queries/useSurveyResponsesQue
 import { ASSIGNMENT_STATUSES } from '@/constants';
 import { LEVANTE_TASK_IDS, ROAR_TASK_IDS } from '@/constants/coreTasks';
 import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
+import TaskImage from '@/components/TaskImage.vue';
 import { getAssignmentStatus } from '@/helpers/assignments';
 import {
   expandGamesForDisplay,
@@ -515,15 +526,27 @@ async function routeExternalTask(game: DisplayGame): Promise<void> {
 }
 
 .game-card__thumbnail {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   width: 88px;
   height: 88px;
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: cover;
   border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.game-card__thumbnail-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.game-card__thumbnail .game-card__btn {
+  position: relative;
+  z-index: 1;
 }
 
 .game-card__btn {
