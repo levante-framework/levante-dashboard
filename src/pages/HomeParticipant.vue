@@ -123,6 +123,7 @@ import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 import { useSurveyStore } from '@/store/survey';
 import 'survey-core/survey.i18n';
+import { getSurveyTheme } from '@/helpers/survey';
 
 const showConsent = ref(false);
 const consentVersion = ref('');
@@ -471,6 +472,7 @@ function createSurveyInstance(surveyDataToStartAt) {
   const surveyInstance = new Model(
     typeof structuredClone === 'function' ? structuredClone(surveyJson) : JSON.parse(JSON.stringify(surveyJson)),
   );
+  surveyInstance.applyTheme(getSurveyTheme());
   return surveyInstance;
 }
 
