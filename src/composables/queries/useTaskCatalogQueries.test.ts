@@ -4,9 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import { tasksRepository } from '@/firebase/repositories/TasksRepository';
 import { withSetup } from '@/test-support/withSetup.js';
+import useTasksCatalogQuery from './useTasksCatalogQuery';
 import useTaskVariantRevisionsQuery from './useTaskVariantRevisionsQuery';
 import useTaskVariantsCatalogQuery from './useTaskVariantsCatalogQuery';
-import useTasksCatalogQuery from './useTasksCatalogQuery';
 import useVariantParamSpecsQuery from './useVariantParamSpecsQuery';
 
 vi.mock('@/firebase/repositories/TasksRepository', () => ({

@@ -60,8 +60,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import PvButton from 'primevue/button';
+import { computed, ref } from 'vue';
 import TaskUpsertDialog from '@/components/tasks/TaskUpsertDialog.vue';
 import useTasksCatalogQuery from '@/composables/queries/useTasksCatalogQuery';
 import type { SerializedTask } from '@/types/taskCatalog';

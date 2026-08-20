@@ -109,7 +109,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
 import PvButton from 'primevue/button';
 import PvCheckbox from 'primevue/checkbox';
 import PvDialog from 'primevue/dialog';
@@ -117,6 +116,7 @@ import PvInputNumber from 'primevue/inputnumber';
 import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
 import { useToast } from 'primevue/usetoast';
+import { computed, reactive, ref, watch } from 'vue';
 import useCreateTaskVariantMutation from '@/composables/mutations/useCreateTaskVariantMutation';
 import useVariantParamSpecsQuery from '@/composables/queries/useVariantParamSpecsQuery';
 import { getCallableErrorMessage } from '@/helpers/taskCatalog';

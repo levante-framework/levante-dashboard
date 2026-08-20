@@ -167,17 +167,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import PvButton from 'primevue/button';
 import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { useToast } from 'primevue/usetoast';
+import { computed, ref } from 'vue';
 import VariantCreateDialog from '@/components/tasks/VariantCreateDialog.vue';
 import VariantRegistrationHistoryDialog from '@/components/tasks/VariantRegistrationHistoryDialog.vue';
 import useUpdateTaskVariantMutation from '@/composables/mutations/useUpdateTaskVariantMutation';
-import useTaskVariantsCatalogQuery from '@/composables/queries/useTaskVariantsCatalogQuery';
 import useTasksCatalogQuery from '@/composables/queries/useTasksCatalogQuery';
+import useTaskVariantsCatalogQuery from '@/composables/queries/useTaskVariantsCatalogQuery';
 import { diffVariantParams, hasVariantParamDiff } from '@/helpers/diffVariantParams';
 import { getCallableErrorMessage } from '@/helpers/taskCatalog';
 import type { SerializedTaskVariant, VariantParamDiff, VariantParamValue } from '@/types/taskCatalog';

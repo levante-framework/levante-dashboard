@@ -72,7 +72,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
 import PvButton from 'primevue/button';
 import PvCheckbox from 'primevue/checkbox';
 import PvDialog from 'primevue/dialog';
@@ -80,6 +79,7 @@ import PvInputText from 'primevue/inputtext';
 import PvSelect from 'primevue/select';
 import PvTextarea from 'primevue/textarea';
 import { useToast } from 'primevue/usetoast';
+import { computed, reactive, ref, watch } from 'vue';
 import useUpsertVariantParamSpecMutation from '@/composables/mutations/useUpsertVariantParamSpecMutation';
 import { getCallableErrorMessage } from '@/helpers/taskCatalog';
 import type { SerializedVariantParamSpec } from '@/types/taskCatalog';

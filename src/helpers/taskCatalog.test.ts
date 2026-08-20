@@ -34,11 +34,8 @@ describe('getCallableErrorMessage', () => {
   });
 
   it('maps duplicate variant params already-exists', () => {
-    expect(
-      getCallableErrorMessage(
-        { code: 'functions/already-exists', details: { code: 'params' } },
-        'fallback',
-      ),
-    ).toBe('A variant with the same params already exists for this task.');
+    expect(getCallableErrorMessage({ code: 'functions/already-exists', details: { code: 'params' } }, 'fallback')).toBe(
+      'A variant with the same params already exists for this task.',
+    );
   });
 });

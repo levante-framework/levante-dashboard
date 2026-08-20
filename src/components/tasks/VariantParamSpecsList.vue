@@ -61,9 +61,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import PvButton from 'primevue/button';
 import PvTag from 'primevue/tag';
+import { computed, ref } from 'vue';
 import VariantParamSpecUpsertDialog from '@/components/tasks/VariantParamSpecUpsertDialog.vue';
 import useVariantParamSpecsQuery from '@/composables/queries/useVariantParamSpecsQuery';
 import type { SerializedVariantParamSpec } from '@/types/taskCatalog';

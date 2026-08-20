@@ -67,10 +67,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import PvButton from 'primevue/button';
 import PvDialog from 'primevue/dialog';
 import PvTag from 'primevue/tag';
+import { computed } from 'vue';
 import useTaskVariantRevisionsQuery from '@/composables/queries/useTaskVariantRevisionsQuery';
 
 interface Props {

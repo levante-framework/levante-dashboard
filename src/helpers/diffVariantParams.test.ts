@@ -3,10 +3,7 @@ import { diffVariantParams, hasVariantParamDiff, sortVariantsByCreatedAt } from 
 
 describe('diffVariantParams', () => {
   it('detects added, removed, and changed params', () => {
-    const diff = diffVariantParams(
-      { a: 1, b: 'keep', c: true },
-      { b: 'keep', c: false, d: 'new' },
-    );
+    const diff = diffVariantParams({ a: 1, b: 'keep', c: true }, { b: 'keep', c: false, d: 'new' });
 
     expect(diff.added).toEqual({ d: 'new' });
     expect(diff.removed).toEqual({ a: 1 });
