@@ -54,7 +54,7 @@ const loginFromEmailLink = async (email) => {
 // The necessary email is missing from local storage (so the primary sign-in logic via loginFromEmailLink cannot proceed).
 // AND roarfirekit indicates it's expecting an email link sign-in process to be underway.
 // AND the current page's URL is not a valid email sign-in link (e.g., the token in the URL is missing, invalid, or expired, or the user navigated to the path without a token).
-const unsubscribe = authStore.$subscribe(async (mutation, state) => {
+const unsubscribe = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit.isSignInWithEmailLink && state.roarfirekit.signInWithEmailLink) {
     if (!roarfirekit.value.isSignInWithEmailLink(window.location.href)) {
       router.replace({ name: 'Home' });

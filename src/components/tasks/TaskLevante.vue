@@ -44,7 +44,7 @@ const handlePopState = () => {
   router.go(0);
 };
 
-unsubscribe = authStore.$subscribe(async (mutation, state) => {
+unsubscribe = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit.restConfig) init();
 });
 
@@ -87,7 +87,7 @@ onBeforeUnmount(() => {
 
 watch(
   [isFirekitInit, isLoadingUserData, userData, isCoreTasksReady],
-  async ([newFirekitInitValue, newLoadingUserData, newUserData, newIsCoreTasksReady]) => {
+  async ([newFirekitInitValue, newLoadingUserData, _newUserData, newIsCoreTasksReady]) => {
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
     const hasAgeData = birthMonth !== undefined && birthYear !== undefined;

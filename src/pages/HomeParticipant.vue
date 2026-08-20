@@ -155,7 +155,7 @@ const isUserChild = computed(
 const assignmentsStore = useAssignmentsStore();
 const { selectedAssignment, selectedStatus, userAssignments } = storeToRefs(assignmentsStore);
 
-unsubscribe = authStore.$subscribe(async (mutation, state) => {
+unsubscribe = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit.restConfig) init();
 });
 
@@ -475,7 +475,7 @@ function createSurveyInstance(surveyDataToStartAt) {
 
 function setupMarkdownConverter(surveyInstance) {
   const converter = new Converter();
-  surveyInstance.onTextMarkdown.add((survey, options) => {
+  surveyInstance.onTextMarkdown.add((_survey, options) => {
     let str = converter.makeHtml(options.text);
     str = str.substring(3, str.length - 4);
     options.html = str;
