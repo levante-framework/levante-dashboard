@@ -193,10 +193,24 @@ export const useAuthStore = defineStore(
 
     async function initiateLoginWithEmailLink({ email }: Pick<LoginCredentials, 'email'>): Promise<void> {
       if (isFirekitInit()) {
+        const trimmedEmail = email.trim();
+        logger.capture('Email link sign-in requested', { email: trimmedEmail });
+
+        const isEmailAvailable = await roarfirekit.value?.isEmailAvailable(trimmedEmail);
+        if (isEmailAvailable) {
+          logger.capture('Email link sign-in blocked, address not registered', { email: trimmedEmail });
+          const notRegisteredError = new Error(
+            'This email is not in our records. We did not send a sign-in link. Ask your site administrator to add this address before using email-link sign-in.',
+          ) as Error & { code: string };
+          notRegisteredError.code = 'levante/email-not-registered';
+          throw notRegisteredError;
+        }
+
         const redirectUrl = `${window.location.origin}/auth-email-link`;
 
-        return roarfirekit.value?.initiateLoginWithEmailLink({ email, redirectUrl }).then(() => {
-          window.localStorage.setItem('emailForSignIn', email);
+        return roarfirekit.value?.initiateLoginWithEmailLink({ email: trimmedEmail, redirectUrl }).then(() => {
+          window.localStorage.setItem('emailForSignIn', trimmedEmail);
+          logger.capture('Email link sign-in sent', { email: trimmedEmail });
         });
       }
     }
