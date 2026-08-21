@@ -295,9 +295,23 @@ const authWithEmailOrUsername = async () => {
   }
 
   if (isSigningInWithEmailLink.value) {
-    return initiateLoginWithEmailLink({ email }).then(() => {
-      router.push({ name: 'AuthEmailSent' });
-    });
+    return initiateLoginWithEmailLink({ email })
+      .then(() => {
+        router.push({ name: 'AuthEmailSent' });
+      })
+      .catch((e) => {
+        messages.value.push({
+          id: e?.code || 'email-link',
+          severity: 'error',
+          content:
+            e?.code === 'levante/email-not-registered'
+              ? e.message
+              : 'There was a problem sending the sign-in link. Please try again.',
+        });
+      })
+      .finally(() => {
+        spinner.value = false;
+      });
   }
 
   logInWithEmailAndPassword({ email, password })
