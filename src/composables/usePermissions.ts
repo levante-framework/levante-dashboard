@@ -10,6 +10,7 @@ import {
   type Resource,
   type Role,
 } from '@levante-framework/permissions-core';
+import { AxiosError, isAxiosError } from 'axios';
 import _mapValues from 'lodash/mapValues';
 import { storeToRefs } from 'pinia';
 import { computed, readonly, ref, watch } from 'vue';
@@ -64,6 +65,12 @@ export const usePermissions = () => {
           errors,
         });
       }
+    } catch (error: unknown) {
+      if (isAxiosError(error) && error.code === AxiosError.ERR_NETWORK) return;
+
+      logger.error(new Error('Failed to fetch permissions', { cause: error }), {
+        tags: { function: 'loadPermissions' },
+      });
     } finally {
       isFetchingPermissions = false;
     }
