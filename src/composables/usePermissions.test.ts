@@ -1,10 +1,16 @@
 import { createTestingPinia } from '@pinia/testing';
 import { flushPromises } from '@vue/test-utils';
+import { AxiosError } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { withSetup } from '@/test-support/withSetup.js';
 import { resetPermissionsState, usePermissions } from './usePermissions';
+
+const { mockPermissionRequest } = vi.hoisted(() => ({
+  mockPermissionRequest: vi.fn(),
+}));
 
 // Mock the permissions-core package
 vi.mock('@levante-framework/permissions-core', () => ({
@@ -20,21 +26,15 @@ vi.mock('@levante-framework/permissions-core', () => ({
 
 // Mock the query utils
 vi.mock('@/helpers/query/utils', () => ({
-  getAxiosInstance: vi.fn(() => ({
-    get: vi.fn(() =>
-      Promise.resolve({
-        data: {
-          fields: {
-            matrix: { mapValue: { fields: {} } },
-            lastUpdated: { timestampValue: '2023-01-01T00:00:00Z' },
-            updatedAt: { timestampValue: '2023-01-01T00:00:00Z' },
-          },
-        },
-      }),
-    ),
-  })),
+  getAxiosInstance: vi.fn(() => ({ get: mockPermissionRequest })),
   getBaseDocumentPath: vi.fn(() => '/test-path'),
   convertValues: vi.fn((value) => value),
+}));
+
+vi.mock('@/logger', () => ({
+  logger: {
+    error: vi.fn(),
+  },
 }));
 
 // Mock lodash mapValues
@@ -61,6 +61,17 @@ describe('usePermissions', () => {
 
   beforeEach(async () => {
     resetPermissionsState();
+    mockPermissionRequest.mockReset();
+    mockPermissionRequest.mockResolvedValue({
+      data: {
+        fields: {
+          matrix: { mapValue: { fields: {} } },
+          lastUpdated: { timestampValue: '2023-01-01T00:00:00Z' },
+          updatedAt: { timestampValue: '2023-01-01T00:00:00Z' },
+        },
+      },
+    });
+    vi.mocked(logger.error).mockClear();
 
     piniaInstance = createTestingPinia({
       createSpy: vi.fn,
@@ -421,6 +432,56 @@ describe('usePermissions', () => {
 
       expect(result.permissionsLoaded.value).toBe(true);
       expect(result.isLoadingPermissions.value).toBe(false);
+    });
+
+    it('keeps permissions retryable without logging Axios network errors', async () => {
+      mockPermissionRequest.mockRejectedValue(new AxiosError('Network Error', AxiosError.ERR_NETWORK));
+
+      const [result] = withSetup(
+        () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, mockAuthStore);
+
+          return usePermissions();
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
+
+      await nextTick();
+      await flushPromises();
+      await nextTick();
+
+      expect(mockPermissionRequest).toHaveBeenCalledOnce();
+      expect(result.permissionsLoaded.value).toBe(false);
+      expect(result.isLoadingPermissions.value).toBe(true);
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('logs unexpected permission loading errors', async () => {
+      const unexpectedError = new Error('Unexpected permission failure');
+      mockPermissionRequest.mockRejectedValue(unexpectedError);
+
+      withSetup(
+        () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, mockAuthStore);
+
+          return usePermissions();
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
+
+      await nextTick();
+      await flushPromises();
+      await nextTick();
+
+      expect(logger.error).toHaveBeenCalledWith(new Error('Failed to fetch permissions', { cause: unexpectedError }), {
+        tags: { function: 'loadPermissions' },
+      });
     });
   });
 
