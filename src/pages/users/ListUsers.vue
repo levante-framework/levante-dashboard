@@ -33,7 +33,7 @@
                   </div>
                   <div class="flex align-items-center gap-2">
                     <div class="text-xl text-gray-600">
-                      <b> {{ users?.length }} </b>
+                      <b> {{ nonAdminUsers.length }} </b>
                     </div>
                   </div>
                 </div>
@@ -241,21 +241,22 @@ const {
 
 const isUserCountExpanded = ref(false);
 
+const nonAdminUsers = computed(() => users.value?.filter((user) => user.userType !== 'admin') ?? []);
+
 const childrenCount = computed(() => {
-  return users.value?.filter((user) => user.userType === 'child').length ?? 0;
+  return nonAdminUsers.value.filter((user) => user.userType === 'child').length;
 });
 
 const caregiversCount = computed(() => {
-  return users.value?.filter((user) => user.userType === 'caregiver').length ?? 0;
+  return nonAdminUsers.value.filter((user) => user.userType === 'caregiver').length;
 });
 
 const teachersCount = computed(() => {
-  return users.value?.filter((user) => user.userType === 'teacher').length ?? 0;
+  return nonAdminUsers.value.filter((user) => user.userType === 'teacher').length;
 });
 
 const transformedUsers = computed(() => {
-  if (!users.value) return [];
-  return users.value.map((user) => ({
+  return nonAdminUsers.value.map((user) => ({
     ...user,
     userType: normalizeUserTypeForDisplay(user.userType),
   }));
