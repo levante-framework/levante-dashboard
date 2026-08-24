@@ -1,4 +1,4 @@
-import { DriveStep } from 'driver.js';
+import type { DriveStep } from 'driver.js';
 import { defineStore } from 'pinia';
 import { type Ref, ref } from 'vue';
 

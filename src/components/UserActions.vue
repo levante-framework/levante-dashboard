@@ -71,6 +71,7 @@
 </template>
 
 <script setup lang="ts">
+import { hints } from 'driver.js/hints';
 import { storeToRefs } from 'pinia';
 import PvAvatar from 'primevue/avatar';
 import PvButton from 'primevue/button';
@@ -81,10 +82,9 @@ import { useRouter } from 'vue-router';
 import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import { APP_ROUTES } from '@/constants/routes';
 import { useAuthStore } from '@/store/auth';
-import SiteSelector from './SiteSelector.vue';
-import { runWizard } from '@/wizard/index.js';
-import { hints } from 'driver.js/hints';
 import { useLevanteStore } from '@/store/levante.js';
+import { runWizard } from '@/wizard/index.js';
+import SiteSelector from './SiteSelector.vue';
 
 interface Props {
   isBasicView: boolean;

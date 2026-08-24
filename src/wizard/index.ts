@@ -1,8 +1,8 @@
+import { type Config, type Driver, type DriveStep, driver as driverjs } from 'driver.js';
+import { storeToRefs } from 'pinia';
 import { LEVANTE_TRANSLATIONS } from '@/constants/bucket';
 import { logger } from '@/logger';
 import { useLevanteStore } from '@/store/levante';
-import { Config, Driver, driver as driverjs, DriveStep } from 'driver.js';
-import { storeToRefs } from 'pinia';
 
 interface RunWizardOptions {
   config?: Config;
