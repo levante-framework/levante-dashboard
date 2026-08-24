@@ -58,6 +58,7 @@
       </PvSelect>
 
       <PvButton
+        v-if="shouldDisplayWizardBtn"
         severity="info"
         variant="outlined"
         class="--djs-wizard-link wizard-link"
@@ -83,6 +84,7 @@ import { useAuthStore } from '@/store/auth';
 import SiteSelector from './SiteSelector.vue';
 import { runWizard } from '@/wizard/index.js';
 import { hints } from 'driver.js/hints';
+import { useLevanteStore } from '@/store/levante.js';
 
 interface Props {
   isBasicView: boolean;
@@ -101,10 +103,16 @@ interface DropdownChangeEvent {
 const authStore = useAuthStore();
 const { shouldUsePermissions, userData } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
+const levanteStore = useLevanteStore();
+const { wizardSteps } = storeToRefs(levanteStore);
 const i18n = useI18n();
 const router = useRouter();
 const { mutate: signOut } = useSignOutMutation();
 const feedbackButton = ref<HTMLButtonElement | null>(null);
+
+const shouldDisplayWizardBtn = computed(
+  () => (import.meta.env.VITE_FIREBASE_PROJECT ?? 'PROD').toUpperCase() === 'DEV' && wizardSteps.value?.length,
+);
 
 const props = defineProps<Props>();
 

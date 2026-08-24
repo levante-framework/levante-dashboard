@@ -15,6 +15,8 @@ const localStorageKey = 'levanteTourDismissed';
 const localStorageValue = 'true';
 
 export const runWizard = ({ config = {}, driver = driverjs(), force = false, steps = [] }: RunDriverOptions = {}) => {
+  if ((import.meta.env.VITE_FIREBASE_PROJECT ?? 'PROD').toUpperCase() !== 'DEV') return;
+
   const levanteStore = useLevanteStore();
   const { wizardSteps } = storeToRefs(levanteStore);
   const isDismissed = localStorage.getItem(localStorageKey);

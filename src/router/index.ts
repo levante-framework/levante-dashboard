@@ -403,7 +403,9 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
     return next({ name: 'Home' });
   }
 
-  await fetchWizardSteps(String(to.name));
+  if ((import.meta.env.VITE_FIREBASE_PROJECT ?? 'PROD').toUpperCase() === 'DEV') {
+    await fetchWizardSteps(String(to.name));
+  }
 
   return next();
 });
