@@ -75,7 +75,7 @@ import { storeToRefs } from 'pinia';
 import PvAvatar from 'primevue/avatar';
 import PvButton from 'primevue/button';
 import PvSelect from 'primevue/select';
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
@@ -170,11 +170,8 @@ const wizardLinkHint = hints({
 
 onMounted(async () => {
   if (isUserSuperAdmin()) {
-    await new Promise(() =>
-      setTimeout(() => {
-        wizardLinkHint.show();
-      }, 1000),
-    );
+    await nextTick();
+    setTimeout(() => wizardLinkHint.show(), 1000);
   }
 });
 </script>
