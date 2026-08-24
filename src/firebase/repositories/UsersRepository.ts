@@ -1,4 +1,10 @@
 import {
+  type GetUsersByOrgError,
+  GetUsersByOrgErrorSchema,
+  type GetUsersByOrgParams,
+  type GetUsersByOrgResult,
+} from '@levante-framework/levante-zod';
+import {
   collection,
   type DocumentData,
   getDocs,
@@ -9,7 +15,7 @@ import {
 } from 'firebase/firestore';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { ROLES } from '@/constants/roles';
-import { Repository } from '@/firebase/Repository';
+import { type CallSafeResult, Repository } from '@/firebase/Repository';
 import { FirebaseService } from '@/firebase/Service';
 import { logger } from '@/logger';
 import type {
@@ -90,6 +96,10 @@ function serializeUserSnapshot(doc: QueryDocumentSnapshot<DocumentData>): Docume
 }
 
 class UsersRepository extends Repository {
+  constructor() {
+    super();
+  }
+
   async fetchAdminUsers(options: { superAdminsOnly?: boolean } = {}): Promise<(DocumentData & { id: string })[]> {
     const { superAdminsOnly = false } = options;
 
@@ -142,6 +152,14 @@ class UsersRepository extends Repository {
     }
 
     return response.data;
+  }
+
+  async getUsersByOrg(params: GetUsersByOrgParams): Promise<CallSafeResult<GetUsersByOrgResult, GetUsersByOrgError>> {
+    return this.callSafe<GetUsersByOrgParams, GetUsersByOrgResult, GetUsersByOrgError>(
+      'getUsersByOrg',
+      params,
+      GetUsersByOrgErrorSchema,
+    );
   }
 }
 

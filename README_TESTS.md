@@ -69,7 +69,7 @@ Unit tests are located in various directories and test individual components, ut
   - [`useGroupsListQuery.test.ts`](src/composables/useGroupsListQuery.test.ts)
   - [`useDistrictsListQuery.test.ts`](src/composables/useDistrictsListQuery.test.ts)
   - [`useTasksQuery.test.ts`](src/composables/useTasksQuery.test.ts)
-  - [`useOrgUsersQuery.test.ts`](src/composables/useOrgUsersQuery.test.ts)
+  - [`useGetUsersByOrgQuery.test.ts`](src/composables/useGetUsersByOrgQuery.test.ts)
   - And many more...
 - **Mutation Tests**: Testing data modification composables
   - [`useDeleteAdministrationMutation.test.js`](src/composables/useDeleteAdministrationMutation.test.js)

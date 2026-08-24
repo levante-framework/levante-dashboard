@@ -179,12 +179,12 @@ import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
 import { useToast } from 'primevue/usetoast';
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import AppSpinner from '@/components/AppSpinner.vue';
 import EditUsersForm from '@/components/EditUsersForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
-import useOrgUsersQuery from '@/composables/queries/useOrgUsersQuery';
+import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { singularizeFirestoreCollection } from '@/helpers';
 import { exportCsv } from '@/helpers/query/utils';
@@ -235,34 +235,18 @@ const {
   isLoading,
   isFetching,
   data: users,
-} = useOrgUsersQuery(props.orgType, props.orgId, page, orderBy, {
+} = useGetUsersByOrgQuery(props.orgType, props.orgId, page, orderBy, {
   enabled: initialized,
 });
-
-watch(
-  users,
-  (newUsers) => {
-    console.log('Raw users data from query:', newUsers);
-    console.log('Number of users:', newUsers?.length);
-    if (newUsers?.length > 0) {
-      console.log('First user example:', newUsers[0]);
-      console.log(
-        'User types in data:',
-        newUsers.map((u) => u.userType),
-      );
-    }
-  },
-  { immediate: true },
-);
 
 const isUserCountExpanded = ref(false);
 
 const childrenCount = computed(() => {
-  return users.value?.filter((user) => user.userType === 'student').length ?? 0;
+  return users.value?.filter((user) => user.userType === 'child').length ?? 0;
 });
 
 const caregiversCount = computed(() => {
-  return users.value?.filter((user) => user.userType === 'parent').length ?? 0;
+  return users.value?.filter((user) => user.userType === 'caregiver').length ?? 0;
 });
 
 const teachersCount = computed(() => {
@@ -279,7 +263,7 @@ const transformedUsers = computed(() => {
 
 const columns = ref([
   {
-    field: 'id',
+    field: 'uid',
     header: 'UID',
     dataType: 'string',
     sort: false,
@@ -384,7 +368,7 @@ const updateUserData = async () => {
   isSubmitting.value = true;
 
   await roarfirekit.value
-    .updateUserData(currentEditUser.value.id, localUserData.value)
+    .updateUserData(currentEditUser.value.uid, localUserData.value)
     .then(() => {
       isSubmitting.value = false;
       closeModal();
@@ -442,7 +426,7 @@ async function updatePassword() {
   if (!v$.value.$invalid) {
     isSubmitting.value = true;
     await roarfirekit.value
-      .updateUserData(currentEditUser.value.id, { password: state.password })
+      .updateUserData(currentEditUser.value.uid, { password: state.password })
       .then(() => {
         submitted.value = false;
         isSubmitting.value = false;

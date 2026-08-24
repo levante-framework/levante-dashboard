@@ -49,7 +49,7 @@
     "@bdelab/roar-utils": "^1.2.1",
     "@levante-framework/core-tasks": "^1.3.14",
     "@levante-framework/firekit": "^9.7.0",
-    "@levante-framework/levante-zod": "^1.2.4",
+    "@levante-framework/levante-zod": "github:levante-framework/levante-zod#feat/get-users-by-org",
     "@levante-framework/permissions-core": "^1.2.0",
     "@primevue/core": "^4.2.4",
     "@primevue/themes": "^4.2.4",
