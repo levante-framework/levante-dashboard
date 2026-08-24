@@ -4,7 +4,7 @@ import { useLevanteStore } from '@/store/levante';
 import { Config, Driver, driver as driverjs, DriveStep } from 'driver.js';
 import { storeToRefs } from 'pinia';
 
-interface RunDriverOptions {
+interface RunWizardOptions {
   config?: Config;
   driver?: Driver;
   force?: boolean;
@@ -13,8 +13,57 @@ interface RunDriverOptions {
 
 const localStorageKey = 'levanteTourDismissed';
 const localStorageValue = 'true';
+const remoteCache = new Map<string, Array<DriveStep>>();
 
-export const runWizard = ({ config = {}, driver = driverjs(), force = false, steps = [] }: RunDriverOptions = {}) => {
+export const clearWizardSteps = () => {
+  const levanteStore = useLevanteStore();
+  const { setWizardSteps } = levanteStore;
+  setWizardSteps([]);
+};
+
+export const dismissWizard = () => {
+  localStorage.setItem(localStorageKey, localStorageValue);
+};
+
+export const fetchWizardSteps = async (wizard: string) => {
+  if (!wizard.trim().length) return null;
+
+  const filename = wizard.replace(/\.json$/, '');
+  const cached = remoteCache.get(filename);
+  if (cached) return cached;
+
+  const url = `${LEVANTE_TRANSLATIONS}/wizards/${filename}.json`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      clearWizardSteps();
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data || typeof data !== 'object') {
+      clearWizardSteps();
+      return null;
+    }
+
+    const levanteStore = useLevanteStore();
+    const { setWizardSteps } = levanteStore;
+    setWizardSteps(data as Array<DriveStep>);
+    remoteCache.set(filename, data as Array<DriveStep>);
+
+    return data;
+  } catch (error) {
+    logger.capture('Failed to fetch wizard steps', { error });
+    clearWizardSteps();
+    return null;
+  }
+};
+
+export const resolveWizardSteps = (...sources: Array<Array<DriveStep> | undefined>): Array<DriveStep> | undefined =>
+  sources.find((source) => (source?.length ?? 0) > 0);
+
+export const runWizard = ({ config = {}, driver = driverjs(), force = false, steps = [] }: RunWizardOptions = {}) => {
   if ((import.meta.env.VITE_FIREBASE_PROJECT ?? 'PROD').toUpperCase() !== 'DEV') return;
 
   const levanteStore = useLevanteStore();
@@ -29,44 +78,13 @@ export const runWizard = ({ config = {}, driver = driverjs(), force = false, ste
     ...config,
   };
 
+  const resolvedSteps = resolveWizardSteps(wizardSteps.value, steps, config.steps);
+  if (!resolvedSteps) return;
+
   driver.setConfig({
     ...defaultConfig,
-    steps: wizardSteps.value || steps || config.steps,
+    steps: resolvedSteps,
   });
 
   driver.drive();
-};
-
-export const dismissWizard = () => {
-  localStorage.setItem(localStorageKey, localStorageValue);
-};
-
-const remoteCache = new Map<string, Array<DriveStep>>();
-
-export const fetchWizardSteps = async (wizard: string) => {
-  if (!wizard.trim().length) return null;
-
-  const filename = wizard.replace(/\.json$/, '');
-  const cached = remoteCache.get(filename);
-  if (cached) return cached;
-
-  const url = `${LEVANTE_TRANSLATIONS}/wizards/${filename}.json`;
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    if (!data || typeof data !== 'object') return null;
-
-    const levanteStore = useLevanteStore();
-    const { setWizardSteps } = levanteStore;
-    setWizardSteps(data as Array<DriveStep>);
-    remoteCache.set(filename, data as Array<DriveStep>);
-
-    return data;
-  } catch (error) {
-    logger.capture('Failed to fetch wizard steps', { error });
-    return null;
-  }
 };
