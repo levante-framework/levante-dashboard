@@ -269,13 +269,11 @@ export const useAuthStore = defineStore(
         ? (data?.roles ?? [])
         : (data?.roles ?? []).filter((role) => role?.siteId !== RESTRICTED_SITE_ID);
 
-      if (visibleRoles.length > 0) {
-        sites.value = visibleRoles.map((role) => ({ siteId: role.siteId, siteName: role.siteName }));
+      sites.value = visibleRoles.map((role) => ({ siteId: role.siteId, siteName: role.siteName }));
 
-        if (!currentSite.value || !visibleRoles.some((role) => role.siteId === currentSite.value)) {
-          currentSite.value = visibleRoles[0]?.siteId ?? null;
-          currentSiteName.value = visibleRoles[0]?.siteName ?? null;
-        }
+      if (!currentSite.value || !visibleRoles.some((role) => role.siteId === currentSite.value)) {
+        currentSite.value = visibleRoles[0]?.siteId ?? null;
+        currentSiteName.value = visibleRoles[0]?.siteName ?? null;
       }
 
       // Participants often lack admin roles; fall back to districts.current for site telemetry.
