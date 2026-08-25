@@ -576,7 +576,8 @@ watchEffect(async () => {
   try {
     const mappedData = await Promise.all(
       orgData.value.map(async (org) => {
-        const userCount = await countUsersByOrg(activeOrgType.value, org.id);
+        const users = await fetchUsersByOrg(activeOrgType.value, org.id, 1_000_000, 0);
+        const userCount = users.filter((user) => user.userType !== 'admin').length;
         const assignmentCount = getAdministrationsByOrg(org.id, activeOrgType.value, allAdministrations.value).length;
 
         return {
