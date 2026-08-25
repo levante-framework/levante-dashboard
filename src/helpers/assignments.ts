@@ -6,7 +6,7 @@ export const isCurrent = (assignment: AdministrationType) => {
   const now = new Date();
   const open = convertToDate(assignment?.dateOpened || assignment?.dates?.start);
   const closed = convertToDate(assignment?.dateClosed || assignment?.dates?.end);
-  return open && open <= now && closed! >= now;
+  return Boolean(open && open <= now && closed && closed >= now);
 };
 
 export const isPast = (assignment: AdministrationType) => {

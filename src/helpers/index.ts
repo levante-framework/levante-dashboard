@@ -288,7 +288,7 @@ export const formattedVariantName = (variantName: string): string => {
   let variantLanguage = rawName;
   if (rawName?.toLowerCase()?.includes('adaptive')) {
     const parts = rawName?.split(' ');
-    variantLanguage = parts[0]!;
+    variantLanguage = parts[0] ?? '';
   }
 
   const trimmedName = variantLanguage.trim();

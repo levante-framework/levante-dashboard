@@ -103,9 +103,7 @@ describe('CsvUploader', () => {
 
       await pvFileUpload.vm.$emit('uploader', payload);
 
-      expect(wrapper.emitted('upload')).toBeTruthy();
-      expect(wrapper.emitted('upload')).toHaveLength(1);
-      expect(wrapper.emitted('upload')![0]).toEqual([payload]);
+      expect(wrapper.emitted('upload')).toEqual([[payload]]);
     });
 
     it('only accepts .csv files', () => {

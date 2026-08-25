@@ -661,10 +661,9 @@ describe('AddUsers Page', () => {
 
       // A Blob of the correct MIME type was passed to createObjectURL.
       expect(createObjectURL).toHaveBeenCalledOnce();
-      const [blobCallArgs] = createObjectURL.mock.calls as unknown as [Blob][];
-      const blob = blobCallArgs![0];
+      const blob = createObjectURL.mock.calls[0]?.[0];
       expect(blob).toBeInstanceOf(Blob);
-      expect(blob.type).toBe('text/csv;charset=utf-8;');
+      expect(blob?.type).toBe('text/csv;charset=utf-8;');
 
       // The download was triggered with the correct filename via an <a> element.
       expect(appendChildMock).toHaveBeenCalledOnce();
@@ -961,7 +960,7 @@ describe('AddUsers Page', () => {
       // produces. userType is forwarded verbatim — 'child' is a valid backend
       // literal, so there is no 'student' normalization in this component.
       expect(createUsers).toHaveBeenCalledOnce();
-      const [payload] = createUsers.mock.calls[0]!;
+      const [payload] = createUsers.mock.calls[0] ?? [];
       expect(payload.siteId).toBe('site-id-123');
       expect(payload.users).toHaveLength(1);
       expect(payload.users[0]).toMatchObject({
@@ -1151,7 +1150,7 @@ describe('AddUsers Page', () => {
       });
 
       expect(createUsers).toHaveBeenCalledOnce();
-      const [payload] = createUsers.mock.calls[0]!;
+      const [payload] = createUsers.mock.calls[0] ?? [];
       expect(payload.users[0].orgIds).toMatchObject({
         schools: [],
         classes: [],
@@ -1435,10 +1434,9 @@ describe('AddUsers Page', () => {
 
         // A Blob of the correct MIME type was passed to createObjectURL.
         expect(createObjectURL).toHaveBeenCalledOnce();
-        const [blobCallArgs] = createObjectURL.mock.calls as unknown as [Blob][];
-        const blob = blobCallArgs![0];
+        const blob = createObjectURL.mock.calls[0]?.[0];
         expect(blob).toBeInstanceOf(Blob);
-        expect(blob.type).toBe('text/csv;charset=utf-8;');
+        expect(blob?.type).toBe('text/csv;charset=utf-8;');
 
         // downloadRegisteredUsers passes 'registered-users.csv' explicitly to
         // downloadCsv, which is the documented filename contract for this path.

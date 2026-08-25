@@ -240,8 +240,9 @@ export const useAuthStore = defineStore(
     }
 
     async function sendMyPasswordResetEmail(): Promise<boolean> {
-      if (getUserEmail()) {
-        return (await roarfirekit.value?.sendPasswordResetEmail(getUserEmail()!).then(() => true)) ?? false;
+      const email = getUserEmail();
+      if (email) {
+        return (await roarfirekit.value?.sendPasswordResetEmail(email).then(() => true)) ?? false;
       }
 
       console.warn('Logged in user does not have an associated email. Unable to send password reset email');
