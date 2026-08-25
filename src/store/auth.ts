@@ -281,7 +281,7 @@ export const useAuthStore = defineStore(
       // Participants often lack admin roles; fall back to districts.current for site telemetry.
       const districtId = data?.districts?.current?.[0];
       const siteId = currentSite.value ?? districtId ?? null;
-      const matchingRole = data?.roles?.find((role) => role?.siteId === siteId) ?? data?.roles?.[0] ?? undefined;
+      const matchingRole = visibleRoles.find((role) => role?.siteId === siteId) ?? visibleRoles[0] ?? undefined;
       const siteName = currentSiteName.value ?? matchingRole?.siteName ?? null;
       stampTelemetrySite(siteId, siteName);
     }
