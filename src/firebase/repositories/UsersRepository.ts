@@ -91,10 +91,6 @@ function serializeUserSnapshot(doc: QueryDocumentSnapshot<DocumentData>): Docume
 }
 
 class UsersRepository extends Repository {
-  constructor() {
-    super();
-  }
-
   async fetchAdminUsers(options: { superAdminsOnly?: boolean } = {}): Promise<(DocumentData & { id: string })[]> {
     const { superAdminsOnly = false } = options;
 
