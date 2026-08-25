@@ -258,16 +258,16 @@ export const useAuthStore = defineStore(
       }
     }
 
-    // @TODO: Temporary block
-    // Remove it once LEVANTE_AUDIO_REVIEW is ready for non-superadmins or useless.
-    const RESTRICTED_SITE_ID = '1SUxysPAgIpD8XZR3Pwh'; // LEVANTE_AUDIO_REVIEW site
+    const LEVANTE_AUDIO_REVIEW_SITE_ID = '1SUxysPAgIpD8XZR3Pwh';
 
     function setUserData(data: UserData): void {
       userData.value = data;
 
+      // @TODO: Temporary — hide the LEVANTE_AUDIO_REVIEW site from non-superadmins.
+      // Remove once that site is no longer needed for audio review tool auth.
       const visibleRoles = isUserSuperAdmin()
         ? (data?.roles ?? [])
-        : (data?.roles ?? []).filter((role) => role?.siteId !== RESTRICTED_SITE_ID);
+        : (data?.roles ?? []).filter((role) => role?.siteId !== LEVANTE_AUDIO_REVIEW_SITE_ID);
 
       sites.value = visibleRoles.map((role) => ({ siteId: role.siteId, siteName: role.siteName }));
 
