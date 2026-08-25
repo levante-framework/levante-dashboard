@@ -323,7 +323,8 @@ describe('parseCsvFile', () => {
     it('does not mutate keys that are not listed', async () => {
       const csv = makeFile([['name,errors,age'], ['Alice,bad,30']]);
       const result = await parseCsvFile(csv, { omitColumns: ['errors'] });
-      expect(Object.keys(result![0]!)).toEqual(['name', 'age']);
+      expect(result).toHaveLength(1);
+      expect(Object.keys(result[0])).toEqual(['name', 'age']);
     });
 
     it('applies after normalizedHeaders, so omit keys must use the normalized name', async () => {

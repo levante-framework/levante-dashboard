@@ -57,7 +57,7 @@ describe('AddUsersInfo Component', () => {
 
     // Verify URL.createObjectURL was called with a Blob
     expect(global.URL.createObjectURL).toHaveBeenCalled();
-    const blob = (global.URL.createObjectURL as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+    const [[blob]] = (global.URL.createObjectURL as ReturnType<typeof vi.fn>).mock.calls;
     expect(blob).toBeInstanceOf(Blob);
 
     // Verify link properties and DOM operations

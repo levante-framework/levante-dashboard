@@ -661,8 +661,9 @@ const createOrgIdResolver = (): GetOrgId => {
     const cacheKey = JSON.stringify([normalizedOrgName, parentDistrictId ?? null, parentSchoolId ?? null]);
 
     // Check if the org is already in the cache
-    if (cache[orgType][cacheKey]) {
-      return cache[orgType][cacheKey]!;
+    const cachedId = cache[orgType][cacheKey];
+    if (cachedId) {
+      return cachedId;
     }
 
     // Fetch the org from the database

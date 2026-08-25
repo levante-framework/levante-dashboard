@@ -285,12 +285,13 @@ watch(
     setSurveyBaseline();
 
     // If the selected survey has been modified, use the local stored content
+    const storedSurvey = window.sessionStorage.getItem(STORAGE_KEYS.SURVEY);
     if (
       window.sessionStorage.getItem(STORAGE_KEYS.BUCKET_ID) === newBucketId &&
       window.sessionStorage.getItem(STORAGE_KEYS.SURVEY_ID) === newSurveyId &&
-      window.sessionStorage.getItem(STORAGE_KEYS.SURVEY)
+      storedSurvey
     ) {
-      surveyCreator.text = window.sessionStorage.getItem(STORAGE_KEYS.SURVEY)!;
+      surveyCreator.text = storedSurvey;
       return;
     }
   },

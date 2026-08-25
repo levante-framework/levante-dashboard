@@ -60,7 +60,9 @@ describe('initNewFirekit markRaw configuration', () => {
 
     const firekitRef = ref(firekit);
 
-    const admin = firekitRef.value.admin!;
+    const admin = firekitRef.value.admin;
+    expect(admin).toBeTruthy();
+    if (!admin) return;
     expect(isReactive(admin.auth)).toBe(false);
     expect(isReactive(admin.db)).toBe(false);
     expect(isReactive(admin.functions)).toBe(false);
