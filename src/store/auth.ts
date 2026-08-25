@@ -265,8 +265,7 @@ export const useAuthStore = defineStore(
     function setUserData(data: UserData): void {
       userData.value = data;
 
-      const isSuperAdmin = Boolean(data?.roles?.some((role) => role?.role === ROLES.SUPER_ADMIN));
-      const visibleRoles = isSuperAdmin
+      const visibleRoles = isUserSuperAdmin()
         ? (data?.roles ?? [])
         : (data?.roles ?? []).filter((role) => role?.siteId !== RESTRICTED_SITE_ID);
 
