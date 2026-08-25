@@ -207,20 +207,9 @@ const props = defineProps({
 
 const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
-const initialized = ref(false);
-
-let unsubscribe;
-const init = () => {
-  if (unsubscribe) unsubscribe();
-  initialized.value = true;
-};
-
-unsubscribe = authStore.$subscribe(async (_mutation, state) => {
-  if (state.roarfirekit.restConfig) init();
-});
+const initialized = computed(() => authStore.isFirekitInit());
 
 onMounted(() => {
-  if (roarfirekit.value.restConfig) init();
   isModalEnabled.value = false;
 });
 
