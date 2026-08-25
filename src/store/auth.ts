@@ -258,18 +258,24 @@ export const useAuthStore = defineStore(
       }
     }
 
+    // @TODO: Temporary block
+    // Remove it once LEVANTE_AUDIO_REVIEW is ready for non-superadmins or useless.
+    const RESTRICTED_SITE_ID = '1SUxysPAgIpD8XZR3Pwh'; // LEVANTE_AUDIO_REVIEW site
+
     function setUserData(data: UserData): void {
       userData.value = data;
 
-      if (data?.roles && data.roles.length > 0) {
-        sites.value = data.roles.map((role: { siteId: string; role: string; siteName: string }) => ({
-          siteId: role.siteId,
-          siteName: role.siteName,
-        }));
+      const isSuperAdmin = Boolean(data?.roles?.some((role) => role?.role === ROLES.SUPER_ADMIN));
+      const visibleRoles = isSuperAdmin
+        ? (data?.roles ?? [])
+        : (data?.roles ?? []).filter((role) => role?.siteId !== RESTRICTED_SITE_ID);
 
-        if (!currentSite.value) {
-          currentSite.value = data.roles[0]?.siteId ?? null;
-          currentSiteName.value = data.roles[0]?.siteName ?? null;
+      if (visibleRoles.length > 0) {
+        sites.value = visibleRoles.map((role) => ({ siteId: role.siteId, siteName: role.siteName }));
+
+        if (!currentSite.value || !visibleRoles.some((role) => role.siteId === currentSite.value)) {
+          currentSite.value = visibleRoles[0]?.siteId ?? null;
+          currentSiteName.value = visibleRoles[0]?.siteName ?? null;
         }
       }
 
