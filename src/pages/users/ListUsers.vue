@@ -349,7 +349,6 @@ const localUserData = ref(null);
 const onEditButtonClick = (event) => {
   currentEditUser.value = event;
   isModalEnabled.value = true;
-  console.log(event);
 };
 
 const isSubmitting = ref(false);
@@ -372,7 +371,6 @@ const updateUserData = async () => {
       });
     })
     .catch((error) => {
-      console.log('Error occurred during submission:', error);
       isSubmitting.value = false;
     });
 };
