@@ -56,10 +56,7 @@ describe('auth store — setUserData', () => {
   it('keeps the restricted site for superadmins', () => {
     const store = useAuthStore();
     const data = {
-      roles: [
-        makeRole(RESTRICTED_SITE_ID, 'Audio Review', ROLES.SUPER_ADMIN),
-        makeRole('siteB', 'Site B'),
-      ],
+      roles: [makeRole(RESTRICTED_SITE_ID, 'Audio Review', ROLES.SUPER_ADMIN), makeRole('siteB', 'Site B')],
     } as UserData;
 
     store.setUserData(data);
