@@ -69,7 +69,7 @@
         <RoarDataTable
           v-if="users"
           :columns="columns"
-          :data="transformedUsers"
+          :data="nonAdminUsers"
           :loading="isLoading || isFetching"
           :allow-export="true"
           :allow-filtering="false"
@@ -188,7 +188,6 @@ import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { singularizeFirestoreCollection } from '@/helpers';
 import { exportCsv } from '@/helpers/query/utils';
-import { normalizeUserTypeForDisplay } from '@/helpers/userType';
 import { useAuthStore } from '@/store/auth';
 
 const props = defineProps({
@@ -252,13 +251,6 @@ const caregiversCount = computed(() => {
 
 const teachersCount = computed(() => {
   return nonAdminUsers.value.filter((user) => user.userType === 'teacher').length;
-});
-
-const transformedUsers = computed(() => {
-  return nonAdminUsers.value.map((user) => ({
-    ...user,
-    userType: normalizeUserTypeForDisplay(user.userType),
-  }));
 });
 
 const columns = ref([
@@ -325,7 +317,7 @@ const exportRowsToCsv = (rows, filename) => {
 };
 
 const downloadAllListedUsers = () => {
-  exportRowsToCsv(transformedUsers.value, `${props.orgName}-users`);
+  exportRowsToCsv(nonAdminUsers.value, `${props.orgName}-users`);
 };
 
 const downloadSelectedUsers = () => {
