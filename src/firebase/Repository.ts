@@ -66,7 +66,8 @@ export class Repository {
       }
 
       if (err instanceof Error) return { code: 'error', data: err };
-      return { code: 'error', data: new Error(`Unexpected ${name} error`, { cause: err }) };
+
+      return { code: 'error', data: new Error(`Unexpected ${functionName} error`, { cause: err }) };
     }
   }
 }
