@@ -3,13 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import Login from '@/pages/Login.vue';
 
-const authRefs = vi.hoisted(() => ({
-  spinner: { value: false },
-  routeToProfile: { value: false },
-  ssoProvider: { value: null },
-  userClaims: { value: null },
-  roarfirekit: { value: { sendPasswordResetEmail: () => {} } },
-}));
+const authRefs = vi.hoisted(() => ({}));
 
 const captured = vi.hoisted(() => ({
   logInWithEmailAndPassword: [],
@@ -18,12 +12,23 @@ const captured = vi.hoisted(() => ({
   googleRedirectCalls: 0,
   resetPasswordEmails: [],
   routerPushes: [],
+  confirmRequests: [],
 }));
 
 const mobileState = vi.hoisted(() => ({ isMobile: false }));
 
 vi.mock('pinia', async (importOriginal) => {
   const actual = await importOriginal();
+  const { ref } = await import('vue');
+
+  Object.assign(authRefs, {
+    spinner: ref(false),
+    routeToProfile: ref(false),
+    ssoProvider: ref(null),
+    userClaims: ref(null),
+    roarfirekit: ref(null),
+  });
+
   return {
     ...actual,
     storeToRefs: () => ({
@@ -35,6 +40,14 @@ vi.mock('pinia', async (importOriginal) => {
     }),
   };
 });
+
+vi.mock('primevue/useconfirm', () => ({
+  useConfirm: () => ({
+    require: (options) => {
+      captured.confirmRequests.push(options);
+    },
+  }),
+}));
 
 vi.mock('@/store/auth', () => ({
   useAuthStore: () => ({
@@ -160,6 +173,31 @@ describe('Login.vue', () => {
       ...options,
     });
 
+  const switchToResearcherMode = async () => {
+    await wrapper
+      .findAllComponents(PvButtonStub)
+      .find((b) => b.text().includes('pageSignIn.researcherLoginBtn'))
+      .trigger('click');
+    await nextTick();
+  };
+
+  const openTroubleOnSignInModal = async () => {
+    await wrapper
+      .findAll('small')
+      .find((s) => s.text().includes('Trouble logging in?'))
+      .trigger('click');
+    await nextTick();
+  };
+
+  const clickModalButton = async (label) => {
+    await wrapper
+      .find('.roar-modal-stub')
+      .findAll('button')
+      .find((b) => b.text().includes(label))
+      .trigger('click');
+    await nextTick();
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mobileState.isMobile = false;
@@ -169,6 +207,7 @@ describe('Login.vue', () => {
     captured.googleRedirectCalls = 0;
     captured.resetPasswordEmails.length = 0;
     captured.routerPushes.length = 0;
+    captured.confirmRequests.length = 0;
     authRefs.spinner.value = false;
     authRefs.routeToProfile.value = false;
     authRefs.ssoProvider.value = null;
@@ -176,6 +215,7 @@ describe('Login.vue', () => {
     authRefs.roarfirekit.value = {
       sendPasswordResetEmail: (email) => {
         captured.resetPasswordEmails.push(email);
+        return Promise.resolve();
       },
     };
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -225,13 +265,14 @@ describe('Login.vue', () => {
       .find((b) => b.text().includes('pageSignIn.researcherLoginBtn'))
       .trigger('click');
     await nextTick();
-    expect(wrapper.find('[data-cy="sign-in-with-email-link"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Trouble logging in?');
+    expect(wrapper.text()).toContain('Read sign in docs');
     expect(wrapper.text()).toContain('Stanford DCC Sign in');
   });
 
-  it('calls logInWithEmailAndPassword with normalized email when form is submitted', async () => {
+  it('calls logInWithEmailAndPassword when the form is submitted with valid credentials', async () => {
     wrapper = mountLogin();
-    await wrapper.find('[data-cy="input-username-email"]').setValue('user.name');
+    await wrapper.find('[data-cy="input-username-email"]').setValue('user.name@levante.com');
     await wrapper.find('[data-cy="input-password"]').setValue('secret123');
     await wrapper.find('form').trigger('submit.prevent');
     await flushPromises();
@@ -250,21 +291,17 @@ describe('Login.vue', () => {
     expect(captured.logInWithEmailAndPassword).toHaveLength(0);
   });
 
-  it('initiates email link login and navigates in researcher mode when email link is enabled', async () => {
+  it('initiates email link login from the trouble logging in modal', async () => {
     wrapper = mountLogin();
-    await wrapper
-      .findAllComponents(PvButtonStub)
-      .find((b) => b.text().includes('pageSignIn.researcherLoginBtn'))
-      .trigger('click');
-    await nextTick();
-    await wrapper.find('[data-cy="input-username-email"]').setValue('researcher@test.com');
-    await wrapper.find('[data-cy="input-password"]').setValue('placeholder');
-    await wrapper.find('[data-cy="sign-in-with-email-link"]').trigger('click');
-    await nextTick();
-    await wrapper.find('form').trigger('submit.prevent');
+    await switchToResearcherMode();
+    await openTroubleOnSignInModal();
+    await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('researcher@test.com');
+    await clickModalButton('Login Link');
     await flushPromises();
     expect(captured.initiateLoginWithEmailLink).toEqual([{ email: 'researcher@test.com' }]);
-    expect(captured.routerPushes).toContainEqual({ name: 'AuthEmailSent' });
+    expect(captured.confirmRequests).toHaveLength(1);
+    captured.confirmRequests[0].accept();
+    expect(captured.routerPushes).toContainEqual({ name: 'Home' });
   });
 
   it('uses Google popup on desktop when Stanford DCC Sign in is clicked', async () => {
@@ -303,42 +340,24 @@ describe('Login.vue', () => {
     expect(captured.googlePopupCalls).toBe(0);
   });
 
-  it('opens forgot password modal and sends reset email for valid email', async () => {
+  it('opens the trouble logging in modal and sends reset email for valid email', async () => {
     wrapper = mountLogin();
-    await wrapper
-      .findAllComponents(PvButtonStub)
-      .find((b) => b.text().includes('pageSignIn.researcherLoginBtn'))
-      .trigger('click');
-    await nextTick();
-    await wrapper.find('[data-cy="sign-in-with-password"]').trigger('click');
-    await nextTick();
+    await switchToResearcherMode();
+    await openTroubleOnSignInModal();
     expect(wrapper.find('.roar-modal-stub').exists()).toBe(true);
-    const modalInputs = wrapper.find('.roar-modal-stub').findAll('input');
-    await modalInputs[0].setValue('valid@mail.com');
-    const sendBtn = wrapper
-      .find('.roar-modal-stub')
-      .findAll('button')
-      .find((b) => b.text().includes('Send Reset Email'));
-    await sendBtn.trigger('click');
+    await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('valid@mail.com');
+    await clickModalButton('Reset Password');
+    await flushPromises();
     expect(captured.resetPasswordEmails).toEqual(['valid@mail.com']);
   });
 
   it('does not send reset email when forgot-password email is invalid', async () => {
     wrapper = mountLogin();
-    await wrapper
-      .findAllComponents(PvButtonStub)
-      .find((b) => b.text().includes('pageSignIn.researcherLoginBtn'))
-      .trigger('click');
-    await nextTick();
-    await wrapper.find('[data-cy="sign-in-with-password"]').trigger('click');
-    await nextTick();
-    const modalInputs = wrapper.find('.roar-modal-stub').findAll('input');
-    await modalInputs[0].setValue('not-an-email');
-    const sendBtn = wrapper
-      .find('.roar-modal-stub')
-      .findAll('button')
-      .find((b) => b.text().includes('Send Reset Email'));
-    await sendBtn.trigger('click');
+    await switchToResearcherMode();
+    await openTroubleOnSignInModal();
+    await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('not-an-email');
+    await clickModalButton('Reset Password');
+    await flushPromises();
     expect(captured.resetPasswordEmails).toHaveLength(0);
   });
 
