@@ -1,9 +1,4 @@
-import {
-  type GetUsersByOrgError,
-  GetUsersByOrgErrorSchema,
-  type GetUsersByOrgParams,
-  type GetUsersByOrgResult,
-} from '@levante-framework/levante-zod';
+import type { GetUsersByOrgParams, GetUsersByOrgResult } from '@levante-framework/levante-zod';
 import {
   collection,
   type DocumentData,
@@ -15,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { ROLES } from '@/constants/roles';
-import { type CallSafeResult, Repository } from '@/firebase/Repository';
+import { Repository } from '@/firebase/Repository';
 import { FirebaseService } from '@/firebase/Service';
 import { logger } from '@/logger';
 import type {
@@ -154,12 +149,8 @@ class UsersRepository extends Repository {
     return response.data;
   }
 
-  async getUsersByOrg(params: GetUsersByOrgParams): Promise<CallSafeResult<GetUsersByOrgResult, GetUsersByOrgError>> {
-    return this.callSafe<GetUsersByOrgParams, GetUsersByOrgResult, GetUsersByOrgError>(
-      'getUsersByOrg',
-      params,
-      GetUsersByOrgErrorSchema,
-    );
+  async getUsersByOrg(params: GetUsersByOrgParams): Promise<GetUsersByOrgResult> {
+    return this.call<GetUsersByOrgParams, GetUsersByOrgResult>('getUsersByOrg', params);
   }
 }
 

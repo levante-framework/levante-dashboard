@@ -20,9 +20,9 @@ describe('useGetUsersByOrgQuery', () => {
   const mountQuery = (
     orgType: string,
     orgId: string,
-    queryOptions?: Parameters<typeof useGetUsersByOrgQuery>[4],
+    enabled?: Parameters<typeof useGetUsersByOrgQuery>[4],
   ): ReturnType<typeof useGetUsersByOrgQuery> => {
-    const [result] = withSetup(() => useGetUsersByOrgQuery(orgType, orgId, 1, 'name', queryOptions), {
+    const [result] = withSetup(() => useGetUsersByOrgQuery(orgType, orgId, 1, 'name', enabled), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
     return result;
@@ -30,7 +30,7 @@ describe('useGetUsersByOrgQuery', () => {
 
   beforeEach(() => {
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    getUsersByOrg.mockResolvedValue({ code: 'success', data: { users: [{ uid: 'default' }] } });
+    getUsersByOrg.mockResolvedValue({ users: [{ uid: 'default' }] });
   });
 
   afterEach(() => {
@@ -38,10 +38,10 @@ describe('useGetUsersByOrgQuery', () => {
     vi.clearAllMocks();
   });
 
-  it('fetches users for the given org and exposes the users array', async () => {
+  it('fetches users for the given org and exposes the result', async () => {
     const orgId = nanoid();
-    const users = [{ uid: 'user-1' }, { uid: 'user-2' }];
-    getUsersByOrg.mockResolvedValueOnce({ code: 'success', data: { users } });
+    const result = { users: [{ uid: 'user-1' }, { uid: 'user-2' }] };
+    getUsersByOrg.mockResolvedValueOnce(result);
 
     const { data, isSuccess } = mountQuery('site', orgId);
     await flushPromises();
@@ -49,7 +49,7 @@ describe('useGetUsersByOrgQuery', () => {
     expect(getUsersByOrg).toHaveBeenCalledTimes(1);
     expect(getUsersByOrg).toHaveBeenCalledWith({ orgType: 'site', orgId });
     expect(isSuccess.value).toBe(true);
-    expect(data.value).toEqual(users);
+    expect(data.value).toEqual(result);
   });
 
   it.each([
@@ -70,37 +70,26 @@ describe('useGetUsersByOrgQuery', () => {
     mountQuery('school', orgId);
     await flushPromises();
 
-    expect(queryClient.getQueryData(['org-users', 'school', orgId])).toEqual([{ uid: 'default' }]);
+    expect(queryClient.getQueryData(['org-users', 'school', orgId])).toEqual({ users: [{ uid: 'default' }] });
   });
 
-  it('does not fetch when disabled via query options', async () => {
-    mountQuery('site', nanoid(), { enabled: false });
+  it('does not fetch when disabled via the enabled argument', async () => {
+    mountQuery('site', nanoid(), false);
     await flushPromises();
 
     expect(getUsersByOrg).not.toHaveBeenCalled();
   });
 
-  it('surfaces a non-success result as a query error and exposes no data', async () => {
-    const failure = { code: 'app-error', data: { name: 'FirebaseError', message: 'nope' } };
-    getUsersByOrg.mockResolvedValueOnce(failure);
+  it('normalizes a rejected repository call into a FirebaseCallFailure and exposes no data', async () => {
+    const boom = new Error('repository boom');
+    getUsersByOrg.mockRejectedValueOnce(boom);
 
     const { isError, error, data } = mountQuery('site', nanoid());
     await flushPromises();
 
     expect(isError.value).toBe(true);
-    expect(error.value).toEqual(failure);
+    expect(error.value).toEqual({ code: 'error', error: boom });
     expect(data.value).toBeUndefined();
-  });
-
-  it('surfaces a rejected repository call through the query state', async () => {
-    const boom = new Error('repository boom');
-    getUsersByOrg.mockRejectedValueOnce(boom);
-
-    const { isError, error } = mountQuery('site', nanoid());
-    await flushPromises();
-
-    expect(isError.value).toBe(true);
-    expect(error.value).toBe(boom);
   });
 
   it('rejects an invalid orgType via schema validation without calling the repository', async () => {

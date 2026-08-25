@@ -1,7 +1,14 @@
-import { GetUsersByOrgParamsSchema, type GetUsersByOrgResult } from '@levante-framework/levante-zod';
-import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
+import {
+  type GetUsersByOrgError,
+  GetUsersByOrgErrorSchema,
+  GetUsersByOrgParamsSchema,
+  type GetUsersByOrgResult,
+} from '@levante-framework/levante-zod';
+import { type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
+import { type MaybeRefOrGetter, toValue } from '@vueuse/core';
 import { ORG_TYPES } from '@/constants/orgTypes';
 import { ORG_USERS_QUERY_KEY } from '@/constants/queryKeys';
+import { type FirebaseCallFailure, toFirebaseCallFailure } from '@/firebase/callFailure';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
 
 const ROAR_TO_LEVANTE_ORG_TYPE: Record<string, string> = {
@@ -16,20 +23,31 @@ const useGetUsersByOrgQuery = (
   orgId: string,
   _page: number, // TODO: implement pagination
   _orderBy: string, // TODO: implement ordering
-  queryOptions?: Omit<UseQueryOptions, 'queryKey' | 'queryFn'>,
-): UseQueryReturnType<GetUsersByOrgResult['users'], Error> => {
+  enabled: MaybeRefOrGetter<boolean> = true,
+): UseQueryReturnType<GetUsersByOrgResult, FirebaseCallFailure<GetUsersByOrgError>> => {
   return useQuery({
     queryKey: [ORG_USERS_QUERY_KEY, orgType, orgId],
     queryFn: async () => {
-      const params = GetUsersByOrgParamsSchema.parse({
-        orgType: ROAR_TO_LEVANTE_ORG_TYPE[orgType] ?? orgType,
-        orgId,
-      });
-      const result = await usersRepository.getUsersByOrg(params);
-      if (result.code !== 'success') throw result;
-      return result.data.users;
+      try {
+        const params = GetUsersByOrgParamsSchema.parse({
+          orgType: ROAR_TO_LEVANTE_ORG_TYPE[orgType] ?? orgType,
+          orgId,
+        });
+        const result = await usersRepository.getUsersByOrg(params);
+        return result;
+      } catch (error) {
+        throw toFirebaseCallFailure(error, GetUsersByOrgErrorSchema);
+      }
     },
-    ...queryOptions,
+    enabled: () => toValue(enabled),
+    meta: {
+      errorMessage: 'Failed to fetch users by org',
+      errorContext: {
+        tags: { composable: 'useGetUsersByOrgQuery' },
+        orgType,
+        orgId,
+      },
+    },
   });
 };
 

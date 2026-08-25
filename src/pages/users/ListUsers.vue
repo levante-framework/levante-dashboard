@@ -234,14 +234,13 @@ const orderBy = ref(null);
 const {
   isLoading,
   isFetching,
-  data: users,
-} = useGetUsersByOrgQuery(props.orgType, props.orgId, page, orderBy, {
-  enabled: initialized,
-});
+  data: usersResult,
+} = useGetUsersByOrgQuery(props.orgType, props.orgId, page, orderBy, initialized);
 
 const isUserCountExpanded = ref(false);
+const users = computed(() => usersResult.value?.users ?? []);
 
-const nonAdminUsers = computed(() => users.value?.filter((user) => user.userType !== 'admin') ?? []);
+const nonAdminUsers = computed(() => users.value.filter((user) => user.userType !== 'admin'));
 
 const childrenCount = computed(() => {
   return nonAdminUsers.value.filter((user) => user.userType === 'child').length;
