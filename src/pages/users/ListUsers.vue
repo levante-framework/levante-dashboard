@@ -179,7 +179,7 @@ import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
 import { useToast } from 'primevue/usetoast';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import AppSpinner from '@/components/AppSpinner.vue';
 import EditUsersForm from '@/components/EditUsersForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
@@ -234,7 +234,19 @@ const {
   isLoading,
   isFetching,
   data: usersResult,
+  isError,
 } = useGetUsersByOrgQuery(props.orgType, props.orgId, page, orderBy, initialized);
+
+watch(isError, (hasError) => {
+  if (!hasError) return;
+  toast.add({
+    severity: TOAST_SEVERITIES.ERROR,
+    summary: 'Failed to load users',
+    // TODO: handle error cases to provide more specific error messages
+    detail: 'An error occurred while loading users. Please try again.',
+    life: TOAST_DEFAULT_LIFE_DURATION,
+  });
+});
 
 const isUserCountExpanded = ref(false);
 const users = computed(() => usersResult.value?.users ?? []);
