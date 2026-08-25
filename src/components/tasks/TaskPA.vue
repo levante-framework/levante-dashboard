@@ -116,7 +116,9 @@ async function startTask(selectedAdmin) {
       birthYear: _get(userData.value, 'birthYear'),
     };
 
-    const gameParams = { ...appKit._taskInfo.variantParams, sentryDualReport: true };
+    // Keep off gameParams — firekit.updateTaskParams writes those keys onto the variant.
+    appKit.sentryDualReport = true;
+    const gameParams = { ...appKit._taskInfo.variantParams };
 
     const roarApp = new TaskLauncher(appKit, gameParams, userParams, 'jspsych-target');
 
