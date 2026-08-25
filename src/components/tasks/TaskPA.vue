@@ -116,7 +116,7 @@ async function startTask(selectedAdmin) {
       birthYear: _get(userData.value, 'birthYear'),
     };
 
-    const gameParams = { ...appKit._taskInfo.variantParams };
+    const gameParams = { ...appKit._taskInfo.variantParams, sentryDualReport: true };
 
     const roarApp = new TaskLauncher(appKit, gameParams, userParams, 'jspsych-target');
 
