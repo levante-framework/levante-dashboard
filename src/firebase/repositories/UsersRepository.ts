@@ -1,3 +1,4 @@
+import type { GetUsersByOrgParams, GetUsersByOrgResult } from '@levante-framework/levante-zod';
 import {
   collection,
   type DocumentData,
@@ -142,6 +143,10 @@ class UsersRepository extends Repository {
     }
 
     return response.data;
+  }
+
+  async getUsersByOrg(params: GetUsersByOrgParams): Promise<GetUsersByOrgResult> {
+    return this.call<GetUsersByOrgParams, GetUsersByOrgResult>('getUsersByOrg', params);
   }
 }
 
