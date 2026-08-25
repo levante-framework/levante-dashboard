@@ -564,7 +564,7 @@ const refresh = () => {
   initialized.value = true;
 };
 
-unsubscribe = authStore.$subscribe(async (mutation, state) => {
+unsubscribe = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit.restConfig) refresh();
 });
 
