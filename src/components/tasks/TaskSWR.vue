@@ -87,11 +87,17 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  [isFirekitInit, isLoadingUserData, isTaskSWRReady],
-  async ([newFirekitInitValue, newLoadingUserData, newIsTaskSWRReady]) => {
-    if (newFirekitInitValue && !newLoadingUserData && !taskStarted.value && newIsTaskSWRReady) {
+  [isTaskSWRReady, selectedAssignment, isLoadingUserData, isFirekitInit],
+  async ([newIsTaskSWRReady, newSelectedAssignment, newLoadingUserData, newFirekitInitValue]) => {
+    if (
+      newSelectedAssignment &&
+      newIsTaskSWRReady &&
+      !newLoadingUserData &&
+      !taskStarted.value &&
+      newFirekitInitValue
+    ) {
       taskStarted.value = true;
-      await startTask(selectedAssignment);
+      await startTask(newSelectedAssignment);
     }
   },
   { immediate: true },

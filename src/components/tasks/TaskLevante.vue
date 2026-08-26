@@ -86,15 +86,22 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  [isFirekitInit, isLoadingUserData, userData, isCoreTasksReady],
-  async ([newFirekitInitValue, newLoadingUserData, _newUserData, newIsCoreTasksReady]) => {
+  [isFirekitInit, isCoreTasksReady, isLoadingUserData, selectedAssignment, userData],
+  async ([newIsCoreTasksReady, newSelectedAssignment, _newUserData, newLoadingUserData, newFirekitInitValue]) => {
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
     const hasAgeData = birthMonth !== undefined && birthYear !== undefined;
 
-    if (newFirekitInitValue && !newLoadingUserData && hasAgeData && newIsCoreTasksReady && !taskStarted.value) {
+    if (
+      !taskStarted.value &&
+      newSelectedAssignment &&
+      newIsCoreTasksReady &&
+      hasAgeData &&
+      !newLoadingUserData &&
+      newFirekitInitValue
+    ) {
       taskStarted.value = true;
-      await startTask(selectedAssignment);
+      await startTask(newSelectedAssignment);
     }
   },
   { immediate: true },
