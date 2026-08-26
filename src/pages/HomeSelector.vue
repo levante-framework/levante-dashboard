@@ -1,6 +1,8 @@
 <template>
   <LevanteSpinner v-if="isLoading" fullscreen data-cy="home-selector-loading" />
 
+  <HomeError v-else-if="userHasNoRoles" />
+
   <HomeAdministrator v-else-if="shouldRenderAdminPage" data-cy="home-selector-admin" />
 
   <HomeParticipant v-else data-cy="home-selector-participant" />
@@ -32,6 +34,7 @@ import { useAuthStore } from '@/store/auth';
 
 const HomeParticipant = defineAsyncComponent(() => import('@/pages/HomeParticipant.vue'));
 const HomeAdministrator = defineAsyncComponent(() => import('@/pages/HomeAdministrator.vue'));
+const HomeError = defineAsyncComponent(() => import('@/pages/HomeError.vue'));
 const ConsentModal = defineAsyncComponent(() => import('@/components/ConsentModal.vue'));
 
 const authStore = useAuthStore();
@@ -61,6 +64,8 @@ const init = () => {
 unsubscribe = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit?.restConfig) init();
 });
+
+const userHasNoRoles = computed(() => !userData.value?.roles?.length);
 
 const shouldRenderAdminPage = computed(() => {
   const adminRoles = [ROLES.ADMIN, ROLES.RESEARCH_ASSISTANT, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN];
