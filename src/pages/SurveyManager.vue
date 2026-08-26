@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isPreview">
+  <div v-if="isPreview" class="survey-preview-page" :style="{ height: `calc(100dvh - ${footerHeight}px)` }">
     <SurveyComponent v-if="surveyPreviewModel" :model="surveyPreviewModel" class="survey-preview" />
   </div>
 
@@ -357,14 +357,14 @@ watchEffect(() => {
     background-color: white;
   }
 
-  .sd-container-modern__title {
-    border-bottom: 1px solid var(--surface-d);
-    box-shadow: none;
-  }
-
-  .sd-title {
-    font-size: 1.5rem;
-    color: var(--text-primary);
+  .sd-container-modern {
+    & > .sd-title {
+      border-bottom: 1px solid var(--surface-d);
+      box-shadow: none;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
   }
 
   .sd-logo {
@@ -374,8 +374,12 @@ watchEffect(() => {
   }
 }
 
+.survey-preview-page {
+  height: 100dvh;
+}
+
 .survey-preview {
-  height: auto;
+  height: 100%;
   
   .sd-container-modern__title {
     border-top: 6px solid var(--primary-color);
@@ -388,6 +392,7 @@ watchEffect(() => {
   height: auto;
   border-top: 6px solid var(--primary-color);
 }
+
 .survey-manager__aside {
   display: flex;
   flex-direction: column;
@@ -397,6 +402,7 @@ watchEffect(() => {
   background-color: white;
   border-right: 1px solid #f3f3f3;
 }
+
 .aside__header {
   display: block;
   width: 100%;
@@ -404,6 +410,7 @@ watchEffect(() => {
   margin: 0;
   padding: 1.5rem 1.5rem 0;
 }
+
 .logo {
   display: block;
   width: 100%;
@@ -411,6 +418,7 @@ watchEffect(() => {
   height: auto;
   margin: 0;
 }
+
 .aside__actions {
   display: flex;
   flex-direction: column;
@@ -420,6 +428,7 @@ watchEffect(() => {
   margin: 0;
   padding: 1.5rem 1.5rem 0;
 }
+
 .label {
   display: block;
   margin: 0 0 4px;
@@ -428,6 +437,7 @@ watchEffect(() => {
   color: var(--text-color-secondary);
   text-transform: uppercase;
 }
+
 .aside__footer {
   display: flex;
   flex-direction: column;
@@ -437,6 +447,7 @@ watchEffect(() => {
   margin: auto 0 0;
   padding: 1.5rem;
 }
+
 .survey-manager__main {
   display: block;
   flex: 1;
