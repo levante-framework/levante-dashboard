@@ -64,11 +64,12 @@ interface NavbarAction {
 
 interface MenuItem {
   label: string;
-  icon?: string;
-  command?: () => void;
-  items?: MenuItem[];
   badge?: string;
   badgeClass?: string;
+  class?: string;
+  command?: () => void;
+  icon?: string;
+  items?: MenuItem[];
 }
 
 const router = useRouter();
@@ -116,6 +117,7 @@ const computedItems = computed((): MenuItem[] => {
   const groupsAction = rawActions.value.find((action) => action.category === 'Groups');
   if (groupsAction) {
     items.push({
+      class: '--djs-groups-link',
       label: groupsAction.title,
       icon: groupsAction.icon,
       command: () => {
