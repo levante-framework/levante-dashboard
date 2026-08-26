@@ -28,9 +28,14 @@ export const dismissWizard = () => {
 export const fetchWizardSteps = async (wizard: string) => {
   if (!wizard.trim().length) return null;
 
+  const levanteStore = useLevanteStore();
+  const { setWizardSteps } = levanteStore;
   const filename = wizard.replace(/\.json$/, '');
   const cached = remoteCache.get(filename);
-  if (cached) return cached;
+  if (cached) {
+    setWizardSteps(cached);
+    return cached;
+  }
 
   const url = `${LEVANTE_TRANSLATIONS}/wizards/${filename}.json`;
 
@@ -47,8 +52,6 @@ export const fetchWizardSteps = async (wizard: string) => {
       return null;
     }
 
-    const levanteStore = useLevanteStore();
-    const { setWizardSteps } = levanteStore;
     setWizardSteps(data as Array<DriveStep>);
     remoteCache.set(filename, data as Array<DriveStep>);
 
