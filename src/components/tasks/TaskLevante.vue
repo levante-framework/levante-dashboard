@@ -144,15 +144,21 @@ async function startTask(selectedAdmin) {
       router.push({ name: 'Home' });
     });
   } catch (error) {
-    alert(
-      'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
-    );
-    logger.error(new Error('Failed to start task', { cause: error }), {
-      tags: { function: 'startTask', component: 'TaskLevante' },
-      administrationId: selectedAdmin.value.id,
-      taskId: props.taskId,
-      userId: getUserId(),
-    });
+    if (error.name === 'AbortError') {
+      assignmentsStore.setHomeRefresh();
+      router.push({ name: 'Home' });
+    } else {
+      alert(
+        'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
+      );
+
+      logger.error(new Error('Failed to start task', { cause: error }), {
+        tags: { function: 'startTask', component: 'TaskLevante' },
+        administrationId: selectedAdmin.value.id,
+        taskId: props.taskId,
+        userId: getUserId(),
+      });
+    }
   }
 }
 </script>
