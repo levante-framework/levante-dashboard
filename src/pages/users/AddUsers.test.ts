@@ -642,7 +642,7 @@ describe('AddUsers Page', () => {
       // PrimeVue's Portal/Dialog calls document.body.appendChild on every
       // re-render triggered by reactive state changes; mocking it earlier causes
       // Vue to throw because the mock returns undefined instead of a DOM node.
-      const createObjectURL = vi.fn(() => 'mock-blob-url');
+      const createObjectURL = vi.fn((_blob: Blob) => 'mock-blob-url');
       const appendChildMock = vi.fn();
       const removeChildMock = vi.fn();
       const clickMock = vi.fn();
@@ -675,7 +675,7 @@ describe('AddUsers Page', () => {
 
       // Parse the blob back as CSV so we can assert the 'errors' column is
       // populated per row, rather than just probing for substrings.
-      const csvText = await blob.text();
+      const csvText = await blob!.text();
       const parsed = Papa.parse<Record<string, string>>(csvText, {
         header: true,
         skipEmptyLines: 'greedy',
@@ -1381,7 +1381,7 @@ describe('AddUsers Page', () => {
       // test verifies that contract and the download wiring; the granular
       // escaping rules (commas, quote doubling, null/undefined → empty) live
       // in src/helpers/csv.test.ts.
-      const createObjectURL = vi.fn(() => 'mock-blob-url');
+      const createObjectURL = vi.fn((_blob: Blob) => 'mock-blob-url');
       const appendChildMock = vi.fn();
       const removeChildMock = vi.fn();
       const clickMock = vi.fn();
@@ -1447,7 +1447,7 @@ describe('AddUsers Page', () => {
         expect(link.getAttribute('href')).toBe('mock-blob-url');
         expect(link.getAttribute('download')).toMatch(/^test__registered-\d{8}-\d{4}\.csv$/);
 
-        const csvText = await blob.text();
+        const csvText = await blob!.text();
         const lines = csvText.split('\n');
         expect(lines).toHaveLength(3);
 
