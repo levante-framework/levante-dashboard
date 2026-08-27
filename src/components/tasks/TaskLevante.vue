@@ -87,7 +87,7 @@ onBeforeUnmount(() => {
 
 watch(
   [isFirekitInit, isCoreTasksReady, isLoadingUserData, selectedAssignment, userData],
-  async ([newIsCoreTasksReady, newSelectedAssignment, _newUserData, newLoadingUserData, newFirekitInitValue]) => {
+  async ([newFirekitInitValue, newIsCoreTasksReady, newLoadingUserData, newSelectedAssignment, _newUserData]) => {
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
     const hasAgeData = birthMonth !== undefined && birthYear !== undefined;
@@ -101,7 +101,7 @@ watch(
       newFirekitInitValue
     ) {
       taskStarted.value = true;
-      await startTask(newSelectedAssignment);
+      await startTask(selectedAssignment);
     }
   },
   { immediate: true },
@@ -121,7 +121,7 @@ async function startTask(selectedAdmin) {
     const trialContainer = props.taskId === 'child-survey' ? 'surveyResponses' : 'runs';
 
     const appKit = await authStore.roarfirekit.startAssessment(
-      selectedAdmin.value.id,
+      selectedAdmin.value?.id,
       props.taskId,
       version,
       trialContainer,
@@ -142,7 +142,7 @@ async function startTask(selectedAdmin) {
     await levanteTask.run().then(async () => {
       // Handle any post-game actions.
       await completeAssessmentMutate({
-        adminId: selectedAdmin.value.id,
+        adminId: selectedAdmin.value?.id,
         taskId: props.taskId,
       });
 
@@ -151,21 +151,15 @@ async function startTask(selectedAdmin) {
       router.push({ name: 'Home' });
     });
   } catch (error) {
-    if (error?.name === 'AbortError') {
-      assignmentsStore.setHomeRefresh();
-      router.push({ name: 'Home' });
-    } else {
-      alert(
-        'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
-      );
-
-      logger.error(new Error('Failed to start task', { cause: error }), {
-        tags: { function: 'startTask', component: 'TaskLevante' },
-        administrationId: selectedAdmin.value.id,
-        taskId: props.taskId,
-        userId: getUserId(),
-      });
-    }
+    alert(
+      'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
+    );
+    logger.error(new Error('Failed to start task', { cause: error }), {
+      tags: { function: 'startTask', component: 'TaskLevante' },
+      administrationId: selectedAdmin.value?.id,
+      taskId: props.taskId,
+      userId: getUserId(),
+    });
   }
 }
 </script>
