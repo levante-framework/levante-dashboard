@@ -18,7 +18,13 @@
             </template>
 
             <template #item="{ item, props, hasSubmenu, root }">
-              <a class="flex items-center" v-bind="props.action">
+              <a
+                v-tooltip.right="item.tooltip"
+                class="flex items-center"
+                :class="{ 'p-menubar-item-link--disabled': item.isDisabled }"
+                :aria-disabled="item.isDisabled || undefined"
+                v-bind="props.action"
+              >
                 <i v-if="item.icon" :class="['mr-2', item.icon]"></i>
                 <span>{{ item.label }}</span>
                 <Badge
@@ -46,11 +52,13 @@ import { storeToRefs } from 'pinia';
 import Badge from 'primevue/badge';
 import PvButton from 'primevue/button';
 import PvMenubar from 'primevue/menubar';
+import type { TooltipOptions } from 'primevue/tooltip';
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import { usePermissions } from '@/composables/usePermissions';
 import { ROLES } from '@/constants/roles';
 import { APP_ROUTES } from '@/constants/routes';
+import { getTooltip } from '@/helpers';
 import { getNavbarActions } from '@/router/navbarActions';
 import { useAuthStore } from '@/store/auth';
 import UserActions from './UserActions.vue';
@@ -60,6 +68,8 @@ interface NavbarAction {
   title: string;
   icon: string;
   buttonLink: { name: string; params?: Record<string, any> };
+  requiresSite?: boolean;
+  tooltipMessage?: string;
 }
 
 interface MenuItem {
@@ -70,6 +80,8 @@ interface MenuItem {
   command?: () => void;
   icon?: string;
   items?: MenuItem[];
+  isDisabled?: boolean;
+  tooltip?: TooltipOptions;
 }
 
 const router = useRouter();
@@ -110,6 +122,8 @@ onUnmounted((): void => {
   window.removeEventListener('resize', handleResize);
 });
 
+const isSiteSelected = computed((): boolean => !!currentSite.value && currentSite.value !== 'any');
+
 const computedItems = computed((): MenuItem[] => {
   const items: MenuItem[] = [];
 
@@ -131,10 +145,16 @@ const computedItems = computed((): MenuItem[] => {
     const headerItems = rawActions.value
       .filter((action) => action.category === header)
       .map((action): MenuItem => {
+        const isDisabled = !!action.requiresSite && !isSiteSelected.value;
+        const tooltipMessage = action?.tooltipMessage;
+
         return {
           label: action.title,
           icon: action.icon,
+          isDisabled,
+          tooltip: isDisabled && tooltipMessage ? getTooltip(tooltipMessage) : undefined,
           command: () => {
+            if (isDisabled) return;
             router.push(action.buttonLink);
           },
         };
@@ -194,6 +214,11 @@ nav {
   gap: 2rem;
   padding: 1rem 2rem;
   border: none;
+}
+
+.p-menubar-item-link--disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .levante-logo {
