@@ -4,566 +4,366 @@
       <LinkUsersInfo />
 
       <PvDivider class="my-5" />
-      <PvMessage v-if="validationErrors.length" severity="error" class="mt-3 mb-3">
-        <p class="m-0 mb-2">
-          There are errors in the file you tried to upload, <code>{{ uploadedFile?.name || 'selected file' }}</code
-          >. Please fix the listed errors and try again.
-        </p>
-        <ul class="m-0 pl-3">
-          <li v-for="(error, index) in validationErrors" :key="`${index}-${error}`">
-            <span v-html="error"></span>
-          </li>
-        </ul>
-      </PvMessage>
 
-      <PvMessage
-        v-if="linkingAttemptError"
-        severity="error"
-        closable
-        class="mt-3 mb-3"
-        @close="linkingAttemptError = ''"
-      >
-        <p class="m-0 mb-2">
-          Linking was attempted but did not complete for <code>{{ uploadedFile?.name || 'your file' }}</code
-          >.
-        </p>
-        <p class="m-0">Error: {{ linkingAttemptError }}</p>
-      </PvMessage>
+      <!-- Status message -->
+      <div class="navbar-offset" ref="statusRef">
+        <PvMessage
+          v-if="status"
+          class="mb-3"
+          :closable="false"
+          :icon="status.severity === 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"
+          :pt="{ transition: { css: false, appear: false } }"
+          :severity="status.severity"
+        >
+          {{ status.message }}
+        </PvMessage>
+      </div>
 
-      <PvMessage v-if="lastLinkedFileName" severity="success" closable class="mb-4">
-        Linking successful with file <code>{{ lastLinkedFileName }}</code
-        >. Click below to upload another file.
-      </PvMessage>
+      <div class="m-0 mb-3 p-3 pb-0 bg-gray-100 border-1 border-gray-200 border-round">
+        <!-- CSV uploader -->
+        <CsvUploader
+          :disabled="isAllSitesSelected"
+          :uploadedFile="uploadedFile"
+          disabledMessage="Select a site to link users"
+          data-cy="upload-link-users-csv"
+          @upload="onFileUpload"
+        />
 
-      <div class="m-0 mb-5 p-3 bg-gray-100 border-1 border-gray-200 border-round">
-        <div class="flex align-items-center gap-3">
-          <PvFileUpload
-            :choose-label="isFileUploaded && !errorUsers.length ? 'Choose Another CSV File' : 'Choose CSV File'"
-            :empty-label="'Test'"
-            :show-cancel-button="false"
-            :show-upload-button="false"
-            :disabled="isAllSitesSelected"
-            auto
-            accept=".csv"
-            custom-upload
-            mode="basic"
-            name="linkUsersFile[]"
-            @uploader="onFileUpload($event)"
-          />
-          <span v-if="isFileUploaded" class="text-gray-500">File: {{ uploadedFile?.name }}</span>
-          <span v-else class="text-gray-500">
-            {{ isAllSitesSelected ? 'Select a site to link users' : 'No file chosen' }}
-          </span>
+        <!-- Errors datatable -->
+        <div v-if="validationErrors" class="mb-3">
+          <CsvTable :headers="validationErrors.headers" :keys="validationErrors.keys" :rows="validationErrors.rows" />
+          <PvButton v-if="validationErrors.showDownloadButton" label="Download Error CSV" @click="downloadErrors" />
         </div>
 
-        <div v-if="isFileUploaded && !errorUsers.length">
-          <PvDataTable
-            ref="dataTable"
-            :value="rawUserFile"
-            show-gridlines
-            :row-hover="true"
-            :resizable-columns="true"
-            paginator
-            :always-show-paginator="false"
-            :rows="10"
-            class="datatable"
-          >
-            <PvColumn v-for="col of allFields" :key="col.field" :field="col.field">
-              <template #header>
-                <div class="col-header">
-                  <b>{{ col.header }}</b>
-                </div>
-              </template>
-              <template #body="{ data }">
-                <span>{{ formatPreviewCell(data, col.field) }}</span>
-              </template>
-            </PvColumn>
-          </PvDataTable>
+        <!-- Rows datatable -->
+        <div v-if="validatedData && !validationErrors" class="mb-3">
+          <CsvTable
+            :keys="['id', 'userType', 'caregiverId', 'teacherId', 'uid']"
+            :rows="validatedData"
+          />
 
           <div class="submit-container">
             <PvButton
-              :label="activeSubmit ? 'Linking Users' : 'Start Linking'"
-              :icon="activeSubmit ? 'pi pi-spin pi-spinner' : 'pi pi-link'"
-              :disabled="activeSubmit || isAllSitesSelected"
+              v-tooltip.bottom="isAllSitesSelected ? 'Please select a specific site to link users' : ''"
+              :label="isSubmitting ? 'Linking Users' : 'Link Users from Uploaded File'"
+              :icon="isSubmitting ? 'pi pi-spin pi-spinner' : ''"
+              :disabled="isSubmitting || isAllSitesSelected"
+              data-cy="button-link-users-submit"
               @click="submitUsers"
             />
           </div>
         </div>
       </div>
-
-      <div v-if="showErrorTable && errorUsers.length" class="error-container">
-        <div class="error-header">
-          <h3>Rows with Errors</h3>
-        </div>
-        <PvDataTable
-          ref="errorTable"
-          :value="errorUsers"
-          show-gridlines
-          :row-hover="true"
-          :resizable-columns="true"
-          paginator
-          :always-show-paginator="false"
-          :rows="10"
-          class="datatable"
-        >
-          <PvColumn v-for="col of errorUserColumns" :key="col.field" :field="col.field">
-            <template #header>
-              {{ col.header }}
-            </template>
-          </PvColumn>
-        </PvDataTable>
-      </div>
     </section>
   </main>
 </template>
 
-<script setup>
-import { validateCsvHeaders, validateLinkUsersCsv } from '@levante-framework/levante-zod';
-import _forEach from 'lodash/forEach';
-import _isEmpty from 'lodash/isEmpty';
-import _startCase from 'lodash/startCase';
+<script setup lang="ts">
+import {
+  combineUsersCsvIssues,
+  type LinkUsersCsv,
+  LinkUsersCsvHeaderSchema,
+  LinkUsersCsvSchema,
+  LinkUsersParamsSchema,
+  makeCustomIssue,
+  type ZodIssue,
+} from '@levante-framework/levante-zod';
+import _cloneDeep from 'lodash/cloneDeep';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
-import PvColumn from 'primevue/column';
-import PvDataTable from 'primevue/datatable';
 import PvDivider from 'primevue/divider';
-import PvFileUpload from 'primevue/fileupload';
+import type { FileUploadUploaderEvent } from 'primevue/fileupload';
 import PvMessage from 'primevue/message';
-import { useToast } from 'primevue/usetoast';
-import { computed, ref, toRaw, watch } from 'vue';
+import { computed, nextTick, ref, toRaw, watch } from 'vue';
+import CsvTable from '@/components/CsvTable.vue';
+import CsvUploader from '@/components/CsvUploader.vue';
 import LinkUsersInfo from '@/components/userInfo/LinkUsersInfo.vue';
-import { TOAST_DEFAULT_LIFE_DURATION } from '@/constants/toasts';
-import { csvFileToJson } from '@/helpers/csv';
+import { NORMALIZED_USER_CSV_HEADERS } from '@/constants/csv';
+import { normalizeToLowercase } from '@/helpers';
+import { deriveNextCsvFilename, downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
 import { useAuthStore } from '@/store/auth';
 import { useLevanteStore } from '@/store/levante';
+import { logger } from '@/logger';
+import useLinkUsersMutation from '@/composables/mutations/useLinkUsersMutation';
+
+const authStore = useAuthStore();
+const { currentSite, currentSiteName } = storeToRefs(authStore);
+const isAllSitesSelected = computed(() => currentSite.value === 'any');
+const selectedSiteId = computed(() => currentSite.value ?? '');
 
 const levanteStore = useLevanteStore();
-const { hasUserConfirmed } = storeToRefs(levanteStore);
-const { setHasUserConfirmed, setShouldUserConfirm } = levanteStore;
-const authStore = useAuthStore();
-const { currentSite } = storeToRefs(authStore);
-const isAllSitesSelected = computed(() => currentSite.value === 'any');
-const toast = useToast();
-const isFileUploaded = ref(false);
-const uploadedFile = ref(null);
-const rawUserFile = ref([]);
-const errorUsers = ref([]);
-const errorUserColumns = ref([]);
-const activeSubmit = ref(false);
-const showErrorTable = ref(false);
-const validationErrors = ref([]);
-const lastLinkedFileName = ref('');
-const linkingAttemptError = ref('');
+const { setShouldUserConfirm } = levanteStore;
 
-// LINKING
-// Required columns: id, userType, uid, caregiverId, teacherId
-// Optional columns: school, class, cohort, email
+const { mutate: linkUsers } = useLinkUsersMutation();
 
-function formatPreviewCell(data, field) {
-  const key = Object.keys(data).find((k) => k.toLowerCase() === field.toLowerCase());
-  if (key === undefined) return '';
-  const val = data[key];
-  if (val === null || val === undefined) return '';
-  if (Array.isArray(val)) return val.join(', ');
-  if (typeof val === 'object') return JSON.stringify(val);
-  return String(val);
-}
-
-const allFields = [
-  {
-    field: 'id',
-    header: 'id',
-    dataType: 'string',
-  },
-  {
-    field: 'userType',
-    header: 'userType',
-    dataType: 'string',
-  },
-  {
-    field: 'caregiverId',
-    header: 'caregiverId',
-    dataType: 'string',
-  },
-  {
-    field: 'teacherId',
-    header: 'teacherId',
-    dataType: 'string',
-  },
-  {
-    field: 'school',
-    header: 'school',
-    dataType: 'string',
-  },
-  {
-    field: 'class',
-    header: 'class',
-    dataType: 'string',
-  },
-  {
-    field: 'cohort',
-    header: 'cohort',
-    dataType: 'string',
-  },
-  {
-    field: 'uid',
-    header: 'uid',
-    dataType: 'string',
-  },
-  {
-    field: 'email',
-    header: 'email',
-    dataType: 'string',
-  },
-];
+const isSubmitting = ref(false);
+const parsedData = ref<Record<string, string>[] | null>(null);
+const status = ref<{ message: string; severity: string } | null>(null);
+const statusRef = ref<HTMLElement | null>(null);
+const uploadedFile = ref<File | null>(null);
+const validatedData = ref<LinkUsersCsv | null>(null);
+const validationErrors = ref<{
+  headers: string[];
+  keys: string[];
+  rows: Record<string, unknown>[];
+  showDownloadButton: boolean;
+} | null>(null);
 
 const resetUserProgress = () => {
-  isFileUploaded.value = false;
+  isSubmitting.value = false;
+  parsedData.value = null;
+  status.value = null;
   uploadedFile.value = null;
-  showErrorTable.value = false;
-  errorUsers.value = [];
-  errorUserColumns.value = [];
-  validationErrors.value = [];
-  lastLinkedFileName.value = '';
-  linkingAttemptError.value = '';
+  validatedData.value = null;
+  validationErrors.value = null;
 
-  setHasUserConfirmed(false);
+  // Reset user confirmation
+  setShouldUserConfirm(false);
 };
 
-const hasAnyLinkingData = (users) =>
-  users.some((user) => {
-    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-    const userType = userTypeField && user[userTypeField] ? String(user[userTypeField]).trim().toLowerCase() : '';
-    if (userType !== 'child') return false;
+watch(currentSite, () => {
+  if (isSubmitting.value) return;
+  resetUserProgress();
+});
 
-    const caregiverIdField = Object.keys(user).find((key) => key.toLowerCase() === 'caregiverid');
-    const teacherIdField = Object.keys(user).find((key) => key.toLowerCase() === 'teacherid');
-
-    const hasCaregiverId =
-      caregiverIdField &&
-      String(user[caregiverIdField] ?? '')
-        .split(',')
-        .map((id) => id.trim())
-        .some((id) => id !== '');
-
-    const hasTeacherId =
-      teacherIdField &&
-      String(user[teacherIdField] ?? '')
-        .split(',')
-        .map((id) => id.trim())
-        .some((id) => id !== '');
-
-    return hasCaregiverId || hasTeacherId;
+watch(status, () => {
+  // Scroll to bottom of page after datatable is displayed
+  // NB: nextTick ensures datatable is rendered before scroll
+  nextTick(() => {
+    statusRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
+});
 
-const onFileUpload = async (event) => {
+const onFileUpload = async (event: FileUploadUploaderEvent) => {
+  // Reset all error states and data
   resetUserProgress();
 
-  // Read the file
-  const file = event.files[event.files.length - 1];
+  // Read the file (if multiple files, use the last one)
+  const files = Array.isArray(event.files) ? event.files : [event.files];
+  const file = files[files.length - 1];
+  if (!file) {
+    status.value = { message: 'No file uploaded.', severity: 'error' };
+    return;
+  }
   uploadedFile.value = file;
 
-  const parsedData = await csvFileToJson(file);
-  const filteredData = parsedData.filter((user) => {
-    if (!user || typeof user !== 'object') return false;
-    const keys = Object.keys(user);
-    if (keys.length === 0) return false;
-    const hasAnyValue = keys.some((key) => {
-      const val = user[key];
-      if (val === null || val === undefined) return false;
-      const strVal = String(val).trim();
-      return strVal !== '';
-    });
-    return hasAnyValue;
+  // Parse the file
+  const parsed = await parseCsvFile(file, {
+    normalizedHeaders: NORMALIZED_USER_CSV_HEADERS,
+    omitColumns: ['errors'],
   });
+  if (!parsed) {
+    status.value = {
+      message:
+        'The uploaded file could not be read. If you used a spreadsheet app, please "Save as" or "Export" to CSV and upload again.',
+      severity: 'error',
+    };
+    return;
+  }
+  if (parsed.length === 0) {
+    status.value = {
+      message: 'The uploaded file contains no users. Please add at least one user and upload again.',
+      severity: 'error',
+    };
+    return;
+  }
+  parsedData.value = parsed;
 
-  if (!filteredData || filteredData.length === 0) {
-    validationErrors.value = ['The uploaded file contains no data'];
+  // Validate all required headers are present
+  const headers = Object.keys(parsed[0] ?? {});
+  const validatedHeaders = LinkUsersCsvHeaderSchema.safeParse(headers);
+  if (!validatedHeaders.success) {
+    status.value = { message: 'The uploaded file is invalid. See table for details.', severity: 'error' };
+    validationErrors.value = {
+      headers: ['Validation Errors'],
+      keys: ['message'],
+      rows: validatedHeaders.error.issues.map((issue) => {
+        return {
+          message: `${issue.path.join('.')}: ${issue.message}`,
+        };
+      }),
+      showDownloadButton: false,
+    };
     return;
   }
 
-  rawUserFile.value = filteredData;
-
-  const firstRow = toRaw(rawUserFile.value[0]);
-  const headers = Object.keys(firstRow);
-  const requiredHeaders = ['id', 'usertype', 'uid', 'caregiverid', 'teacherid'];
-
-  const headerValidation = validateCsvHeaders(headers, requiredHeaders);
-  const currentValidationErrors = [];
-
-  if (!headerValidation.success) {
-    const missingHeaders = headerValidation.errors.map((e) => e.field).join(', ');
-    currentValidationErrors.push(`Missing required column(s): <code>${missingHeaders}</code>`);
-  }
-
-  if (!hasAnyLinkingData(filteredData)) {
-    currentValidationErrors.push(
-      'At least one child row must include a <code>caregiverId</code> and/or a <code>teacherId</code> to link users.',
-    );
-  }
-
-  if (currentValidationErrors.length) {
-    validationErrors.value = currentValidationErrors;
-    return;
-  }
-  validationErrors.value = [];
-
-  const validation = validateLinkUsersCsv(filteredData);
-
-  const usersWithZodErrors = new Set();
-
-  if (!validation.success) {
-    const errorsByUser = new Map();
-    validation.errors.forEach((error) => {
-      const userIndex = error.row - 1;
-      if (userIndex >= 0 && userIndex < filteredData.length) {
-        const user = filteredData[userIndex];
-        usersWithZodErrors.add(user);
-        if (!errorsByUser.has(user)) {
-          errorsByUser.set(user, []);
-        }
-        const fieldName = error.field === 'usertype' ? 'userType' : error.field;
-        errorsByUser.get(user).push(`${fieldName}: ${error.message}`);
+  // Validate site column, if present
+  const siteIssues: ZodIssue[] = [];
+  if (headers.includes('site')) {
+    const normalizedSelectedSite = normalizeToLowercase(currentSiteName.value ?? '');
+    parsed.forEach((row, idx) => {
+      // Must match the selected site
+      if (row.site && normalizeToLowercase(row.site) !== normalizedSelectedSite) {
+        siteIssues.push(
+          makeCustomIssue({
+            input: row.site,
+            message: `Must match the selected site`,
+            path: [idx, 'site'],
+          }),
+        );
       }
     });
-    errorsByUser.forEach((errors, user) => {
-      addErrorUser(user, errors.join('; '));
-    });
   }
 
-  validateUsers(usersWithZodErrors);
-
-  if (errorUsers.value.length === 0) {
-    isFileUploaded.value = true;
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'File Successfully Uploaded',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-
-    // Wait for user confirmation before changing the selected site
-    setShouldUserConfirm(true);
+  // Validate w/ zod schema
+  const validated = LinkUsersCsvSchema.safeParse(parsed);
+  const issues = combineUsersCsvIssues([...(validated.error?.issues ?? []), ...siteIssues]);
+  if (issues.length > 0) {
+    // Validation failed
+    status.value = { message: 'The uploaded file is invalid. See table for details.', severity: 'error' };
+    validationErrors.value = {
+      headers: ['Validation Errors', 'Affected Rows'],
+      keys: ['message', 'rowNums'],
+      rows: issues,
+      showDownloadButton: true,
+    };
+    return;
   }
+
+  // Filter out children that don't have caregiverId and/or teacherId, and
+  // caregivers/teachers that aren't linked to any children
+  const adultIds = new Set<string>();
+  const filtered = validated
+    .data!.filter((user) => {
+      if (user.userType === 'child') {
+        if (!user.caregiverId.length && !user.teacherId.length) {
+          return false;
+        }
+        user.caregiverId.forEach((id) => {
+          adultIds.add(id);
+        });
+        user.teacherId.forEach((id) => {
+          adultIds.add(id);
+        });
+      }
+      return true;
+    })
+    .filter((user) => {
+      if (user.userType !== 'child') {
+        return adultIds.has(user.id);
+      }
+      return true;
+    });
+  if (!filtered.length) {
+    status.value = {
+      message: 'At least one child row must include a caregiverId and/or a teacherId to link users.',
+      severity: 'error',
+    };
+    return;
+  }
+
+  // Validation succeeded
+  validatedData.value = filtered;
+  status.value = {
+    message: 'File successfully uploaded. See table for summary of users to be linked.',
+    severity: 'success',
+  };
+
+  // Set flag to ask user before changing the selected site
+  setShouldUserConfirm(true);
 };
 
-const validateUsers = (usersWithZodErrors = new Set()) => {
-  errorUsers.value = [];
-  const userMap = new Map(
-    toRaw(rawUserFile.value).map((user) => {
-      const idField = Object.keys(user).find((key) => key.toLowerCase() === 'id');
-      return [idField ? user[idField].toString() : '', user];
-    }),
-  );
+const downloadErrors = () => {
+  if (!parsedData.value || !validationErrors.value || !uploadedFile.value) return;
 
-  rawUserFile.value.forEach((user) => {
-    if (usersWithZodErrors.has(user)) return;
-
-    const missingFields = [];
-
-    const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-
-    if (userTypeField && user[userTypeField] && user[userTypeField].toLowerCase() === 'child') {
-      const caregiverIdField = Object.keys(user).find((key) => key.toLowerCase() === 'caregiverid');
-
-      if (caregiverIdField && user[caregiverIdField] && user[caregiverIdField].trim() !== '') {
-        const caregiverIds =
-          typeof user[caregiverIdField] === 'string'
-            ? user[caregiverIdField].split(',').map((id) => id.trim())
-            : [user[caregiverIdField].toString()];
-
-        caregiverIds.forEach((caregiverId) => {
-          if (!userMap.has(caregiverId)) {
-            missingFields.push(`Caregiver with ID ${caregiverId} not found`);
-          } else {
-            const caregiverUserTypeField = Object.keys(userMap.get(caregiverId)).find(
-              (key) => key.toLowerCase() === 'usertype',
-            );
-            const caregiverUserTypeValue = caregiverUserTypeField
-              ? userMap.get(caregiverId)[caregiverUserTypeField].toLowerCase()
-              : null;
-
-            if (!caregiverUserTypeField || caregiverUserTypeValue !== 'caregiver') {
-              missingFields.push(`User with ID ${caregiverId} is not a caregiver`);
-            }
-          }
-        });
+  // Map errors column to the rows
+  const data = toRaw(parsedData.value);
+  const errors = validationErrors.value.rows as { message: string; rowNums: number[] }[];
+  const mapped: Record<string, string>[] = data.map((row, idx) => {
+    const rowErrors: string[] = [];
+    errors.forEach((error) => {
+      if (error.rowNums.includes(idx + 2)) {
+        rowErrors.push(error.message);
       }
-
-      const teacherIdField = Object.keys(user).find((key) => key.toLowerCase() === 'teacherid');
-
-      if (teacherIdField && user[teacherIdField] && user[teacherIdField].trim() !== '') {
-        const teacherIds =
-          typeof user[teacherIdField] === 'string'
-            ? user[teacherIdField].split(',').map((id) => id.trim())
-            : [user[teacherIdField].toString()];
-
-        teacherIds.forEach((teacherId) => {
-          if (!userMap.has(teacherId)) {
-            missingFields.push(`Teacher with ID ${teacherId} not found`);
-          } else {
-            const teacherUserTypeField = Object.keys(userMap.get(teacherId)).find(
-              (key) => key.toLowerCase() === 'usertype',
-            );
-
-            if (!teacherUserTypeField || userMap.get(teacherId)[teacherUserTypeField].toLowerCase() !== 'teacher') {
-              missingFields.push(`User with ID ${teacherId} is not a teacher`);
-            }
-          }
-        });
-      }
-    }
-
-    if (missingFields.length > 0) {
-      addErrorUser(user, `Missing Field(s): ${missingFields.join(', ')}`);
-    }
+    });
+    return {
+      ...row,
+      errors: rowErrors.join('; '),
+    };
   });
 
-  if (errorUsers.value.length > 0) {
-    toast.add({
-      severity: 'error',
-      summary: 'Validation Errors. See below for details.',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-  }
+  // Download the Error CSV file
+  const csv = unparseCsvFile(mapped);
+  const filename = deriveNextCsvFilename(uploadedFile.value.name, { suffix: 'errors', timestamp: new Date() });
+  downloadCsv(csv, filename);
 };
 
 const submitUsers = async () => {
-  if (errorUsers.value.length > 0) {
-    showErrorTable.value = true;
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Please fix all errors before submitting',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+  isSubmitting.value = true;
+  console.log('submitUsers', validatedData.value);
+
+  // Ensure the user data is valid
+  if (!validatedData.value) {
+    status.value = { message: 'Please fix the errors in your CSV file before submitting.', severity: 'error' };
+    isSubmitting.value = false;
     return;
   }
 
-  if (!currentSite.value || isAllSitesSelected.value) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Please select a specific site before linking users',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
+  // Ensure a site is selected
+  const siteId = selectedSiteId.value;
+  if (!siteId || isAllSitesSelected.value) {
+    status.value = { message: 'Please select a site before adding users.', severity: 'error' };
+    isSubmitting.value = false;
     return;
   }
 
-  activeSubmit.value = true;
-  showErrorTable.value = false;
-  errorUsers.value = [];
-  errorUserColumns.value = [];
-  linkingAttemptError.value = '';
+  // Prepare the parameters for the linkUsers request
+  const users = _cloneDeep(toRaw(validatedData.value));
+  const params = LinkUsersParamsSchema.safeParse({
+    siteId,
+    users: users.map((user) => ({
+      userType: user.userType,
+      id: user.id,
+      uid: user.uid,
+      ...(user.userType === 'child' ? { caregiverId: user.caregiverId } : {}),
+      ...(user.userType === 'child' ? { teacherId: user.teacherId } : {}),
+    })),
+  });
+  if (!params.success) {
+    logger.error(
+      new Error('LinkUsersParamsSchema parse failed unexpectedly', {
+        cause: params.error,
+      }),
+      {
+        tags: {
+          component: 'LinkUsers',
+        },
+      },
+    );
+    status.value = { message: 'An unexpected error occurred. Please contact support.', severity: 'error' };
+    isSubmitting.value = false;
+    return;
+  }
 
-  try {
-    const normalizedUsers = toRaw(rawUserFile.value).map((user) => {
-      const normalizedUser = {};
-
-      const idField = Object.keys(user).find((key) => key.toLowerCase() === 'id');
-      const userTypeField = Object.keys(user).find((key) => key.toLowerCase() === 'usertype');
-      const uidField = Object.keys(user).find((key) => key.toLowerCase() === 'uid');
-
-      if (idField) normalizedUser.id = user[idField];
-      if (userTypeField) {
-        const userTypeValue = user[userTypeField];
-        // Link users: send CSV userType as-is (trimmed). Do not use normalizeUserTypeForBackend —
-        // the linkUsers Cloud Function expects child rows as "child", not "student".
-        normalizedUser.userType = typeof userTypeValue === 'string' ? userTypeValue.trim() : userTypeValue;
-      }
-      if (uidField) normalizedUser.uid = user[uidField];
-
-      const caregiverIdField = Object.keys(user).find((key) => key.toLowerCase() === 'caregiverid');
-      const teacherIdField = Object.keys(user).find((key) => key.toLowerCase() === 'teacherid');
-
-      if (caregiverIdField && user[caregiverIdField]) normalizedUser.parentId = user[caregiverIdField];
-      if (teacherIdField && user[teacherIdField]) normalizedUser.teacherId = user[teacherIdField];
-
-      Object.keys(user).forEach((key) => {
-        const lowerCaseKey = key.toLowerCase();
-        if (!['id', 'usertype', 'uid', 'caregiverid', 'teacherid', 'parentid'].includes(lowerCaseKey)) {
-          normalizedUser[key] = user[key];
-        }
+  // TODO: improve error handling
+  linkUsers(params.data, {
+    onError: (error) => {
+      logger.error(new Error('Failed to link users', { cause: error }), {
+        tags: {
+          component: 'LinkUsers',
+          code: error && typeof error === 'object' && 'code' in error ? String(error.code) : 'unknown',
+        },
+        siteId,
+        userCount: params.data.users.length,
       });
-
-      return normalizedUser;
-    });
-
-    await authStore.roarfirekit.linkUsers({ users: normalizedUsers, siteId: currentSite.value });
-    lastLinkedFileName.value = uploadedFile.value?.name ?? '';
-    isFileUploaded.value = false;
-    showErrorTable.value = false;
-    errorUsers.value = [];
-    errorUserColumns.value = [];
-    validationErrors.value = [];
-    linkingAttemptError.value = '';
-  } catch (error) {
-    linkingAttemptError.value = error?.message
-      ? `${error.message}. Please try again.`
-      : 'Something went wrong. Please try again.';
-  } finally {
-    activeSubmit.value = false;
-  }
+      status.value = { message: 'Failed to link users. Please try again.', severity: 'error' };
+    },
+    onSuccess: () => {
+      status.value = { message: 'Users linked successfully.', severity: 'success' };
+    },
+    onSettled: () => {
+      isSubmitting.value = false;
+    },
+  });
 };
-
-function generateColumns(rawJson) {
-  let columns = [];
-  const columnValues = Object.keys(rawJson);
-  _forEach(columnValues, (col) => {
-    let dataType = typeof rawJson[col];
-    if (dataType === 'object') {
-      if (rawJson[col] instanceof Date) dataType = 'date';
-    }
-    columns.push({
-      field: col,
-      header: _startCase(col),
-      dataType: dataType,
-    });
-  });
-  return columns;
-}
-
-function addErrorUser(user, error) {
-  if (_isEmpty(errorUserColumns.value)) {
-    errorUserColumns.value = generateColumns(user);
-    errorUserColumns.value.unshift({
-      dataType: 'string',
-      field: 'error',
-      header: 'Cause of Error',
-    });
-  }
-  // Concat the userObject with the error reason.
-  errorUsers.value.push({
-    ...user,
-    error,
-  });
-}
-
-watch(hasUserConfirmed, (userConfirmed) => {
-  if (userConfirmed) resetUserProgress();
-});
 </script>
 
 <style scoped>
-.extra-height {
-  min-height: 33vh;
-}
-
-.datatable {
-  border: 1px solid var(--surface-d);
-  border-radius: 5px;
-  margin-top: 1rem;
+.navbar-offset {
+  scroll-margin-top: var(--navbar-height, 5rem);
 }
 
 .submit-container {
   margin-top: 1rem;
-}
-
-.error-container {
-  margin-top: 2rem;
-}
-
-.error-header {
-  margin-bottom: 1rem;
 }
 </style>
