@@ -240,7 +240,19 @@ watch(isError, (hasError) => {
 const isUserCountExpanded = ref(false);
 const users = computed(() => usersResult.value?.users ?? []);
 
-const nonAdminUsers = computed(() => users.value.filter((user) => user.userType !== 'admin'));
+const CHILD_LABELS = Array.from({ length: 26 }, (_, i) => `Child ${String.fromCharCode(65 + i)}`);
+
+const getChildLabel = (childLabelIndex) => {
+  if (typeof childLabelIndex !== 'number') return '';
+  console.log('getChildLabel', childLabelIndex, CHILD_LABELS[childLabelIndex % CHILD_LABELS.length]);
+  return CHILD_LABELS[childLabelIndex % CHILD_LABELS.length];
+};
+
+const nonAdminUsers = computed(() =>
+  users.value
+    .filter((user) => user.userType !== 'admin')
+    .map((user) => ({ ...user, childLabel: getChildLabel(user.childLabelIndex) })),
+);
 
 const childrenCount = computed(() => {
   return nonAdminUsers.value.filter((user) => user.userType === 'child').length;
@@ -282,6 +294,12 @@ const columns = ref([
   {
     field: 'userType',
     header: 'User Type',
+    dataType: 'string',
+    sort: false,
+  },
+  {
+    field: 'childLabel',
+    header: 'Child Label',
     dataType: 'string',
     sort: false,
   },
@@ -371,7 +389,7 @@ const updateUserData = async () => {
         life: 3000,
       });
     })
-    .catch((error) => {
+    .catch(() => {
       isSubmitting.value = false;
     });
 };
