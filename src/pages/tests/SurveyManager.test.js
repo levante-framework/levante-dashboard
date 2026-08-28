@@ -5,7 +5,7 @@ import SurveyManager from '@/pages/SurveyManager.vue';
 
 const state = {
   isSuperAdmin: true,
-  locale: ref('en'),
+  locale: ref('en-US'),
   route: {
     query: {},
     params: {},
@@ -193,7 +193,7 @@ describe('SurveyManager.vue', () => {
     vi.clearAllMocks();
     window.localStorage.clear();
     state.isSuperAdmin = true;
-    state.locale.value = 'en';
+    state.locale.value = 'en-US';
     state.route.query = {};
     state.route.params = {};
     state.surveyListData.value = [
