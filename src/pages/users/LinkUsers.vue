@@ -80,6 +80,7 @@ import CsvUploader from '@/components/CsvUploader.vue';
 import LinkUsersInfo from '@/components/userInfo/LinkUsersInfo.vue';
 import useLinkUsersMutation from '@/composables/mutations/useLinkUsersMutation';
 import { NORMALIZED_USER_CSV_HEADERS } from '@/constants/csv';
+import { toFirebaseFailureCode } from '@/firebase/failure';
 import { normalizeToLowercase } from '@/helpers';
 import { deriveNextCsvFilename, downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
 import { logger } from '@/logger';
@@ -290,7 +291,6 @@ const downloadErrors = () => {
 
 const submitUsers = async () => {
   isSubmitting.value = true;
-  console.log('submitUsers', validatedData.value);
 
   // Ensure the user data is valid
   if (!validatedData.value) {
@@ -335,19 +335,68 @@ const submitUsers = async () => {
     return;
   }
 
-  // TODO: improve error handling
   linkUsers(params.data, {
-    onError: (error) => {
-      logger.error(new Error('Failed to link users', { cause: error }), {
-        tags: {
-          component: 'LinkUsers',
-          code: error && typeof error === 'object' && 'code' in error ? String(error.code) : 'unknown',
-        },
-        siteId,
-        userCount: params.data.users.length,
-      });
-      status.value = { message: 'Failed to link users. Please try again.', severity: 'error' };
+    onError: (failure) => {
+      let message = 'Failed to link users. Please try again. If the problem persists, contact support.';
+      let shouldLog = true;
+
+      const populateValidationErrors = (uids: string[], validationMessage: string) => {
+        message = 'Failed to link users. Please fix the errors in your CSV file and try again.';
+        shouldLog = false;
+        const uidsSet = new Set(uids);
+        const rowNums = (parsedData.value ?? [])
+          .map((row, idx) => ({ uid: row.uid, rowNum: idx + 2 }))
+          .filter(({ uid }) => uid !== undefined && uidsSet.has(uid.trim()))
+          .map(({ rowNum }) => rowNum);
+        validationErrors.value = {
+          headers: ['Validation Errors', 'Affected Rows'],
+          keys: ['message', 'rowNums'],
+          rows: [{ message: validationMessage, rowNums }],
+          showDownloadButton: true,
+        };
+      };
+
+      if (failure.code === 'app-error') {
+        if (failure.error.code === 'functions/invalid-argument') {
+          if (failure.error.details.code === 'id-hash-mismatch') {
+            populateValidationErrors(failure.error.details.uids, 'id|uid: Does not match previously registered user');
+          } else if (failure.error.details.code === 'schema') {
+            message = 'Failed to link users due to an unexpected error. Please contact support.';
+          } else if (failure.error.details.code === 'users-site-mismatch') {
+            populateValidationErrors(failure.error.details.uids, 'uid: User does not exist in the selected site');
+          }
+        } else if (failure.error.code === 'functions/not-found') {
+          if (failure.error.details.code === 'users') {
+            populateValidationErrors(failure.error.details.uids, 'uid: User does not exist in the database');
+          }
+        } else if (failure.error.code === 'functions/permission-denied') {
+          message = 'Failed to link users due to insufficient permissions. Please contact support.';
+        } else if (failure.error.code === 'functions/unauthenticated') {
+          message = 'Failed to link users due to an expired session. Please sign in again and retry.';
+          shouldLog = false;
+        }
+      }
+      // remaining FirebaseFailure cases:
+      // - `app-error/functions/internal/link`
+      // - `functions-error/*`
+      // - `firebase-error/*`
+      // - `error`
+
+      status.value = {
+        message,
+        severity: 'error',
+      };
       isSubmitting.value = false;
+
+      if (shouldLog) {
+        logger.error(new Error('Failed to link users', { cause: failure }), {
+          tags: {
+            component: 'LinkUsers',
+            firebaseFailureCode: toFirebaseFailureCode(failure),
+          },
+          siteId,
+        });
+      }
     },
     onSuccess: () => {
       resetUserProgress();
