@@ -188,6 +188,15 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
+    path: APP_ROUTES.DATA_DASHBOARD,
+    name: 'DataDashboard',
+    component: () => import('@/pages/DataDashboard.vue'),
+    meta: {
+      pageTitle: 'Data Dashboard',
+      allowedRoles: [ROLES.SUPER_ADMIN],
+    },
+  },
+  {
     path: '/list-groups',
     name: 'ListGroups',
     component: () => import('@/pages/groups/ListGroups.vue'),
