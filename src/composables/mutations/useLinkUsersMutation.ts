@@ -6,12 +6,12 @@ import {
 } from '@levante-framework/levante-zod';
 import { type UseMutationReturnType, useMutation } from '@tanstack/vue-query';
 import { LINK_USERS_MUTATION_KEY } from '@/constants/mutationKeys';
-import { type FirebaseCallFailure, toFirebaseCallFailure } from '@/firebase/callFailure';
+import { type FirebaseFailure, toFirebaseFailure } from '@/firebase/failure';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
 
 const useLinkUsersMutation = (): UseMutationReturnType<
   LinkUsersResult,
-  FirebaseCallFailure<LinkUsersError>,
+  FirebaseFailure<LinkUsersError>,
   LinkUsersParams,
   void
 > => {
@@ -22,7 +22,7 @@ const useLinkUsersMutation = (): UseMutationReturnType<
         const result = await usersRepository.linkUsers(params);
         return result;
       } catch (error) {
-        throw toFirebaseCallFailure(error, LinkUsersErrorSchema);
+        throw toFirebaseFailure(error, LinkUsersErrorSchema);
       }
     },
     meta: { skipGlobalErrorLogging: true },

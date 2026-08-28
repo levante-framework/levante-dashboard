@@ -43,7 +43,7 @@ describe('useLinkUsersMutation', () => {
     expect(result.isSuccess.value).toBe(true);
   });
 
-  it('wraps a non-Firebase error into a FirebaseCallFailure with code "error"', async () => {
+  it('wraps a non-Firebase error into a FirebaseFailure with code "error"', async () => {
     const rawError = new Error('boom');
     vi.mocked(usersRepository.linkUsers).mockRejectedValue(rawError);
 
@@ -58,7 +58,7 @@ describe('useLinkUsersMutation', () => {
     expect(result.isError.value).toBe(true);
   });
 
-  it('parses a matching FirebaseError into a FirebaseCallFailure with code "app-error"', async () => {
+  it('parses a matching FirebaseError into a FirebaseFailure with code "app-error"', async () => {
     const firebaseError = new FirebaseError('functions/not-found', 'Users not found');
     Object.assign(firebaseError, { details: { code: 'users', uids: ['uid-1'] } });
     vi.mocked(usersRepository.linkUsers).mockRejectedValue(firebaseError);
