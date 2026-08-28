@@ -94,9 +94,9 @@ import { useSurveyQuery } from '@/composables/queries/useSurveyQuery';
 import {
   getParsedLocale,
   getPlainSurveyData,
-  setupSurveyMarkdownConverter,
   getSurveyDataWithDefaults,
   getSurveyTheme,
+  setupSurveyMarkdownConverter,
 } from '@/helpers/survey';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
