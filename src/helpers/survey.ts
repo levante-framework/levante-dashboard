@@ -13,7 +13,7 @@ import { logger } from '@/logger';
 import type { useAssignmentsStore } from '@/store/assignments';
 // @ts-expect-error - Will be resolved when store file is converted to TS
 import type { UseSurveyStore } from '@/store/survey';
-import { findBestMatchingLocale } from '@/translations/i18n';
+import { findBestMatchingLocale, i18n } from '@/translations/i18n';
 
 interface SurveyResponseDoc {
   administrationId?: string;
@@ -331,23 +331,22 @@ export const getPlainSurveyData = (raw: unknown) => {
   return typeof structuredClone === 'function' ? structuredClone(toRaw(raw)) : JSON.parse(JSON.stringify(toRaw(raw)));
 };
 
-const defaultSurveyTitles: Record<string, string> = {
-  default: '[Survey Name Here]',
-  child_survey: '[Child Survey Name Here]',
-  parent_survey_child: 'For child X with Birth month A and Birth Year B',
-  parent_survey_family: '[Caregiver Survey Name Here]',
-  teacher_survey_classroom: 'For [Clasroom Name Here]',
-  teacher_survey_general: '[Teacher Survey Name Here]',
+const defaultSurveyTitleKeys: Record<string, string> = {
+  default: 'gameTabs.surveyNameChild',
+  child_survey: 'gameTabs.surveyNameChild',
+  parent_survey_family: 'gameTabs.surveyNameParentPart2',
+  parent_survey_child: 'gameTabs.surveyNameParentPart1',
+  teacher_survey_general: 'gameTabs.surveyNameTeacherPart1',
+  teacher_survey_classroom: 'gameTabs.surveyNameTeacherPart2',
 };
 
 export const getSurveyDataWithDefaults = (surveyId: string, surveyData: Record<string, any>): Record<string, any> => {
-  const title = surveyData?.title || defaultSurveyTitles[surveyId || 'default'];
+  const title = surveyData?.title || i18n.global.t(defaultSurveyTitleKeys[surveyId] ?? defaultSurveyTitleKeys.default);
   const hasMultiplePages = surveyData?.pages?.length > 2; // Start page does not count
 
   // In case the JSON file does not contain any of the following props
   const fallbackOptions = {
     firstPageIsStartPage: true,
-    progressBarLocation: 'belowHeader',
     showProgressBar: hasMultiplePages,
     title,
     widthMode: 'responsive',
@@ -355,6 +354,7 @@ export const getSurveyDataWithDefaults = (surveyId: string, surveyData: Record<s
 
   // Every survey should have showTitle == true
   const defaultOptions = {
+    progressBarLocation: 'bottom',
     showTitle: true,
   };
 
