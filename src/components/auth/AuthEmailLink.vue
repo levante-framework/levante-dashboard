@@ -46,6 +46,7 @@ const loginFromEmailLink = async (email) => {
       isError.value = true;
       logger.error(new Error('Failed to sign in with email link', { cause: error }), {
         tags: { component: 'AuthEmailLink', function: 'loginFromEmailLink' },
+        email,
       });
     });
 };
@@ -70,11 +71,11 @@ onMounted(async () => {
     } catch (error) {
       logger.error(new Error('Failed to sign in with email link', { cause: error }), {
         tags: { component: 'AuthEmailLink', function: 'onMounted' },
+        email,
       });
       isError.value = true;
     }
   } else {
-    // No email in localStorage, so we need to show a message
     isError.value = true;
     logger.capture('No email in localStorage');
   }
