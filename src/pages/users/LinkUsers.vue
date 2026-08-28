@@ -347,12 +347,11 @@ const submitUsers = async () => {
         userCount: params.data.users.length,
       });
       status.value = { message: 'Failed to link users. Please try again.', severity: 'error' };
+      isSubmitting.value = false;
     },
     onSuccess: () => {
+      resetUserProgress();
       status.value = { message: 'Users linked successfully.', severity: 'success' };
-    },
-    onSettled: () => {
-      isSubmitting.value = false;
     },
   });
 };
