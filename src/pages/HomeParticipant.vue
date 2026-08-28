@@ -116,14 +116,18 @@ import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
 import { formatDateWithLocale } from '@/helpers';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { fetchDocsById } from '@/helpers/query/utils';
-import { setupSurveyMarkdownConverter } from '@/helpers/survey';
+import {
+  getPlainSurveyData,
+  getSurveyDataWithDefaults,
+  getSurveyTheme,
+  setupSurveyMarkdownConverter,
+} from '@/helpers/survey';
 import { bootstrapSurveyInstance, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 import { useSurveyStore } from '@/store/survey';
 import 'survey-core/survey.i18n';
-import { getSurveyTheme } from '@/helpers/survey';
 
 const showConsent = ref(false);
 const consentVersion = ref('');
@@ -463,15 +467,21 @@ const specificSurveyData = computed(() => {
   return userType.value === 'student' ? null : surveyData.value.specific;
 });
 
-function createSurveyInstance(surveyDataToStartAt) {
+function getParticipantSurveyId(participantUserType, isGeneral) {
+  if (participantUserType === 'student') return 'child_survey';
+  if (participantUserType === 'teacher') {
+    return isGeneral ? 'teacher_survey_general' : 'teacher_survey_classroom';
+  }
+  return isGeneral ? 'parent_survey_family' : 'parent_survey_child';
+}
+
+function createSurveyInstance(surveyDataToStartAt, surveyId) {
   settings.lazyRender = true;
   // SurveyJS mutates the input JSON (e.g., deleting internal keys like `pos`). Vue Query/Vue may wrap fetched JSON in
   // readonly/reactive proxies, which triggers warnings like "Delete operation on key 'pos' failed: target is readonly".
   // Clone to a plain mutable object before passing it to SurveyJS.
-  const surveyJson = toRaw(surveyDataToStartAt);
-  const surveyInstance = new Model(
-    typeof structuredClone === 'function' ? structuredClone(surveyJson) : JSON.parse(JSON.stringify(surveyJson)),
-  );
+  const surveyJson = getSurveyDataWithDefaults(surveyId, getPlainSurveyData(surveyDataToStartAt));
+  const surveyInstance = new Model(surveyJson);
   surveyInstance.applyTheme(getSurveyTheme());
   return surveyInstance;
 }
@@ -569,10 +579,9 @@ watch(
       }
     }
 
-    const surveyDataToStartAt =
-      userType.value === 'student' || !surveyStore.isGeneralSurveyComplete
-        ? surveyData.value.general
-        : surveyData.value.specific;
+    const isGeneralSurvey = userType.value === 'student' || !surveyStore.isGeneralSurveyComplete;
+    const surveyDataToStartAt = isGeneralSurvey ? surveyData.value.general : surveyData.value.specific;
+    const surveyId = getParticipantSurveyId(userType.value, isGeneralSurvey);
 
     const surveyInstance = createSurveyInstance(surveyDataToStartAt);
     setupSurveyMarkdownConverter(surveyInstance);

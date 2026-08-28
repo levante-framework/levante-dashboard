@@ -357,13 +357,21 @@ watchEffect(() => {
     background-color: white;
   }
 
-  .sd-container-modern {
-    & > .sd-title {
-      border-bottom: 1px solid var(--surface-d);
-      box-shadow: none;
-      position: sticky;
-      top: 0;
-      z-index: 1;
+  .sd-container-modern__title {
+    padding: 1rem 2.5rem;
+    font-size: 20px;
+    line-height: 1;
+    border-bottom: 1px solid var(--surface-d);
+    box-shadow: none;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+
+    .sd-header__text {
+      .sd-title {
+        font-size: 20px;
+        line-height: 1;
+      }
     }
   }
 

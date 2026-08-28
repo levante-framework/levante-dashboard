@@ -2,37 +2,18 @@
 import { storeToRefs } from 'pinia';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { getChildLetter } from '@/helpers/childLabels';
-import { useAuthStore } from '@/store/auth';
 import { useSurveyStore } from '@/store/survey';
 import 'survey-core/survey-core.css';
 import { SurveyComponent } from 'survey-vue3-ui';
-import { computed, onMounted } from 'vue';
+import { inject, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
-const authStore = useAuthStore();
-const { userData } = storeToRefs(authStore);
 const surveyStore = useSurveyStore();
-const {
-  isGeneralSurveyComplete,
-  isSavingSurveyResponses,
-  isSurveyPartSubmitted,
-  specificSurveyRelationData,
-  specificSurveyRelationIndex,
-  survey,
-} = storeToRefs(surveyStore);
+const { isSavingSurveyResponses, survey } = storeToRefs(surveyStore);
 
-const birthMonth = computed(() => {
-  return specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.birthMonth ?? '--';
-});
-
-const birthYear = computed(() => {
-  return specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.birthYear ?? '--';
-});
-
-const name = computed(() => {
-  return specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.name ?? '--';
-});
+const navbarHeight = inject('navbarHeight', ref(0));
+const footerHeight = inject('footerHeight', ref(0));
 
 const childLetter = computed(() => {
   const childLabelIndex = specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.childLabelIndex;
@@ -47,25 +28,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="survey && !isSavingSurveyResponses">
-    <h1
-      v-if="userData.userType !== 'student' && isGeneralSurveyComplete && !isSurveyPartSubmitted"
-      class="text-2xl font-bold text-black text-center"
-    >
-      {{
-        userData.userType === 'parent'
-          ? `${$t('userSurvey.specificRelationDescriptionChildA')} ${
-              birthMonth
-            } ${$t('userSurvey.specificRelationDescriptionChildB')} ${
-              birthYear
-            }${childLetter ? ` (${$t('gameTabs.surveyProgressSpecificParent')} ${childLetter})` : ''}`
-          : `${$t('userSurvey.specificRelationDescriptionClass')} ${
-              name
-            }`
-      }}
-    </h1>
-
-    <SurveyComponent :model="survey" />
+  <div v-if="survey && !isSavingSurveyResponses" class="survey-wrapper" :style="{
+    height: `calc(100dvh - ${navbarHeight}px - ${footerHeight}px - 7px)`
+  }">
+    <SurveyComponent :model="survey" class="survey" />
   </div>
 
   <LevanteSpinner
@@ -73,3 +39,23 @@ onMounted(() => {
     fullscreen
   />
 </template>
+
+<style lang="scss">
+.survey {
+  .sd-container-modern__title {
+    padding: 1rem 2.5rem;
+    border-bottom: 1px solid var(--surface-d);
+    box-shadow: none;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+
+    .sd-header__text {
+      .sd-title {
+        font-size: 20px;
+        line-height: 1;
+      }
+    }
+  }
+}
+</style>
