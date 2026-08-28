@@ -78,13 +78,13 @@ import { computed, nextTick, ref, toRaw, watch } from 'vue';
 import CsvTable from '@/components/CsvTable.vue';
 import CsvUploader from '@/components/CsvUploader.vue';
 import LinkUsersInfo from '@/components/userInfo/LinkUsersInfo.vue';
+import useLinkUsersMutation from '@/composables/mutations/useLinkUsersMutation';
 import { NORMALIZED_USER_CSV_HEADERS } from '@/constants/csv';
 import { normalizeToLowercase } from '@/helpers';
 import { deriveNextCsvFilename, downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { useLevanteStore } from '@/store/levante';
-import { logger } from '@/logger';
-import useLinkUsersMutation from '@/composables/mutations/useLinkUsersMutation';
 
 const authStore = useAuthStore();
 const { currentSite, currentSiteName } = storeToRefs(authStore);
