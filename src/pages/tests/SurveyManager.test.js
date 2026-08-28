@@ -21,7 +21,7 @@ const state = {
   surveyPDFs: [],
   creators: [],
   markdownConverterSurveys: [],
-});
+};
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
