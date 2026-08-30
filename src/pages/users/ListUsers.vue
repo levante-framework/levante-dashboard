@@ -244,7 +244,6 @@ const CHILD_LABELS = Array.from({ length: 26 }, (_, i) => `Child ${String.fromCh
 
 const getChildLabel = (childLabelIndex) => {
   if (typeof childLabelIndex !== 'number') return '';
-  console.log('getChildLabel', childLabelIndex, CHILD_LABELS[childLabelIndex % CHILD_LABELS.length]);
   return CHILD_LABELS[childLabelIndex % CHILD_LABELS.length];
 };
 
