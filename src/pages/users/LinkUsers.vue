@@ -101,6 +101,7 @@ const isSubmitting = ref(false);
 const parsedData = ref<Record<string, string>[] | null>(null);
 const status = ref<{ message: string; severity: string } | null>(null);
 const statusRef = ref<HTMLElement | null>(null);
+const uidToIdxMap = ref<Record<string, number> | null>(null);
 const uploadedFile = ref<File | null>(null);
 const validatedData = ref<LinkUsersCsv | null>(null);
 const validationErrors = ref<{
@@ -114,6 +115,7 @@ const resetUserProgress = () => {
   isSubmitting.value = false;
   parsedData.value = null;
   status.value = null;
+  uidToIdxMap.value = null;
   uploadedFile.value = null;
   validatedData.value = null;
   validationErrors.value = null;
@@ -163,7 +165,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   }
   if (parsed.length === 0) {
     status.value = {
-      message: 'The uploaded file contains no users. Please add at least one user and upload again.',
+      message: 'The uploaded file contains no users. Please add users to the CSV file and upload again.',
       severity: 'error',
     };
     return;
@@ -220,6 +222,15 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
     };
     return;
   }
+
+  // Create a map of uid to index before filtering
+  uidToIdxMap.value = validated.data!.reduce(
+    (acc, user, idx) => {
+      acc[user.uid] = idx;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
   // Filter out children that don't have caregiverId and/or teacherId, and
   // caregivers/teachers that aren't linked to any children
@@ -340,18 +351,13 @@ const submitUsers = async () => {
       let message = 'Failed to link users. Please try again. If the problem persists, contact support.';
       let shouldLog = true;
 
-      const populateValidationErrors = (uids: string[], validationMessage: string) => {
+      const setValidationErrors = (issues: { message: string; rowNums: number[] }[]) => {
         message = 'Failed to link users. Please fix the errors in your CSV file and try again.';
         shouldLog = false;
-        const uidsSet = new Set(uids);
-        const rowNums = (parsedData.value ?? [])
-          .map((row, idx) => ({ uid: row.uid, rowNum: idx + 2 }))
-          .filter(({ uid }) => uid !== undefined && uidsSet.has(uid.trim()))
-          .map(({ rowNum }) => rowNum);
         validationErrors.value = {
           headers: ['Validation Errors', 'Affected Rows'],
           keys: ['message', 'rowNums'],
-          rows: [{ message: validationMessage, rowNums }],
+          rows: issues,
           showDownloadButton: true,
         };
       };
@@ -359,15 +365,53 @@ const submitUsers = async () => {
       if (failure.code === 'app-error') {
         if (failure.error.code === 'functions/invalid-argument') {
           if (failure.error.details.code === 'id-hash-mismatch') {
-            populateValidationErrors(failure.error.details.uids, 'id|uid: Does not match previously registered user');
+            const issues = combineUsersCsvIssues(
+              failure.error.details.uids.map((uid) =>
+                makeCustomIssue({
+                  input: uid,
+                  message: 'Does not match previously registered user',
+                  path: [uidToIdxMap.value![uid]!, 'id|uid'],
+                }),
+              ),
+            );
+            setValidationErrors(issues);
           } else if (failure.error.details.code === 'schema') {
             message = 'Failed to link users due to an unexpected error. Please contact support.';
           } else if (failure.error.details.code === 'users-site-mismatch') {
-            populateValidationErrors(failure.error.details.uids, 'uid: User does not exist in the selected site');
+            const issues = combineUsersCsvIssues(
+              failure.error.details.uids.map((uid) =>
+                makeCustomIssue({
+                  input: uid,
+                  message: 'User does not exist in the selected site',
+                  path: [uidToIdxMap.value![uid]!, 'uid'],
+                }),
+              ),
+            );
+            setValidationErrors(issues);
+          } else if (failure.error.details.code === 'users-usertype-mismatch') {
+            const issues = combineUsersCsvIssues(
+              failure.error.details.users.map((user) =>
+                makeCustomIssue({
+                  input: user.userType,
+                  message: `Does not match the expected ${user.userType}`,
+                  path: [uidToIdxMap.value![user.uid]!, 'userType'],
+                }),
+              ),
+            );
+            setValidationErrors(issues);
           }
         } else if (failure.error.code === 'functions/not-found') {
           if (failure.error.details.code === 'users') {
-            populateValidationErrors(failure.error.details.uids, 'uid: User does not exist in the database');
+            const issues = combineUsersCsvIssues(
+              failure.error.details.uids.map((uid) =>
+                makeCustomIssue({
+                  input: uid,
+                  message: 'User does not exist in the database',
+                  path: [uidToIdxMap.value![uid]!, 'uid'],
+                }),
+              ),
+            );
+            setValidationErrors(issues);
           }
         } else if (failure.error.code === 'functions/permission-denied') {
           message = 'Failed to link users due to insufficient permissions. Please contact support.';

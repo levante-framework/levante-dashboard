@@ -5,7 +5,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import ToastService from 'primevue/toastservice';
 import Tooltip from 'primevue/tooltip';
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import LinkUsers from './LinkUsers.vue';
@@ -187,7 +187,7 @@ describe('LinkUsers Page', () => {
       await vm.onFileUpload(mockFileUploadEvent(HEADER_ONLY_CSV));
 
       expect(vm.status).toEqual({
-        message: 'The uploaded file contains no users. Please add at least one user and upload again.',
+        message: 'The uploaded file contains no users. Please add users to the CSV file and upload again.',
         severity: 'error',
       });
       expect(vm.validatedData).toBeNull();
@@ -587,6 +587,27 @@ describe('LinkUsers Page', () => {
 
       expect(vm.validationErrors.rows).toEqual([
         { message: 'uid: User does not exist in the selected site', rowNums: [3] },
+      ]);
+    });
+
+    it('maps a users-usertype-mismatch app-error to per-row validation errors', async () => {
+      linkUsersMock.mockImplementation((_params: unknown, { onError }: any) =>
+        onError({
+          code: 'app-error',
+          error: {
+            code: 'functions/invalid-argument',
+            details: {
+              code: 'users-usertype-mismatch',
+              users: [{ uid: 'uid-care-1', userType: 'caregiver' }],
+            },
+          },
+        }),
+      );
+
+      const vm = await uploadValidAndSubmit();
+
+      expect(vm.validationErrors.rows).toEqual([
+        { message: 'userType: Does not match the expected caregiver', rowNums: [3] },
       ]);
     });
 
