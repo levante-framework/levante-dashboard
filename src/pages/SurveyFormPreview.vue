@@ -30,7 +30,7 @@
         :section-info="data.sectionInfo"
         :is-saving="isSaving"
         :is-complete="isComplete"
-        @save="onSave"
+        :save-draft="onSave"
         @submit="onSubmit"
         @close="onClose"
       />
@@ -78,7 +78,7 @@ const isComplete = ref(false);
 
 async function persist(
   responses: Record<string, unknown>,
-  status: 'draft' | 'submitted',
+  status: 'draft' | 'complete',
   options?: { silent?: boolean },
 ): Promise<boolean> {
   if (!data.value) return false;
@@ -91,7 +91,7 @@ async function persist(
       responses,
       status,
     });
-    if (options?.silent || status === 'submitted') return true;
+    if (options?.silent || status === 'complete') return true;
     toast.add({
       severity: 'success',
       summary: 'Saved',
@@ -113,11 +113,11 @@ async function persist(
 }
 
 function onSave(values: Record<string, unknown>, options?: { silent?: boolean }) {
-  void persist(values, 'draft', options);
+  return persist(values, 'draft', options);
 }
 
 async function onSubmit(values: Record<string, unknown>) {
-  isComplete.value = await persist(values, 'submitted');
+  isComplete.value = await persist(values, 'complete');
 }
 
 function onClose() {

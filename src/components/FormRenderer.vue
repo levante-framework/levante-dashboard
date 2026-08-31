@@ -44,7 +44,7 @@
             type="button"
             class="survey-form__example-trigger"
             :aria-label="`Show an example for: ${toPlainText(field.questionText)}`"
-            @click="openExample($event, field)"
+            @click="openExample(field)"
           >
             ?
           </button>
@@ -110,10 +110,23 @@
       </div>
     </section>
 
-    <PvPopover ref="examplePopover" append-to="body">
+    <PvDialog
+      v-model:visible="isExampleVisible"
+      modal
+      dismissable-mask
+      :draggable="false"
+      :style="{ width: 'min(40rem, 92vw)' }"
+      :pt="{
+        header: { style: 'padding: 0.85rem 1.25rem 0' },
+        content: { style: 'padding: 0 1.25rem 0.85rem' },
+      }"
+    >
+      <template #header>
+        <span class="text-base font-semibold">Example</span>
+      </template>
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div class="survey-form__example-panel" v-html="exampleHtml"></div>
-    </PvPopover>
+    </PvDialog>
 
     <footer v-if="pageCount && !isComplete" class="survey-form__footer">
       <div class="survey-form__nav" :class="{ 'survey-form__nav--intro': isIntroPage }">
@@ -133,7 +146,7 @@
           <PvButton
             v-if="!isFirstPage"
             type="button"
-            label="Back"
+            label="Previous"
             severity="secondary"
             outlined
             @click="goBack"
@@ -158,7 +171,7 @@ import DOMPurify from 'dompurify';
 import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
 import PvMultiSelect from 'primevue/multiselect';
-import PvPopover from 'primevue/popover';
+import PvDialog from 'primevue/dialog';
 import PvSelect from 'primevue/select';
 import PvTextarea from 'primevue/textarea';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
@@ -184,6 +197,10 @@ const props = defineProps<{
   sectionInfo?: FormSectionInfo[];
   isSaving?: boolean;
   isComplete?: boolean;
+  saveDraft: (
+    values: Record<string, unknown>,
+    options?: { silent?: boolean },
+  ) => Promise<boolean>;
 }>();
 
 // `sectionInfo` arrives as an ordered array; index it by id for quick lookup.
@@ -193,7 +210,6 @@ const sectionInfoById = computed(
 
 const emit = defineEmits<{
   submit: [values: Record<string, unknown>];
-  save: [values: Record<string, unknown>, options?: { silent?: boolean }];
   close: [];
 }>();
 
@@ -228,12 +244,12 @@ function formatExampleHtml(value?: string): string {
   return DOMPurify.sanitize(root.innerHTML);
 }
 
-const examplePopover = ref<InstanceType<typeof PvPopover> | null>(null);
+const isExampleVisible = ref(false);
 const exampleHtml = ref('');
 
-function openExample(event: Event, field: InformationFormField) {
+function openExample(field: InformationFormField) {
   exampleHtml.value = formatExampleHtml(field.infoExample);
-  examplePopover.value?.toggle(event);
+  isExampleVisible.value = true;
 }
 
 function formatNumberField(variableName: string): string {
@@ -397,25 +413,37 @@ function collectValues(fields: InformationFormField[]): Record<string, unknown> 
   const values: Record<string, unknown> = {};
   for (const field of fields) {
     const value = model[field.variableName];
-    if (isEmptyValue(value)) continue;
+    if (isEmptyValue(value)) {
+      if (field.displayLogic) values[field.variableName] = null;
+      continue;
+    }
     values[field.variableName] = value;
   }
   return values;
 }
 
-function currentPageValues(): Record<string, unknown> {
-  return collectValues(currentSection.value?.fields ?? []);
+function fieldsInCurrentSection(): InformationFormField[] {
+  const sectionId = currentSection.value?.id;
+  if (!sectionId) return [];
+  return props.fields.filter((field) => (field.sectionId ?? DEFAULT_SECTION_ID) === sectionId);
 }
 
-function goNext() {
+function currentPageValues(): Record<string, unknown> {
+  return collectValues(fieldsInCurrentSection());
+}
+
+async function goNext() {
   if (!validateCurrentSection()) return;
-  if (!isIntroPage.value) emit('save', currentPageValues(), { silent: true });
+  if (!isIntroPage.value) {
+    const didSave = await props.saveDraft(currentPageValues(), { silent: true });
+    if (!didSave) return;
+  }
   if (!isLastPage.value) currentPageIndex.value += 1;
 }
 
-function onSave() {
+async function onSave() {
   if (!validateCurrentSection()) return;
-  emit('save', currentPageValues());
+  await props.saveDraft(currentPageValues());
 }
 
 function goBack() {
@@ -425,7 +453,7 @@ function goBack() {
 
 function onSubmit() {
   if (!validateCurrentSection()) return;
-  emit('submit', collectValues(visibleFields.value));
+  emit('submit', collectValues(props.fields));
 }
 </script>
 
@@ -582,7 +610,6 @@ function onSubmit() {
 }
 
 .survey-form__example-panel {
-  max-width: 22rem;
   font-size: 0.875rem;
   font-weight: 400;
   line-height: 1.55;
