@@ -211,7 +211,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   // Validate w/ zod schema
   const validated = LinkUsersCsvSchema.safeParse(parsed);
   const issues = combineUsersCsvIssues([...(validated.error?.issues ?? []), ...siteIssues]);
-  if (issues.length > 0) {
+  if (issues.length > 0 || !validated.success) {
     // Validation failed
     status.value = { message: 'The uploaded file is invalid. See table for details.', severity: 'error' };
     validationErrors.value = {
@@ -224,7 +224,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   }
 
   // Create a map of uid to index before filtering
-  uidToIdxMap.value = validated.data!.reduce(
+  uidToIdxMap.value = validated.data.reduce(
     (acc, user, idx) => {
       acc[user.uid] = idx;
       return acc;
@@ -235,8 +235,8 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   // Filter out children that don't have caregiverId and/or teacherId, and
   // caregivers/teachers that aren't linked to any children
   const adultIds = new Set<string>();
-  const filtered = validated
-    .data!.filter((user) => {
+  const filtered = validated.data
+    .filter((user) => {
       if (user.userType === 'child') {
         if (!user.caregiverId.length && !user.teacherId.length) {
           return false;
@@ -365,51 +365,76 @@ const submitUsers = async () => {
       if (failure.code === 'app-error') {
         if (failure.error.code === 'functions/invalid-argument') {
           if (failure.error.details.code === 'id-hash-mismatch') {
+            // Handle app-error/functions/invalid-argument/id-hash-mismatch
             const issues = combineUsersCsvIssues(
-              failure.error.details.uids.map((uid) =>
-                makeCustomIssue({
-                  input: uid,
-                  message: 'Does not match previously registered user',
-                  path: [uidToIdxMap.value![uid]!, 'id|uid'],
-                }),
-              ),
+              failure.error.details.uids.flatMap((uid) => {
+                const idx = uidToIdxMap.value?.[uid];
+                return idx === undefined
+                  ? []
+                  : [
+                      makeCustomIssue({
+                        input: uid,
+                        message: 'Does not match previously registered user',
+                        path: [idx, 'id|uid'],
+                      }),
+                    ];
+              }),
             );
             setValidationErrors(issues);
           } else if (failure.error.details.code === 'schema') {
+            // Handle app-error/functions/invalid-argument/schema
             message = 'Failed to link users due to an unexpected error. Please contact support.';
           } else if (failure.error.details.code === 'users-site-mismatch') {
+            // Handle app-error/functions/invalid-argument/users-site-mismatch
             const issues = combineUsersCsvIssues(
-              failure.error.details.uids.map((uid) =>
-                makeCustomIssue({
-                  input: uid,
-                  message: 'User does not exist in the selected site',
-                  path: [uidToIdxMap.value![uid]!, 'uid'],
-                }),
-              ),
+              failure.error.details.uids.flatMap((uid) => {
+                const idx = uidToIdxMap.value?.[uid];
+                return idx === undefined
+                  ? []
+                  : [
+                      makeCustomIssue({
+                        input: uid,
+                        message: 'User does not exist in the selected site',
+                        path: [idx, 'uid'],
+                      }),
+                    ];
+              }),
             );
             setValidationErrors(issues);
           } else if (failure.error.details.code === 'users-usertype-mismatch') {
+            // Handle app-error/functions/invalid-argument/users-usertype-mismatch
             const issues = combineUsersCsvIssues(
-              failure.error.details.users.map((user) =>
-                makeCustomIssue({
-                  input: user.userType,
-                  message: `Does not match the expected ${user.userType}`,
-                  path: [uidToIdxMap.value![user.uid]!, 'userType'],
-                }),
-              ),
+              failure.error.details.users.flatMap((user) => {
+                const idx = uidToIdxMap.value?.[user.uid];
+                return idx === undefined
+                  ? []
+                  : [
+                      makeCustomIssue({
+                        input: user.userType,
+                        message: `Does not match the expected ${user.userType}`,
+                        path: [idx, 'userType'],
+                      }),
+                    ];
+              }),
             );
             setValidationErrors(issues);
           }
         } else if (failure.error.code === 'functions/not-found') {
+          // Handle app-error/functions/not-found/users
           if (failure.error.details.code === 'users') {
             const issues = combineUsersCsvIssues(
-              failure.error.details.uids.map((uid) =>
-                makeCustomIssue({
-                  input: uid,
-                  message: 'User does not exist in the database',
-                  path: [uidToIdxMap.value![uid]!, 'uid'],
-                }),
-              ),
+              failure.error.details.uids.flatMap((uid) => {
+                const idx = uidToIdxMap.value?.[uid];
+                return idx === undefined
+                  ? []
+                  : [
+                      makeCustomIssue({
+                        input: uid,
+                        message: 'User does not exist in the database',
+                        path: [idx, 'uid'],
+                      }),
+                    ];
+              }),
             );
             setValidationErrors(issues);
           }

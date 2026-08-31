@@ -1,3 +1,5 @@
+// biome-ignore-all lint/suspicious/noExplicitAny: tests access component internals via `.vm as any`
+
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { mount } from '@vue/test-utils';
 import * as Papa from 'papaparse';
@@ -443,9 +445,9 @@ describe('LinkUsers Page', () => {
       vm.downloadErrors();
 
       expect(createObjectURL).toHaveBeenCalledOnce();
-      const blob = createObjectURL.mock.calls[0]?.[0];
+      const blob = createObjectURL.mock.calls[0]?.[0] as Blob;
       expect(blob).toBeInstanceOf(Blob);
-      expect(blob?.type).toBe('text/csv;charset=utf-8;');
+      expect(blob.type).toBe('text/csv;charset=utf-8;');
 
       expect(appendChildMock).toHaveBeenCalledOnce();
       expect(clickMock).toHaveBeenCalledOnce();
@@ -454,7 +456,7 @@ describe('LinkUsers Page', () => {
       expect(link.getAttribute('href')).toBe('mock-blob-url');
       expect(link.getAttribute('download')).toMatch(/^test__errors-\d{8}-\d{4}\.csv$/);
 
-      const csvText = await blob!.text();
+      const csvText = await blob.text();
       const parsed = Papa.parse<Record<string, string>>(csvText, {
         header: true,
         skipEmptyLines: 'greedy',
@@ -570,6 +572,26 @@ describe('LinkUsers Page', () => {
         { message: 'id|uid: Does not match previously registered user', rowNums: [2] },
       ]);
       expect(vm.isSubmitting).toBe(false);
+    });
+
+    it('drops uids that are not present in the uploaded CSV', async () => {
+      linkUsersMock.mockImplementation((_params: unknown, { onError }: any) =>
+        onError({
+          code: 'app-error',
+          error: {
+            code: 'functions/invalid-argument',
+            details: { code: 'id-hash-mismatch', uids: ['uid-child-1', 'uid-unknown'] },
+          },
+        }),
+      );
+
+      const vm = await uploadValidAndSubmit();
+
+      // Only the uid present in the uploaded CSV maps to a row; the unknown uid
+      // is dropped rather than producing a NaN row number.
+      expect(vm.validationErrors.rows).toEqual([
+        { message: 'id|uid: Does not match previously registered user', rowNums: [2] },
+      ]);
     });
 
     it('maps a users-site-mismatch app-error to per-row validation errors', async () => {
