@@ -8,7 +8,7 @@ import { type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
 import { type MaybeRefOrGetter, toValue } from '@vueuse/core';
 import { ORG_TYPES } from '@/constants/orgTypes';
 import { ORG_USERS_QUERY_KEY } from '@/constants/queryKeys';
-import { type FirebaseCallFailure, toFirebaseCallFailure } from '@/firebase/callFailure';
+import { type FirebaseFailure, toFirebaseFailure } from '@/firebase/failure';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
 
 const ROAR_TO_LEVANTE_ORG_TYPE: Record<string, string> = {
@@ -24,7 +24,7 @@ const useGetUsersByOrgQuery = (
   _page: MaybeRefOrGetter<number>, // TODO: implement pagination
   _orderBy: MaybeRefOrGetter<string>, // TODO: implement ordering
   enabled: MaybeRefOrGetter<boolean> = true,
-): UseQueryReturnType<GetUsersByOrgResult, FirebaseCallFailure<GetUsersByOrgError>> => {
+): UseQueryReturnType<GetUsersByOrgResult, FirebaseFailure<GetUsersByOrgError>> => {
   return useQuery({
     queryKey: [ORG_USERS_QUERY_KEY, orgType, orgId],
     queryFn: async () => {
@@ -36,7 +36,7 @@ const useGetUsersByOrgQuery = (
         const result = await usersRepository.getUsersByOrg(params);
         return result;
       } catch (error) {
-        throw toFirebaseCallFailure(error, GetUsersByOrgErrorSchema);
+        throw toFirebaseFailure(error, GetUsersByOrgErrorSchema);
       }
     },
     enabled: () => toValue(enabled),

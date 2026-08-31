@@ -80,7 +80,7 @@ describe('useGetUsersByOrgQuery', () => {
     expect(getUsersByOrg).not.toHaveBeenCalled();
   });
 
-  it('normalizes a rejected repository call into a FirebaseCallFailure and exposes no data', async () => {
+  it('normalizes a rejected repository call into a FirebaseFailure and exposes no data', async () => {
     const boom = new Error('repository boom');
     getUsersByOrg.mockRejectedValueOnce(boom);
 

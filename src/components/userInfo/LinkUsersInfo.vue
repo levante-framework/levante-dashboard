@@ -15,10 +15,8 @@
 
     <div class="how-to-section">
       <h3>How to Link Users</h3>
-      <div class="text-md text-gray-500 mb-1 line-height-3">Links are indicated by completing the <code>caregiverID</code> and <code>teacherID</code> fields with the adult’s project <code>id</code> on the corresponding child’s row. Read the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">link users documentation</a> for more information on how and when to link users.</div>
+      <div class="text-md text-gray-500 mb-1 line-height-3">Links are indicated by completing the <code>caregiverId</code> and <code>teacherId</code> fields with the adult’s project <code>id</code> on the corresponding child’s row. Read the <a href="https://researcher.levante-network.org/dashboard/add-users" target="_blank" rel="noopener noreferrer">link users documentation</a> for more information on how and when to link users.</div>
     </div>
-
-
 
     <p>
       Below is an example of what your CSV/spreadsheet should look like. Columns with names that do not match exactly, including any additional columns, will not be processed or stored.
@@ -33,7 +31,7 @@
       />
     </div>
 
-    <p>To link users, choose your completed registered users file to upload and click "Start Linking".</p>
+    <p>To link users, choose your completed registered users file to upload and click "Link Users from Uploaded File".</p>
   </PvPanel>
 </template>
 

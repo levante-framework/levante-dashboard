@@ -187,6 +187,7 @@ import RoarDataTable from '@/components/RoarDataTable.vue';
 import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { singularizeFirestoreCollection } from '@/helpers';
+import { getChildLabel } from '@/helpers/childLabels';
 import { exportCsv } from '@/helpers/query/utils';
 import { useAuthStore } from '@/store/auth';
 
@@ -240,7 +241,11 @@ watch(isError, (hasError) => {
 const isUserCountExpanded = ref(false);
 const users = computed(() => usersResult.value?.users ?? []);
 
-const nonAdminUsers = computed(() => users.value.filter((user) => user.userType !== 'admin'));
+const nonAdminUsers = computed(() =>
+  users.value
+    .filter((user) => user.userType !== 'admin')
+    .map((user) => ({ ...user, childLabel: getChildLabel(user.childLabelIndex) })),
+);
 
 const childrenCount = computed(() => {
   return nonAdminUsers.value.filter((user) => user.userType === 'child').length;
@@ -282,6 +287,12 @@ const columns = ref([
   {
     field: 'userType',
     header: 'User Type',
+    dataType: 'string',
+    sort: false,
+  },
+  {
+    field: 'childLabel',
+    header: 'Child Label',
     dataType: 'string',
     sort: false,
   },
@@ -371,7 +382,7 @@ const updateUserData = async () => {
         life: 3000,
       });
     })
-    .catch((error) => {
+    .catch(() => {
       isSubmitting.value = false;
     });
 };
