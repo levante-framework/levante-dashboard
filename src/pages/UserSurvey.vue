@@ -1,7 +1,7 @@
 <script setup>
 import { storeToRefs } from 'pinia';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import { getChildLabel } from '@/helpers/childLabels';
+import { getChildLetter } from '@/helpers/childLabels';
 import { useAuthStore } from '@/store/auth';
 import { useSurveyStore } from '@/store/survey';
 import 'survey-core/survey-core.css';
@@ -34,8 +34,9 @@ const name = computed(() => {
   return specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.name ?? '--';
 });
 
-const childLabel = computed(() => {
-  return getChildLabel(specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.childLabelIndex);
+const childLetter = computed(() => {
+  const childLabelIndex = specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.childLabelIndex;
+  return typeof childLabelIndex === 'number' ? getChildLetter(childLabelIndex) : '';
 });
 
 onMounted(() => {
@@ -57,7 +58,7 @@ onMounted(() => {
               birthMonth
             } ${$t('userSurvey.specificRelationDescriptionChildB')} ${
               birthYear
-            }${childLabel ? ` (${childLabel})` : ''}`
+            }${childLetter ? ` (${$t('gameTabs.surveyProgressSpecificParent')} ${childLetter})` : ''}`
           : `${$t('userSurvey.specificRelationDescriptionClass')} ${
               name
             }`
