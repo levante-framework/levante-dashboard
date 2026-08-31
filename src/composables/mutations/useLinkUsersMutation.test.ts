@@ -2,6 +2,7 @@ import type { LinkUsersParams, LinkUsersResult } from '@levante-framework/levant
 import * as VueQuery from '@tanstack/vue-query';
 import { FirebaseError } from 'firebase/app';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ORG_USERS_QUERY_KEY } from '@/constants/queryKeys';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
 import { withSetup } from '@/test-support/withSetup.js';
 import useLinkUsersMutation from './useLinkUsersMutation';
@@ -41,6 +42,19 @@ describe('useLinkUsersMutation', () => {
     expect(usersRepository.linkUsers).toHaveBeenCalledWith(mockParams);
     expect(data).toEqual(mockResult);
     expect(result.isSuccess.value).toBe(true);
+  });
+
+  it('invalidates the org users query on success', async () => {
+    vi.mocked(usersRepository.linkUsers).mockResolvedValue(mockResult);
+    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const [result] = withSetup(() => useLinkUsersMutation(), {
+      plugins: [[VueQuery.VueQueryPlugin, { queryClient }]],
+    });
+
+    await result.mutateAsync(mockParams);
+
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: [ORG_USERS_QUERY_KEY] });
   });
 
   it('wraps a non-Firebase error into a FirebaseFailure with code "error"', async () => {
