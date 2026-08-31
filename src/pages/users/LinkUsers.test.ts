@@ -629,7 +629,7 @@ describe('LinkUsers Page', () => {
       const vm = await uploadValidAndSubmit();
 
       expect(vm.validationErrors.rows).toEqual([
-        { message: 'userType: Does not match the expected caregiver', rowNums: [3] },
+        { message: 'userType: Does not match the expected "caregiver"', rowNums: [3] },
       ]);
     });
 
