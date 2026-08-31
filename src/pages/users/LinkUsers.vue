@@ -411,7 +411,7 @@ const submitUsers = async () => {
                   : [
                       makeCustomIssue({
                         input: user.userType,
-                        message: `Does not match the expected ${user.userType}`,
+                        message: `Does not match the expected "${user.userType}"`,
                         path: [idx, 'userType'],
                       }),
                     ];
