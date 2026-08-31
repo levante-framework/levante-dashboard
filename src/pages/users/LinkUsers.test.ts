@@ -146,8 +146,7 @@ describe('LinkUsers Page', () => {
       expect(teacher.id).toBe('teach-1');
 
       expect(vm.status).toEqual({
-        message:
-          'File successfully uploaded. See table for summary of 1 child to be linked to 2 adults. 0 users without links were ignored.',
+        message: 'File successfully uploaded. See table for summary of 1 child to be linked to 2 adults.',
         severity: 'success',
       });
     });
