@@ -313,7 +313,7 @@ const submitUsers = async () => {
   // Ensure a site is selected
   const siteId = selectedSiteId.value;
   if (!siteId || isAllSitesSelected.value) {
-    status.value = { message: 'Please select a site before adding users.', severity: 'error' };
+    status.value = { message: 'Please select a site before linking users.', severity: 'error' };
     isSubmitting.value = false;
     return;
   }
