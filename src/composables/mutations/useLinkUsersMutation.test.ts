@@ -54,7 +54,7 @@ describe('useLinkUsersMutation', () => {
 
     await result.mutateAsync(mockParams);
 
-    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: [ORG_USERS_QUERY_KEY] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: [ORG_USERS_QUERY_KEY], refetchType: 'all' });
   });
 
   it('wraps a non-Firebase error into a FirebaseFailure with code "error"', async () => {

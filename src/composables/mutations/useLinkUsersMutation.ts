@@ -29,7 +29,7 @@ const useLinkUsersMutation = (): UseMutationReturnType<
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [ORG_USERS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [ORG_USERS_QUERY_KEY], refetchType: 'all' });
     },
     meta: { skipGlobalErrorLogging: true },
   });
