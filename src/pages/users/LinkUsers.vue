@@ -1,4 +1,6 @@
 <template>
+  <LevanteSpinner v-if="isSubmitting" fullscreen class="opacity-0" />
+
   <main class="container main">
     <section class="main-body">
       <LinkUsersInfo />
@@ -77,6 +79,7 @@ import PvMessage from 'primevue/message';
 import { computed, nextTick, ref, toRaw, watch } from 'vue';
 import CsvTable from '@/components/CsvTable.vue';
 import CsvUploader from '@/components/CsvUploader.vue';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import LinkUsersInfo from '@/components/userInfo/LinkUsersInfo.vue';
 import useLinkUsersMutation from '@/composables/mutations/useLinkUsersMutation';
 import { NORMALIZED_USER_CSV_HEADERS } from '@/constants/csv';
