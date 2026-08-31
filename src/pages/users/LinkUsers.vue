@@ -269,8 +269,15 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
 
   // Validation succeeded
   validatedData.value = filtered;
+  const numChildren = filtered.filter((user) => user.userType === 'child').length;
+  const childrenClause = numChildren === 1 ? '1 child' : `${numChildren} children`;
+  const numAdults = filtered.length - numChildren;
+  const adultsClause = numAdults === 1 ? '1 adult' : `${numAdults} adults`;
+  const numIgnored = validated.data.length - filtered.length;
+  const ignoredClause =
+    numIgnored === 1 ? '1 user without links was ignored.' : `${numIgnored} users without links were ignored.`;
   status.value = {
-    message: 'File successfully uploaded. See table for summary of users to be linked.',
+    message: `File successfully uploaded. See table for summary of ${childrenClause} to be linked to ${adultsClause}. ${ignoredClause}`,
     severity: 'success',
   };
 
