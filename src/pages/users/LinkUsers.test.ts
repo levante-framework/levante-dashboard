@@ -509,7 +509,7 @@ describe('LinkUsers Page', () => {
       await vm.submitUsers();
 
       expect(vm.status).toEqual({
-        message: 'Please select a site before adding users.',
+        message: 'Please select a site before linking users.',
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);
