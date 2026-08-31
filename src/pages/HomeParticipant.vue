@@ -545,7 +545,7 @@ watch(
           fetchConfig = userData.value.childIds.map((childId) => ({
             collection: 'users',
             docId: childId,
-            select: ['birthMonth', 'birthYear'],
+            select: ['birthMonth', 'birthYear', 'childLabelIndex'],
           }));
         } else if (userType.value === 'teacher' && userData.value.classes?.current) {
           fetchConfig = userData.value.classes.current.map((classId) => ({

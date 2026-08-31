@@ -187,6 +187,7 @@ import RoarDataTable from '@/components/RoarDataTable.vue';
 import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { singularizeFirestoreCollection } from '@/helpers';
+import { getChildLabel } from '@/helpers/childLabels';
 import { exportCsv } from '@/helpers/query/utils';
 import { useAuthStore } from '@/store/auth';
 
@@ -239,13 +240,6 @@ watch(isError, (hasError) => {
 
 const isUserCountExpanded = ref(false);
 const users = computed(() => usersResult.value?.users ?? []);
-
-const CHILD_LABELS = Array.from({ length: 26 }, (_, i) => `Child ${String.fromCharCode(65 + i)}`);
-
-const getChildLabel = (childLabelIndex) => {
-  if (typeof childLabelIndex !== 'number') return '';
-  return CHILD_LABELS[childLabelIndex % CHILD_LABELS.length];
-};
 
 const nonAdminUsers = computed(() =>
   users.value
