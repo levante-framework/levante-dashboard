@@ -1,6 +1,7 @@
 <script setup>
 import { storeToRefs } from 'pinia';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import { getChildLabel } from '@/helpers/childLabels';
 import { useAuthStore } from '@/store/auth';
 import { useSurveyStore } from '@/store/survey';
 import 'survey-core/survey-core.css';
@@ -33,6 +34,10 @@ const name = computed(() => {
   return specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.name ?? '--';
 });
 
+const childLabel = computed(() => {
+  return getChildLabel(specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.childLabelIndex);
+});
+
 onMounted(() => {
   if (!survey.value) {
     router.push({ name: 'Home' });
@@ -52,7 +57,7 @@ onMounted(() => {
               birthMonth
             } ${$t('userSurvey.specificRelationDescriptionChildB')} ${
               birthYear
-            }`
+            }${childLabel ? ` (${childLabel})` : ''}`
           : `${$t('userSurvey.specificRelationDescriptionClass')} ${
               name
             }`
