@@ -242,6 +242,24 @@ describe('SignIn.vue', () => {
     });
   });
 
+  it('shows a warning when the email-link address is not registered', async () => {
+    const notRegistered = new Error(
+      'This email is not in our records. We did not send a sign-in link. Ask your site administrator to add this address before using email-link sign-in.',
+    );
+    notRegistered.code = 'levante/email-not-registered';
+    authStoreMock.initiateLoginWithEmailLink.mockRejectedValue(notRegistered);
+
+    const instance = wrapper.vm;
+    await instance.authWithEmail({
+      email: 'unknown@example.com',
+      usePassword: false,
+      useLink: true,
+    });
+
+    expect(instance.emailLinkError).toContain('not in our records');
+    expect(wrapper.find('[data-cy="email-link-not-registered"]').exists()).toBe(true);
+  });
+
   it('uses Google popup for desktop browser authentication', async () => {
     // Setup successful Google popup login
     authStoreMock.signInWithGooglePopup.mockResolvedValue({});

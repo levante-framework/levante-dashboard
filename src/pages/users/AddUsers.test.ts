@@ -642,7 +642,7 @@ describe('AddUsers Page', () => {
       // PrimeVue's Portal/Dialog calls document.body.appendChild on every
       // re-render triggered by reactive state changes; mocking it earlier causes
       // Vue to throw because the mock returns undefined instead of a DOM node.
-      const createObjectURL = vi.fn(() => 'mock-blob-url');
+      const createObjectURL = vi.fn((_blob: Blob) => 'mock-blob-url');
       const appendChildMock = vi.fn();
       const removeChildMock = vi.fn();
       const clickMock = vi.fn();
@@ -661,10 +661,9 @@ describe('AddUsers Page', () => {
 
       // A Blob of the correct MIME type was passed to createObjectURL.
       expect(createObjectURL).toHaveBeenCalledOnce();
-      const [blobCallArgs] = createObjectURL.mock.calls as unknown as [Blob][];
-      const blob = blobCallArgs![0];
+      const blob = createObjectURL.mock.calls[0]?.[0];
       expect(blob).toBeInstanceOf(Blob);
-      expect(blob.type).toBe('text/csv;charset=utf-8;');
+      expect(blob?.type).toBe('text/csv;charset=utf-8;');
 
       // The download was triggered with the correct filename via an <a> element.
       expect(appendChildMock).toHaveBeenCalledOnce();
@@ -676,7 +675,7 @@ describe('AddUsers Page', () => {
 
       // Parse the blob back as CSV so we can assert the 'errors' column is
       // populated per row, rather than just probing for substrings.
-      const csvText = await blob.text();
+      const csvText = await blob!.text();
       const parsed = Papa.parse<Record<string, string>>(csvText, {
         header: true,
         skipEmptyLines: 'greedy',
@@ -961,7 +960,7 @@ describe('AddUsers Page', () => {
       // produces. userType is forwarded verbatim — 'child' is a valid backend
       // literal, so there is no 'student' normalization in this component.
       expect(createUsers).toHaveBeenCalledOnce();
-      const [payload] = createUsers.mock.calls[0]!;
+      const [payload] = createUsers.mock.calls[0] ?? [];
       expect(payload.siteId).toBe('site-id-123');
       expect(payload.users).toHaveLength(1);
       expect(payload.users[0]).toMatchObject({
@@ -1151,7 +1150,7 @@ describe('AddUsers Page', () => {
       });
 
       expect(createUsers).toHaveBeenCalledOnce();
-      const [payload] = createUsers.mock.calls[0]!;
+      const [payload] = createUsers.mock.calls[0] ?? [];
       expect(payload.users[0].orgIds).toMatchObject({
         schools: [],
         classes: [],
@@ -1382,7 +1381,7 @@ describe('AddUsers Page', () => {
       // test verifies that contract and the download wiring; the granular
       // escaping rules (commas, quote doubling, null/undefined → empty) live
       // in src/helpers/csv.test.ts.
-      const createObjectURL = vi.fn(() => 'mock-blob-url');
+      const createObjectURL = vi.fn((_blob: Blob) => 'mock-blob-url');
       const appendChildMock = vi.fn();
       const removeChildMock = vi.fn();
       const clickMock = vi.fn();
@@ -1435,10 +1434,9 @@ describe('AddUsers Page', () => {
 
         // A Blob of the correct MIME type was passed to createObjectURL.
         expect(createObjectURL).toHaveBeenCalledOnce();
-        const [blobCallArgs] = createObjectURL.mock.calls as unknown as [Blob][];
-        const blob = blobCallArgs![0];
+        const blob = createObjectURL.mock.calls[0]?.[0];
         expect(blob).toBeInstanceOf(Blob);
-        expect(blob.type).toBe('text/csv;charset=utf-8;');
+        expect(blob?.type).toBe('text/csv;charset=utf-8;');
 
         // downloadRegisteredUsers passes 'registered-users.csv' explicitly to
         // downloadCsv, which is the documented filename contract for this path.
@@ -1449,7 +1447,7 @@ describe('AddUsers Page', () => {
         expect(link.getAttribute('href')).toBe('mock-blob-url');
         expect(link.getAttribute('download')).toMatch(/^test__registered-\d{8}-\d{4}\.csv$/);
 
-        const csvText = await blob.text();
+        const csvText = await blob!.text();
         const lines = csvText.split('\n');
         expect(lines).toHaveLength(3);
 

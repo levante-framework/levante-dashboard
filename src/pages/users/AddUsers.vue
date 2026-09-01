@@ -100,12 +100,12 @@
 
 <script setup lang="ts">
 import {
-  AddUserCsvHeaderSchema,
+  type AddUsersCsv,
+  AddUsersCsvHeaderSchema,
+  AddUsersCsvSchema,
   CreateUsersParamsSchema,
-  combineUserCsvIssues,
+  combineUsersCsvIssues,
   makeCustomIssue,
-  UserCsvSchema,
-  type UserCsvType,
   type ZodIssue,
 } from '@levante-framework/levante-zod';
 import { useQueryClient } from '@tanstack/vue-query';
@@ -167,14 +167,14 @@ const toast = useToast();
 
 const isSubmitting = ref(false);
 const parsedData = ref<Record<string, string>[] | null>(null);
-const registeredUsers = ref<UserCsvType | null>(null);
+const registeredUsers = ref<AddUsersCsv | null>(null);
 const showSyncPendingModal = ref(false);
 const status = ref<{ message: string; severity: string } | null>(null);
 const statusRef = ref<HTMLElement | null>(null);
 const unregisteredToValidated = ref<number[] | null>(null);
-const unregisteredUsers = ref<UserCsvType | null>(null);
+const unregisteredUsers = ref<AddUsersCsv | null>(null);
 const uploadedFile = ref<File | null>(null);
-const validatedData = ref<UserCsvType | null>(null);
+const validatedData = ref<AddUsersCsv | null>(null);
 const validationErrors = ref<{
   headers: string[];
   keys: string[];
@@ -256,7 +256,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
 
   // Validate all required headers are present
   const headers = Object.keys(parsed[0] ?? {});
-  const validatedHeaders = AddUserCsvHeaderSchema.safeParse(headers);
+  const validatedHeaders = AddUsersCsvHeaderSchema.safeParse(headers);
   if (!validatedHeaders.success) {
     status.value = { message: 'The uploaded file is invalid. See table for details.', severity: 'error' };
     validationErrors.value = {
@@ -291,8 +291,8 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   }
 
   // Validate w/ zod schema
-  const validated = UserCsvSchema.safeParse(parsed);
-  const issues = combineUserCsvIssues([...(validated.error?.issues ?? []), ...siteIssues]);
+  const validated = AddUsersCsvSchema.safeParse(parsed);
+  const issues = combineUsersCsvIssues([...(validated.error?.issues ?? []), ...siteIssues]);
   if (issues.length > 0) {
     // Validation failed
     status.value = { message: 'The uploaded file is invalid. See table for details.', severity: 'error' };
@@ -661,8 +661,9 @@ const createOrgIdResolver = (): GetOrgId => {
     const cacheKey = JSON.stringify([normalizedOrgName, parentDistrictId ?? null, parentSchoolId ?? null]);
 
     // Check if the org is already in the cache
-    if (cache[orgType][cacheKey]) {
-      return cache[orgType][cacheKey]!;
+    const cachedId = cache[orgType][cacheKey];
+    if (cachedId) {
+      return cachedId;
     }
 
     // Fetch the org from the database

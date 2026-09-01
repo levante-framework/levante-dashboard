@@ -1,3 +1,9 @@
+import type {
+  GetUsersByOrgParams,
+  GetUsersByOrgResult,
+  LinkUsersParams,
+  LinkUsersResult,
+} from '@levante-framework/levante-zod';
 import {
   collection,
   type DocumentData,
@@ -142,6 +148,14 @@ class UsersRepository extends Repository {
     }
 
     return response.data;
+  }
+
+  async getUsersByOrg(params: GetUsersByOrgParams): Promise<GetUsersByOrgResult> {
+    return this.call<GetUsersByOrgParams, GetUsersByOrgResult>('getUsersByOrg', params);
+  }
+
+  async linkUsers(params: LinkUsersParams): Promise<LinkUsersResult> {
+    return this.call<LinkUsersParams, LinkUsersResult>('linkUsers', params);
   }
 }
 

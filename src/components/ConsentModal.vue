@@ -75,7 +75,7 @@ onMounted((): void => {
     acceptIcon: 'pi pi-check mr-2',
     rejectClass: 'bg-red-600 text-white border-none border-round p-2 hover:bg-red-800',
     rejectIcon: 'pi pi-times mr-2',
-    accept: async (): Promise<void | boolean> => {
+    accept: async (): Promise<undefined | boolean> => {
       try {
         isSubmitting.value = true;
 
