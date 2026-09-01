@@ -431,7 +431,9 @@ const sendResetPasswordEmail = () => {
     .value!.sendPasswordResetEmail(email)
     .then(() => {
       closeTroubleOnSignInModal();
-      confirmSendResetPasswordEmail();
+      confirmEmailSent(
+        "An email to reset your password is on its way to you. This could take 5-10 minutes. Check your spam folder if you can't find it. If it never arrives, open a ticket with us.",
+      );
     })
     .catch((e) => {
       handleTroubleModalError(
@@ -442,10 +444,9 @@ const sendResetPasswordEmail = () => {
     });
 };
 
-const confirmSendResetPasswordEmail = () => {
+const confirmEmailSent = (message: string) => {
   confirm.require({
-    message:
-      "An email to reset your password is on its way to you. This could take 5-10 minutes. Check your spam folder if you can't find it. If it never arrives, open a ticket with us.",
+    message,
     header: 'Email sent',
     acceptProps: {
       label: 'Continue',
@@ -466,7 +467,9 @@ const signInWithEmailLink = () => {
   return initiateLoginWithEmailLink({ email })
     .then(() => {
       closeTroubleOnSignInModal();
-      confirmSignInWithEmailLink();
+      confirmEmailSent(
+        "An email to login with a link is on its way to you. This could take 5-10 minutes. Check your spam folder if you can't find it. If it never arrives, open a ticket with us.",
+      );
     })
     .catch((e) => {
       handleTroubleModalError(
@@ -475,23 +478,6 @@ const signInWithEmailLink = () => {
         'There was a problem sending the sign-in link. Please try again.',
       );
     });
-};
-
-const confirmSignInWithEmailLink = () => {
-  confirm.require({
-    message:
-      "An email to login with a link is on its way to you. This could take 5-10 minutes. Check your spam folder if you can't find it. If it never arrives, open a ticket with us.",
-    header: 'Email sent',
-    acceptProps: {
-      label: 'Continue',
-    },
-    rejectProps: {
-      label: 'Open ticket',
-      outlined: true,
-      severity: 'danger',
-    },
-    reject: () => window.open(freshdeskLink.value, '_blank'),
-  });
 };
 </script>
 
