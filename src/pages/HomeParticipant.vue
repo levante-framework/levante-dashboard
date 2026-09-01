@@ -232,6 +232,7 @@ const {
 // Computed didn't react to selected admin changes, so using a ref instead.
 let hasSurvey = ref(false);
 watch(selectedAssignment, (newAdmin, oldAdmin) => {
+  logger.setAdditionalProperties({ administrationId: newAdmin?.id });
   hasSurvey.value = newAdmin?.assessments.some((task) => task.taskId.toLowerCase().includes('survey'));
   // Reset survey store when switching between different administrations
   if (newAdmin?.id !== oldAdmin?.id && oldAdmin?.id) {
