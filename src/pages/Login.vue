@@ -173,7 +173,7 @@
     </template>
   </RoarModal>
 
-  <PvConfirmDialog style="max-width: 600px;" />
+  <PvConfirmDialog group="login" style="max-width: 600px;" />
 </template>
 
 <script setup lang="ts">
@@ -446,6 +446,7 @@ const sendResetPasswordEmail = () => {
 
 const confirmEmailSent = (message: string) => {
   confirm.require({
+    group: 'login',
     message,
     header: 'Email sent',
     acceptProps: {
