@@ -10,6 +10,7 @@ import { useRouter } from 'vue-router';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import useCompleteAssessmentMutation from '@/composables/mutations/useCompleteAssessmentMutation';
 import useUserChildDataQuery from '@/composables/queries/useUserChildDataQuery';
+import { startAssessmentWithRetry } from '@/helpers/startAssessmentWithRetry';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
@@ -108,7 +109,9 @@ async function startTask(selectedAdmin) {
       }
     }, 100);
 
-    const appKit = await authStore.roarfirekit.startAssessment(selectedAdmin.value.id, props.taskId, version);
+    const appKit = await startAssessmentWithRetry(() =>
+      authStore.roarfirekit.startAssessment(selectedAdmin.value.id, props.taskId, version),
+    );
 
     const userParams = {
       grade: '',
@@ -134,6 +137,7 @@ async function startTask(selectedAdmin) {
       router.push({ name: 'Home' });
     });
   } catch (error) {
+    taskStarted.value = false;
     alert(
       'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
     );
