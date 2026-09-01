@@ -32,7 +32,7 @@
         </div>
       </div>
       <div class="flex w-6 justify-content-end">
-        <img :src="assessment.task.image" class="w-5" />
+        <TaskImage class="w-5" :image="assessment.task.image" :alt="assessment.task.name" />
       </div>
     </div>
     <div class="flex flex-column w-full my-2 gap-2">
@@ -268,6 +268,7 @@ import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { computed, onMounted, ref, toRaw } from 'vue';
+import TaskImage from '@/components/TaskImage.vue';
 import { isLevante } from '@/constants';
 
 interface FieldOption {
