@@ -149,7 +149,7 @@
     <template #default>
       <div class="flex flex-column gap-3">
         <p class="m-0">Users should set a password for a more reliable login experience. Click <span class="font-semibold">Reset Password</span> to receive an email to reset your password. If you need a temporary solution, use a <span class="font-semibold">Login link</span>.</p>
-        <small class="m-0 text-gray-500">Expect an email from <<span class="font-semibold">levantedcc@gmail.com</span>>. Please add it to your approved senders list. You may also need to look for it in your junkmail folder.</small>
+        <small class="m-0 text-gray-500">Expect an email from &lt;<span class="font-semibold">levantedcc@gmail.com</span>&gt;. Please add it to your approved senders list. You may also need to look for it in your junkmail folder.</small>
         <PvInputText v-model="v$.email.$model" placeholder="Username or email" class="w-full" />
       </div>
     </template>
