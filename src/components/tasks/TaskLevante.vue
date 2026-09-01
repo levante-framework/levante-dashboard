@@ -144,7 +144,7 @@ async function startTask(selectedAdmin) {
       router.push({ name: 'Home' });
     });
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error?.name === 'AbortError') {
       assignmentsStore.setHomeRefresh();
       router.push({ name: 'Home' });
     } else {
