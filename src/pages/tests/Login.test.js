@@ -330,8 +330,8 @@ describe('Login.vue', () => {
     await flushPromises();
     expect(captured.initiateLoginWithEmailLink).toEqual([{ email: 'researcher@test.com' }]);
     expect(captured.confirmRequests).toHaveLength(1);
-    captured.confirmRequests[0].accept();
-    expect(captured.routerPushes).toContainEqual({ name: 'Home' });
+    expect(captured.confirmRequests[0].accept).toBeUndefined();
+    expect(captured.routerPushes).not.toContainEqual({ name: 'Home' });
   });
 
   it('surfaces the server message and skips Sentry when the email link is for an unregistered address', async () => {

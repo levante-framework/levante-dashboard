@@ -455,7 +455,6 @@ const confirmSendResetPasswordEmail = () => {
       outlined: true,
       severity: 'danger',
     },
-    accept: () => router.push({ name: 'Home' }),
     reject: () => window.open(freshdeskLink.value, '_blank'),
   });
 };
@@ -491,7 +490,6 @@ const confirmSignInWithEmailLink = () => {
       outlined: true,
       severity: 'danger',
     },
-    accept: () => router.push({ name: 'Home' }),
     reject: () => window.open(freshdeskLink.value, '_blank'),
   });
 };
