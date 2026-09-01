@@ -124,5 +124,19 @@ describe('TaskLevante.vue', () => {
       expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'egma-math', expect.any(String), 'runs');
       wrapper.unmount();
     });
+
+    it('should start the task when selectedAssignment is set after mount', async () => {
+      selectedAssignmentRef.value = null;
+
+      const wrapper = await mountTaskLevante();
+
+      expect(startAssessment).not.toHaveBeenCalled();
+
+      selectedAssignmentRef.value = { id: 'assignment-1' };
+      await flushPromises();
+
+      expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'egma-math', expect.any(String), 'runs');
+      wrapper.unmount();
+    });
   });
 });

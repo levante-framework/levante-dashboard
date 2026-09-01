@@ -124,5 +124,19 @@ describe('TaskSWR.vue', () => {
       expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'swr', expect.any(String));
       wrapper.unmount();
     });
+
+    it('should start the task when selectedAssignment is set after mount', async () => {
+      selectedAssignmentRef.value = null;
+
+      const wrapper = await mountTaskSWR();
+
+      expect(startAssessment).not.toHaveBeenCalled();
+
+      selectedAssignmentRef.value = { id: 'assignment-1' };
+      await flushPromises();
+
+      expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'swr', expect.any(String));
+      wrapper.unmount();
+    });
   });
 });
