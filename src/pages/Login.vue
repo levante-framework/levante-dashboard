@@ -244,7 +244,7 @@ function redirectAfterLogin() {
   }
 }
 
-const freshdeskLink = ref('https://levante-support.freshdesk.com/support/tickets/new');
+const freshdeskLink = 'https://levante-support.freshdesk.com/support/tickets/new';
 const googleSignInErrorKey = ref('');
 const isCapsLockOn = ref(false);
 const isOpenTroubleOnSignInModal = ref(false);
@@ -457,7 +457,7 @@ const confirmEmailSent = (message: string) => {
       outlined: true,
       severity: 'danger',
     },
-    reject: () => window.open(freshdeskLink.value, '_blank'),
+    reject: () => window.open(freshdeskLink, '_blank'),
   });
 };
 
