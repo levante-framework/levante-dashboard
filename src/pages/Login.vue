@@ -402,14 +402,44 @@ const closeTroubleOnSignInModal = () => {
   isOpenTroubleOnSignInModal.value = false;
 };
 
+const handleTroubleModalError = (e: unknown, fallbackCode: string, fallbackMessage: string) => {
+  closeTroubleOnSignInModal();
+
+  const code = typeof e === 'object' && e !== null && 'code' in e ? String(e.code) : fallbackCode;
+  const isEmailNotRegistered = code === 'levante/email-not-registered';
+
+  messages.value = [
+    {
+      id: code,
+      severity: 'error',
+      content: e instanceof Error && isEmailNotRegistered ? e.message : fallbackMessage,
+    },
+  ];
+
+  if (!isEmailNotRegistered) {
+    logger.error(new Error('Trouble-logging-in modal action failed', { cause: e }), {
+      tags: { action: fallbackCode, component: 'Login' },
+    });
+  }
+};
+
 const sendResetPasswordEmail = () => {
   const { email } = formState;
   if (!isEmailValid(email)) return false;
 
-  return roarfirekit.value!.sendPasswordResetEmail(email).then(() => {
-    closeTroubleOnSignInModal();
-    confirmSendResetPasswordEmail();
-  });
+  return roarfirekit
+    .value!.sendPasswordResetEmail(email)
+    .then(() => {
+      closeTroubleOnSignInModal();
+      confirmSendResetPasswordEmail();
+    })
+    .catch((e) => {
+      handleTroubleModalError(
+        e,
+        'sendResetPasswordEmail',
+        'There was a problem sending the password reset email. Please try again.',
+      );
+    });
 };
 
 const confirmSendResetPasswordEmail = () => {
@@ -434,10 +464,18 @@ const signInWithEmailLink = () => {
   const { email } = formState;
   if (!isEmailValid(email)) return false;
 
-  return initiateLoginWithEmailLink({ email }).then(() => {
-    closeTroubleOnSignInModal();
-    confirmSignInWithEmailLink();
-  });
+  return initiateLoginWithEmailLink({ email })
+    .then(() => {
+      closeTroubleOnSignInModal();
+      confirmSignInWithEmailLink();
+    })
+    .catch((e) => {
+      handleTroubleModalError(
+        e,
+        'signInWithEmailLink',
+        'There was a problem sending the sign-in link. Please try again.',
+      );
+    });
 };
 
 const confirmSignInWithEmailLink = () => {

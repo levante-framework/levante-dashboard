@@ -17,6 +17,18 @@ const captured = vi.hoisted(() => ({
 
 const mobileState = vi.hoisted(() => ({ isMobile: false }));
 
+const emailLinkState = vi.hoisted(() => ({ rejectWith: null }));
+
+const loggerErrors = vi.hoisted(() => []);
+
+vi.mock('@/logger', () => ({
+  logger: {
+    error: (...args) => {
+      loggerErrors.push(args);
+    },
+  },
+}));
+
 vi.mock('pinia', async (importOriginal) => {
   const actual = await importOriginal();
   const { ref } = await import('vue');
@@ -63,6 +75,7 @@ vi.mock('@/store/auth', () => ({
     },
     initiateLoginWithEmailLink: (args) => {
       captured.initiateLoginWithEmailLink.push(args);
+      if (emailLinkState.rejectWith) return Promise.reject(emailLinkState.rejectWith);
       return Promise.resolve();
     },
     signInWithGooglePopup: () => {
@@ -164,6 +177,7 @@ describe('Login.vue', () => {
           InputText: PvInputTextStub,
           Password: PvPasswordStub,
           Button: PvButtonStub,
+          Message: { template: '<div class="pv-message-stub"><slot /></div>' },
         },
         mocks: {
           $t: (key) => key,
@@ -208,6 +222,8 @@ describe('Login.vue', () => {
     captured.resetPasswordEmails.length = 0;
     captured.routerPushes.length = 0;
     captured.confirmRequests.length = 0;
+    emailLinkState.rejectWith = null;
+    loggerErrors.length = 0;
     authRefs.spinner.value = false;
     authRefs.routeToProfile.value = false;
     authRefs.ssoProvider.value = null;
@@ -316,6 +332,49 @@ describe('Login.vue', () => {
     expect(captured.confirmRequests).toHaveLength(1);
     captured.confirmRequests[0].accept();
     expect(captured.routerPushes).toContainEqual({ name: 'Home' });
+  });
+
+  it('surfaces the server message and skips Sentry when the email link is for an unregistered address', async () => {
+    const notRegistered = new Error('That email is not registered.');
+    notRegistered.code = 'levante/email-not-registered';
+    emailLinkState.rejectWith = notRegistered;
+    wrapper = mountLogin();
+    await switchToResearcherMode();
+    await openTroubleOnSignInModal();
+    await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('unknown@test.com');
+    await clickModalButton('Login Link');
+    await flushPromises();
+    expect(captured.confirmRequests).toHaveLength(0);
+    expect(wrapper.text()).toContain('That email is not registered.');
+    expect(loggerErrors).toHaveLength(0);
+  });
+
+  it('shows a fallback message and reports to Sentry when the email link request fails unexpectedly', async () => {
+    emailLinkState.rejectWith = new Error('network down');
+    wrapper = mountLogin();
+    await switchToResearcherMode();
+    await openTroubleOnSignInModal();
+    await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('researcher@test.com');
+    await clickModalButton('Login Link');
+    await flushPromises();
+    expect(captured.confirmRequests).toHaveLength(0);
+    expect(wrapper.text()).toContain('There was a problem sending the sign-in link. Please try again.');
+    expect(loggerErrors).toHaveLength(1);
+  });
+
+  it('shows a fallback message and reports to Sentry when the reset email request fails unexpectedly', async () => {
+    wrapper = mountLogin();
+    authRefs.roarfirekit.value = {
+      sendPasswordResetEmail: () => Promise.reject(new Error('network down')),
+    };
+    await switchToResearcherMode();
+    await openTroubleOnSignInModal();
+    await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('valid@mail.com');
+    await clickModalButton('Reset Password');
+    await flushPromises();
+    expect(captured.confirmRequests).toHaveLength(0);
+    expect(wrapper.text()).toContain('There was a problem sending the password reset email. Please try again.');
+    expect(loggerErrors).toHaveLength(1);
   });
 
   it('uses Google popup on desktop when Stanford DCC Sign in is clicked', async () => {
