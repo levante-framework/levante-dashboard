@@ -270,15 +270,29 @@ describe('Login.vue', () => {
     expect(wrapper.text()).toContain('Stanford DCC Sign in');
   });
 
-  it('calls logInWithEmailAndPassword when the form is submitted with valid credentials', async () => {
+  it('calls logInWithEmailAndPassword with normalized email when a username is submitted', async () => {
     wrapper = mountLogin();
-    await wrapper.find('[data-cy="input-username-email"]').setValue('user.name@levante.com');
+    await wrapper.find('[data-cy="input-username-email"]').setValue('user.name');
     await wrapper.find('[data-cy="input-password"]').setValue('secret123');
     await wrapper.find('form').trigger('submit.prevent');
     await flushPromises();
     expect(captured.logInWithEmailAndPassword).toEqual([
       {
         email: 'user.name@levante.com',
+        password: 'secret123',
+      },
+    ]);
+  });
+
+  it('calls logInWithEmailAndPassword with the email as-is when an email is submitted', async () => {
+    wrapper = mountLogin();
+    await wrapper.find('[data-cy="input-username-email"]').setValue('user.name@example.com');
+    await wrapper.find('[data-cy="input-password"]').setValue('secret123');
+    await wrapper.find('form').trigger('submit.prevent');
+    await flushPromises();
+    expect(captured.logInWithEmailAndPassword).toEqual([
+      {
+        email: 'user.name@example.com',
         password: 'secret123',
       },
     ]);

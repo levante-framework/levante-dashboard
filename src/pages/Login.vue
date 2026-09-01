@@ -155,8 +155,8 @@
     </template>
 
     <template #footer>
-      <PvButton v-if="!v$.email.$invalid"
-        :disabled="v$.email.$invalid"
+      <PvButton
+        :disabled="!isResetEmailValid"
         label="Login Link"
         severity="danger"
         tabindex="0"
@@ -165,7 +165,7 @@
       />
 
       <PvButton
-        :disabled="v$.email.$invalid"
+        :disabled="!isResetEmailValid"
         label="Reset Password"
         tabindex="0"
         @click="sendResetPasswordEmail"
@@ -178,7 +178,7 @@
 
 <script setup lang="ts">
 import useVuelidate from '@vuelidate/core';
-import { email, helpers, required, requiredUnless } from '@vuelidate/validators';
+import { helpers, required } from '@vuelidate/validators';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvConfirmDialog from 'primevue/confirmdialog';
@@ -260,16 +260,15 @@ const formState = reactive({
 });
 
 const formRules = {
-  email: {
-    required: helpers.withMessage('Username/email is required', required),
-    email: helpers.withMessage('Please enter a valid email address', email),
-  },
+  email: { required: helpers.withMessage('Username/email is required', required) },
   password: {
     required: helpers.withMessage('Password is required', required),
   },
 };
 
 const v$ = useVuelidate(formRules, formState);
+
+const isResetEmailValid = computed(() => isEmailValid(formState.email));
 
 const authWithEmailOrUsername = async () => {
   spinner.value = true;
