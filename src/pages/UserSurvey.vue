@@ -1,7 +1,6 @@
 <script setup>
 import { storeToRefs } from 'pinia';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import { getChildLetter } from '@/helpers/childLabels';
 import { useSurveyStore } from '@/store/survey';
 import 'survey-core/survey-core.css';
 import { SurveyComponent } from 'survey-vue3-ui';
@@ -14,11 +13,6 @@ const { isSavingSurveyResponses, survey } = storeToRefs(surveyStore);
 
 const navbarHeight = inject('navbarHeight', ref(0));
 const footerHeight = inject('footerHeight', ref(0));
-
-const childLetter = computed(() => {
-  const childLabelIndex = specificSurveyRelationData.value[specificSurveyRelationIndex.value]?.childLabelIndex;
-  return typeof childLabelIndex === 'number' ? getChildLetter(childLabelIndex) : '';
-});
 
 onMounted(() => {
   if (!survey.value) {
