@@ -421,6 +421,7 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
   return next();
 });
 
+// Call for Posthog pageview tracking
 router.afterEach((to, from) => {
   sessionStorage.removeItem(CHUNK_RELOAD_KEY);
   logger.capture('pageview', {
@@ -430,7 +431,13 @@ router.afterEach((to, from) => {
 });
 
 router.onError((error, to) => {
-  if (!isChunkLoadError(error)) return;
+  if (!isChunkLoadError(error)) {
+    logger.error(new Error('Router navigation failed', { cause: error }), {
+      tags: { function: 'router.onError', route: String(to.name ?? 'unknown') },
+      path: to.fullPath,
+    });
+    return;
+  }
 
   if (sessionStorage.getItem(CHUNK_RELOAD_KEY) === to.fullPath) {
     sessionStorage.removeItem(CHUNK_RELOAD_KEY);
