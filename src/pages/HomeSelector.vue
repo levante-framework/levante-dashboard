@@ -1,7 +1,7 @@
 <template>
   <LevanteSpinner v-if="isLoading" fullscreen data-cy="home-selector-loading" />
 
-  <HomeError v-else-if="userHasNoSites" />
+  <HomeError v-else-if="shouldShowErrorPage" />
 
   <HomeAdministrator v-else-if="shouldRenderAdminPage" data-cy="home-selector-admin" />
 
@@ -65,7 +65,7 @@ unsubscribe = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit?.restConfig) init();
 });
 
-const userHasNoSites = computed(() => !sites.value?.length);
+const shouldShowErrorPage = computed(() => !!userData.value?.roles?.length && !sites.value?.length);
 
 const shouldRenderAdminPage = computed(() => {
   const adminRoles = [ROLES.ADMIN, ROLES.RESEARCH_ASSISTANT, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN];
