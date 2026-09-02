@@ -102,6 +102,8 @@ watch(
 );
 
 async function startTask(selectedAdmin) {
+  let startAssessmentSucceeded = false;
+
   try {
     let checkGameStarted = setInterval(() => {
       // Poll for the preload trials progress bar to exist and then begin the game
@@ -117,6 +119,8 @@ async function startTask(selectedAdmin) {
     const appKit = await startAssessmentWithRetry(() =>
       authStore.roarfirekit.startAssessment(selectedAdmin.value.id, props.taskId, version, trialContainer),
     );
+
+    startAssessmentSucceeded = true;
 
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
@@ -146,7 +150,12 @@ async function startTask(selectedAdmin) {
       assignmentsStore.setHomeRefresh();
       router.push({ name: 'Home' });
     } else {
-      taskStarted.value = false;
+      // Only unlatch when the callable never succeeded. A later failure means the
+      // assessment is already started server-side, so the watcher must not relaunch it.
+      if (!startAssessmentSucceeded) {
+        taskStarted.value = false;
+      }
+
       alert(
         'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
       );

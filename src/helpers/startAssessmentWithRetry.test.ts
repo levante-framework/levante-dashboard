@@ -28,6 +28,16 @@ describe('startAssessmentWithRetry', () => {
     expect(startAssessment).toHaveBeenCalledTimes(2);
   });
 
+  it('rejects with the second error when both attempts fail', async () => {
+    const secondError = { code: 'functions/internal', attempt: 2 };
+    const startAssessment = vi
+      .fn()
+      .mockRejectedValueOnce({ code: 'functions/internal', attempt: 1 })
+      .mockRejectedValueOnce(secondError);
+    await expect(startAssessmentWithRetry(startAssessment, 0)).rejects.toBe(secondError);
+    expect(startAssessment).toHaveBeenCalledTimes(2);
+  });
+
   it('does not retry permission errors', async () => {
     const error = { code: 'permission-denied' };
     const startAssessment = vi.fn().mockRejectedValue(error);
