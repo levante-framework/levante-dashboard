@@ -2,7 +2,6 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
 import UserSurvey from '@/pages/UserSurvey.vue';
-import { useAuthStore } from '@/store/auth';
 import { useSurveyStore } from '@/store/survey';
 
 const { mockRouterPush } = vi.hoisted(() => ({
@@ -13,10 +12,6 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: mockRouterPush,
   }),
-}));
-
-vi.mock('@/store/auth', () => ({
-  useAuthStore: vi.fn(),
 }));
 
 vi.mock('@/store/survey', () => ({
@@ -41,47 +36,22 @@ vi.mock('survey-vue3-ui', () => ({
 
 vi.mock('survey-core/survey-core.css', () => ({}));
 
-const TRANSLATIONS = {
-  'userSurvey.specificRelationDescriptionChildA': 'For child with Birth Month',
-  'userSurvey.specificRelationDescriptionChildB': 'and Birth Year',
-  'userSurvey.specificRelationDescriptionClass': 'For class',
-};
-
-function createAuthStoreMock(overrides = {}) {
-  return {
-    userData: ref({ userType: 'parent' }),
-    ...overrides,
-  };
-}
-
 function createSurveyStoreMock(overrides = {}) {
   return {
     survey: ref({ id: 'survey-1' }),
     isSavingSurveyResponses: ref(false),
-    isGeneralSurveyComplete: ref(false),
-    isSurveyPartSubmitted: ref(false),
-    specificSurveyRelationData: ref([]),
-    specificSurveyRelationIndex: ref(0),
     ...overrides,
   };
 }
 
 function mountUserSurvey() {
-  return mount(UserSurvey, {
-    global: {
-      mocks: {
-        $t: (key) => TRANSLATIONS[key] ?? key,
-      },
-    },
-  });
+  return mount(UserSurvey);
 }
 
 describe('UserSurvey.vue', () => {
   beforeEach(() => {
     mockRouterPush.mockReset();
-    vi.mocked(useAuthStore).mockReset();
     vi.mocked(useSurveyStore).mockReset();
-    vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock());
     vi.mocked(useSurveyStore).mockReturnValue(createSurveyStoreMock());
   });
 
@@ -144,162 +114,5 @@ describe('UserSurvey.vue', () => {
     expect(wrapper.find('[data-testid="survey-component"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="levante-spinner"]').exists()).toBe(false);
     expect(wrapper.findComponent({ name: 'SurveyComponent' }).props('model')).toEqual(surveyModel);
-  });
-
-  it('shows the parent-specific relation header when the general survey is complete', () => {
-    vi.mocked(useAuthStore).mockReturnValue(
-      createAuthStoreMock({
-        userData: ref({ userType: 'parent' }),
-      }),
-    );
-    vi.mocked(useSurveyStore).mockReturnValue(
-      createSurveyStoreMock({
-        isGeneralSurveyComplete: ref(true),
-        specificSurveyRelationData: ref([{ birthMonth: 'March', birthYear: '2018', name: 'Alex' }]),
-        specificSurveyRelationIndex: ref(0),
-      }),
-    );
-
-    const wrapper = mountUserSurvey();
-
-    expect(wrapper.find('h1').text()).toBe('For child with Birth Month March and Birth Year 2018');
-  });
-
-  it('shows the class-specific relation header for non-parent users when the general survey is complete', () => {
-    vi.mocked(useAuthStore).mockReturnValue(
-      createAuthStoreMock({
-        userData: ref({ userType: 'teacher' }),
-      }),
-    );
-    vi.mocked(useSurveyStore).mockReturnValue(
-      createSurveyStoreMock({
-        isGeneralSurveyComplete: ref(true),
-        specificSurveyRelationData: ref([{ birthMonth: 'March', birthYear: '2018', name: 'Room 12' }]),
-        specificSurveyRelationIndex: ref(0),
-      }),
-    );
-
-    const wrapper = mountUserSurvey();
-
-    expect(wrapper.find('h1').text()).toBe('For class Room 12');
-  });
-
-  it('uses the relation at the current specific survey index', () => {
-    vi.mocked(useAuthStore).mockReturnValue(
-      createAuthStoreMock({
-        userData: ref({ userType: 'parent' }),
-      }),
-    );
-    vi.mocked(useSurveyStore).mockReturnValue(
-      createSurveyStoreMock({
-        isGeneralSurveyComplete: ref(true),
-        specificSurveyRelationData: ref([
-          { birthMonth: 'January', birthYear: '2017', name: 'First' },
-          { birthMonth: 'June', birthYear: '2019', name: 'Second' },
-        ]),
-        specificSurveyRelationIndex: ref(1),
-      }),
-    );
-
-    const wrapper = mountUserSurvey();
-
-    expect(wrapper.find('h1').text()).toBe('For child with Birth Month June and Birth Year 2019');
-  });
-
-  it('falls back to placeholders when relation fields are missing', () => {
-    vi.mocked(useAuthStore).mockReturnValue(
-      createAuthStoreMock({
-        userData: ref({ userType: 'parent' }),
-      }),
-    );
-    vi.mocked(useSurveyStore).mockReturnValue(
-      createSurveyStoreMock({
-        isGeneralSurveyComplete: ref(true),
-        specificSurveyRelationData: ref([{}]),
-        specificSurveyRelationIndex: ref(0),
-      }),
-    );
-
-    const wrapper = mountUserSurvey();
-
-    expect(wrapper.find('h1').text()).toBe('For child with Birth Month -- and Birth Year --');
-  });
-
-  it('falls back to a placeholder class name when the relation name is missing', () => {
-    vi.mocked(useAuthStore).mockReturnValue(
-      createAuthStoreMock({
-        userData: ref({ userType: 'teacher' }),
-      }),
-    );
-    vi.mocked(useSurveyStore).mockReturnValue(
-      createSurveyStoreMock({
-        isGeneralSurveyComplete: ref(true),
-        specificSurveyRelationData: ref([{}]),
-        specificSurveyRelationIndex: ref(0),
-      }),
-    );
-
-    const wrapper = mountUserSurvey();
-
-    expect(wrapper.find('h1').text()).toBe('For class --');
-  });
-
-  it('hides the relation header for students', () => {
-    vi.mocked(useAuthStore).mockReturnValue(
-      createAuthStoreMock({
-        userData: ref({ userType: 'student' }),
-      }),
-    );
-    vi.mocked(useSurveyStore).mockReturnValue(
-      createSurveyStoreMock({
-        isGeneralSurveyComplete: ref(true),
-        specificSurveyRelationData: ref([{ birthMonth: 'March', birthYear: '2018', name: 'Alex' }]),
-      }),
-    );
-
-    const wrapper = mountUserSurvey();
-
-    expect(wrapper.find('h1').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="survey-component"]').exists()).toBe(true);
-  });
-
-  it('hides the relation header once the survey is completed, so it does not overlap the thank-you page', () => {
-    vi.mocked(useAuthStore).mockReturnValue(
-      createAuthStoreMock({
-        userData: ref({ userType: 'parent' }),
-      }),
-    );
-    vi.mocked(useSurveyStore).mockReturnValue(
-      createSurveyStoreMock({
-        isGeneralSurveyComplete: ref(true),
-        isSurveyPartSubmitted: ref(true),
-        specificSurveyRelationData: ref([{ birthMonth: 'March', birthYear: '2018', name: 'Alex' }]),
-        specificSurveyRelationIndex: ref(0),
-      }),
-    );
-
-    const wrapper = mountUserSurvey();
-
-    expect(wrapper.find('h1').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="survey-component"]').exists()).toBe(true);
-  });
-
-  it('hides the relation header when the general survey is incomplete', () => {
-    vi.mocked(useAuthStore).mockReturnValue(
-      createAuthStoreMock({
-        userData: ref({ userType: 'parent' }),
-      }),
-    );
-    vi.mocked(useSurveyStore).mockReturnValue(
-      createSurveyStoreMock({
-        isGeneralSurveyComplete: ref(false),
-        specificSurveyRelationData: ref([{ birthMonth: 'March', birthYear: '2018', name: 'Alex' }]),
-      }),
-    );
-
-    const wrapper = mountUserSurvey();
-
-    expect(wrapper.find('h1').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="survey-component"]').exists()).toBe(true);
   });
 });

@@ -1,18 +1,18 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { nextTick } from 'vue';
+import { ref } from 'vue';
 import SurveyManager from '@/pages/SurveyManager.vue';
 
-const state = vi.hoisted(() => ({
+const state = {
   isSuperAdmin: true,
-  locale: { __v_isRef: true, value: 'en' },
+  locale: ref('en-US'),
   route: {
     query: {},
     params: {},
   },
-  surveyListData: { __v_isRef: true, value: [] },
-  surveyData: { __v_isRef: true, value: null },
-  isSurveyFetching: { __v_isRef: true, value: false },
+  surveyListData: ref([]),
+  surveyData: ref(null),
+  isSurveyFetching: ref(false),
   routerPushes: [],
   resolvedRoutes: [],
   surveyListQueryArgs: [],
@@ -21,7 +21,7 @@ const state = vi.hoisted(() => ({
   surveyPDFs: [],
   creators: [],
   markdownConverterSurveys: [],
-}));
+};
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -75,6 +75,8 @@ vi.mock('@/helpers/survey', () => ({
   setupSurveyMarkdownConverter: (survey) => {
     state.markdownConverterSurveys.push(survey);
   },
+  getSurveyDataWithDefaults: (surveyId, surveyData) => ({ ...surveyData }),
+  getSurveyTheme: () => ({}),
 }));
 
 vi.mock('@/components/LanguageSelector.vue', () => ({
@@ -109,15 +111,13 @@ vi.mock('survey-core', () => ({
     constructor(data) {
       this.data = data;
       this.onTextMarkdown = { add: vi.fn() };
+      this.applyTheme = vi.fn();
       state.surveyModels.push(data);
     }
   },
 }));
 
 vi.mock('survey-creator-core', () => ({
-  SC2020: {
-    cssVariables: {},
-  },
   SurveyCreatorModel: class MockSurveyCreatorModel {
     constructor(options) {
       this.options = options;
@@ -126,6 +126,7 @@ vi.mock('survey-creator-core', () => ({
       this.saveSurveyFunc = null;
       this.applyCreatorTheme = vi.fn();
       this.onSurveyInstanceCreated = { add: vi.fn() };
+      this.onModified = { add: vi.fn() };
       state.creators.push(this);
     }
 
@@ -167,22 +168,6 @@ vi.mock('survey-pdf', () => ({
   },
 }));
 
-const PvSelectStub = {
-  name: 'PvSelect',
-  props: ['modelValue', 'options', 'placeholder', 'emptyMessage', 'optionLabel', 'optionValue'],
-  emits: ['update:modelValue', 'change'],
-  template:
-    '<select :data-placeholder="placeholder" :value="modelValue ?? \'\'" @change="$emit(\'change\', { value: $event.target.value || null })"><option value=""></option><option v-for="option in options" :key="option.id" :value="option.id">{{ option.name }}</option></select>',
-};
-
-const PvButtonStub = {
-  name: 'PvButton',
-  props: ['as', 'href', 'target', 'disabled', 'variant'],
-  emits: ['click'],
-  template:
-    '<a v-if="as === \'a\'" :href="href" :target="target"><slot /></a><button v-else :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
-};
-
 const RouterLinkStub = {
   name: 'RouterLink',
   props: ['to'],
@@ -192,20 +177,23 @@ const RouterLinkStub = {
 const mountSurveyManager = () =>
   mount(SurveyManager, {
     global: {
-      stubs: {
-        PvButton: PvButtonStub,
-        PvSelect: PvSelectStub,
+      components: {
         RouterLink: RouterLinkStub,
       },
     },
   });
 
+const resolveSurveyData = async (surveyData) => {
+  state.surveyData.value = surveyData;
+  await flushPromises();
+};
+
 describe('SurveyManager.vue', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    window.sessionStorage.clear();
+    window.localStorage.clear();
     state.isSuperAdmin = true;
-    state.locale.value = 'en';
+    state.locale.value = 'en-US';
     state.route.query = {};
     state.route.params = {};
     state.surveyListData.value = [
@@ -224,6 +212,7 @@ describe('SurveyManager.vue', () => {
     state.markdownConverterSurveys.length = 0;
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.spyOn(console, 'error').mockImplementation(() => {});
+    window.confirm = vi.fn().mockReturnValue(true);
   });
 
   it('renders bucket controls and dashboard link for super admins', () => {
@@ -259,7 +248,6 @@ describe('SurveyManager.vue', () => {
   it('uses route values to request surveys and build a full preview URL', () => {
     state.route.query = { bucketId: 'levante-assets-draft' };
     state.route.params = { surveyId: 'intake', surveyLanguage: 'es-CO' };
-    state.surveyData.value = { title: 'Intake', pages: [] };
 
     const wrapper = mountSurveyManager();
 
@@ -274,15 +262,15 @@ describe('SurveyManager.vue', () => {
         surveyId: 'intake',
         surveyLanguage: 'es-CO',
       },
+      query: { bucketId: 'levante-assets-draft' },
     });
   });
 
   it('loads survey data into the creator with the selected locale', async () => {
     state.route.params = { surveyId: 'intake', surveyLanguage: 'es-MX' };
-    state.surveyData.value = { title: 'Intake', pages: [{ name: 'page-1' }] };
 
     mountSurveyManager();
-    await nextTick();
+    await resolveSurveyData({ title: 'Intake', pages: [{ name: 'page-1' }] });
 
     expect(state.creators[0].JSON).toEqual({
       title: 'Intake',
@@ -297,10 +285,9 @@ describe('SurveyManager.vue', () => {
       surveyId: 'intake',
       surveyLanguage: 'fr-CA',
     };
-    state.surveyData.value = { title: 'Preview survey', pages: [] };
 
     const wrapper = mountSurveyManager();
-    await nextTick();
+    await resolveSurveyData({ title: 'Preview survey', pages: [] });
 
     expect(wrapper.find('[data-testid="survey-preview"]').exists()).toBe(true);
     expect(wrapper.find('.survey-manager').exists()).toBe(false);
@@ -318,7 +305,7 @@ describe('SurveyManager.vue', () => {
     state.route.params = { surveyPreview: 'preview' };
 
     mountSurveyManager();
-    await nextTick();
+    await flushPromises();
 
     expect(state.routerPushes).toEqual([{ name: 'SurveyManager' }]);
   });
@@ -332,19 +319,18 @@ describe('SurveyManager.vue', () => {
     state.creators[0].text = '{"title":"Draft"}';
     state.creators[0].saveSurveyFunc(7, callback);
 
-    expect(window.sessionStorage.getItem('levanteBucketId')).toBe('levante-assets-draft');
-    expect(window.sessionStorage.getItem('levanteSurveyId')).toBe('intake');
-    expect(window.sessionStorage.getItem('levanteSurvey')).toBe('{"title":"Draft"}');
+    expect(window.localStorage.getItem('levanteBucketId')).toBe('levante-assets-draft');
+    expect(window.localStorage.getItem('levanteSurveyId')).toBe('intake');
+    expect(window.localStorage.getItem('levanteSurvey')).toBe('{"title":"Draft"}');
     expect(callback).toHaveBeenCalledWith(7, true);
     wrapper.unmount();
   });
 
   it('reverts a survey change when unsaved changes are not discarded', async () => {
     state.route.params = { surveyId: 'intake' };
-    state.surveyData.value = { title: 'Intake', pages: [] };
     window.confirm.mockReturnValue(false);
     const wrapper = mountSurveyManager();
-    await nextTick();
+    await resolveSurveyData({ title: 'Intake', pages: [] });
 
     state.creators[0].text = '{"title":"Unsaved"}';
     const surveySelect = wrapper.findAll('select').at(1);
@@ -358,9 +344,8 @@ describe('SurveyManager.vue', () => {
 
   it('downloads the selected survey as a localized PDF', async () => {
     state.route.params = { surveyId: 'intake', surveyLanguage: 'pt-BR' };
-    state.surveyData.value = { title: 'Printable survey', pages: [] };
     const wrapper = mountSurveyManager();
-    await nextTick();
+    await resolveSurveyData({ title: 'Printable survey', pages: [] });
 
     const downloadButton = wrapper.findAll('button').find((button) => button.text().includes('Download as PDF'));
     await downloadButton.trigger('click');

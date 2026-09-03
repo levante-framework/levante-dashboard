@@ -197,6 +197,12 @@ const rawActions = computed((): NavbarAction[] => {
     userRole: currentRoleObj?.role,
   }) as unknown as NavbarAction[];
 });
+
+function getNavbarHeight() {
+  return navbarRef.value?.getBoundingClientRect().height ?? 0;
+}
+
+defineExpose({ getNavbarHeight });
 </script>
 
 <style lang="scss" scoped>
