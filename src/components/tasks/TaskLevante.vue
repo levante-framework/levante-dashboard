@@ -109,6 +109,12 @@ watch(
   { immediate: true },
 );
 
+function goHome() {
+  // Navigate to home, but first set the refresh flag to true.
+  assignmentsStore.setHomeRefresh();
+  router.push({ name: 'Home' });
+}
+
 async function startTask(selectedAdmin) {
   try {
     checkGameStarted = setInterval(() => {
@@ -148,14 +154,11 @@ async function startTask(selectedAdmin) {
         taskId: props.taskId,
       });
 
-      // Navigate to home, but first set the refresh flag to true.
-      assignmentsStore.setHomeRefresh();
-      router.push({ name: 'Home' });
+      goHome();
     });
   } catch (error) {
     if (error?.name === 'AbortError') {
-      assignmentsStore.setHomeRefresh();
-      router.push({ name: 'Home' });
+      goHome();
     } else {
       alert(
         'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
