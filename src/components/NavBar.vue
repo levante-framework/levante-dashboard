@@ -66,7 +66,7 @@ import UserActions from './UserActions.vue';
 interface NavbarAction {
   category: string;
   title: string;
-  icon: string;
+  icon?: string;
   buttonLink: { name: string; params?: Record<string, any> };
   requiresSite?: boolean;
   tooltipMessage?: string;
@@ -174,6 +174,17 @@ const computedItems = computed((): MenuItem[] => {
       label: researchersAction.title,
       command: () => {
         router.push(researchersAction.buttonLink);
+      },
+    });
+  }
+
+  const tasksAction = rawActions.value.find((action) => action.category === 'Tasks');
+  if (tasksAction) {
+    items.push({
+      label: tasksAction.title,
+      icon: tasksAction.icon,
+      command: () => {
+        router.push(tasksAction.buttonLink);
       },
     });
   }

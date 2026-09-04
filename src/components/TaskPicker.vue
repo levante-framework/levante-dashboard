@@ -188,7 +188,7 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, nextTick, ref, watch } from 'vue';
 import { VueDraggableNext } from 'vue-draggable-next';
-import { formattedVariantName } from '@/helpers';
+import { resolveVariantDisplayName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 import { languageOptions } from '@/translations/i18n';
 import VariantCard, { type VariantObject } from './VariantCard.vue';
@@ -334,11 +334,13 @@ const groupedTaskSections = computed((): TaskSection[] => {
 
   Object.entries(props.allVariants).forEach(([taskKey, variants]) => {
     const allVariants = variants ?? [];
-    const namedVariants = allVariants.filter((variant) => variant.variant.name) as VariantObject[];
+    const namedVariants = allVariants.filter((variant) =>
+      resolveVariantDisplayName(variant.variant),
+    ) as VariantObject[];
     const filteredVariants = variantsByLanguage(namedVariants);
     const orderedVariants = filteredVariants.slice().sort((variantA, variantB) => {
-      const variantNameA = formattedVariantName(variantA?.variant?.name?.trim() ?? '');
-      const variantNameB = formattedVariantName(variantB?.variant?.name?.trim() ?? '');
+      const variantNameA = resolveVariantDisplayName(variantA?.variant ?? {});
+      const variantNameB = resolveVariantDisplayName(variantB?.variant ?? {});
       return variantNameA.localeCompare(variantNameB, undefined, { sensitivity: 'base' });
     });
     const visibleVariants = orderedVariants.filter((variant) => !selectedVariantIdSet.value.has(variant.id));
@@ -389,8 +391,8 @@ const groupedTaskSections = computed((): TaskSection[] => {
 });
 
 const compareVariantNames = (variantA: VariantObject, variantB: VariantObject): number => {
-  const variantNameA = formattedVariantName(variantA?.variant?.name?.trim() ?? '');
-  const variantNameB = formattedVariantName(variantB?.variant?.name?.trim() ?? '');
+  const variantNameA = resolveVariantDisplayName(variantA?.variant ?? {});
+  const variantNameB = resolveVariantDisplayName(variantB?.variant ?? {});
   return variantNameA.localeCompare(variantNameB, undefined, { sensitivity: 'base' });
 };
 
@@ -403,8 +405,13 @@ const searchCards = (term: string): void => {
     const variantList = variants ?? [];
     const matchingVariants = variantList.filter(({ task, variant }) => {
       const taskName = (task?.name ?? '').toLowerCase();
-      const variantName = (variant?.name ?? '').toLowerCase();
-      return taskName.includes(normalizedTerm) || variantName.includes(normalizedTerm);
+      const displayName = resolveVariantDisplayName(variant ?? {}).toLowerCase();
+      const internalName = (variant?.name ?? '').toLowerCase();
+      return (
+        taskName.includes(normalizedTerm) ||
+        displayName.includes(normalizedTerm) ||
+        internalName.includes(normalizedTerm)
+      );
     });
 
     const filteredVariants = variantsByLanguage(matchingVariants as VariantObject[]);
