@@ -104,6 +104,8 @@ vi.mock('primevue/button', () => ({
   },
 }));
 
+vi.mock('survey-core/survey.i18n', () => ({}));
+
 vi.mock('survey-core', () => ({
   Model: class MockModel {
     constructor(data) {
