@@ -19,6 +19,7 @@ const props = defineProps({
 });
 
 let levanteTaskLauncher;
+let checkGameStarted;
 
 const { version } = packageLockJson.packages['node_modules/@levante-framework/core-tasks'];
 const router = useRouter();
@@ -83,6 +84,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('popstate', handlePopState);
+  if (checkGameStarted) clearInterval(checkGameStarted);
 });
 
 watch(
@@ -109,7 +111,7 @@ watch(
 
 async function startTask(selectedAdmin) {
   try {
-    let checkGameStarted = setInterval(() => {
+    checkGameStarted = setInterval(() => {
       // Poll for the preload trials progress bar to exist and then begin the game
       let gameLoading = document.querySelector('.jspsych-content-wrapper');
       if (gameLoading) {
@@ -165,6 +167,8 @@ async function startTask(selectedAdmin) {
         userId: getUserId(),
       });
     }
+  } finally {
+    clearInterval(checkGameStarted);
   }
 }
 </script>
