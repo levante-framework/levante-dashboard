@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { reactive, ref } from 'vue';
+import { logger } from '@/logger';
 import TaskLevante from '../tasks/TaskLevante.vue';
 
 const startAssessment = vi.fn().mockResolvedValue({
@@ -27,9 +28,11 @@ const mockAuthStore = reactive({
   isFirekitInit: vi.fn(() => true),
 });
 
+const routerPush = vi.fn();
+
 vi.mock('vue-router', () => ({
   useRouter: () => ({
-    push: vi.fn(),
+    push: routerPush,
     go: vi.fn(),
   }),
 }));
@@ -84,6 +87,7 @@ async function mountTaskLevante(props = {}) {
 beforeEach(() => {
   setActivePinia(createPinia());
   vi.clearAllMocks();
+  vi.stubGlobal('alert', vi.fn());
   selectedAssignmentRef.value = null;
   userDataRef.value = { birthMonth: 6, birthYear: 2015 };
   isLoadingUserDataRef.value = false;
@@ -136,6 +140,34 @@ describe('TaskLevante.vue', () => {
       await flushPromises();
 
       expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'egma-math', expect.any(String), 'runs');
+      wrapper.unmount();
+    });
+
+    it('should navigate home without alerting or logging when the task is aborted', async () => {
+      selectedAssignmentRef.value = { id: 'assignment-1' };
+      startAssessment.mockRejectedValueOnce(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+
+      const wrapper = await mountTaskLevante();
+      await flushPromises();
+
+      expect(mockAssignmentsStore.setHomeRefresh).toHaveBeenCalled();
+      expect(routerPush).toHaveBeenCalledWith({ name: 'Home' });
+      expect(window.alert).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('should alert and log without navigating home when the task fails unexpectedly', async () => {
+      selectedAssignmentRef.value = { id: 'assignment-1' };
+      startAssessment.mockRejectedValueOnce(new Error('boom'));
+
+      const wrapper = await mountTaskLevante();
+      await flushPromises();
+
+      expect(window.alert).toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalled();
+      expect(routerPush).not.toHaveBeenCalled();
+      expect(mockAssignmentsStore.setHomeRefresh).not.toHaveBeenCalled();
       wrapper.unmount();
     });
   });

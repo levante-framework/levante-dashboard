@@ -19,6 +19,7 @@ const props = defineProps({
 });
 
 let levanteTaskLauncher;
+let checkGameStarted;
 
 const { version } = packageLockJson.packages['node_modules/@levante-framework/core-tasks'];
 const router = useRouter();
@@ -83,6 +84,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('popstate', handlePopState);
+  if (checkGameStarted) clearInterval(checkGameStarted);
 });
 
 watch(
@@ -107,9 +109,15 @@ watch(
   { immediate: true },
 );
 
+function goHome() {
+  // Navigate to home, but first set the refresh flag to true.
+  assignmentsStore.setHomeRefresh();
+  router.push({ name: 'Home' });
+}
+
 async function startTask(selectedAdmin) {
   try {
-    let checkGameStarted = setInterval(() => {
+    checkGameStarted = setInterval(() => {
       // Poll for the preload trials progress bar to exist and then begin the game
       let gameLoading = document.querySelector('.jspsych-content-wrapper');
       if (gameLoading) {
@@ -146,20 +154,24 @@ async function startTask(selectedAdmin) {
         taskId: props.taskId,
       });
 
-      // Navigate to home, but first set the refresh flag to true.
-      assignmentsStore.setHomeRefresh();
-      router.push({ name: 'Home' });
+      goHome();
     });
   } catch (error) {
-    alert(
-      'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
-    );
-    logger.error(new Error('Failed to start task', { cause: error }), {
-      tags: { function: 'startTask', component: 'TaskLevante' },
-      administrationId: selectedAdmin.value?.id,
-      taskId: props.taskId,
-      userId: getUserId(),
-    });
+    if (error?.name === 'AbortError') {
+      goHome();
+    } else {
+      alert(
+        'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
+      );
+      logger.error(new Error('Failed to start task', { cause: error }), {
+        tags: { function: 'startTask', component: 'TaskLevante' },
+        administrationId: selectedAdmin.value?.id,
+        taskId: props.taskId,
+        userId: getUserId(),
+      });
+    }
+  } finally {
+    clearInterval(checkGameStarted);
   }
 }
 </script>
