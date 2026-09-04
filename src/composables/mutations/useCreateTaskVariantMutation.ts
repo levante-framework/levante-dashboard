@@ -28,6 +28,7 @@ const useCreateTaskVariantMutation = (): UseMutationReturnType<
     onError: (error: Error, payload: CreateTaskVariantParams): void => {
       logger.error(error, { payload });
     },
+    meta: { skipGlobalErrorLogging: true },
   });
 };
 

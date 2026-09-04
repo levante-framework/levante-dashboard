@@ -19,6 +19,7 @@ const useUpsertTaskMutation = (): UseMutationReturnType<UpsertTaskResult, Error,
     onError: (error: Error, payload: UpsertTaskParams): void => {
       logger.error(error, { payload });
     },
+    meta: { skipGlobalErrorLogging: true },
   });
 };
 

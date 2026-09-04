@@ -24,6 +24,7 @@ const useUpsertVariantParamSpecMutation = (): UseMutationReturnType<
     onError: (error: Error, payload: UpsertVariantParamSpecParams): void => {
       logger.error(error, { payload });
     },
+    meta: { skipGlobalErrorLogging: true },
   });
 };
 
