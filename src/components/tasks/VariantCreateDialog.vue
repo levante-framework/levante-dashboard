@@ -69,9 +69,9 @@
             />
           </div>
           <div class="flex flex-column gap-1 flex-grow-1" style="min-width: 8rem">
-            <label class="text-xs text-gray-500">Value ({{ rowType(row.key) }})</label>
+            <label class="text-xs text-gray-500">Value ({{ rowType(row) }})</label>
             <PvSelect
-              v-if="rowType(row.key) === 'boolean'"
+              v-if="rowType(row) === 'boolean'"
               v-model="row.value"
               :options="booleanOptions"
               option-label="label"
@@ -79,7 +79,7 @@
               class="w-full"
             />
             <PvInputNumber
-              v-else-if="rowType(row.key) === 'number'"
+              v-else-if="rowType(row) === 'number'"
               v-model="row.numberValue"
               class="w-full"
               :use-grouping="false"
@@ -128,6 +128,7 @@ interface ParamRow {
   value: boolean | null;
   numberValue: number | null;
   stringValue: string;
+  sourceType: 'boolean' | 'number' | 'string' | null;
 }
 
 interface Props {
@@ -166,6 +167,7 @@ const isFork = computed(() => Boolean(props.sourceVariant));
 const availableSpecOptions = computed(() => {
   if (!paramSpecs.value) return [];
   return [...paramSpecs.value]
+    .filter((spec) => !spec.archived)
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((spec) => ({
       label: `${spec.name} (${spec.type})`,
@@ -179,12 +181,12 @@ function nextUid(): string {
 }
 
 function emptyRow(): ParamRow {
-  return { uid: nextUid(), key: null, value: null, numberValue: null, stringValue: '' };
+  return { uid: nextUid(), key: null, value: null, numberValue: null, stringValue: '', sourceType: null };
 }
 
-function rowType(key: string | null): 'boolean' | 'number' | 'string' | 'unknown' {
-  if (!key) return 'string';
-  return availableSpecOptions.value.find((option) => option.value === key)?.type ?? 'string';
+function rowType(row: ParamRow): 'boolean' | 'number' | 'string' | 'unknown' {
+  const specType = row.key ? availableSpecOptions.value.find((option) => option.value === row.key)?.type : undefined;
+  return specType ?? row.sourceType ?? 'string';
 }
 
 function specOptionsForRow(currentKey: string | null) {
@@ -193,7 +195,8 @@ function specOptionsForRow(currentKey: string | null) {
 }
 
 function onRowKeyChange(row: ParamRow): void {
-  const type = rowType(row.key);
+  row.sourceType = null;
+  const type = rowType(row);
   row.value = type === 'boolean' ? false : null;
   row.numberValue = type === 'number' ? 0 : null;
   row.stringValue = '';
@@ -215,10 +218,13 @@ function buildParamsFromSource(source: SerializedTaskVariant | null | undefined)
     row.key = key;
     if (typeof value === 'boolean') {
       row.value = value;
+      row.sourceType = 'boolean';
     } else if (typeof value === 'number') {
       row.numberValue = value;
+      row.sourceType = 'number';
     } else {
       row.stringValue = String(value);
+      row.sourceType = 'string';
     }
     return row;
   });
@@ -253,7 +259,7 @@ function collectParams(): Record<string, VariantParamValue> | null {
       errorMessage.value = 'Each param row needs a key.';
       return null;
     }
-    const type = rowType(row.key);
+    const type = rowType(row);
     if (type === 'boolean') {
       if (row.value === null) {
         errorMessage.value = `Choose a boolean value for ${row.key}.`;

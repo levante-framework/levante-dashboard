@@ -73,6 +73,7 @@ const { data: specs, isFetching, isError } = useVariantParamSpecsQuery();
 const dialogVisible = ref(false);
 const editingSpec = ref<SerializedVariantParamSpec | null>(null);
 
+// TODO: This lists archived specs too; consider filtering/marking archived entries.
 const sortedSpecs = computed(() => {
   if (!specs.value) return [];
   return [...specs.value].sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
