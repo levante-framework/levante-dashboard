@@ -45,7 +45,7 @@ const handlePopState = () => {
   router.go(0);
 };
 
-unsubscribe = authStore.$subscribe(async (mutation, state) => {
+unsubscribe = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit.restConfig) init();
 });
 
@@ -87,9 +87,15 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  [isFirekitInit, isLoadingUserData, isTaskSREReady],
-  async ([newFirekitInitValue, newLoadingUserData, newIsTaskSREReady]) => {
-    if (newFirekitInitValue && !newLoadingUserData && !taskStarted.value && newIsTaskSREReady) {
+  [isTaskSREReady, selectedAssignment, isLoadingUserData, isFirekitInit],
+  async ([newIsTaskSREReady, newSelectedAssignment, newLoadingUserData, newFirekitInitValue]) => {
+    if (
+      newIsTaskSREReady &&
+      newSelectedAssignment &&
+      !taskStarted.value &&
+      !newLoadingUserData &&
+      newFirekitInitValue
+    ) {
       taskStarted.value = true;
       await startTask(selectedAssignment);
     }
@@ -108,7 +114,7 @@ async function startTask(selectedAdmin) {
       }
     }, 100);
 
-    const appKit = await authStore.roarfirekit.startAssessment(selectedAdmin.value.id, props.taskId, version);
+    const appKit = await authStore.roarfirekit.startAssessment(selectedAdmin.value?.id, props.taskId, version);
 
     const userParams = {
       grade: '',
@@ -116,6 +122,8 @@ async function startTask(selectedAdmin) {
       birthYear: _get(userData.value, 'birthYear'),
     };
 
+    // Keep off gameParams — firekit.updateTaskParams writes those keys onto the variant.
+    appKit.sentryDualReport = true;
     const gameParams = { ...appKit._taskInfo.variantParams };
 
     const roarApp = new TaskLauncher(appKit, gameParams, userParams, 'jspsych-target', false);
@@ -123,7 +131,7 @@ async function startTask(selectedAdmin) {
     await roarApp.run().then(async () => {
       // Handle any post-game actions.
       await completeAssessmentMutate({
-        adminId: selectedAdmin.value.id,
+        adminId: selectedAdmin.value?.id,
         taskId: props.taskId,
       });
 
@@ -137,7 +145,7 @@ async function startTask(selectedAdmin) {
     );
     logger.error(new Error('Failed to start task', { cause: error }), {
       tags: { function: 'startTask', component: 'TaskSRE' },
-      administrationId: selectedAdmin.value.id,
+      administrationId: selectedAdmin.value?.id,
       taskId: props.taskId,
       userId: getUserId(),
     });

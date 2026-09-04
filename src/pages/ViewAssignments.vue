@@ -214,7 +214,7 @@ const init = () => {
   initialized.value = true;
 };
 
-unsubscribeInitializer = authStore.$subscribe(async (mutation, state) => {
+unsubscribeInitializer = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit.restConfig) init();
 });
 

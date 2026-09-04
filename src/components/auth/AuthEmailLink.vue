@@ -46,6 +46,7 @@ const loginFromEmailLink = async (email) => {
       isError.value = true;
       logger.error(new Error('Failed to sign in with email link', { cause: error }), {
         tags: { component: 'AuthEmailLink', function: 'loginFromEmailLink' },
+        email,
       });
     });
 };
@@ -54,7 +55,7 @@ const loginFromEmailLink = async (email) => {
 // The necessary email is missing from local storage (so the primary sign-in logic via loginFromEmailLink cannot proceed).
 // AND roarfirekit indicates it's expecting an email link sign-in process to be underway.
 // AND the current page's URL is not a valid email sign-in link (e.g., the token in the URL is missing, invalid, or expired, or the user navigated to the path without a token).
-const unsubscribe = authStore.$subscribe(async (mutation, state) => {
+const unsubscribe = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit.isSignInWithEmailLink && state.roarfirekit.signInWithEmailLink) {
     if (!roarfirekit.value.isSignInWithEmailLink(window.location.href)) {
       router.replace({ name: 'Home' });
@@ -70,11 +71,11 @@ onMounted(async () => {
     } catch (error) {
       logger.error(new Error('Failed to sign in with email link', { cause: error }), {
         tags: { component: 'AuthEmailLink', function: 'onMounted' },
+        email,
       });
       isError.value = true;
     }
   } else {
-    // No email in localStorage, so we need to show a message
     isError.value = true;
     logger.capture('No email in localStorage');
   }

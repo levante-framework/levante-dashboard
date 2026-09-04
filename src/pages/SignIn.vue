@@ -16,6 +16,14 @@
           <div id="languageSelect" class="mb-5">
             <LanguageSelector />
           </div>
+          <div
+            v-if="emailLinkError"
+            class="mb-4 p-3 border-round border-2 border-red-500 bg-red-50 text-red-800 text-center font-semibold"
+            role="alert"
+            data-cy="email-link-not-registered"
+          >
+            {{ emailLinkError }}
+          </div>
           <SignIn :invalid="incorrect" @submit="authWithEmail" @update:email="email = $event" />
         </section>
         <section v-if="isLevante" class="w-full">
@@ -140,6 +148,7 @@ import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 
 const incorrect = ref(false);
+const emailLinkError = ref('');
 const googleSignInErrorKey = ref('');
 const authStore = useAuthStore();
 const assignmentsStore = useAssignmentsStore();
@@ -222,12 +231,22 @@ const authWithEmail = async (state) => {
   // turn it into our internal auth email
   spinner.value = true;
   incorrect.value = false;
+  emailLinkError.value = '';
   googleSignInErrorKey.value = '';
   let creds = toRaw(state);
   if (creds.useLink && !creds.usePassword) {
-    authStore.initiateLoginWithEmailLink({ email: creds.email }).then(() => {
+    try {
+      await authStore.initiateLoginWithEmailLink({ email: creds.email });
       router.push({ name: 'AuthEmailSent' });
-    });
+    } catch (e) {
+      emailLinkError.value =
+        e?.code === 'levante/email-not-registered'
+          ? e.message
+          : 'There was a problem sending the sign-in link. Please try again.';
+    } finally {
+      spinner.value = false;
+    }
+    return;
   } else {
     if (!creds.email.includes('@')) {
       creds.email = `${creds.email}@roar-auth.com`;

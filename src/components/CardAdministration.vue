@@ -87,6 +87,29 @@
           </PvPopover>
         </div>
       </div>
+      <div v-if="isSyncComplete" class="flex justify-content-end mt-3">
+        <router-link
+          :to="{
+            name: 'AdministrationProgressReport',
+            params: {
+              administrationId: props.id,
+            },
+          }"
+          class="no-underline text-black"
+        >
+          <PvButton
+            v-tooltip.top="getTooltip('View assignment progress')"
+            class="progress-report-button"
+            icon="pi pi-chart-bar"
+            severity="secondary"
+            outlined
+            label="View General Progress"
+            aria-label="View assignment progress"
+            size="small"
+            data-cy="button-administration-progress"
+          />
+        </router-link>
+      </div>
       <PvTreeTable
         v-if="isSyncComplete"
         class="mt-3"

@@ -29,7 +29,7 @@
         :options="helpOptions"
         :optionValue="(o) => o.value"
         :optionLabel="(o) => o.label"
-        class="options-help"
+        class="options-help --djs-options-help"
         @change="handleHelpChange"
       >
         <template #value>
@@ -56,21 +56,34 @@
           <i class="pi pi-user"></i>
         </template>
       </PvSelect>
+
+      <PvButton
+        v-if="shouldDisplayWizardBtn"
+        severity="info"
+        variant="outlined"
+        class="--djs-wizard-link wizard-link"
+        @click="() => runWizard({ force: true })"
+      >
+        <i class="pi pi-sparkles"></i>
+      </PvButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { hints } from 'driver.js/hints';
 import { storeToRefs } from 'pinia';
 import PvAvatar from 'primevue/avatar';
 import PvButton from 'primevue/button';
 import PvSelect from 'primevue/select';
-import { computed, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import { APP_ROUTES } from '@/constants/routes';
 import { useAuthStore } from '@/store/auth';
+import { useLevanteStore } from '@/store/levante.js';
+import { runWizard } from '@/wizard/index.js';
 import SiteSelector from './SiteSelector.vue';
 
 interface Props {
@@ -89,10 +102,17 @@ interface DropdownChangeEvent {
 
 const authStore = useAuthStore();
 const { shouldUsePermissions, userData } = storeToRefs(authStore);
+const { isUserSuperAdmin } = authStore;
+const levanteStore = useLevanteStore();
+const { wizardSteps } = storeToRefs(levanteStore);
 const i18n = useI18n();
 const router = useRouter();
 const { mutate: signOut } = useSignOutMutation();
 const feedbackButton = ref<HTMLButtonElement | null>(null);
+
+const shouldDisplayWizardBtn = computed(
+  () => (import.meta.env.VITE_FIREBASE_PROJECT ?? 'PROD').toUpperCase() === 'DEV' && wizardSteps.value?.length,
+);
 
 const props = defineProps<Props>();
 
@@ -130,6 +150,30 @@ const handleProfileChange = (e: DropdownChangeEvent): void => {
     signOut();
   }
 };
+
+const wizardLinkHint = hints({
+  overlay: true,
+  hints: [
+    {
+      element: '.--djs-wizard-link',
+      popover: {
+        popoverClass: 'djs-levante-theme',
+        title: 'Page walkthroughs',
+        description:
+          "This button will appear on pages where there's an available walkthrough - just click it to get started.",
+        side: 'bottom',
+        align: 'end',
+      },
+    },
+  ],
+});
+
+onMounted(async () => {
+  if (isUserSuperAdmin()) {
+    await nextTick();
+    setTimeout(() => wizardLinkHint.show(), 1000);
+  }
+});
 </script>
 
 <style lang="scss">
@@ -137,6 +181,18 @@ const handleProfileChange = (e: DropdownChangeEvent): void => {
 .options-settings {
   .p-select-dropdown {
     display: none;
+  }
+}
+
+.wizard-link {
+  border-color: var(--docs-btn) !important;
+
+  .pi {
+    color: var(--docs-btn);
+  }
+
+  &:hover {
+    border-color: var(--docs-btn) !important;
   }
 }
 </style>

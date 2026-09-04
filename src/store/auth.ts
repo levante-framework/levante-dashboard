@@ -193,10 +193,24 @@ export const useAuthStore = defineStore(
 
     async function initiateLoginWithEmailLink({ email }: Pick<LoginCredentials, 'email'>): Promise<void> {
       if (isFirekitInit()) {
+        const trimmedEmail = email.trim();
+        logger.capture('Email link sign-in requested', { email: trimmedEmail });
+
+        const isEmailAvailable = await roarfirekit.value?.isEmailAvailable(trimmedEmail);
+        if (isEmailAvailable) {
+          logger.capture('Email link sign-in blocked, address not registered', { email: trimmedEmail });
+          const notRegisteredError = new Error(
+            'This email is not in our records. We did not send a sign-in link. Ask your site administrator to add this address before using email-link sign-in.',
+          ) as Error & { code: string };
+          notRegisteredError.code = 'levante/email-not-registered';
+          throw notRegisteredError;
+        }
+
         const redirectUrl = `${window.location.origin}/auth-email-link`;
 
-        return roarfirekit.value?.initiateLoginWithEmailLink({ email, redirectUrl }).then(() => {
-          window.localStorage.setItem('emailForSignIn', email);
+        return roarfirekit.value?.initiateLoginWithEmailLink({ email: trimmedEmail, redirectUrl }).then(() => {
+          window.localStorage.setItem('emailForSignIn', trimmedEmail);
+          logger.capture('Email link sign-in sent', { email: trimmedEmail });
         });
       }
     }
@@ -240,8 +254,9 @@ export const useAuthStore = defineStore(
     }
 
     async function sendMyPasswordResetEmail(): Promise<boolean> {
-      if (getUserEmail()) {
-        return (await roarfirekit.value?.sendPasswordResetEmail(getUserEmail()!).then(() => true)) ?? false;
+      const email = getUserEmail();
+      if (email) {
+        return (await roarfirekit.value?.sendPasswordResetEmail(email).then(() => true)) ?? false;
       }
 
       console.warn('Logged in user does not have an associated email. Unable to send password reset email');
@@ -257,25 +272,29 @@ export const useAuthStore = defineStore(
       }
     }
 
+    const LEVANTE_AUDIO_REVIEW_SITE_ID = '1SUxysPAgIpD8XZR3Pwh';
+
     function setUserData(data: UserData): void {
       userData.value = data;
 
-      if (data?.roles && data.roles.length > 0) {
-        sites.value = data.roles.map((role: { siteId: string; role: string; siteName: string }) => ({
-          siteId: role.siteId,
-          siteName: role.siteName,
-        }));
+      // Hide the LEVANTE_AUDIO_REVIEW site from non-superadmins.
+      // NB: this becomes deprecated once translation utilities use a different
+      // auth strategy, but this is not currently on the roadmap.
+      const visibleRoles = isUserSuperAdmin()
+        ? (data?.roles ?? [])
+        : (data?.roles ?? []).filter((role) => role?.siteId !== LEVANTE_AUDIO_REVIEW_SITE_ID);
 
-        if (!currentSite.value) {
-          currentSite.value = data.roles[0]?.siteId ?? null;
-          currentSiteName.value = data.roles[0]?.siteName ?? null;
-        }
+      sites.value = visibleRoles.map((role) => ({ siteId: role.siteId, siteName: role.siteName }));
+
+      if (!currentSite.value || !visibleRoles.some((role) => role.siteId === currentSite.value)) {
+        currentSite.value = visibleRoles[0]?.siteId ?? null;
+        currentSiteName.value = visibleRoles[0]?.siteName ?? null;
       }
 
       // Participants often lack admin roles; fall back to districts.current for site telemetry.
       const districtId = data?.districts?.current?.[0];
       const siteId = currentSite.value ?? districtId ?? null;
-      const matchingRole = data?.roles?.find((role) => role?.siteId === siteId) ?? data?.roles?.[0] ?? undefined;
+      const matchingRole = visibleRoles.find((role) => role?.siteId === siteId) ?? visibleRoles[0] ?? undefined;
       const siteName = currentSiteName.value ?? matchingRole?.siteName ?? null;
       stampTelemetrySite(siteId, siteName);
     }

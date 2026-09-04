@@ -13,6 +13,7 @@ import { APP_ROUTES } from '@/constants/routes';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import type { Role } from '@/types';
+import { fetchWizardSteps } from '@/wizard/index.js';
 
 function removeQueryParams(to: RouteLocationNormalized) {
   if (Object.keys(to.query).length) return { path: to.path, query: {}, hash: to.hash };
@@ -20,6 +21,17 @@ function removeQueryParams(to: RouteLocationNormalized) {
 
 function removeHash(to: RouteLocationNormalized) {
   if (to.hash) return { path: to.path, query: to.query, hash: '' };
+}
+
+const CHUNK_RELOAD_KEY = 'chunk-reload';
+
+function isChunkLoadError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes('Failed to fetch dynamically imported module') ||
+    message.includes('error loading dynamically imported module') ||
+    message.includes('Importing a module script failed')
+  );
 }
 
 // '*' = all roles
@@ -202,6 +214,16 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/pages/users/ListUsers.vue'),
     meta: {
       pageTitle: 'List users',
+      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
+    },
+  },
+  {
+    path: '/administration/:administrationId',
+    name: 'AdministrationProgressReport',
+    props: true,
+    component: () => import('@/pages/AdministrationProgressReport.vue'),
+    meta: {
+      pageTitle: 'Assignment Progress Report',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
@@ -392,15 +414,41 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
     return next({ name: 'Home' });
   }
 
+  if ((import.meta.env.VITE_FIREBASE_PROJECT ?? 'PROD').toUpperCase() === 'DEV') {
+    await fetchWizardSteps(String(to.name));
+  }
+
   return next();
 });
 
-// PostHog pageview tracking
+// Call for Posthog pageview tracking
 router.afterEach((to, from) => {
+  sessionStorage.removeItem(CHUNK_RELOAD_KEY);
   logger.capture('pageview', {
     to: { name: to.name, path: to.path },
     from: { name: from.name, path: from.path },
   });
+});
+
+router.onError((error, to) => {
+  if (!isChunkLoadError(error)) {
+    logger.error(new Error('Router navigation failed', { cause: error }), {
+      tags: { function: 'router.onError', route: String(to.name ?? 'unknown') },
+      path: to.fullPath,
+    });
+    return;
+  }
+
+  if (sessionStorage.getItem(CHUNK_RELOAD_KEY) === to.fullPath) {
+    sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+    logger.error(new Error('Failed to load app chunk after reload', { cause: error }), {
+      tags: { function: 'router.onError' },
+    });
+    return;
+  }
+
+  sessionStorage.setItem(CHUNK_RELOAD_KEY, to.fullPath);
+  window.location.assign(to.fullPath);
 });
 
 export default router;

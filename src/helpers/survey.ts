@@ -2,6 +2,7 @@ import type { RoarFirekit as RoarfirekitType } from '@bdelab/roar-firekit';
 import type { QueryClient } from '@tanstack/vue-query';
 import _merge from 'lodash/merge';
 import type { ToastServiceMethods } from 'primevue/toastservice';
+import { Converter } from 'showdown';
 import type { Question, SurveyModel } from 'survey-core';
 import { toRaw } from 'vue';
 import type { Router } from 'vue-router';
@@ -83,6 +84,15 @@ interface SaveFinalSurveyDataParams {
 
 export function getParsedLocale(locale: string | undefined | null): string {
   return findBestMatchingLocale(locale);
+}
+
+export function setupSurveyMarkdownConverter(surveyInstance: SurveyModel): void {
+  const converter = new Converter();
+  surveyInstance.onTextMarkdown.add((_survey, options) => {
+    let str = converter.makeHtml(options.text);
+    str = str.substring(3, str.length - 4);
+    options.html = str;
+  });
 }
 
 export function restoreSurveyData({

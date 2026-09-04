@@ -2,6 +2,7 @@ import * as VueQuery from '@tanstack/vue-query';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
+import Tooltip from 'primevue/tooltip';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { computed, reactive, ref } from 'vue';
 import { createI18n } from 'vue-i18n';
@@ -113,6 +114,7 @@ const router = createRouter({
 const mountOptions = {
   global: {
     plugins: [i18n, PrimeVue, router, VueQuery.VueQueryPlugin],
+    directives: { tooltip: Tooltip },
   },
 };
 

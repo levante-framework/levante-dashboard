@@ -6,6 +6,8 @@ interface NavbarAction {
   buttonLink: { name: string; params?: Record<string, any> };
   allowedRoles: string[];
   category: string;
+  requiresSite?: boolean;
+  tooltipMessage?: string;
 }
 
 const navbarActionOptions: Readonly<NavbarAction>[] = [
@@ -35,6 +37,8 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     buttonLink: { name: 'CreateAssignment' },
     allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
     category: 'Assignments',
+    requiresSite: true,
+    tooltipMessage: 'Please select a site to create assignments',
   },
   {
     title: 'Add Users',
@@ -42,6 +46,8 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     buttonLink: { name: 'Add Users' },
     allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
     category: 'Users',
+    requiresSite: true,
+    tooltipMessage: 'Please select a site to modify users',
   },
   {
     title: 'Link Users',
@@ -49,6 +55,8 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     buttonLink: { name: 'Link Users' },
     allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
     category: 'Users',
+    requiresSite: true,
+    tooltipMessage: 'Please select a site to modify users',
   },
   {
     title: 'Researchers',

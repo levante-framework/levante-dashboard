@@ -26,7 +26,7 @@
           <div class="flex align-items-center gap-3 mb-4 md:mb-0">
             <PermissionGuard :requiredRole="ROLES.SITE_ADMIN">
               <PvButton
-                v-tooltip.bottom="currentSite === 'any' && 'Please select a specific site to add a group'"
+                v-tooltip.bottom="currentSite === 'any' && activeIndex != 0 && 'Please select a specific site to add a group'"
                 class="bg-primary text-white border-none p-2 ml-auto"
                 data-testid="add-group-btn"
                 data-cy="add-group-btn"
@@ -576,7 +576,8 @@ watchEffect(async () => {
   try {
     const mappedData = await Promise.all(
       orgData.value.map(async (org) => {
-        const userCount = await countUsersByOrg(activeOrgType.value, org.id);
+        const users = await fetchUsersByOrg(activeOrgType.value, org.id, 1_000_000, 0);
+        const userCount = users.filter((user) => user.userType !== 'admin').length;
         const assignmentCount = getAdministrationsByOrg(org.id, activeOrgType.value, allAdministrations.value).length;
 
         return {
@@ -672,7 +673,7 @@ const initTable = () => {
   initialized.value = true;
 };
 
-unsubscribe = authStore.$subscribe(async (mutation, state) => {
+unsubscribe = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit.restConfig) initTable();
 });
 

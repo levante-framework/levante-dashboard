@@ -1,5 +1,5 @@
 <template>
-  <div class="flex align-items-center gap-2">
+  <div class="flex align-items-center gap-2 --djs-site-selector">
     <label for="site-selector" class="font-semibold">Site:</label>
     <PvSelect
       v-model="pendingSelectedSite"
@@ -105,9 +105,13 @@ const handleSiteChange = (e: DropdownChangeEvent): void => {
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
 
-    if (router.currentRoute.value.name === 'ProgressReport') {
-      router.push({ name: 'Home' });
-    } else if (router.currentRoute.value.name === 'ListUsers') {
+    const reportRoutes = new Set(['AdministrationProgressReport', 'ProgressReport']);
+
+    if (reportRoutes.has(router.currentRoute.value.name as string)) {
+      router.push({ name: 'ViewAssignments' });
+    }
+
+    if (router.currentRoute.value.name === 'ListUsers') {
       router.push({ name: 'ListGroups' });
     }
   };

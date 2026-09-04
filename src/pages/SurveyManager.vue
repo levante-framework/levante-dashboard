@@ -84,7 +84,7 @@ import { Model } from 'survey-core';
 import LanguageSelector from '@/components/LanguageSelector.vue';
 import { useSurveyListQuery } from '@/composables/queries/useSurveyListQuery';
 import { useSurveyQuery } from '@/composables/queries/useSurveyQuery';
-import { getParsedLocale, getPlainSurveyData } from '@/helpers/survey';
+import { getParsedLocale, getPlainSurveyData, setupSurveyMarkdownConverter } from '@/helpers/survey';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import 'survey-core/survey-core.css';
@@ -198,6 +198,9 @@ const surveyCreatorOptions: ICreatorOptions = {
 
 const surveyCreator = new SurveyCreatorModel(surveyCreatorOptions);
 surveyCreator.applyCreatorTheme(surveyCreatorTheme);
+surveyCreator.onSurveyInstanceCreated.add((_sender, options) => {
+  setupSurveyMarkdownConverter(options.survey);
+});
 surveyCreator.saveSurveyFunc = (saveNo: number, callback: (saveNo: number, isSuccess: boolean) => void) => {
   window.sessionStorage.setItem(STORAGE_KEYS.BUCKET_ID, selectedBucketId.value);
   if (surveyId.value) window.sessionStorage.setItem(STORAGE_KEYS.SURVEY_ID, surveyId.value);
@@ -210,7 +213,9 @@ const surveyPreviewModel = computed(() => {
   if (!raw) return null;
   const plain = getPlainSurveyData(raw);
   plain.locale = getParsedLocale(language.value);
-  return markRaw(new Model(plain));
+  const model = new Model(plain);
+  setupSurveyMarkdownConverter(model);
+  return markRaw(model);
 });
 
 const downloadPDF = async () => {
@@ -285,12 +290,13 @@ watch(
     setSurveyBaseline();
 
     // If the selected survey has been modified, use the local stored content
+    const storedSurvey = window.sessionStorage.getItem(STORAGE_KEYS.SURVEY);
     if (
       window.sessionStorage.getItem(STORAGE_KEYS.BUCKET_ID) === newBucketId &&
       window.sessionStorage.getItem(STORAGE_KEYS.SURVEY_ID) === newSurveyId &&
-      window.sessionStorage.getItem(STORAGE_KEYS.SURVEY)
+      storedSurvey
     ) {
-      surveyCreator.text = window.sessionStorage.getItem(STORAGE_KEYS.SURVEY)!;
+      surveyCreator.text = storedSurvey;
       return;
     }
   },

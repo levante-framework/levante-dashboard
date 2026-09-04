@@ -33,7 +33,7 @@
                   </div>
                   <div class="flex align-items-center gap-2">
                     <div class="text-xl text-gray-600">
-                      <b> {{ users?.length }} </b>
+                      <b> {{ nonAdminUsers.length }} </b>
                     </div>
                   </div>
                 </div>
@@ -69,7 +69,7 @@
         <RoarDataTable
           v-if="users"
           :columns="columns"
-          :data="transformedUsers"
+          :data="nonAdminUsers"
           :loading="isLoading || isFetching"
           :allow-export="true"
           :allow-filtering="false"
@@ -184,11 +184,11 @@ import AppSpinner from '@/components/AppSpinner.vue';
 import EditUsersForm from '@/components/EditUsersForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
-import useOrgUsersQuery from '@/composables/queries/useOrgUsersQuery';
+import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { singularizeFirestoreCollection } from '@/helpers';
+import { getChildLabel } from '@/helpers/childLabels';
 import { exportCsv } from '@/helpers/query/utils';
-import { normalizeUserTypeForDisplay } from '@/helpers/userType';
 import { useAuthStore } from '@/store/auth';
 
 const props = defineProps({
@@ -208,20 +208,9 @@ const props = defineProps({
 
 const authStore = useAuthStore();
 const { roarfirekit } = storeToRefs(authStore);
-const initialized = ref(false);
-
-let unsubscribe;
-const init = () => {
-  if (unsubscribe) unsubscribe();
-  initialized.value = true;
-};
-
-unsubscribe = authStore.$subscribe(async (mutation, state) => {
-  if (state.roarfirekit.restConfig) init();
-});
+const initialized = computed(() => authStore.isFirekitInit());
 
 onMounted(() => {
-  if (roarfirekit.value.restConfig) init();
   isModalEnabled.value = false;
 });
 
@@ -234,52 +223,45 @@ const orderBy = ref(null);
 const {
   isLoading,
   isFetching,
-  data: users,
-} = useOrgUsersQuery(props.orgType, props.orgId, page, orderBy, {
-  enabled: initialized,
+  data: usersResult,
+  isError,
+} = useGetUsersByOrgQuery(props.orgType, props.orgId, page, orderBy, initialized);
+
+watch(isError, (hasError) => {
+  if (!hasError) return;
+  toast.add({
+    severity: TOAST_SEVERITIES.ERROR,
+    summary: 'Failed to load users',
+    // TODO: handle error cases to provide more specific error messages
+    detail: 'An error occurred while loading users. Please try again.',
+    life: TOAST_DEFAULT_LIFE_DURATION,
+  });
 });
 
-watch(
-  users,
-  (newUsers) => {
-    console.log('Raw users data from query:', newUsers);
-    console.log('Number of users:', newUsers?.length);
-    if (newUsers?.length > 0) {
-      console.log('First user example:', newUsers[0]);
-      console.log(
-        'User types in data:',
-        newUsers.map((u) => u.userType),
-      );
-    }
-  },
-  { immediate: true },
+const isUserCountExpanded = ref(false);
+const users = computed(() => usersResult.value?.users ?? []);
+
+const nonAdminUsers = computed(() =>
+  users.value
+    .filter((user) => user.userType !== 'admin')
+    .map((user) => ({ ...user, childLabel: getChildLabel(user.childLabelIndex) })),
 );
 
-const isUserCountExpanded = ref(false);
-
 const childrenCount = computed(() => {
-  return users.value?.filter((user) => user.userType === 'student').length ?? 0;
+  return nonAdminUsers.value.filter((user) => user.userType === 'child').length;
 });
 
 const caregiversCount = computed(() => {
-  return users.value?.filter((user) => user.userType === 'parent').length ?? 0;
+  return nonAdminUsers.value.filter((user) => user.userType === 'caregiver').length;
 });
 
 const teachersCount = computed(() => {
-  return users.value?.filter((user) => user.userType === 'teacher').length ?? 0;
-});
-
-const transformedUsers = computed(() => {
-  if (!users.value) return [];
-  return users.value.map((user) => ({
-    ...user,
-    userType: normalizeUserTypeForDisplay(user.userType),
-  }));
+  return nonAdminUsers.value.filter((user) => user.userType === 'teacher').length;
 });
 
 const columns = ref([
   {
-    field: 'id',
+    field: 'uid',
     header: 'UID',
     dataType: 'string',
     sort: false,
@@ -305,6 +287,12 @@ const columns = ref([
   {
     field: 'userType',
     header: 'User Type',
+    dataType: 'string',
+    sort: false,
+  },
+  {
+    field: 'childLabel',
+    header: 'Child Label',
     dataType: 'string',
     sort: false,
   },
@@ -341,7 +329,7 @@ const exportRowsToCsv = (rows, filename) => {
 };
 
 const downloadAllListedUsers = () => {
-  exportRowsToCsv(transformedUsers.value, `${props.orgName}-users`);
+  exportRowsToCsv(nonAdminUsers.value, `${props.orgName}-users`);
 };
 
 const downloadSelectedUsers = () => {
@@ -373,7 +361,6 @@ const localUserData = ref(null);
 const onEditButtonClick = (event) => {
   currentEditUser.value = event;
   isModalEnabled.value = true;
-  console.log(event);
 };
 
 const isSubmitting = ref(false);
@@ -384,7 +371,7 @@ const updateUserData = async () => {
   isSubmitting.value = true;
 
   await roarfirekit.value
-    .updateUserData(currentEditUser.value.id, localUserData.value)
+    .updateUserData(currentEditUser.value.uid, localUserData.value)
     .then(() => {
       isSubmitting.value = false;
       closeModal();
@@ -395,8 +382,7 @@ const updateUserData = async () => {
         life: 3000,
       });
     })
-    .catch((error) => {
-      console.log('Error occurred during submission:', error);
+    .catch(() => {
       isSubmitting.value = false;
     });
 };
@@ -442,7 +428,7 @@ async function updatePassword() {
   if (!v$.value.$invalid) {
     isSubmitting.value = true;
     await roarfirekit.value
-      .updateUserData(currentEditUser.value.id, { password: state.password })
+      .updateUserData(currentEditUser.value.uid, { password: state.password })
       .then(() => {
         submitted.value = false;
         isSubmitting.value = false;

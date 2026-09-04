@@ -101,6 +101,7 @@ import { ASSIGNMENT_STATUSES } from '@/constants';
 import { LEVANTE_TASK_IDS, ROAR_TASK_IDS } from '@/constants/coreTasks';
 import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
 import { getAssignmentStatus } from '@/helpers/assignments';
+import { getChildLetter } from '@/helpers/childLabels';
 import {
   expandGamesForDisplay,
   getSurveyPartProgress,
@@ -226,14 +227,13 @@ const getSurveyPartName = (game: DisplayGame): string => {
   }
 
   const relation = surveyStore.specificSurveyRelationData[part.index] as Record<string, unknown> | undefined;
-  const childNumber = part.index + 1;
+  const childLetter = typeof relation?.childLabelIndex === 'number' ? getChildLetter(relation.childLabelIndex) : '';
+  const childName = `${t('gameTabs.surveyProgressSpecificParent')}${childLetter ? ` ${childLetter}` : ''}`;
   if (relation?.birthMonth || relation?.birthYear) {
-    return `Survey - ${t('gameTabs.surveyProgressSpecificParent')} ${childNumber} (${relation.birthMonth ?? ''}/${
-      relation.birthYear ?? ''
-    })`;
+    return `Survey - ${childName} (${relation.birthMonth ?? ''}/${relation.birthYear ?? ''})`;
   }
 
-  return `Survey - ${t('gameTabs.surveyProgressSpecificParent')} ${childNumber}`;
+  return `Survey - ${childName}`;
 };
 
 const getSurveyPartDescription = (game: DisplayGame): string => {
