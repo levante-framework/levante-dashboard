@@ -32,10 +32,3 @@ export function hasVariantParamDiff(diff: VariantParamDiff): boolean {
     Object.keys(diff.added).length > 0 || Object.keys(diff.removed).length > 0 || Object.keys(diff.changed).length > 0
   );
 }
-
-export function sortVariantsByCreatedAt<T extends { createdAt: string }>(variants: T[], ascending = true): T[] {
-  return [...variants].sort((a, b) => {
-    const delta = a.createdAt.localeCompare(b.createdAt);
-    return ascending ? delta : -delta;
-  });
-}

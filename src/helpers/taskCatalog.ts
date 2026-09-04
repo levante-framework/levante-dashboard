@@ -27,3 +27,10 @@ export function getCallableErrorMessage(error: unknown, fallback: string): strin
   }
   return err.message || fallback;
 }
+
+export function sortVariantsByCreatedAt<T extends { createdAt: string }>(variants: T[], ascending = true): T[] {
+  return [...variants].sort((a, b) => {
+    const delta = a.createdAt.localeCompare(b.createdAt);
+    return ascending ? delta : -delta;
+  });
+}

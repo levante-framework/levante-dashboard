@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveVariantDisplayName } from '@/helpers';
-import { getCallableErrorMessage, semanticIdFromName } from '@/helpers/taskCatalog';
+import { getCallableErrorMessage, semanticIdFromName, sortVariantsByCreatedAt } from '@/helpers/taskCatalog';
 
 describe('semanticIdFromName', () => {
   it('slugs display names like the backend', () => {
@@ -37,5 +37,29 @@ describe('getCallableErrorMessage', () => {
     expect(getCallableErrorMessage({ code: 'functions/already-exists', details: { code: 'params' } }, 'fallback')).toBe(
       'A variant with the same params already exists for this task.',
     );
+  });
+});
+
+describe('sortVariantsByCreatedAt', () => {
+  it('sorts ascending by createdAt by default', () => {
+    const sorted = sortVariantsByCreatedAt([
+      { id: 'b', createdAt: '2024-02-01T00:00:00.000Z' },
+      { id: 'a', createdAt: '2024-01-01T00:00:00.000Z' },
+      { id: 'c', createdAt: '2024-03-01T00:00:00.000Z' },
+    ]);
+
+    expect(sorted.map((item) => item.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('sorts descending when ascending is false', () => {
+    const sorted = sortVariantsByCreatedAt(
+      [
+        { id: 'a', createdAt: '2024-01-01T00:00:00.000Z' },
+        { id: 'b', createdAt: '2024-02-01T00:00:00.000Z' },
+      ],
+      false,
+    );
+
+    expect(sorted.map((item) => item.id)).toEqual(['b', 'a']);
   });
 });

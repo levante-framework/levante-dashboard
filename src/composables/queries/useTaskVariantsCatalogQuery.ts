@@ -2,7 +2,7 @@ import { type UseQueryOptions, type UseQueryReturnType, useQuery } from '@tansta
 import { computed, type MaybeRefOrGetter, toValue } from 'vue';
 import { TASK_VARIANTS_CATALOG_QUERY_KEY } from '@/constants/queryKeys';
 import { tasksRepository } from '@/firebase/repositories/TasksRepository';
-import { sortVariantsByCreatedAt } from '@/helpers/diffVariantParams';
+import { sortVariantsByCreatedAt } from '@/helpers/taskCatalog';
 import type { GetTaskVariantsParams, SerializedTaskVariant } from '@/types/taskCatalog';
 
 type TaskVariantsCatalogQueryOptions = Omit<UseQueryOptions<SerializedTaskVariant[]>, 'queryKey' | 'queryFn'>;
