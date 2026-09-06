@@ -132,7 +132,7 @@ import PvImage from 'primevue/image';
 import PvPassword from 'primevue/password';
 import { useToast } from 'primevue/usetoast';
 import { computed, onBeforeUnmount, onMounted, ref, toRaw } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import SignIn from '@/components/auth/SignIn.vue';
 import LanguageSelector from '@/components/LanguageSelector.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
@@ -153,6 +153,7 @@ const googleSignInErrorKey = ref('');
 const authStore = useAuthStore();
 const assignmentsStore = useAssignmentsStore();
 const router = useRouter();
+const route = useRoute();
 const toast = useToast();
 const adminSignIn = ref(false);
 
@@ -164,11 +165,20 @@ function redirectAfterLogin() {
 
   if (ssoProvider.value) {
     router.replace({ path: APP_ROUTES.SSO });
-  } else if (routeToProfile.value) {
-    router.replace({ path: APP_ROUTES.ACCOUNT_PROFILE });
-  } else {
-    router.replace({ path: APP_ROUTES.HOME });
+    return;
   }
+  if (routeToProfile.value) {
+    router.replace({ path: APP_ROUTES.ACCOUNT_PROFILE });
+    return;
+  }
+
+  const redirect = route.query.redirect;
+  if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
+    router.replace(redirect);
+    return;
+  }
+
+  router.replace({ path: APP_ROUTES.HOME });
 }
 
 const toggleAdminSignIn = () => {

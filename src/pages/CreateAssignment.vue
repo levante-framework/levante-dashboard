@@ -156,7 +156,14 @@
           </div>
           <div class="divider mx-2 my-3" />
           <div class="mb-2 w-full flex justify-content-center gap-3">
-            <PvButton v-if="adminId" severity="danger" variant="outlined" @click="onClickCancelBtn">Cancel</PvButton>
+            <PvButton
+              v-if="adminId || assignmentReturnPath"
+              severity="danger"
+              variant="outlined"
+              @click="onClickCancelBtn"
+            >
+              {{ assignmentReturnPath ? 'Back to science fair' : 'Cancel' }}
+            </PvButton>
 
             <PvButton
               :label="submitLabel"
@@ -195,7 +202,7 @@ import PvInputText from 'primevue/inputtext';
 import PvRadioButton from 'primevue/radiobutton';
 import { useToast } from 'primevue/usetoast';
 import { computed, onMounted, onUnmounted, reactive, ref, toRaw, toRef, toValue, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import ConsentPicker from '@/components/ConsentPicker.vue';
 import DocsButton from '@/components/DocsButton.vue';
 import GroupPicker from '@/components/GroupPicker.vue';
@@ -227,6 +234,25 @@ const initialized = ref(false);
 const isFormPopulated = ref(false);
 const editTasksHydrated = ref(false);
 const router = useRouter();
+const route = useRoute();
+
+const assignmentReturnPath = computed(() => {
+  const value = route.query.return;
+  if (typeof value === 'string' && value.startsWith('/') && !value.startsWith('//')) return value;
+  return null;
+});
+
+function leaveAssignmentForm(created = false) {
+  if (assignmentReturnPath.value) {
+    const name = created ? String(toRaw(state).administrationName || '').trim() : '';
+    router.push({
+      path: assignmentReturnPath.value,
+      query: created ? { created: '1', ...(name ? { assignment: name } : {}) } : undefined,
+    });
+    return;
+  }
+  router.push({ path: APP_ROUTES.VIEW_ASSIGNMENTS });
+}
 const toast = useToast();
 const queryClient = useQueryClient();
 
@@ -254,7 +280,13 @@ const creatorName = computed(() => {
   return userData.value?.displayName || `${firstName} ${middleName} ${lastName}`;
 });
 
-const onClickCancelBtn = () => router.back();
+const onClickCancelBtn = () => {
+  if (assignmentReturnPath.value) {
+    leaveAssignmentForm();
+    return;
+  }
+  router.back();
+};
 
 function resolveTasks(assessments, variants, tasks) {
   if (!tasks?.length) return [];
@@ -806,7 +838,7 @@ const submit = async () => {
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
 
-    return router.push({ path: APP_ROUTES.VIEW_ASSIGNMENTS });
+    return leaveAssignmentForm();
   }
 
   const { data: assignmentExists } = await refetchAssignmentExists();
@@ -835,7 +867,7 @@ const submit = async () => {
       queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: [DSGF_ORGS_QUERY_KEY] });
 
-      router.push({ path: APP_ROUTES.VIEW_ASSIGNMENTS });
+      leaveAssignmentForm(true);
     },
     onError: (error) => {
       toast.add({

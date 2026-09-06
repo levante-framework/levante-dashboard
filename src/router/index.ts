@@ -293,6 +293,23 @@ const routes: Array<RouteRecordRaw> = [
   },
 
   {
+    path: '/science-fair',
+    name: 'ScienceFair',
+    component: () => import('@/pages/ScienceFair.vue'),
+    meta: {
+      pageTitle: 'Science fair / museum',
+      allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
+      devOnly: true,
+    },
+    beforeEnter: (_to, _from, next) => {
+      if ((import.meta.env.VITE_FIREBASE_PROJECT ?? 'PROD').toUpperCase() !== 'DEV') {
+        next({ name: 'Home' });
+        return;
+      }
+      next();
+    },
+  },
+  {
     path: '/link-users',
     name: 'Link Users',
     component: () => import('@/pages/users/LinkUsers.vue'),
@@ -387,7 +404,10 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
 
   // Check if user is signed in. If not, go to signin
   if (!to.path.includes('__/auth/handler') && !isAuthenticated() && !allowedUnauthenticatedRoutes.includes(to.name)) {
-    return next({ name: 'SignIn' });
+    return next({
+      name: 'SignIn',
+      query: to.fullPath !== '/' ? { redirect: to.fullPath } : {},
+    });
   }
 
   // @TODO

@@ -168,6 +168,17 @@ const computedItems = computed((): MenuItem[] => {
     }
   }
 
+  const scienceFairAction = rawActions.value.find((action) => action.category === 'Science Fair');
+  if (scienceFairAction) {
+    items.push({
+      label: scienceFairAction.title,
+      icon: scienceFairAction.icon,
+      command: () => {
+        router.push(scienceFairAction.buttonLink);
+      },
+    });
+  }
+
   const researchersAction = rawActions.value.find((action) => action.category === 'Researchers');
   if (researchersAction) {
     items.push({

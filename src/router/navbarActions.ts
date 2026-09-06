@@ -25,6 +25,13 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     category: 'Groups',
   },
   {
+    title: 'Science Fair',
+    icon: 'pi pi-map',
+    buttonLink: { name: 'ScienceFair' },
+    allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
+    category: 'Science Fair',
+  },
+  {
     title: 'View Assignments',
     icon: 'pi pi-list',
     buttonLink: { name: 'ViewAssignments' },
@@ -78,7 +85,12 @@ interface GetNavbarActionsParams {
 }
 
 export const getNavbarActions = ({ userRole }: GetNavbarActionsParams): Readonly<NavbarAction>[] => {
+  const isDev = (import.meta.env.VITE_FIREBASE_PROJECT ?? '').toUpperCase() === 'DEV';
   return navbarActionOptions.filter((action) => {
+    if (action.category === 'Science Fair' && !isDev) {
+      return false;
+    }
+
     if (action.allowedRoles.includes('*')) {
       return true;
     }

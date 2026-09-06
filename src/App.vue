@@ -17,7 +17,7 @@
   <div v-if="isAuthStoreReady" class="app" :style="{ paddingBottom: `${footerHeight}px` }">
     <PvToast position="bottom-center" />
 
-    <NavBar v-if="typeof $route.name === 'string' && !NAVBAR_BLACKLIST.includes($route.name)" />
+    <NavBar v-if="showNavBar" />
 
     <router-view :key="$route.fullPath" />
 
@@ -65,6 +65,10 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
+const showNavBar = computed(() => {
+  if (typeof route.name !== 'string' || NAVBAR_BLACKLIST.includes(route.name)) return false;
+  return true;
+});
 const shouldShowFooter = computed(() => !FOOTER_BLACKLIST.includes(route.name));
 const footerVariant = computed(() => {
   const alternativeStylePages = ['Login', 'SignIn'];

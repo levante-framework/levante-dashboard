@@ -25,6 +25,17 @@
       </div>
     </div>
 
+    <div v-if="isDevProject" class="w-full px-5 mb-5 -mt-2">
+      <div class="info">
+        <i class="pi pi-map" />
+        <div class="mr-auto">
+          <div class="font-semibold">Science fair / museum</div>
+          Walk through creating a site, children, and an assignment, then provision tablets offline.
+        </div>
+        <RouterLink :to="{ name: 'ScienceFair' }" class="font-semibold no-underline">Open wizard</RouterLink>
+      </div>
+    </div>
+
     <div v-if="showSelectSitePrompt" class="w-full px-5 mb-5 -mt-4">
       <div class="info info--site-not-selected">
         <i class="pi pi-exclamation-circle" />
@@ -273,6 +284,7 @@ const authStore = useAuthStore();
 const { currentSite, userData } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
 
+const isDevProject = computed(() => (import.meta.env.VITE_FIREBASE_PROJECT ?? '').toUpperCase() === 'DEV');
 const isSiteSelected = computed(() => !!currentSite.value && currentSite.value !== 'any');
 const showSelectSitePrompt = computed(() => !!userData.value && !isSiteSelected.value);
 const { data: siteOverview, isLoading } = useGetSiteOverviewQuery(() =>
