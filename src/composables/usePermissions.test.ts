@@ -1,6 +1,8 @@
+import type { PermissionService as PermissionServiceInstance } from '@levante-framework/permissions-core';
 import { createTestingPinia } from '@pinia/testing';
 import { flushPromises } from '@vue/test-utils';
-import { AxiosError, type AxiosResponse } from 'axios';
+import { AxiosError, type AxiosInstance, type AxiosResponse } from 'axios';
+import type { User } from 'firebase/auth';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import { getAxiosInstance } from '@/helpers/query/utils';
@@ -50,8 +52,8 @@ vi.mock('@/helpers/query/utils', () => ({
 
 // Mock lodash mapValues
 vi.mock('lodash/mapValues', () => ({
-  default: vi.fn((obj, fn) => {
-    const result = {};
+  default: vi.fn((obj: Record<string, unknown>, fn: (value: unknown) => unknown) => {
+    const result: Record<string, unknown> = {};
     Object.keys(obj).forEach((key) => {
       result[key] = fn(obj[key]);
     });
@@ -89,7 +91,7 @@ describe('usePermissions', () => {
 
     // Get the mocked PermissionService constructor
     const { PermissionService } = await import('@levante-framework/permissions-core');
-    vi.mocked(PermissionService).mockReturnValue(mockPermissionService);
+    vi.mocked(PermissionService).mockReturnValue(mockPermissionService as unknown as PermissionServiceInstance);
   });
 
   afterEach(() => {
@@ -133,7 +135,7 @@ describe('usePermissions', () => {
             adminFirebaseUser: {
               uid: 'test-uid',
               email: 'test@example.com',
-            },
+            } as User,
           };
           authStore.userData = { roles: [] };
           authStore.currentSite = 'test-site';
@@ -446,7 +448,7 @@ describe('usePermissions', () => {
             adminFirebaseUser: {
               uid: 'test-uid',
               email: 'test@example.com',
-            },
+            } as User,
           };
           authStore.userData = { roles: [] };
           authStore.currentSite = null;
@@ -481,7 +483,7 @@ describe('usePermissions', () => {
             adminFirebaseUser: {
               uid: 'test-uid',
               email: 'test@example.com',
-            },
+            } as User,
           };
           authStore.userData = { roles: [] };
           authStore.currentSite = null;
@@ -517,7 +519,7 @@ describe('usePermissions', () => {
             adminFirebaseUser: {
               uid: 'test-uid',
               email: 'test@example.com',
-            },
+            } as User,
           };
           authStore.userData = null;
           authStore.currentSite = 'test-site';
@@ -557,25 +559,28 @@ describe('usePermissions', () => {
     };
 
     afterEach(() => {
-      vi.mocked(getAxiosInstance).mockImplementation(() => ({
-        get: vi.fn(() =>
-          Promise.resolve({
-            data: {
-              fields: {
-                matrix: { mapValue: { fields: {} } },
-                lastUpdated: { timestampValue: '2023-01-01T00:00:00Z' },
-                updatedAt: { timestampValue: '2023-01-01T00:00:00Z' },
-              },
-            },
-          }),
-        ),
-      }));
+      vi.mocked(getAxiosInstance).mockImplementation(
+        () =>
+          ({
+            get: vi.fn(() =>
+              Promise.resolve({
+                data: {
+                  fields: {
+                    matrix: { mapValue: { fields: {} } },
+                    lastUpdated: { timestampValue: '2023-01-01T00:00:00Z' },
+                    updatedAt: { timestampValue: '2023-01-01T00:00:00Z' },
+                  },
+                },
+              }),
+            ),
+          }) as unknown as AxiosInstance,
+      );
     });
 
     it('should swallow ERR_NETWORK without marking permissions as loaded', async () => {
       vi.mocked(getAxiosInstance).mockReturnValue({
         get: vi.fn().mockRejectedValue(new AxiosError('Network Error', AxiosError.ERR_NETWORK)),
-      });
+      } as unknown as AxiosInstance);
 
       const [result] = withSetup(
         () => {
@@ -603,7 +608,7 @@ describe('usePermissions', () => {
       } as AxiosResponse);
       vi.mocked(getAxiosInstance).mockReturnValue({
         get: vi.fn().mockRejectedValue(httpError),
-      });
+      } as unknown as AxiosInstance);
 
       const [result] = withSetup(
         () => {
@@ -630,7 +635,7 @@ describe('usePermissions', () => {
 
     it('should not fetch permissions when a home refresh is pending', async () => {
       const get = vi.fn();
-      vi.mocked(getAxiosInstance).mockReturnValue({ get });
+      vi.mocked(getAxiosInstance).mockReturnValue({ get } as unknown as AxiosInstance);
 
       withSetup(
         () => {
