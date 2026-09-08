@@ -2,9 +2,19 @@ import { createTestingPinia } from '@pinia/testing';
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
+import { getAxiosInstance } from '@/helpers/query/utils';
+import { logger } from '@/logger';
+import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 import { withSetup } from '@/test-support/withSetup.js';
 import { resetPermissionsState, usePermissions } from './usePermissions';
+
+vi.mock('@/logger', () => ({
+  logger: {
+    error: vi.fn(),
+    capture: vi.fn(),
+  },
+}));
 
 // Mock the permissions-core package
 vi.mock('@levante-framework/permissions-core', () => ({
@@ -528,6 +538,114 @@ describe('usePermissions', () => {
           plugins: [[piniaInstance]],
         },
       );
+    });
+  });
+
+  describe('when loading permissions fails', () => {
+    const authenticatedAuthState = {
+      isAuthenticated: vi.fn(() => true),
+      shouldUsePermissions: true,
+      firebaseUser: {
+        adminFirebaseUser: {
+          uid: 'test-uid',
+          email: 'test@example.com',
+        },
+      },
+      userData: { roles: [] },
+      currentSite: 'test-site',
+    };
+
+    afterEach(() => {
+      vi.mocked(getAxiosInstance).mockImplementation(() => ({
+        get: vi.fn(() =>
+          Promise.resolve({
+            data: {
+              fields: {
+                matrix: { mapValue: { fields: {} } },
+                lastUpdated: { timestampValue: '2023-01-01T00:00:00Z' },
+                updatedAt: { timestampValue: '2023-01-01T00:00:00Z' },
+              },
+            },
+          }),
+        ),
+      }));
+    });
+
+    it('should swallow ERR_NETWORK without marking permissions as loaded', async () => {
+      vi.mocked(getAxiosInstance).mockReturnValue({
+        get: vi.fn().mockRejectedValue({ code: 'ERR_NETWORK', message: 'Network Error' }),
+      });
+
+      const [result] = withSetup(
+        () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, authenticatedAuthState);
+          return usePermissions();
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
+
+      await nextTick();
+      await flushPromises();
+      await nextTick();
+
+      expect(result.permissionsLoaded.value).toBe(false);
+      expect(result.isLoadingPermissions.value).toBe(true);
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('should log HTTP failures without marking permissions as loaded', async () => {
+      const httpError = { code: 'ERR_BAD_RESPONSE', response: { status: 500 }, message: 'Request failed' };
+      vi.mocked(getAxiosInstance).mockReturnValue({
+        get: vi.fn().mockRejectedValue(httpError),
+      });
+
+      const [result] = withSetup(
+        () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, authenticatedAuthState);
+          return usePermissions();
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
+
+      await nextTick();
+      await flushPromises();
+      await nextTick();
+
+      expect(result.permissionsLoaded.value).toBe(false);
+      expect(result.isLoadingPermissions.value).toBe(true);
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Failed to load permissions', cause: httpError }),
+        { tags: { composable: 'usePermissions' } },
+      );
+    });
+
+    it('should not fetch permissions when a home refresh is pending', async () => {
+      const get = vi.fn();
+      vi.mocked(getAxiosInstance).mockReturnValue({ get });
+
+      withSetup(
+        () => {
+          const authStore = useAuthStore(piniaInstance);
+          Object.assign(authStore, authenticatedAuthState);
+          const assignmentsStore = useAssignmentsStore(piniaInstance);
+          assignmentsStore.requireRefresh = true;
+          return usePermissions();
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
+
+      await nextTick();
+      await flushPromises();
+
+      expect(get).not.toHaveBeenCalled();
     });
   });
 });
