@@ -10,6 +10,7 @@ import {
   type Resource,
   type Role,
 } from '@levante-framework/permissions-core';
+import { AxiosError, isAxiosError } from 'axios';
 import _mapValues from 'lodash/mapValues';
 import { storeToRefs } from 'pinia';
 import { computed, readonly, ref, watch } from 'vue';
@@ -17,7 +18,6 @@ import { convertValues, getAxiosInstance, getBaseDocumentPath } from '@/helpers/
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
-import { AxiosError, isAxiosError } from 'axios';
 
 interface UserData {
   roles: CoreUserRole[];
