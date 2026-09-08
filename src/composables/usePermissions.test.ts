@@ -1,5 +1,6 @@
 import { createTestingPinia } from '@pinia/testing';
 import { flushPromises } from '@vue/test-utils';
+import { AxiosError } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import { getAxiosInstance } from '@/helpers/query/utils';
@@ -573,7 +574,7 @@ describe('usePermissions', () => {
 
     it('should swallow ERR_NETWORK without marking permissions as loaded', async () => {
       vi.mocked(getAxiosInstance).mockReturnValue({
-        get: vi.fn().mockRejectedValue({ code: 'ERR_NETWORK', message: 'Network Error' }),
+        get: vi.fn().mockRejectedValue(new AxiosError('Network Error', AxiosError.ERR_NETWORK)),
       });
 
       const [result] = withSetup(
