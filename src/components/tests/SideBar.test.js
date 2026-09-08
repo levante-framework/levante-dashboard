@@ -118,12 +118,6 @@ const i18n = createI18n({
 const mountOptions = {
   global: {
     plugins: [i18n, PrimeVue],
-    directives: {
-      tooltip: {
-        mounted: () => {},
-        unmounted: () => {},
-      },
-    },
     mocks: {
       $t: (key) => {
         const messages = {
