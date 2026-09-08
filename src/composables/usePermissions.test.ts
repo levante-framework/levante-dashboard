@@ -1,6 +1,6 @@
 import { createTestingPinia } from '@pinia/testing';
 import { flushPromises } from '@vue/test-utils';
-import { AxiosError } from 'axios';
+import { AxiosError, type AxiosResponse } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import { getAxiosInstance } from '@/helpers/query/utils';
@@ -598,7 +598,9 @@ describe('usePermissions', () => {
     });
 
     it('should log HTTP failures without marking permissions as loaded', async () => {
-      const httpError = { code: 'ERR_BAD_RESPONSE', response: { status: 500 }, message: 'Request failed' };
+      const httpError = new AxiosError('Request failed', AxiosError.ERR_BAD_RESPONSE, undefined, undefined, {
+        status: 500,
+      } as AxiosResponse);
       vi.mocked(getAxiosInstance).mockReturnValue({
         get: vi.fn().mockRejectedValue(httpError),
       });
