@@ -10,15 +10,27 @@ import {
   type Resource,
   type Role,
 } from '@levante-framework/permissions-core';
+import { AxiosError, isAxiosError } from 'axios';
 import _mapValues from 'lodash/mapValues';
 import { storeToRefs } from 'pinia';
 import { computed, readonly, ref, watch } from 'vue';
 import { convertValues, getAxiosInstance, getBaseDocumentPath } from '@/helpers/query/utils';
 import { logger } from '@/logger';
+import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 
 interface UserData {
   roles: CoreUserRole[];
+}
+
+function isNavigationAbortedError(error: unknown): boolean {
+  if (!isAxiosError(error) || error.response) return false;
+
+  return (
+    error.code === AxiosError.ECONNABORTED ||
+    error.code === AxiosError.ERR_CANCELED ||
+    error.code === AxiosError.ERR_NETWORK
+  );
 }
 
 // Session-level cache
@@ -36,6 +48,9 @@ export const usePermissions = () => {
   const authStore = useAuthStore();
   const { isAuthenticated } = authStore;
   const { firebaseUser, userData, shouldUsePermissions, currentSite } = storeToRefs(authStore);
+  const assignmentsStore = useAssignmentsStore();
+  const { requireRefresh } = storeToRefs(assignmentsStore);
+
   const user = computed(() => {
     if (!isAuthenticated() || !firebaseUser.value.adminFirebaseUser) return null;
 
@@ -64,6 +79,12 @@ export const usePermissions = () => {
           errors,
         });
       }
+    } catch (error) {
+      if (isNavigationAbortedError(error)) return;
+
+      logger.error(new Error('Failed to load permissions', { cause: error }), {
+        tags: { composable: 'usePermissions' },
+      });
     } finally {
       isFetchingPermissions = false;
     }
@@ -72,7 +93,7 @@ export const usePermissions = () => {
   watch(
     [shouldUsePermissions, () => isAuthenticated()],
     ([usePermissions, authed]) => {
-      if (permissionsLoaded.value || !authed) return;
+      if (permissionsLoaded.value || !authed || requireRefresh.value) return;
 
       if (usePermissions) {
         loadPermissions();
