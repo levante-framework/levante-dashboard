@@ -25,7 +25,7 @@ We are updating data model names. The mapping is: child/children (frontend) = st
 - **Components**: PascalCase names (e.g., `NavBar.vue`), use PrimeVue v4 components prefixed with `Pv`
 - **Composables**: camelCase with `use` prefix (e.g., `useAuthStore.ts`)
 - **State**: Use Pinia stores, VueUse utilities, and Tanstack Query for data fetching
-- **Styling**: Tailwind CSS with mobile-first approach, avoid inline styles
+- **Styling**: PrimeFlex utility classes with mobile-first approach, avoid inline styles
 - **Functions**: Arrow functions for methods/computed, `function` keyword for pure functions
 - **Error Handling**: Use try-catch blocks, handle Firebase errors gracefully
 - **Testing**: Use Vitest with @testing-library/vue, mock Firebase services

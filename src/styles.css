@@ -6,5 +6,5 @@
 @import "primeicons/primeicons.css";
 @import "primeflex/primeflex.scss";
 
-@import "./assets/styles/theme-tailwind.css";
+@import "./assets/styles/theme-overrides.css";
 @import "./assets/styles/theme.scss";
