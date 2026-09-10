@@ -35,7 +35,9 @@
         <div v-if="isLoading" class="text-md text-gray-500">Loading…</div>
         <div v-else-if="assignments.length" class="flex flex-column gap-2">
           <div v-for="assignment in assignments" :key="assignment.id" class="flex flex-column">
-            <span>{{ assignment.name }}</span>
+            <router-link :to="assignmentRoute(assignment)" class="text-primary hover:underline">{{
+              assignment.name
+            }}</router-link>
             <span class="text-sm text-gray-500">
               {{ capitalize(assignment.status) }} · {{ formatDate(assignment.dateOpened) }} –
               {{ formatDate(assignment.dateClosed) }}
@@ -78,8 +80,9 @@ export type UserOverviewAssignment = GetUserOverviewResult['assignments'][number
 </script>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
 import PvToggleSwitch from 'primevue/toggleswitch';
+import { computed, ref, watch } from 'vue';
+import type { RouteLocationRaw } from 'vue-router';
 
 // +-------+
 // | Props |
@@ -136,6 +139,10 @@ watch(isDirty, (value) => emit('dirty', value), { immediate: true });
 // +---------+
 // | Methods |
 // +---------+
+function assignmentRoute(assignment: UserOverviewAssignment): RouteLocationRaw {
+  return { name: 'AdministrationProgressReport', params: { administrationId: assignment.id } };
+}
+
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }

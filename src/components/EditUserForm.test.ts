@@ -1,8 +1,13 @@
-import { mount } from '@vue/test-utils';
+import { mount, RouterLinkStub } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { describe, expect, it } from 'vitest';
 import EditUserForm, { type EditableUser } from './EditUserForm.vue';
+
+const globalMountOptions = {
+  plugins: [PrimeVue],
+  stubs: { RouterLink: RouterLinkStub },
+};
 
 // ─── Mount helper ─────────────────────────────────────────────────────────────
 
@@ -17,9 +22,7 @@ const DEFAULT_USER: EditableUser = {
 const mountForm = (user: Partial<EditableUser> = {}) =>
   mount(EditUserForm, {
     props: { user: { ...DEFAULT_USER, ...user } },
-    global: {
-      plugins: [PrimeVue],
-    },
+    global: globalMountOptions,
   });
 
 const setToggle = async (wrapper: ReturnType<typeof mountForm>, index: number, value: boolean) => {
@@ -64,7 +67,7 @@ describe('EditUserForm', () => {
           user: DEFAULT_USER,
           orgs: [{ id: 'o1', name: 'Acme School', orgType: 'school' }],
         },
-        global: { plugins: [PrimeVue] },
+        global: globalMountOptions,
       });
       expect(wrapper.text()).toContain('Groups');
       expect(wrapper.text()).toContain('Acme School');
@@ -79,11 +82,14 @@ describe('EditUserForm', () => {
             { id: 'a1', name: 'Fall Screening', status: 'open', dateOpened: '2026-01-01', dateClosed: '2026-02-01' },
           ],
         },
-        global: { plugins: [PrimeVue] },
+        global: globalMountOptions,
       });
       expect(wrapper.text()).toContain('Assignments');
       expect(wrapper.text()).toContain('Fall Screening');
       expect(wrapper.text()).toContain('Open');
+
+      const link = wrapper.findComponent(RouterLinkStub);
+      expect(link.props('to')).toEqual({ name: 'AdministrationProgressReport', params: { administrationId: 'a1' } });
     });
 
     it('shows "None" for empty orgs and assignments and "Loading…" while loading', () => {
@@ -91,7 +97,7 @@ describe('EditUserForm', () => {
 
       const loading = mount(EditUserForm, {
         props: { user: DEFAULT_USER, isLoading: true },
-        global: { plugins: [PrimeVue] },
+        global: globalMountOptions,
       });
       expect(loading.text()).toContain('Loading…');
     });
