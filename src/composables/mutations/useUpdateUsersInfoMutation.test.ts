@@ -2,7 +2,7 @@ import type { UpdateUsersInfoParams, UpdateUsersInfoResult } from '@levante-fram
 import * as VueQuery from '@tanstack/vue-query';
 import { FirebaseError } from 'firebase/app';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ORG_USERS_QUERY_KEY } from '@/constants/queryKeys';
+import { ORG_USERS_QUERY_KEY, USER_OVERVIEW_QUERY_KEY } from '@/constants/queryKeys';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
 import { withSetup } from '@/test-support/withSetup.js';
 import useUpdateUsersInfoMutation from './useUpdateUsersInfoMutation';
@@ -45,7 +45,7 @@ describe('useUpdateUsersInfoMutation', () => {
     expect(result.isSuccess.value).toBe(true);
   });
 
-  it('invalidates the org users query on success', async () => {
+  it('invalidates the org users and user overview queries on success', async () => {
     vi.mocked(usersRepository.updateUsersInfo).mockResolvedValue(mockResult);
     const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
@@ -56,6 +56,7 @@ describe('useUpdateUsersInfoMutation', () => {
     await result.mutateAsync(mockParams);
 
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: [ORG_USERS_QUERY_KEY], refetchType: 'all' });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: [USER_OVERVIEW_QUERY_KEY], refetchType: 'all' });
   });
 
   it('wraps a non-Firebase error into a FirebaseFailure with code "error"', async () => {

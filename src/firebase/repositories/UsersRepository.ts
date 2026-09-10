@@ -1,4 +1,6 @@
 import type {
+  GetUserOverviewParams,
+  GetUserOverviewResult,
   GetUsersByOrgParams,
   GetUsersByOrgResult,
   LinkUsersParams,
@@ -150,6 +152,10 @@ class UsersRepository extends Repository {
     }
 
     return response.data;
+  }
+
+  async getUserOverview(params: GetUserOverviewParams): Promise<GetUserOverviewResult> {
+    return this.call<GetUserOverviewParams, GetUserOverviewResult>('getUserOverview', params);
   }
 
   async getUsersByOrg(params: GetUsersByOrgParams): Promise<GetUsersByOrgResult> {
