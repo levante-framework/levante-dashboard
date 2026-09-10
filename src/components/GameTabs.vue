@@ -192,7 +192,7 @@ const surveyResponseDoc = computed((): SurveyResponseDoc | null => {
   const responses =
     surveyResponsesData.value ?? queryClient.getQueryData<SurveyResponseDoc[]>([SURVEY_RESPONSES_QUERY_KEY]);
 
-  if (!responses) return null;
+  if (!Array.isArray(responses)) return null;
 
   const assignmentId = activeAssignment.value?.id;
   if (!assignmentId) return null;
