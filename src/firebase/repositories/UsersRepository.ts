@@ -3,8 +3,8 @@ import type {
   GetUsersByOrgResult,
   LinkUsersParams,
   LinkUsersResult,
-  UpdateUserInfoParams,
-  UpdateUserInfoResult,
+  UpdateUsersInfoParams,
+  UpdateUsersInfoResult,
 } from '@levante-framework/levante-zod';
 import {
   collection,
@@ -160,8 +160,8 @@ class UsersRepository extends Repository {
     return this.call<LinkUsersParams, LinkUsersResult>('linkUsers', params);
   }
 
-  async updateUserInfo(params: UpdateUserInfoParams): Promise<UpdateUserInfoResult> {
-    return this.call<UpdateUserInfoParams, UpdateUserInfoResult>('updateUserInfo', params);
+  async updateUsersInfo(params: UpdateUsersInfoParams): Promise<UpdateUsersInfoResult> {
+    return this.call<UpdateUsersInfoParams, UpdateUsersInfoResult>('updateUsersInfo', params);
   }
 }
 

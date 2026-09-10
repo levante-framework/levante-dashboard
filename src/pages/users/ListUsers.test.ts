@@ -15,7 +15,7 @@ vi.mock('primevue/usetoast', () => ({ useToast: () => ({ add: toastAddMock }) })
 // ─── Data fetching / mutation ─────────────────────────────────────────────────
 
 vi.mock('@/composables/queries/useGetUsersByOrgQuery', () => ({ default: vi.fn() }));
-vi.mock('@/composables/mutations/useUpdateUserInfoMutation', () => ({ default: vi.fn() }));
+vi.mock('@/composables/mutations/useUpdateUsersInfoMutation', () => ({ default: vi.fn() }));
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 // The component only reads authStore.isFirekitInit() (for the query's enabled
@@ -57,7 +57,7 @@ vi.mock('@/components/modals/RoarModal.vue', () => ({ default: { name: 'RoarModa
 vi.mock('@/components/EditUserForm.vue', () => ({ default: { name: 'EditUserForm', render: () => null } }));
 vi.mock('@/components/AppSpinner.vue', () => ({ default: { name: 'AppSpinner', render: () => null } }));
 
-import useUpdateUserInfoMutation from '@/composables/mutations/useUpdateUserInfoMutation';
+import useUpdateUsersInfoMutation from '@/composables/mutations/useUpdateUsersInfoMutation';
 import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
 
 const mutateAsyncMock = vi.fn();
@@ -75,7 +75,7 @@ interface ListUsersVm {
   isUserDirty: boolean;
   onEditButtonClick: (user: Record<string, unknown>) => void;
   onEditModalClosed: () => void;
-  submitUpdateUserInfo: () => Promise<void>;
+  submitUpdateUsersInfo: () => Promise<void>;
   downloadAllUsers: () => void;
   downloadSelectedUsers: (rows: Record<string, unknown>[]) => void;
 }
@@ -102,10 +102,10 @@ const mountListUsers = (props: Record<string, string> = {}) => {
 describe('ListUsers Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useUpdateUserInfoMutation).mockReturnValue({
+    vi.mocked(useUpdateUsersInfoMutation).mockReturnValue({
       mutateAsync: mutateAsyncMock,
       isPending: ref(false),
-    } as unknown as ReturnType<typeof useUpdateUserInfoMutation>);
+    } as unknown as ReturnType<typeof useUpdateUsersInfoMutation>);
     setUsers([]);
   });
 
@@ -171,11 +171,11 @@ describe('ListUsers Page', () => {
     });
   });
 
-  describe('submitUpdateUserInfo', () => {
+  describe('submitUpdateUsersInfo', () => {
     it('does nothing when there is no pending update', async () => {
       const vm = mountListUsers();
 
-      await vm.submitUpdateUserInfo();
+      await vm.submitUpdateUsersInfo();
 
       expect(mutateAsyncMock).not.toHaveBeenCalled();
     });
@@ -187,7 +187,7 @@ describe('ListUsers Page', () => {
       vm.showEditModal = true;
       vm.pendingUserUpdate = { uid: 'b', archived: true, disabled: false };
 
-      await vm.submitUpdateUserInfo();
+      await vm.submitUpdateUsersInfo();
 
       expect(mutateAsyncMock).toHaveBeenCalledWith({ users: [{ uid: 'b', archived: true, disabled: false }] });
       expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
@@ -204,12 +204,12 @@ describe('ListUsers Page', () => {
       vm.showEditModal = true;
       vm.pendingUserUpdate = { uid: 'b', archived: true, disabled: false };
 
-      await vm.submitUpdateUserInfo();
+      await vm.submitUpdateUsersInfo();
 
       expect(logger.error).toHaveBeenCalledTimes(1);
       const [error, context] = vi.mocked(logger.error).mock.calls[0] ?? [];
       expect(error?.cause).toBe(boom);
-      expect(context).toMatchObject({ uid: 'b', tags: { composable: 'useUpdateUserInfoMutation' } });
+      expect(context).toMatchObject({ uid: 'b', tags: { composable: 'useUpdateUsersInfoMutation' } });
       expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
       expect(vm.showEditModal).toBe(true);
     });

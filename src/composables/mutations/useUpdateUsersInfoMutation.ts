@@ -1,31 +1,31 @@
 import {
-  type UpdateUserInfoError,
-  UpdateUserInfoErrorSchema,
-  type UpdateUserInfoParams,
-  type UpdateUserInfoResult,
+  type UpdateUsersInfoError,
+  UpdateUsersInfoErrorSchema,
+  type UpdateUsersInfoParams,
+  type UpdateUsersInfoResult,
 } from '@levante-framework/levante-zod';
 import { type UseMutationReturnType, useMutation, useQueryClient } from '@tanstack/vue-query';
-import { USER_INFO_UPDATE_MUTATION_KEY } from '@/constants/mutationKeys';
+import { USERS_INFO_UPDATE_MUTATION_KEY } from '@/constants/mutationKeys';
 import { ORG_USERS_QUERY_KEY } from '@/constants/queryKeys';
 import { type FirebaseFailure, toFirebaseFailure } from '@/firebase/failure';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
 
-const useUpdateUserInfoMutation = (): UseMutationReturnType<
-  UpdateUserInfoResult,
-  FirebaseFailure<UpdateUserInfoError>,
-  UpdateUserInfoParams,
+const useUpdateUsersInfoMutation = (): UseMutationReturnType<
+  UpdateUsersInfoResult,
+  FirebaseFailure<UpdateUsersInfoError>,
+  UpdateUsersInfoParams,
   void
 > => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: USER_INFO_UPDATE_MUTATION_KEY,
-    mutationFn: async (params: UpdateUserInfoParams): Promise<UpdateUserInfoResult> => {
+    mutationKey: USERS_INFO_UPDATE_MUTATION_KEY,
+    mutationFn: async (params: UpdateUsersInfoParams): Promise<UpdateUsersInfoResult> => {
       try {
-        const result = await usersRepository.updateUserInfo(params);
+        const result = await usersRepository.updateUsersInfo(params);
         return result;
       } catch (error) {
-        throw toFirebaseFailure(error, UpdateUserInfoErrorSchema);
+        throw toFirebaseFailure(error, UpdateUsersInfoErrorSchema);
       }
     },
     onSuccess: () => {
@@ -35,4 +35,4 @@ const useUpdateUserInfoMutation = (): UseMutationReturnType<
   });
 };
 
-export default useUpdateUserInfoMutation;
+export default useUpdateUsersInfoMutation;

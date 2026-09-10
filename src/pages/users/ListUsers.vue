@@ -116,7 +116,7 @@
               :label="isSubmitting ? 'Saving...' : 'Save'"
               :loading="isSubmitting"
               :disabled="!isUserDirty"
-              @click="submitUpdateUserInfo"
+              @click="submitUpdateUsersInfo"
             ></PvButton>
           </div>
         </template>
@@ -133,7 +133,7 @@ import AppSpinner from '@/components/AppSpinner.vue';
 import EditUserForm, { type EditableUser, type EditableUserUpdate } from '@/components/EditUserForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
-import useUpdateUserInfoMutation from '@/composables/mutations/useUpdateUserInfoMutation';
+import useUpdateUsersInfoMutation from '@/composables/mutations/useUpdateUsersInfoMutation';
 import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { singularizeFirestoreCollection } from '@/helpers';
@@ -238,7 +238,7 @@ const {
   isError,
 } = useGetUsersByOrgQuery(props.orgType, props.orgId, authReady);
 
-const { mutateAsync: updateUserInfo, isPending: isSubmitting } = useUpdateUserInfoMutation();
+const { mutateAsync: updateUsersInfo, isPending: isSubmitting } = useUpdateUsersInfoMutation();
 
 // +----------+
 // | Computed |
@@ -342,13 +342,13 @@ const onEditModalClosed = () => {
   isUserDirty.value = false;
 };
 
-const submitUpdateUserInfo = async () => {
+const submitUpdateUsersInfo = async () => {
   if (!pendingUserUpdate.value) return;
 
   const { uid } = pendingUserUpdate.value;
 
   try {
-    await updateUserInfo({ users: [pendingUserUpdate.value] });
+    await updateUsersInfo({ users: [pendingUserUpdate.value] });
     toast.add({
       severity: TOAST_SEVERITIES.SUCCESS,
       summary: 'User updated',
@@ -358,7 +358,7 @@ const submitUpdateUserInfo = async () => {
     onEditModalClosed();
   } catch (error) {
     logger.error(new Error('Failed to update user info', { cause: error }), {
-      tags: { composable: 'useUpdateUserInfoMutation' },
+      tags: { composable: 'useUpdateUsersInfoMutation' },
       uid,
     });
     toast.add({
