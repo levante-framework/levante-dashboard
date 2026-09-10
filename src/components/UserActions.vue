@@ -22,7 +22,7 @@
       </div>
     </div>
     <div v-else class="flex gap-2 options-wrapper">
-      <SiteSelector v-if="shouldUsePermissions" />
+      <SiteSelector v-if="shouldUsePermissions && sites?.length" />
 
       <!-- Help dropdown -->
       <PvSelect
@@ -101,8 +101,8 @@ interface DropdownChangeEvent {
 }
 
 const authStore = useAuthStore();
-const { shouldUsePermissions, userData } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
+const { shouldUsePermissions, sites, userData } = storeToRefs(authStore);
 const levanteStore = useLevanteStore();
 const { wizardSteps } = storeToRefs(levanteStore);
 const i18n = useI18n();
