@@ -1,13 +1,16 @@
 <template>
   <main class="container main">
     <section class="main-body">
-      <div v-if="!isLoading">
+      <AppSpinner v-if="isLoading" />
+      <div v-else>
+        <!-- Page header -->
         <div class="flex flex-column mb-5">
           <div class="flex justify-content-between">
             <div class="flex align-items-center gap-3">
               <i class="pi pi-users text-gray-400 rounded" style="font-size: 1.6rem"></i>
               <div class="admin-page-header">User List</div>
             </div>
+            <!-- Org summary card with expandable user counts -->
             <div class="bg-gray-100 px-5 py-2 rounded flex flex-column gap-3">
               <div class="flex flex-wrap align-items-center gap-2 justify-content-between">
                 <div class="uppercase font-light font-sm text-gray-400 mr-2">
@@ -18,8 +21,10 @@
                 </div>
               </div>
               <div class="flex flex-column gap-2">
-                <div
-                  class="flex flex-wrap gap-2 justify-content-between align-items-center cursor-pointer"
+                <button
+                  type="button"
+                  class="flex flex-wrap gap-2 justify-content-between align-items-center cursor-pointer w-full border-none bg-transparent p-0 text-left"
+                  :aria-expanded="isUserCountExpanded"
                   @click="isUserCountExpanded = !isUserCountExpanded"
                 >
                   <div class="uppercase font-light font-sm text-gray-400 mb-1">
@@ -36,7 +41,7 @@
                       <b> {{ nonAdminUsers.length }} </b>
                     </div>
                   </div>
-                </div>
+                </button>
                 <div
                   v-if="isUserCountExpanded"
                   class="flex flex-column gap-2 pl-3"
@@ -66,9 +71,9 @@
           </div>
           <div class="text-md text-gray-500 ml-6">View users for {{ displayOrgType }} {{ orgName }}.</div>
         </div>
+        <!-- Users table -->
         <RoarDataTable
-          v-if="users"
-          :columns="columns"
+          :columns="COLUMNS"
           :data="nonAdminUsers"
           :loading="isLoading || isFetching"
           :allow-export="true"
@@ -77,120 +82,120 @@
           :allow-row-selection="true"
           :show-options-control="true"
           :show-options="false"
-          :export-filename="`${orgName}-users`"
-          @selection="onSelectionChange"
-          @export-all="downloadAllListedUsers"
+          @export-all="downloadAllUsers"
           @export-selected="downloadSelectedUsers"
-          @sort="onSort($event)"
-          @edit-button="onEditButtonClick($event)"
+          @edit-button="onEditButtonClick"
         />
       </div>
-      <AppSpinner v-else />
+      <!-- Edit user modal -->
       <RoarModal
-        title="Edit User Information"
-        subtitle="Modify, add, or remove user information"
-        :is-enabled="isModalEnabled"
-        @modal-closed="isModalEnabled = false"
+        title="Edit User"
+        subtitle="View and update user information"
+        :is-enabled="showEditModal"
+        @modal-closed="onEditModalClosed"
       >
-        <EditUsersForm
-          v-if="!showPassword"
-          :user-data="currentEditUser"
-          :edit-mode="true"
-          @update:user-data="localUserData = $event"
+        <EditUserForm
+          v-if="currentEditUser"
+          :user="currentEditUser"
+          @change="pendingUserUpdate = $event"
+          @dirty="isUserDirty = $event"
         />
-        <div v-if="showPassword">
-          <div class="flex" style="gap: 1rem">
-            <div class="form-field" style="width: 100%">
-              <label>New Password</label>
-              <PvInputText v-model="v$.password.$model" :class="{ 'p-invalid': v$.password.$invalid && submitted }" />
-              <small v-if="v$.password.$invalid && submitted" class="p-error"
-                >Password must be at least 6 characters long.</small
-              >
-            </div>
-            <div class="form-field" style="width: 100%">
-              <label>Confirm New Password</label>
-              <PvInputText
-                v-model="v$.confirmPassword.$model"
-                :class="{
-                  'p-invalid': v$.confirmPassword.$invalid && submitted,
-                }"
-              />
-              <small v-if="v$.confirmPassword.$invalid && submitted" class="p-error">Passwords do not match.</small>
-            </div>
-          </div>
-        </div>
-        <div class="flex justify-content-center mt-3 w-full">
-          <PvButton
-            v-if="!showPassword"
-            class="border-none border-round bg-primary text-white p-2 hover:surface-400 mr-auto ml-auto"
-            @click="showPassword = true"
-            >Change Password</PvButton
-          >
-        </div>
-
         <template #footer>
-          <div>
-            <div v-if="!showPassword" class="flex gap-2">
-              <PvButton
-                tabindex="0"
-                class="border-none border-round bg-white text-primary p-2 hover:surface-200"
-                text
-                label="Cancel"
-                outlined
-                @click="closeModal"
-              ></PvButton>
-              <PvButton
-                tabindex="0"
-                class="border-none border-round bg-primary text-white p-2 hover:surface-400"
-                label="Save"
-                @click="updateUserData"
-                ><i v-if="isSubmitting" class="pi pi-spinner pi-spin"></i
-              ></PvButton>
-            </div>
-            <div v-else-if="showPassword" class="flex gap-2">
-              <PvButton
-                tabindex="0"
-                class="border-none border-round bg-white text-primary p-2 hover:surface-200"
-                text
-                label="Back to User Information"
-                outlined
-                @click="showPassword = false"
-              ></PvButton>
-              <PvButton
-                tabindex="0"
-                class="border-none border-round bg-primary text-white p-2 hover:surface-400"
-                label="Save Password"
-                @click="updatePassword"
-                ><i v-if="isSubmitting" class="pi pi-spinner pi-spin"></i
-              ></PvButton>
-            </div>
+          <div class="flex gap-2">
+            <PvButton
+              tabindex="0"
+              class="border-none border-round bg-white text-primary p-2 hover:surface-200"
+              text
+              label="Cancel"
+              outlined
+              @click="onEditModalClosed"
+            ></PvButton>
+            <PvButton
+              tabindex="0"
+              class="border-none border-round bg-primary text-white p-2 hover:surface-400"
+              label="Save"
+              :disabled="!isUserDirty || isSubmitting"
+              @click="submitUpdateUserInfo"
+              ><i v-if="isSubmitting" class="pi pi-spinner pi-spin"></i
+            ></PvButton>
           </div>
         </template>
       </RoarModal>
     </section>
   </main>
 </template>
-<script setup>
-import { useVuelidate } from '@vuelidate/core';
-import { minLength, required, sameAs } from '@vuelidate/validators';
-import _get from 'lodash/get';
-import _isEmpty from 'lodash/isEmpty';
-import { storeToRefs } from 'pinia';
+
+<script setup lang="ts">
 import PvButton from 'primevue/button';
-import PvInputText from 'primevue/inputtext';
 import { useToast } from 'primevue/usetoast';
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import AppSpinner from '@/components/AppSpinner.vue';
-import EditUsersForm from '@/components/EditUsersForm.vue';
+import EditUserForm, { type EditableUser, type EditableUserUpdate } from '@/components/EditUserForm.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
+import useUpdateUserInfoMutation from '@/composables/mutations/useUpdateUserInfoMutation';
 import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { singularizeFirestoreCollection } from '@/helpers';
 import { getChildLabel } from '@/helpers/childLabels';
-import { exportCsv } from '@/helpers/query/utils';
+import { deriveNextCsvFilename, downloadCsv, unparseCsvFile } from '@/helpers/csv';
+import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
+// +-------+
+// | Types |
+// +-------+
+interface UserTableColumn {
+  header: string;
+  field?: keyof EditableUser;
+  dataType?: string;
+  sort?: boolean;
+  button?: boolean;
+  eventName?: string;
+  buttonIcon?: string;
+}
+
+// +-----------+
+// | Constants |
+// +-----------+
+const COLUMNS: UserTableColumn[] = [
+  {
+    field: 'uid',
+    header: 'UID',
+    dataType: 'string',
+    sort: false,
+  },
+  {
+    field: 'email',
+    header: 'User Login',
+    dataType: 'string',
+    sort: false,
+  },
+  {
+    field: 'userType',
+    header: 'User Type',
+    dataType: 'string',
+    sort: false,
+  },
+  {
+    field: 'childLabel',
+    header: 'Child Label',
+    dataType: 'string',
+    sort: false,
+  },
+  {
+    header: 'Edit',
+    button: true,
+    eventName: 'edit-button',
+    buttonIcon: 'pi pi-user-edit',
+    sort: false,
+  },
+];
+const CSV_EXPORT_COLUMNS = COLUMNS.filter((column) => !column.button);
+
+// +-------+
+// | Props |
+// +-------+
 const props = defineProps({
   orgType: {
     type: String,
@@ -206,39 +211,38 @@ const props = defineProps({
   },
 });
 
+// +----------------------+
+// | Composables & stores |
+// +----------------------+
 const authStore = useAuthStore();
-const { roarfirekit } = storeToRefs(authStore);
-const initialized = computed(() => authStore.isFirekitInit());
-
-onMounted(() => {
-  isModalEnabled.value = false;
-});
+const authReady = computed(() => authStore.isFirekitInit());
 
 const toast = useToast();
-const selectedRows = ref([]);
 
-const page = ref(0);
-const orderBy = ref(null);
+// +----------------+
+// | Reactive state |
+// +----------------+
+const currentEditUser = ref<EditableUser | null>(null);
+const isUserCountExpanded = ref(false);
+const isUserDirty = ref(false);
+const pendingUserUpdate = ref<EditableUserUpdate | null>(null);
+const showEditModal = ref(false);
 
+// +---------------+
+// | Data fetching |
+// +---------------+
 const {
   isLoading,
   isFetching,
   data: usersResult,
   isError,
-} = useGetUsersByOrgQuery(props.orgType, props.orgId, page, orderBy, initialized);
+} = useGetUsersByOrgQuery(props.orgType, props.orgId, authReady);
 
-watch(isError, (hasError) => {
-  if (!hasError) return;
-  toast.add({
-    severity: TOAST_SEVERITIES.ERROR,
-    summary: 'Failed to load users',
-    // TODO: handle error cases to provide more specific error messages
-    detail: 'An error occurred while loading users. Please try again.',
-    life: TOAST_DEFAULT_LIFE_DURATION,
-  });
-});
+const { mutateAsync: updateUserInfo, isPending: isSubmitting } = useUpdateUserInfoMutation();
 
-const isUserCountExpanded = ref(false);
+// +----------+
+// | Computed |
+// +----------+
 const users = computed(() => usersResult.value?.users ?? []);
 
 const nonAdminUsers = computed(() =>
@@ -259,87 +263,6 @@ const teachersCount = computed(() => {
   return nonAdminUsers.value.filter((user) => user.userType === 'teacher').length;
 });
 
-const columns = ref([
-  {
-    field: 'uid',
-    header: 'UID',
-    dataType: 'string',
-    sort: false,
-  },
-  {
-    field: 'email',
-    header: 'User login',
-    dataType: 'string',
-    sort: false,
-  },
-  // {
-  //   field: 'studentData.grade',
-  //   header: 'Grade',
-  //   dataType: 'string',
-  //   sort: false,
-  // },
-  // {
-  //   field: 'studentData.dob',
-  //   header: 'Date of Birth',
-  //   dataType: 'date',
-  //   sort: false,
-  // },
-  {
-    field: 'userType',
-    header: 'User Type',
-    dataType: 'string',
-    sort: false,
-  },
-  {
-    field: 'childLabel',
-    header: 'Child Label',
-    dataType: 'string',
-    sort: false,
-  },
-  // {
-  //   header: 'Edit',
-  //   button: true,
-  //   eventName: 'edit-button',
-  //   buttonIcon: 'pi pi-user-edit',
-  //   sort: false,
-  // },
-]);
-
-const csvExportColumns = computed(() => columns.value.filter((column) => !column.button));
-
-const exportRowsToCsv = (rows, filename) => {
-  if (!rows.length) {
-    toast.add({
-      severity: TOAST_SEVERITIES.WARN,
-      summary: 'No users to export',
-      detail: 'There are no users available for this export.',
-      life: TOAST_DEFAULT_LIFE_DURATION,
-    });
-    return;
-  }
-
-  const exportRows = rows.map((row) => {
-    return csvExportColumns.value.reduce((acc, column) => {
-      acc[column.header] = _get(row, column.field);
-      return acc;
-    }, {});
-  });
-
-  exportCsv(exportRows, `${filename}.csv`);
-};
-
-const downloadAllListedUsers = () => {
-  exportRowsToCsv(nonAdminUsers.value, `${props.orgName}-users`);
-};
-
-const downloadSelectedUsers = () => {
-  exportRowsToCsv(selectedRows.value, `${props.orgName}-selected-users`);
-};
-
-const onSelectionChange = (selection) => {
-  selectedRows.value = selection ?? [];
-};
-
 const displayOrgType = computed(() => {
   if (props.orgType === 'districts') {
     return 'Site';
@@ -350,105 +273,99 @@ const displayOrgType = computed(() => {
   }
 });
 
-const currentEditUser = ref(null);
-const isModalEnabled = ref(false);
+// +----------+
+// | Watchers |
+// +----------+
+watch(isError, (hasError) => {
+  if (!hasError) return;
+  toast.add({
+    severity: TOAST_SEVERITIES.ERROR,
+    summary: 'Failed to load users',
+    // TODO: handle error cases to provide more specific error messages
+    detail: 'An error occurred while loading users. Please try again.',
+    life: TOAST_DEFAULT_LIFE_DURATION,
+  });
+});
+
+// +------------+
+// | CSV export |
+// +------------+
+const exportRowsToCsv = (rows: EditableUser[], filename: string) => {
+  if (!rows.length) {
+    toast.add({
+      severity: TOAST_SEVERITIES.WARN,
+      summary: 'No users to export',
+      detail: 'There are no users available for this export.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+    return;
+  }
+
+  const exportRows = rows.map((row) =>
+    CSV_EXPORT_COLUMNS.reduce<Record<string, unknown>>((acc, column) => {
+      if (column.field) acc[column.header] = row[column.field];
+      return acc;
+    }, {}),
+  );
+  const csv = unparseCsvFile(exportRows);
+
+  const safeName = filename
+    .trim()
+    .replace(/[^a-z0-9-_]+/gi, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  downloadCsv(csv, deriveNextCsvFilename(safeName, { timestamp: new Date() }));
+};
+
+const downloadAllUsers = () => {
+  exportRowsToCsv(nonAdminUsers.value, `${props.orgName}-users`);
+};
+
+const downloadSelectedUsers = (rows: EditableUser[]) => {
+  exportRowsToCsv(rows, `${props.orgName}-selected-users`);
+};
 
 // +-----------------+
 // | Edit User Modal |
 // +-----------------+
-const localUserData = ref(null);
-
-const onEditButtonClick = (event) => {
+const onEditButtonClick = (event: EditableUser) => {
   currentEditUser.value = event;
-  isModalEnabled.value = true;
+  showEditModal.value = true;
 };
 
-const isSubmitting = ref(false);
+const onEditModalClosed = () => {
+  showEditModal.value = false;
+  currentEditUser.value = null;
+  pendingUserUpdate.value = null;
+  isUserDirty.value = false;
+};
 
-// Hidden until we refactor to update users how we want
-const updateUserData = async () => {
-  if (!localUserData.value) return;
-  isSubmitting.value = true;
+const submitUpdateUserInfo = async () => {
+  if (!pendingUserUpdate.value) return;
 
-  await roarfirekit.value
-    .updateUserData(currentEditUser.value.uid, localUserData.value)
-    .then(() => {
-      isSubmitting.value = false;
-      closeModal();
-      toast.add({
-        severity: 'success',
-        summary: 'Updated',
-        detail: 'User has been updated',
-        life: 3000,
-      });
-    })
-    .catch(() => {
-      isSubmitting.value = false;
+  const { uid } = pendingUserUpdate.value;
+
+  try {
+    await updateUserInfo({ users: [pendingUserUpdate.value] });
+    toast.add({
+      severity: TOAST_SEVERITIES.SUCCESS,
+      summary: 'User updated',
+      detail: 'The user was updated successfully.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
     });
-};
-
-const closeModal = () => {
-  isModalEnabled.value = false;
-  localUserData.value = null;
-};
-
-const onSort = (event) => {
-  const _orderBy = (event.multiSortMeta ?? []).map((item) => ({
-    field: { fieldPath: item.field },
-    direction: item.order === 1 ? 'ASCENDING' : 'DESCENDING',
-  }));
-  orderBy.value = !_isEmpty(_orderBy) ? _orderBy : null;
-};
-
-// +-----------------+
-// | Update Password |
-// +-----------------+
-const submitted = ref(false);
-const showPassword = ref(false);
-const passwordRef = computed(() => state.password);
-const rules = {
-  password: {
-    required,
-    minLength: minLength(6),
-  },
-  confirmPassword: {
-    required,
-    minLength: minLength(6),
-    sameAsPassword: sameAs(passwordRef),
-  },
-};
-const state = reactive({
-  password: '',
-  confirmPassword: '',
-});
-const v$ = useVuelidate(rules, state);
-
-async function updatePassword() {
-  submitted.value = true;
-  if (!v$.value.$invalid) {
-    isSubmitting.value = true;
-    await roarfirekit.value
-      .updateUserData(currentEditUser.value.uid, { password: state.password })
-      .then(() => {
-        submitted.value = false;
-        isSubmitting.value = false;
-        state.password = '';
-        state.confirmPassword = '';
-        showPassword.value = false;
-        toast.add({
-          severity: 'success',
-          summary: 'Updated',
-          detail: 'Password Updated!',
-          life: 3000,
-        });
-      })
-      .catch(() => {
-        toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Unable to update password',
-        });
-      });
+    onEditModalClosed();
+  } catch (error) {
+    logger.error(new Error('Failed to update user info', { cause: error }), {
+      tags: { composable: 'useUpdateUserInfoMutation' },
+      uid,
+    });
+    toast.add({
+      severity: TOAST_SEVERITIES.ERROR,
+      summary: 'Failed to update user',
+      detail: 'An error occurred while updating the user. Please try again.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
   }
-}
+};
 </script>
