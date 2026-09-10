@@ -44,19 +44,31 @@ export type EditableUserUpdate = Pick<EditableUser, 'uid' | 'archived' | 'disabl
 import { computed, ref, watch } from 'vue';
 import PvToggleSwitch from 'primevue/toggleswitch';
 
-interface Props {
-  user: EditableUser;
-}
-
-const props = defineProps<Props>();
+// +-------+
+// | Props |
+// +-------+
+const props = defineProps<{ user: EditableUser }>();
 const emit = defineEmits<{
   change: [update: EditableUserUpdate];
   dirty: [isDirty: boolean];
 }>();
 
+// +----------------+
+// | Reactive state |
+// +----------------+
 const archived = ref(props.user.archived);
 const disabled = ref(props.user.disabled);
 
+// +----------+
+// | Computed |
+// +----------+
+const isDirty = computed(
+  () => archived.value !== props.user.archived || disabled.value !== props.user.disabled,
+);
+
+// +----------+
+// | Watchers |
+// +----------+
 // Reset the local edit state whenever a different user is loaded.
 watch(
   () => props.user,
@@ -64,10 +76,6 @@ watch(
     archived.value = user.archived;
     disabled.value = user.disabled;
   },
-);
-
-const isDirty = computed(
-  () => archived.value !== props.user.archived || disabled.value !== props.user.disabled,
 );
 
 // Surface the edited values to the parent, but only once they diverge from the original.
