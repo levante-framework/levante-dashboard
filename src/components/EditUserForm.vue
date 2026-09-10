@@ -62,6 +62,8 @@ const disabled = ref(props.user.disabled);
 // +----------+
 // | Computed |
 // +----------+
+// Dirty is derived here, next to the state it depends on; the parent just
+// consumes it to enable/disable submit.
 const isDirty = computed(
   () => archived.value !== props.user.archived || disabled.value !== props.user.disabled,
 );
@@ -78,12 +80,11 @@ watch(
   },
 );
 
-// Surface the edited values to the parent, but only once they diverge from the original.
+// Surface the edited values so the parent always holds the current update.
 watch([archived, disabled], () => {
-  if (!isDirty.value) return;
   emit('change', { uid: props.user.uid, archived: archived.value, disabled: disabled.value });
 });
 
-// Keep the parent informed of dirty state so it can enable/disable submit.
+// Surface dirty state so the parent can enable/disable submit.
 watch(isDirty, (value) => emit('dirty', value), { immediate: true });
 </script>

@@ -91,11 +91,12 @@ describe('EditUserForm', () => {
       expect(wrapper.emitted('change')?.at(-1)).toEqual([{ uid: 'user-1', archived: false, disabled: true }]);
     });
 
-    it('does not emit change when toggled back to the original value', async () => {
+    it('keeps the parent in sync by emitting on every toggle, including back to the original', async () => {
       const wrapper = mountForm();
       await setToggle(wrapper, 0, true);
       await setToggle(wrapper, 0, false);
-      expect(wrapper.emitted('change')).toHaveLength(1);
+      expect(wrapper.emitted('change')).toHaveLength(2);
+      expect(wrapper.emitted('change')?.at(-1)).toEqual([{ uid: 'user-1', archived: false, disabled: false }]);
     });
   });
 
@@ -105,10 +106,9 @@ describe('EditUserForm', () => {
       await setToggle(wrapper, 0, true);
       expect(wrapper.emitted('dirty')?.at(-1)).toEqual([true]);
 
-      await wrapper.setProps({ user: { ...DEFAULT_USER, uid: 'user-2', archived: true } });
+      await wrapper.setProps({ user: { ...DEFAULT_USER, uid: 'user-2', archived: false } });
 
-      const archivedToggle = wrapper.findAllComponents(PvToggleSwitch)[0];
-      expect(archivedToggle?.props('modelValue')).toBe(true);
+      expect(wrapper.findAllComponents(PvToggleSwitch)[0]?.props('modelValue')).toBe(false);
       expect(wrapper.emitted('dirty')?.at(-1)).toEqual([false]);
     });
   });
