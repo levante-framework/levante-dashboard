@@ -263,13 +263,20 @@ describe('ListUsers Page', () => {
     });
 
     it('exports all users with header-keyed rows and a sanitized, timestamped filename', () => {
-      setUsers([{ uid: 'b', userType: 'child', email: 'e', childLabelIndex: 2 }]);
+      setUsers([{ uid: 'b', userType: 'child', email: 'e', childLabelIndex: 2, archived: false, disabled: false }]);
       const vm = mountListUsers();
 
       vm.downloadAllUsers();
 
       const [rows] = vi.mocked(unparseCsvFile).mock.calls[0] ?? [];
-      expect(rows?.[0]).toEqual({ UID: 'b', 'User Login': 'e', 'User Type': 'child', 'Child Label': 'label-2' });
+      expect(rows?.[0]).toEqual({
+        UID: 'b',
+        'User Login': 'e',
+        'User Type': 'child',
+        'Child Label': 'label-2',
+        Archived: false,
+        Disabled: false,
+      });
       expect(deriveNextCsvFilename).toHaveBeenCalledWith('My-Org-active-users', { timestamp: expect.any(Date) });
       expect(downloadCsv).toHaveBeenCalledWith('csv-content', 'My-Org-active-users.csv');
     });

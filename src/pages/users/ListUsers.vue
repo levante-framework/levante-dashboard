@@ -219,7 +219,11 @@ const COLUMNS: UserTableColumn[] = [
     sort: false,
   },
 ];
-const CSV_EXPORT_COLUMNS = COLUMNS.filter((column) => !column.button);
+const CSV_EXPORT_COLUMNS: UserTableColumn[] = [
+  ...COLUMNS.filter((column) => !column.button),
+  { field: 'archived', header: 'Archived', dataType: 'boolean' },
+  { field: 'disabled', header: 'Disabled', dataType: 'boolean' },
+];
 
 // +-------+
 // | Props |
