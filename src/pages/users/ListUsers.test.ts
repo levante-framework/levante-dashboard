@@ -16,6 +16,7 @@ vi.mock('primevue/usetoast', () => ({ useToast: () => ({ add: toastAddMock }) })
 // ─── Data fetching / mutation ─────────────────────────────────────────────────
 
 vi.mock('@/composables/queries/useGetUsersByOrgQuery', () => ({ default: vi.fn() }));
+vi.mock('@/composables/queries/useGetUserOverviewQuery', () => ({ useGetUserOverviewQuery: vi.fn() }));
 vi.mock('@/composables/mutations/useUpdateUsersInfoMutation', () => ({ default: vi.fn() }));
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -60,6 +61,7 @@ vi.mock('@/components/EditUserForm.vue', () => ({ default: { name: 'EditUserForm
 vi.mock('@/components/AppSpinner.vue', () => ({ default: { name: 'AppSpinner', render: () => null } }));
 
 import useUpdateUsersInfoMutation from '@/composables/mutations/useUpdateUsersInfoMutation';
+import { useGetUserOverviewQuery } from '@/composables/queries/useGetUserOverviewQuery';
 import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
 
 const mutateAsyncMock = vi.fn();
@@ -114,6 +116,10 @@ describe('ListUsers Page', () => {
       mutateAsync: mutateAsyncMock,
       isPending: ref(false),
     } as unknown as ReturnType<typeof useUpdateUsersInfoMutation>);
+    vi.mocked(useGetUserOverviewQuery).mockReturnValue({
+      data: ref(undefined),
+      isLoading: ref(false),
+    } as unknown as ReturnType<typeof useGetUserOverviewQuery>);
     setUsers([]);
   });
 

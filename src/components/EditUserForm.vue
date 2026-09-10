@@ -17,6 +17,30 @@
       <div class="text-xl">{{ user.childLabel }}</div>
     </div>
     <div class="flex flex-column">
+      <label class="font-light uppercase text-sm">Groups</label>
+      <div v-if="isLoading" class="text-md text-gray-500">Loading…</div>
+      <div v-else-if="orgs.length" class="flex flex-column gap-1">
+        <div v-for="org in orgs" :key="org.id" class="text-lg">
+          {{ org.name }} <span class="text-sm text-gray-500">({{ capitalize(org.orgType) }})</span>
+        </div>
+      </div>
+      <div v-else class="text-md text-gray-500">None</div>
+    </div>
+    <div class="flex flex-column">
+      <label class="font-light uppercase text-sm">Assignments</label>
+      <div v-if="isLoading" class="text-md text-gray-500">Loading…</div>
+      <div v-else-if="assignments.length" class="flex flex-column gap-2">
+        <div v-for="assignment in assignments" :key="assignment.id" class="flex flex-column">
+          <span class="text-lg">{{ assignment.name }}</span>
+          <span class="text-sm text-gray-500">
+            {{ capitalize(assignment.status) }} · {{ formatDate(assignment.dateOpened) }} –
+            {{ formatDate(assignment.dateClosed) }}
+          </span>
+        </div>
+      </div>
+      <div v-else class="text-md text-gray-500">None</div>
+    </div>
+    <div class="flex flex-column">
       <label for="archived" class="font-light uppercase text-sm">Archived</label>
       <PvToggleSwitch v-model="archived" input-id="archived" />
     </div>
@@ -28,6 +52,8 @@
 </template>
 
 <script lang="ts">
+import type { GetUserOverviewResult } from '@levante-framework/levante-zod';
+
 export interface EditableUser {
   uid: string;
   archived: boolean;
@@ -38,6 +64,9 @@ export interface EditableUser {
 }
 
 export type EditableUserUpdate = Pick<EditableUser, 'uid' | 'archived' | 'disabled'>;
+
+export type UserOverviewOrg = GetUserOverviewResult['orgs'][number];
+export type UserOverviewAssignment = GetUserOverviewResult['assignments'][number];
 </script>
 
 <script setup lang="ts">
@@ -47,7 +76,15 @@ import PvToggleSwitch from 'primevue/toggleswitch';
 // +-------+
 // | Props |
 // +-------+
-const props = defineProps<{ user: EditableUser }>();
+const props = withDefaults(
+  defineProps<{
+    user: EditableUser;
+    orgs?: UserOverviewOrg[];
+    assignments?: UserOverviewAssignment[];
+    isLoading?: boolean;
+  }>(),
+  { orgs: () => [], assignments: () => [], isLoading: false },
+);
 const emit = defineEmits<{
   change: [update: EditableUserUpdate];
   dirty: [isDirty: boolean];
@@ -87,4 +124,16 @@ watch([archived, disabled], () => {
 
 // Surface dirty state so the parent can enable/disable submit.
 watch(isDirty, (value) => emit('dirty', value), { immediate: true });
+
+// +---------+
+// | Methods |
+// +---------+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+}
 </script>

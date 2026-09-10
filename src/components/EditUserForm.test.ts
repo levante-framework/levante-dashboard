@@ -57,6 +57,44 @@ describe('EditUserForm', () => {
       expect(toggles[0]?.props('modelValue')).toBe(true);
       expect(toggles[1]?.props('modelValue')).toBe(false);
     });
+
+    it('renders read-only orgs with a capitalized org type', () => {
+      const wrapper = mount(EditUserForm, {
+        props: {
+          user: DEFAULT_USER,
+          orgs: [{ id: 'o1', name: 'Acme School', orgType: 'school' }],
+        },
+        global: { plugins: [PrimeVue] },
+      });
+      expect(wrapper.text()).toContain('Groups');
+      expect(wrapper.text()).toContain('Acme School');
+      expect(wrapper.text()).toContain('(School)');
+    });
+
+    it('renders read-only assignments with status and dates', () => {
+      const wrapper = mount(EditUserForm, {
+        props: {
+          user: DEFAULT_USER,
+          assignments: [
+            { id: 'a1', name: 'Fall Screening', status: 'open', dateOpened: '2026-01-01', dateClosed: '2026-02-01' },
+          ],
+        },
+        global: { plugins: [PrimeVue] },
+      });
+      expect(wrapper.text()).toContain('Assignments');
+      expect(wrapper.text()).toContain('Fall Screening');
+      expect(wrapper.text()).toContain('Open');
+    });
+
+    it('shows "None" for empty orgs and assignments and "Loading…" while loading', () => {
+      expect(mountForm().text()).toContain('None');
+
+      const loading = mount(EditUserForm, {
+        props: { user: DEFAULT_USER, isLoading: true },
+        global: { plugins: [PrimeVue] },
+      });
+      expect(loading.text()).toContain('Loading…');
+    });
   });
 
   describe('dirty state', () => {

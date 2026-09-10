@@ -114,6 +114,9 @@
         <EditUserForm
           v-if="currentEditUser"
           :user="currentEditUser"
+          :orgs="userOverview?.orgs ?? []"
+          :assignments="userOverview?.assignments ?? []"
+          :is-loading="isOverviewLoading"
           @change="pendingUserUpdate = $event"
           @dirty="isUserDirty = $event"
         />
@@ -158,6 +161,7 @@ import EditUserForm, { type EditableUser, type EditableUserUpdate } from '@/comp
 import RoarModal from '@/components/modals/RoarModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import useUpdateUsersInfoMutation from '@/composables/mutations/useUpdateUsersInfoMutation';
+import { useGetUserOverviewQuery } from '@/composables/queries/useGetUserOverviewQuery';
 import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { normalizeToLowercase, singularizeFirestoreCollection } from '@/helpers';
@@ -285,6 +289,11 @@ const {
   data: usersResult,
   isError,
 } = useGetUsersByOrgQuery(props.orgType, props.orgId, authReady);
+
+const { data: userOverview, isLoading: isOverviewLoading } = useGetUserOverviewQuery(
+  () => currentEditUser.value?.uid ?? '',
+  () => showEditModal.value && authReady.value,
+);
 
 const { mutateAsync: updateUsersInfo, isPending: isSubmitting } = useUpdateUsersInfoMutation();
 
