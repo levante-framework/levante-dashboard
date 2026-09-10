@@ -245,10 +245,17 @@ const { mutateAsync: updateUserInfo, isPending: isSubmitting } = useUpdateUserIn
 // +----------+
 const users = computed(() => usersResult.value?.users ?? []);
 
-const nonAdminUsers = computed(() =>
+const nonAdminUsers = computed<EditableUser[]>(() =>
   users.value
     .filter((user) => user.userType !== 'admin')
-    .map((user) => ({ ...user, childLabel: getChildLabel(user.childLabelIndex) })),
+    .map((user) => ({
+      uid: user.uid,
+      archived: user.archived,
+      disabled: user.disabled,
+      email: user.email,
+      userType: user.userType,
+      childLabel: getChildLabel(user.childLabelIndex),
+    })),
 );
 
 const childrenCount = computed(() => {
