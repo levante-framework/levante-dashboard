@@ -72,20 +72,31 @@
           <div class="text-md text-gray-500 ml-6">View users for {{ displayOrgType }} {{ orgName }}.</div>
         </div>
         <!-- Users table -->
-        <RoarDataTable
-          :columns="COLUMNS"
-          :data="nonAdminUsers"
-          :loading="isLoading || isFetching"
-          :allow-export="true"
-          :allow-filtering="false"
-          :allow-column-selection="false"
-          :allow-row-selection="true"
-          :show-options-control="true"
-          :show-options="false"
-          @export-all="downloadAllUsers"
-          @export-selected="downloadSelectedUsers"
-          @edit-button="onEditButtonClick"
-        />
+        <PvTabs v-model:value="activeTab" lazy>
+          <PvTabList>
+            <PvTab v-for="tab in USER_TABS" :key="tab.id" :value="tab.id">
+              {{ tab.header }} ({{ usersByTab[tab.id].length }})
+            </PvTab>
+          </PvTabList>
+          <PvTabPanels>
+            <PvTabPanel v-for="tab in USER_TABS" :key="tab.id" :value="tab.id">
+              <RoarDataTable
+                :columns="COLUMNS"
+                :data="usersByTab[tab.id]"
+                :loading="isLoading || isFetching"
+                :allow-export="true"
+                :allow-filtering="false"
+                :allow-column-selection="false"
+                :allow-row-selection="true"
+                :show-options-control="true"
+                :show-options="false"
+                @export-all="downloadAllUsers"
+                @export-selected="downloadSelectedUsers"
+                @edit-button="onEditButtonClick"
+              />
+            </PvTabPanel>
+          </PvTabPanels>
+        </PvTabs>
       </div>
       <!-- Edit user modal -->
       <RoarModal
@@ -127,6 +138,11 @@
 
 <script setup lang="ts">
 import PvButton from 'primevue/button';
+import PvTab from 'primevue/tab';
+import PvTabList from 'primevue/tablist';
+import PvTabPanel from 'primevue/tabpanel';
+import PvTabPanels from 'primevue/tabpanels';
+import PvTabs from 'primevue/tabs';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 import AppSpinner from '@/components/AppSpinner.vue';
@@ -145,6 +161,13 @@ import { useAuthStore } from '@/store/auth';
 // +-------+
 // | Types |
 // +-------+
+type UserTabId = 'active' | 'inactive';
+
+interface UserTab {
+  id: UserTabId;
+  header: string;
+}
+
 interface UserTableColumn {
   header: string;
   field?: keyof EditableUser;
@@ -158,6 +181,11 @@ interface UserTableColumn {
 // +-----------+
 // | Constants |
 // +-----------+
+const USER_TABS: UserTab[] = [
+  { id: 'active', header: 'Active' },
+  { id: 'inactive', header: 'Inactive' },
+];
+
 const COLUMNS: UserTableColumn[] = [
   {
     field: 'uid',
@@ -222,6 +250,7 @@ const toast = useToast();
 // +----------------+
 // | Reactive state |
 // +----------------+
+const activeTab = ref<UserTabId>('active');
 const currentEditUser = ref<EditableUser | null>(null);
 const isUserCountExpanded = ref(false);
 const isUserDirty = ref(false);
@@ -257,6 +286,19 @@ const nonAdminUsers = computed<EditableUser[]>(() =>
       childLabel: getChildLabel(user.childLabelIndex),
     })),
 );
+
+const activeUsers = computed<EditableUser[]>(() =>
+  nonAdminUsers.value.filter((user) => !user.archived && !user.disabled),
+);
+
+const inactiveUsers = computed<EditableUser[]>(() =>
+  nonAdminUsers.value.filter((user) => user.archived || user.disabled),
+);
+
+const usersByTab = computed<Record<UserTabId, EditableUser[]>>(() => ({
+  active: activeUsers.value,
+  inactive: inactiveUsers.value,
+}));
 
 const childrenCount = computed(() => {
   return nonAdminUsers.value.filter((user) => user.userType === 'child').length;
@@ -320,7 +362,7 @@ const exportRowsToCsv = (rows: EditableUser[], filename: string) => {
 };
 
 const downloadAllUsers = () => {
-  exportRowsToCsv(nonAdminUsers.value, `${props.orgName}-users`);
+  exportRowsToCsv(usersByTab.value[activeTab.value], `${props.orgName}-${activeTab.value}-users`);
 };
 
 const downloadSelectedUsers = (rows: EditableUser[]) => {

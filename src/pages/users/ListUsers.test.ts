@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import { deriveNextCsvFilename, downloadCsv, unparseCsvFile } from '@/helpers/csv';
@@ -65,6 +66,9 @@ const mutateAsyncMock = vi.fn();
 // The slice of the component's setup surface the tests read from `wrapper.vm`.
 interface ListUsersVm {
   nonAdminUsers: Array<{ uid: string; userType: string; childLabel: string }>;
+  activeTab: 'active' | 'inactive';
+  activeUsers: Array<{ uid: string }>;
+  inactiveUsers: Array<{ uid: string }>;
   childrenCount: number;
   caregiversCount: number;
   teachersCount: number;
@@ -93,6 +97,7 @@ const mountListUsers = (props: Record<string, string> = {}) => {
   const wrapper = mount(ListUsers, {
     props: { orgType: 'districts', orgId: 'org-1', orgName: 'My Org', ...props },
     global: {
+      plugins: [PrimeVue],
       stubs: { RoarDataTable: true, RoarModal: true, EditUserForm: true, AppSpinner: true, PvButton: true },
     },
   });
@@ -128,6 +133,37 @@ describe('ListUsers Page', () => {
       expect(vm.childrenCount).toBe(2);
       expect(vm.caregiversCount).toBe(1);
       expect(vm.teachersCount).toBe(1);
+    });
+  });
+
+  describe('active / inactive tabs', () => {
+    it('splits users into active (archived and disabled both false) and inactive (either true)', () => {
+      setUsers([
+        { uid: 'active-1', userType: 'child', archived: false, disabled: false },
+        { uid: 'archived-1', userType: 'child', archived: true, disabled: false },
+        { uid: 'disabled-1', userType: 'caregiver', archived: false, disabled: true },
+        { uid: 'both-1', userType: 'teacher', archived: true, disabled: true },
+      ]);
+
+      const vm = mountListUsers();
+
+      expect(vm.activeUsers.map((u) => u.uid)).toEqual(['active-1']);
+      expect(vm.inactiveUsers.map((u) => u.uid)).toEqual(['archived-1', 'disabled-1', 'both-1']);
+    });
+
+    it('defaults to the active tab', () => {
+      expect(mountListUsers().activeTab).toBe('active');
+    });
+
+    it('exports the inactive users with an inactive-scoped filename when that tab is active', () => {
+      setUsers([{ uid: 'archived-1', userType: 'child', email: 'e', archived: true, disabled: false }]);
+      const vm = mountListUsers();
+      vm.activeTab = 'inactive';
+
+      vm.downloadAllUsers();
+
+      expect(deriveNextCsvFilename).toHaveBeenCalledWith('My-Org-inactive-users', { timestamp: expect.any(Date) });
+      expect(downloadCsv).toHaveBeenCalledWith('csv-content', 'My-Org-inactive-users.csv');
     });
   });
 
@@ -234,8 +270,8 @@ describe('ListUsers Page', () => {
 
       const [rows] = vi.mocked(unparseCsvFile).mock.calls[0] ?? [];
       expect(rows?.[0]).toEqual({ UID: 'b', 'User Login': 'e', 'User Type': 'child', 'Child Label': 'label-2' });
-      expect(deriveNextCsvFilename).toHaveBeenCalledWith('My-Org-users', { timestamp: expect.any(Date) });
-      expect(downloadCsv).toHaveBeenCalledWith('csv-content', 'My-Org-users.csv');
+      expect(deriveNextCsvFilename).toHaveBeenCalledWith('My-Org-active-users', { timestamp: expect.any(Date) });
+      expect(downloadCsv).toHaveBeenCalledWith('csv-content', 'My-Org-active-users.csv');
     });
 
     it('exports the rows passed by the table for a selected-users export', () => {

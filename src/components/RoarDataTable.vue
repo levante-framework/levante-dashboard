@@ -56,9 +56,9 @@
         <span v-if="props.allowExport" class="flex flex-row flex-wrap justify-content-end gap-2 max-h-3 export-wrapper">
           <PvButton
             v-tooltip.bottom="
-              `Export scores for ${selectedRows.length} student${
+              `Export ${selectedRows.length} users${
                 selectedRows.length > 1 ? 's' : ''
-              } to CSV file for spreadsheet import`
+              } to CSV file.`
             "
             label="Export Selected"
             :badge="selectedRows?.length?.toString()"
@@ -67,7 +67,7 @@
             @click="exportCSV(true)"
           />
           <PvButton
-            v-tooltip.bottom="'Export all scores for all students to a CSV file for spreadsheet import.'"
+            v-tooltip.bottom="'Export all rows to a CSV file.'"
             label="Export Whole Table"
             class="m-1 h-3rem bg-primary text-white border-none border-round text-sm hover:bg-red-900"
             @click="exportCSV(false)"
