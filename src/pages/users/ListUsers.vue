@@ -76,7 +76,7 @@
           <!-- Search filter, aligned to the right of the tab header row -->
           <span class="p-input-icon-left p-input-icon-right absolute right-0 z-1" style="top: 0.5rem">
             <i v-if="!searchQuery" class="pi pi-search" />
-            <i v-if="searchQuery" class="pi pi-times cursor-pointer" @click="searchQuery = ''" />
+            <i v-if="searchQuery" class="pi pi-times cursor-pointer" @click="resetSearch" />
             <PvInputText v-model="searchQuery" placeholder="Search users" class="ml-2 p-inputtext-sm" />
           </span>
           <PvTabList>
@@ -99,6 +99,7 @@
                 @export-all="downloadAllUsers"
                 @export-selected="downloadSelectedUsers"
                 @edit-button="onEditButtonClick"
+                @reset-filters="resetSearch"
               />
             </PvTabPanel>
           </PvTabPanels>
@@ -146,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { refDebounced } from '@vueuse/core';
+import { watchDebounced } from '@vueuse/core';
 import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
 import PvTab from 'primevue/tab';
@@ -276,9 +277,10 @@ const isUserCountExpanded = ref(false);
 const isUserDirty = ref(false);
 const pendingUserUpdate = ref<EditableUserUpdate | null>(null);
 const searchQuery = ref('');
+const debouncedSearchQuery = ref('');
 const showEditModal = ref(false);
 
-const debouncedSearchQuery = refDebounced(searchQuery, 300);
+watchDebounced(searchQuery, (value) => (debouncedSearchQuery.value = value), { debounce: 300 });
 
 // +---------------+
 // | Data fetching |
@@ -374,6 +376,14 @@ watch(isError, (hasError) => {
     life: TOAST_DEFAULT_LIFE_DURATION,
   });
 });
+
+// +--------+
+// | Search |
+// +--------+
+const resetSearch = () => {
+  searchQuery.value = '';
+  debouncedSearchQuery.value = '';
+};
 
 // +------------+
 // | CSV export |

@@ -617,7 +617,7 @@ const refFilters = ref(computedFilters.value.computedFilters);
 
 const resetFilters = () => {
   refFilters.value = computedFilters.value.computedFilters;
-  // emit('reset-filters');
+  emit('reset-filters');
 };
 
 let toolTipByHeader = (header) => {
