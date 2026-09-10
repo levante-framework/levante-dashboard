@@ -47,6 +47,7 @@ vi.mock('@/helpers/childLabels', () => ({
 
 vi.mock('@/helpers', () => ({
   singularizeFirestoreCollection: vi.fn((type: string) => `singular-${type}`),
+  normalizeToLowercase: (str = '') => str.trim().toLowerCase(),
 }));
 
 // ─── Child components ─────────────────────────────────────────────────────────
@@ -69,6 +70,8 @@ interface ListUsersVm {
   activeTab: 'active' | 'inactive';
   activeUsers: Array<{ uid: string }>;
   inactiveUsers: Array<{ uid: string }>;
+  searchQuery: string;
+  usersByTab: Record<'active' | 'inactive', Array<{ uid: string }>>;
   childrenCount: number;
   caregiversCount: number;
   teachersCount: number;
@@ -164,6 +167,53 @@ describe('ListUsers Page', () => {
 
       expect(deriveNextCsvFilename).toHaveBeenCalledWith('My-Org-inactive-users', { timestamp: expect.any(Date) });
       expect(downloadCsv).toHaveBeenCalledWith('csv-content', 'My-Org-inactive-users.csv');
+    });
+  });
+
+  describe('search filter', () => {
+    it('matches the query (debounced) against visible column values within the active tab', async () => {
+      vi.useFakeTimers();
+      try {
+        setUsers([
+          { uid: 'abc', userType: 'child', email: 'kid@example.com', archived: false, disabled: false },
+          { uid: 'xyz', userType: 'teacher', email: 'teacher@example.com', archived: false, disabled: false },
+        ]);
+        const vm = mountListUsers();
+
+        expect(vm.usersByTab.active.map((u) => u.uid)).toEqual(['abc', 'xyz']);
+
+        vm.searchQuery = 'teacher';
+        await vi.advanceTimersByTimeAsync(300);
+
+        expect(vm.usersByTab.active.map((u) => u.uid)).toEqual(['xyz']);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('exports the whole tab table (ignoring the active search) with an unfiltered filename', async () => {
+      vi.useFakeTimers();
+      try {
+        setUsers([
+          { uid: 'abc', userType: 'child', email: 'kid@example.com', archived: false, disabled: false },
+          { uid: 'xyz', userType: 'teacher', email: 'teacher@example.com', archived: false, disabled: false },
+        ]);
+        const vm = mountListUsers();
+
+        vm.searchQuery = 'teacher';
+        await vi.advanceTimersByTimeAsync(300);
+        expect(vm.usersByTab.active.map((u) => u.uid)).toEqual(['xyz']);
+
+        vm.downloadAllUsers();
+
+        const [rows] = vi.mocked(unparseCsvFile).mock.calls[0] ?? [];
+        expect(rows).toHaveLength(2);
+        expect(deriveNextCsvFilename).toHaveBeenCalledWith('My-Org-active-users', {
+          timestamp: expect.any(Date),
+        });
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

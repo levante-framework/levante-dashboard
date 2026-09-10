@@ -72,7 +72,13 @@
           <div class="text-md text-gray-500 ml-6">View users for {{ displayOrgType }} {{ orgName }}.</div>
         </div>
         <!-- Users table -->
-        <PvTabs v-model:value="activeTab" lazy>
+        <PvTabs v-model:value="activeTab" lazy class="relative">
+          <!-- Search filter, aligned to the right of the tab header row -->
+          <span class="p-input-icon-left p-input-icon-right absolute right-0 z-1" style="top: 0.5rem">
+            <i v-if="!searchQuery" class="pi pi-search" />
+            <i v-if="searchQuery" class="pi pi-times cursor-pointer" @click="searchQuery = ''" />
+            <PvInputText v-model="searchQuery" placeholder="Search users" class="ml-2 p-inputtext-sm" />
+          </span>
           <PvTabList>
             <PvTab v-for="tab in USER_TABS" :key="tab.id" :value="tab.id">
               {{ tab.header }} ({{ usersByTab[tab.id].length }})
@@ -137,7 +143,9 @@
 </template>
 
 <script setup lang="ts">
+import { refDebounced } from '@vueuse/core';
 import PvButton from 'primevue/button';
+import PvInputText from 'primevue/inputtext';
 import PvTab from 'primevue/tab';
 import PvTabList from 'primevue/tablist';
 import PvTabPanel from 'primevue/tabpanel';
@@ -152,7 +160,7 @@ import RoarDataTable from '@/components/RoarDataTable.vue';
 import useUpdateUsersInfoMutation from '@/composables/mutations/useUpdateUsersInfoMutation';
 import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
-import { singularizeFirestoreCollection } from '@/helpers';
+import { normalizeToLowercase, singularizeFirestoreCollection } from '@/helpers';
 import { getChildLabel } from '@/helpers/childLabels';
 import { deriveNextCsvFilename, downloadCsv, sanitizeCsvFilename, unparseCsvFile } from '@/helpers/csv';
 import { logger } from '@/logger';
@@ -225,6 +233,10 @@ const CSV_EXPORT_COLUMNS: UserTableColumn[] = [
   { field: 'disabled', header: 'Disabled', dataType: 'boolean' },
 ];
 
+const SEARCHABLE_FIELDS = COLUMNS.filter((column) => column.field && !column.button).map(
+  (column) => column.field as keyof EditableUser,
+);
+
 // +-------+
 // | Props |
 // +-------+
@@ -259,7 +271,10 @@ const currentEditUser = ref<EditableUser | null>(null);
 const isUserCountExpanded = ref(false);
 const isUserDirty = ref(false);
 const pendingUserUpdate = ref<EditableUserUpdate | null>(null);
+const searchQuery = ref('');
 const showEditModal = ref(false);
+
+const debouncedSearchQuery = refDebounced(searchQuery, 300);
 
 // +---------------+
 // | Data fetching |
@@ -299,9 +314,20 @@ const inactiveUsers = computed<EditableUser[]>(() =>
   nonAdminUsers.value.filter((user) => user.archived || user.disabled),
 );
 
+const filterBySearch = (users: EditableUser[]): EditableUser[] => {
+  const query = normalizeToLowercase(debouncedSearchQuery.value);
+  if (!query) return users;
+  return users.filter((user) =>
+    SEARCHABLE_FIELDS.some((field) => {
+      const value = user[field];
+      return value != null && normalizeToLowercase(String(value)).includes(query);
+    }),
+  );
+};
+
 const usersByTab = computed<Record<UserTabId, EditableUser[]>>(() => ({
-  active: activeUsers.value,
-  inactive: inactiveUsers.value,
+  active: filterBySearch(activeUsers.value),
+  inactive: filterBySearch(inactiveUsers.value),
 }));
 
 const childrenCount = computed(() => {
@@ -366,7 +392,8 @@ const exportRowsToCsv = (rows: EditableUser[], filename: string) => {
 };
 
 const downloadAllUsers = () => {
-  exportRowsToCsv(usersByTab.value[activeTab.value], `${props.orgName}-${activeTab.value}-users`);
+  const rows = activeTab.value === 'active' ? activeUsers.value : inactiveUsers.value;
+  exportRowsToCsv(rows, `${props.orgName}-${activeTab.value}-users`);
 };
 
 const downloadSelectedUsers = (rows: EditableUser[]) => {
