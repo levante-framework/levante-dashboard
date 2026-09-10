@@ -138,7 +138,7 @@ import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { singularizeFirestoreCollection } from '@/helpers';
 import { getChildLabel } from '@/helpers/childLabels';
-import { deriveNextCsvFilename, downloadCsv, unparseCsvFile } from '@/helpers/csv';
+import { deriveNextCsvFilename, downloadCsv, sanitizeCsvFilename, unparseCsvFile } from '@/helpers/csv';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
@@ -309,13 +309,7 @@ const exportRowsToCsv = (rows: EditableUser[], filename: string) => {
   );
   const csv = unparseCsvFile(exportRows);
 
-  const safeName = filename
-    .trim()
-    .replace(/[^a-z0-9-_]+/gi, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-
-  downloadCsv(csv, deriveNextCsvFilename(safeName, { timestamp: new Date() }));
+  downloadCsv(csv, deriveNextCsvFilename(sanitizeCsvFilename(filename), { timestamp: new Date() }));
 };
 
 const downloadAllUsers = () => {

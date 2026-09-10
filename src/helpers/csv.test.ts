@@ -5,6 +5,7 @@ import {
   formatTimestamp,
   generateColumns,
   parseCsvFile,
+  sanitizeCsvFilename,
   unparseCsvFile,
 } from './csv';
 
@@ -53,6 +54,39 @@ describe('deriveNextCsvFilename', () => {
 
   it('only strips metadata and extension', () => {
     expect(deriveNextCsvFilename('foo_bar_baz__registered-20260508-1407.csv')).toBe('foo_bar_baz.csv');
+  });
+});
+
+describe('sanitizeCsvFilename', () => {
+  it('leaves an already-safe name unchanged and preserves case', () => {
+    expect(sanitizeCsvFilename('My_Org-users')).toBe('My_Org-users');
+  });
+
+  it('trims surrounding whitespace', () => {
+    expect(sanitizeCsvFilename('  My Org  ')).toBe('My-Org');
+  });
+
+  it('replaces spaces and disallowed characters with a dash', () => {
+    expect(sanitizeCsvFilename('My Org: Users/2024')).toBe('My-Org-Users-2024');
+  });
+
+  it('collapses runs of disallowed characters into a single dash', () => {
+    expect(sanitizeCsvFilename('a   b')).toBe('a-b');
+    expect(sanitizeCsvFilename('a & % b')).toBe('a-b');
+  });
+
+  it('strips leading and trailing dashes', () => {
+    expect(sanitizeCsvFilename('***edge***')).toBe('edge');
+    expect(sanitizeCsvFilename('-already-dashed-')).toBe('already-dashed');
+  });
+
+  it('keeps letters, digits, dashes, and underscores', () => {
+    expect(sanitizeCsvFilename('Group_1-A2')).toBe('Group_1-A2');
+  });
+
+  it('returns an empty string when nothing survives sanitization', () => {
+    expect(sanitizeCsvFilename('   ')).toBe('');
+    expect(sanitizeCsvFilename('@#$%')).toBe('');
   });
 });
 
@@ -324,7 +358,7 @@ describe('parseCsvFile', () => {
       const csv = makeFile([['name,errors,age'], ['Alice,bad,30']]);
       const result = await parseCsvFile(csv, { omitColumns: ['errors'] });
       expect(result).toHaveLength(1);
-      expect(Object.keys(result[0])).toEqual(['name', 'age']);
+      expect(Object.keys(result?.[0] ?? {})).toEqual(['name', 'age']);
     });
 
     it('applies after normalizedHeaders, so omit keys must use the normalized name', async () => {

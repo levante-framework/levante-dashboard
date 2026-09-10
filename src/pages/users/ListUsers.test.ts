@@ -32,10 +32,12 @@ vi.mock('@/logger', () => ({ logger: { error: vi.fn() } }));
 // Stub the CSV helpers to observe the export wiring without touching the DOM,
 // and the label/singularize helpers for deterministic output.
 
-vi.mock('@/helpers/csv', () => ({
+vi.mock('@/helpers/csv', async (importActual) => ({
   unparseCsvFile: vi.fn(() => 'csv-content'),
   deriveNextCsvFilename: vi.fn((name: string) => `${name}.csv`),
   downloadCsv: vi.fn(),
+  // Keep the real sanitizer so filename assertions exercise actual behavior.
+  sanitizeCsvFilename: (await importActual<typeof import('@/helpers/csv')>()).sanitizeCsvFilename,
 }));
 
 vi.mock('@/helpers/childLabels', () => ({
