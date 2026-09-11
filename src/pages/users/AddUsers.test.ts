@@ -50,9 +50,8 @@ vi.mock('@/logger', () => ({
 // storeToRefs returns an empty object and all destructured values are
 // undefined, causing a crash during component setup.
 //
-// Beyond the site refs, the component reads `roarfirekit` (used for
-// firekit.createUsers in submitUsers) and calls `isFirekitInit()` from the
-// sync-status query's `enabled` guard, so both must be present or setup throws.
+// Beyond the site refs, the component calls `isFirekitInit()` from the
+// sync-status query's `enabled` guard, so it must be present or setup throws.
 // createAuthStoreMock() supplies a sensible default; the beforeEach below wires
 // it up as the default return and individual tests override fields as needed.
 
@@ -85,6 +84,20 @@ vi.mock('@/composables/mutations/useSignOutMutation', () => ({
   default: () => ({ mutate: signOutMock }),
 }));
 
+// ─── Create-users mutation ──────────────────────────────────────────────────
+//
+// submitUsers calls the createUsers mutation's `mutateAsync`, which resolves a
+// CreateUsersResult on success and rejects with a FirebaseFailure on error.
+// Hoisted so each test can drive the resolved/rejected value.
+
+const { createUsersMock } = vi.hoisted(() => ({
+  createUsersMock: vi.fn(),
+}));
+
+vi.mock('@/composables/mutations/useCreateUsersMutation', () => ({
+  default: () => ({ mutateAsync: createUsersMock }),
+}));
+
 vi.mock('@/composables/queries/useGetSyncStatusQuery', () => ({
   useGetSyncStatusQuery: vi.fn(),
 }));
@@ -92,11 +105,10 @@ vi.mock('@/composables/queries/useGetSyncStatusQuery', () => ({
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
 // Builds the auth-store shape the component expects. Pass overrides to vary the
-// selected site or to supply a roarfirekit whose createUsers is stubbed.
+// selected site.
 const createAuthStoreMock = (overrides: Record<string, unknown> = {}) => ({
   currentSite: ref('site-id-123'),
   currentSiteName: ref('site-id-123'),
-  roarfirekit: ref(null),
   isFirekitInit: () => false,
   ...overrides,
 });
@@ -153,6 +165,7 @@ describe('AddUsers Page', () => {
     mockRouter.push.mockReset();
     setShouldUserConfirmMock.mockReset();
     signOutMock.mockReset();
+    createUsersMock.mockReset();
     vi.mocked(useAuthStore).mockReset();
     vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock() as any);
     vi.mocked(useGetSyncStatusQuery).mockReturnValue({
@@ -730,11 +743,11 @@ describe('AddUsers Page', () => {
       '1,child,5,2018,,,,,"Cohort A"',
     ].join('\n');
 
-    // Mounts AddUsers with an auth store whose roarfirekit.createUsers is the
-    // supplied stub, so submitUsers' firekit call is observable. Returns the
-    // component vm alongside the createUsers mock for assertions.
-    const mountWithFirekit = (createUsers: Mock = vi.fn()) => {
-      vi.mocked(useAuthStore).mockReturnValueOnce(createAuthStoreMock({ roarfirekit: ref({ createUsers }) }) as any);
+    // Mounts AddUsers, wiring the supplied stub as the createUsers mutation's
+    // mutateAsync so submitUsers' call is observable. Returns the component vm
+    // alongside the createUsers mock for assertions.
+    const mountWithCreateUsers = (createUsers: Mock = vi.fn()) => {
+      createUsersMock.mockImplementation((...args: unknown[]) => createUsers(...args));
       return { vm: mountAddUsers().vm as any, createUsers };
     };
 
@@ -767,11 +780,11 @@ describe('AddUsers Page', () => {
     });
 
     it('returns early when there is no clean validated data to submit', async () => {
-      const { vm, createUsers } = mountWithFirekit();
+      const { vm, createUsers } = mountWithCreateUsers();
 
       // Fresh mount: validatedData is null. The `!validatedData.value`
       // half of the guard fires and submission is aborted before any
-      // org lookup or firekit call is attempted.
+      // org lookup or createUsers call is attempted.
       await vm.submitUsers();
 
       expect(vm.status).toEqual({
@@ -787,12 +800,10 @@ describe('AddUsers Page', () => {
       // Override the auth store so isAllSitesSelected is true. SUBMIT_CSV has
       // no 'site' column, so onFileUpload's site-mismatch check is skipped and
       // validatedData populates cleanly even though the all-sites view is active.
-      const createUsers = vi.fn();
       vi.mocked(useAuthStore).mockReturnValueOnce(
         createAuthStoreMock({
           currentSite: ref('any'),
           currentSiteName: ref('Test Site'),
-          roarfirekit: ref({ createUsers }),
         }) as any,
       );
 
@@ -807,7 +818,7 @@ describe('AddUsers Page', () => {
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);
-      expect(createUsers).not.toHaveBeenCalled();
+      expect(createUsersMock).not.toHaveBeenCalled();
     });
 
     it('skips submission when every user already has a uid', async () => {
@@ -822,7 +833,7 @@ describe('AddUsers Page', () => {
         '1,child,5,2018,,,"Test School","Class A",,existing-uid',
       ].join('\n');
 
-      const { vm, createUsers } = mountWithFirekit();
+      const { vm, createUsers } = mountWithCreateUsers();
       await vm.onFileUpload(mockFileUploadEvent(csv));
 
       // The all-already-registered case is caught at upload time: onFileUpload
@@ -836,7 +847,7 @@ describe('AddUsers Page', () => {
       });
 
       // Calling submitUsers in this state hits the guard and bails out before
-      // any org lookup or firekit call.
+      // any org lookup or createUsers call.
       await vm.submitUsers();
 
       expect(vm.isSubmitting).toBe(false);
@@ -937,7 +948,7 @@ describe('AddUsers Page', () => {
       expect(vm.validationErrors.rows).toEqual([{ message: 'school: Does not exist in selected site', rowNums: [2] }]);
     });
 
-    it('calls firekit with resolved orgIds (userType verbatim) and merges the returned credentials', async () => {
+    it('calls createUsers with resolved orgIds (userType verbatim) and merges the returned credentials', async () => {
       // Two sequential resolves: first the school, then the class scoped
       // to that school. createOrgIdResolver caches by (orgType, name +
       // parents) so each is called exactly once for our single user.
@@ -945,11 +956,10 @@ describe('AddUsers Page', () => {
         .mockResolvedValueOnce([{ id: 'school-1' }])
         .mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
-        code: 'success',
-        data: { users: [{ id: '1', email: 'a@b.com', password: 'pw', uid: 'uid-1' }] },
-      });
-      const { vm } = mountWithFirekit(createUsers);
+      const createUsers = vi
+        .fn()
+        .mockResolvedValue({ users: [{ id: '1', email: 'a@b.com', password: 'pw', uid: 'uid-1' }] });
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await withDownloadStubs(async () => {
         await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
@@ -995,16 +1005,16 @@ describe('AddUsers Page', () => {
         .mockResolvedValueOnce([{ id: 'school-1' }])
         .mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
+      const createUsers = vi.fn().mockRejectedValue({
         code: 'app-error',
-        data: {
+        error: {
           name: 'FirebaseError',
           message: 'already exists',
           code: 'functions/already-exists',
           details: { users: [{ id: '1', email: 'existing@example.com', uid: 'uid-abc' }] },
         },
       });
-      const { vm } = mountWithFirekit(createUsers);
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
       await vm.submitUsers();
@@ -1025,17 +1035,17 @@ describe('AddUsers Page', () => {
     });
 
     it('surfaces an unexpected createUsers failure and resets submission state', async () => {
-      // Org resolution succeeds; createUsers resolves with a generic 'error'
-      // result (an exception the firekit wrapper caught and normalized).
+      // Org resolution succeeds; createUsers rejects with a generic 'error'
+      // FirebaseFailure (a non-Firebase exception normalized by toFirebaseFailure).
       vi.mocked(fetchOrgByName as any)
         .mockResolvedValueOnce([{ id: 'school-1' }])
         .mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
+      const createUsers = vi.fn().mockRejectedValue({
         code: 'error',
-        data: new Error('boom'),
+        error: new Error('boom'),
       });
-      const { vm } = mountWithFirekit(createUsers);
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
       await vm.submitUsers();
@@ -1055,16 +1065,16 @@ describe('AddUsers Page', () => {
         .mockResolvedValueOnce([{ id: 'school-1' }])
         .mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
+      const createUsers = vi.fn().mockRejectedValue({
         code: 'app-error',
-        data: {
+        error: {
           name: 'FirebaseError',
           message: 'unauthenticated',
           code: 'functions/unauthenticated',
           details: { code: 'auth' },
         },
       });
-      const { vm } = mountWithFirekit(createUsers);
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
       await vm.submitUsers();
@@ -1081,16 +1091,16 @@ describe('AddUsers Page', () => {
         .mockResolvedValueOnce([{ id: 'school-1' }])
         .mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
+      const createUsers = vi.fn().mockRejectedValue({
         code: 'app-error',
-        data: {
+        error: {
           name: 'FirebaseError',
           message: 'failed precondition',
           code: 'functions/failed-precondition',
           details: { code: 'sync-pending' },
         },
       });
-      const { vm } = mountWithFirekit(createUsers);
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
       await vm.submitUsers();
@@ -1110,16 +1120,16 @@ describe('AddUsers Page', () => {
         .mockResolvedValueOnce([{ id: 'school-1' }])
         .mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
+      const createUsers = vi.fn().mockRejectedValue({
         code: 'app-error',
-        data: {
+        error: {
           name: 'FirebaseError',
           message: 'permission denied',
           code: 'functions/permission-denied',
           details: { code: 'auth' },
         },
       });
-      const { vm } = mountWithFirekit(createUsers);
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
       await vm.submitUsers();
@@ -1134,15 +1144,14 @@ describe('AddUsers Page', () => {
       expect(vm.registeredUsers).toBeNull();
     });
 
-    it('resolves cohorts and includes them in the firekit payload', async () => {
+    it('resolves cohorts and includes them in the createUsers payload', async () => {
       // Cohort-only row: school/class are empty, so only the cohort loop runs.
       vi.mocked(fetchOrgByName as any).mockResolvedValueOnce([{ id: 'cohort-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
-        code: 'success',
-        data: { users: [{ id: '1', email: 'a@b.com', password: 'pw', uid: 'uid-1' }] },
-      });
-      const { vm } = mountWithFirekit(createUsers);
+      const createUsers = vi
+        .fn()
+        .mockResolvedValue({ users: [{ id: '1', email: 'a@b.com', password: 'pw', uid: 'uid-1' }] });
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await withDownloadStubs(async () => {
         await vm.onFileUpload(mockFileUploadEvent(COHORT_CSV));
@@ -1173,25 +1182,6 @@ describe('AddUsers Page', () => {
       });
       expect(vm.validationErrors.rows).toEqual([{ message: 'cohort: Does not exist in selected site', rowNums: [2] }]);
       expect(vm.isSubmitting).toBe(false);
-    });
-
-    it('shows error when roarfirekit is unavailable at submission time', async () => {
-      // Org resolution succeeds but the firekit ref is null (default auth store
-      // mock), so submitUsers hits the null-firekit guard after org resolution.
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([{ id: 'school-1' }])
-        .mockResolvedValueOnce([{ id: 'class-1' }]);
-
-      const vm = mountAddUsers().vm as any;
-      await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
-      await vm.submitUsers();
-
-      expect(vm.status).toEqual({
-        message: 'Unable to create users. Please refresh the page and try again.',
-        severity: 'error',
-      });
-      expect(vm.isSubmitting).toBe(false);
-      expect(vm.showSyncPendingModal).toBe(false);
     });
   });
 
