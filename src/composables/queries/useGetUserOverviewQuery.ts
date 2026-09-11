@@ -29,7 +29,9 @@ export const useGetUserOverviewQuery = (
       errorMessage: 'Failed to get user overview',
       errorContext: {
         tags: { composable: 'useGetUserOverviewQuery' },
-        uid: toValue(uid),
+        get uid() {
+          return toValue(uid);
+        },
       },
     },
   });
