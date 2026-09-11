@@ -294,7 +294,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   // Validate w/ zod schema
   const validated = AddUsersCsvSchema.safeParse(parsed);
   const issues = combineUsersCsvIssues([...(validated.error?.issues ?? []), ...siteIssues]);
-  if (issues.length > 0) {
+  if (issues.length > 0 || !validated.success) {
     // Validation failed
     status.value = { message: 'The uploaded file is invalid. See table for details.', severity: 'error' };
     validationErrors.value = {
@@ -307,8 +307,8 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   }
 
   // Validation succeeded, filter out users that already have a uid
-  const unregistered = validated
-    .data!.map((user, idx) => ({
+  const unregistered = validated.data
+    .map((user, idx) => ({
       user,
       validatedIdx: idx,
     }))
@@ -323,7 +323,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   unregisteredToValidated.value = unregistered.map(({ validatedIdx }) => validatedIdx);
 
   // There are new, valid users to be added
-  validatedData.value = validated.data!;
+  validatedData.value = validated.data;
   status.value = {
     message: 'File successfully uploaded. See table for summary of users to be added.',
     severity: 'success',
@@ -566,7 +566,8 @@ const handleCreateUsersFailure = async (failure: FirebaseFailure<CreateUsersErro
     if (error.code === 'functions/already-exists') {
       message = 'One or more users already exist. Please fix the errors in your CSV file and try again.';
       shouldLog = false;
-      const rowNumMap = validatedData.value!.reduce(
+      const validatedUsers = validatedData.value ?? [];
+      const rowNumMap = validatedUsers.reduce(
         (acc, user, idx) => {
           acc[user.id] = idx + 2; // +2 for header row and 1-indexing
           return acc;
