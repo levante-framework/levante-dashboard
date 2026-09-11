@@ -382,9 +382,10 @@ const submitUsers = async () => {
   }
 
   // Clone the unregistered users and map their validated indices
+  const validatedIdxs = toRaw(unregisteredToValidated.value);
   const unregistered = _cloneDeep(toRaw(unregisteredUsers.value)).map((user, idx) => ({
     user,
-    validatedIdx: unregisteredToValidated.value![idx]!,
+    validatedIdx: validatedIdxs[idx],
   }));
 
   // Ensure the orgs referenced in the user data exist
@@ -398,6 +399,7 @@ const submitUsers = async () => {
   const orgErrors: { field: string; validatedIdx: number }[] = [];
   const getOrgId = createOrgIdResolver();
   for (const { user, validatedIdx } of unregistered) {
+    if (validatedIdx === undefined) continue;
     const orgIds: OrgIds = {
       sites: [siteId],
       schools: [],
@@ -528,9 +530,10 @@ const submitUsers = async () => {
   const mergedUsers = _cloneDeep(toRaw(validatedData.value));
   result.users.forEach((createdUser) => {
     const validatedIdx = unregistered.find(({ user }) => user.id === createdUser.id)?.validatedIdx;
-    if (validatedIdx != null) {
+    const existing = validatedIdx != null ? mergedUsers[validatedIdx] : undefined;
+    if (validatedIdx != null && existing) {
       mergedUsers[validatedIdx] = {
-        ...mergedUsers[validatedIdx]!,
+        ...existing,
         email: createdUser.email ?? '',
         password: createdUser.password ?? '',
         uid: createdUser.uid ?? '',
