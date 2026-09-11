@@ -34,9 +34,13 @@ vi.mock('@/helpers/query/orgs', () => ({
 // JSDOM. Stubbing the surface used by submitUsers' catch block keeps the
 // test environment quiet.
 
+const { loggerErrorMock } = vi.hoisted(() => ({
+  loggerErrorMock: vi.fn(),
+}));
+
 vi.mock('@/logger', () => ({
   logger: {
-    error: vi.fn(),
+    error: loggerErrorMock,
     info: vi.fn(),
     warn: vi.fn(),
     debug: vi.fn(),
@@ -73,8 +77,9 @@ vi.mock('@/store/levante', () => ({
 
 // ─── Sign-out mutation ────────────────────────────────────────────────────────
 //
-// The unauthenticated createUsers branch signs the user out. Hoisted so the spy
-// can be asserted from within individual tests.
+// AddUsers no longer signs the user out on failure; the spy is retained to
+// assert that no sign-out is triggered. Hoisted so it can be asserted from
+// within individual tests.
 
 const { signOutMock } = vi.hoisted(() => ({
   signOutMock: vi.fn(),
@@ -166,6 +171,7 @@ describe('AddUsers Page', () => {
     setShouldUserConfirmMock.mockReset();
     signOutMock.mockReset();
     createUsersMock.mockReset();
+    loggerErrorMock.mockReset();
     vi.mocked(useAuthStore).mockReset();
     vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock() as any);
     vi.mocked(useGetSyncStatusQuery).mockReturnValue({
@@ -1020,7 +1026,7 @@ describe('AddUsers Page', () => {
       await vm.submitUsers();
 
       expect(vm.status).toEqual({
-        message: 'One or more users already exist. Please try again with a different file.',
+        message: 'One or more users already exist. Please fix the errors in your CSV file and try again.',
         severity: 'error',
       });
 
@@ -1052,7 +1058,7 @@ describe('AddUsers Page', () => {
 
       expect(createUsers).toHaveBeenCalledOnce();
       expect(vm.status).toEqual({
-        message: 'An unexpected error occurred. Please contact support.',
+        message: 'Failed to add users. Please try again. If the problem persists, contact support.',
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);
@@ -1060,7 +1066,7 @@ describe('AddUsers Page', () => {
       expect(vm.registeredUsers).toBeNull();
     });
 
-    it('signs the user out on an unauthenticated app-error', async () => {
+    it('surfaces an expired-session message on an unauthenticated app-error', async () => {
       vi.mocked(fetchOrgByName as any)
         .mockResolvedValueOnce([{ id: 'school-1' }])
         .mockResolvedValueOnce([{ id: 'class-1' }]);
@@ -1080,7 +1086,40 @@ describe('AddUsers Page', () => {
       await vm.submitUsers();
 
       expect(createUsers).toHaveBeenCalledOnce();
-      expect(signOutMock).toHaveBeenCalledOnce();
+      expect(signOutMock).not.toHaveBeenCalled();
+      expect(vm.status).toEqual({
+        message: 'Failed to add users due to an expired session. Please sign in again and retry.',
+        severity: 'error',
+      });
+      expect(vm.isSubmitting).toBe(false);
+      expect(vm.showSyncPendingModal).toBe(false);
+      expect(vm.registeredUsers).toBeNull();
+    });
+
+    it('surfaces an expired-session message on a transport-level unauthenticated functions-error', async () => {
+      vi.mocked(fetchOrgByName as any)
+        .mockResolvedValueOnce([{ id: 'school-1' }])
+        .mockResolvedValueOnce([{ id: 'class-1' }]);
+
+      const createUsers = vi.fn().mockRejectedValue({
+        code: 'functions-error',
+        error: {
+          name: 'FirebaseError',
+          message: 'unauthenticated',
+          code: 'functions/unauthenticated',
+        },
+      });
+      const { vm } = mountWithCreateUsers(createUsers);
+
+      await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
+      await vm.submitUsers();
+
+      expect(createUsers).toHaveBeenCalledOnce();
+      expect(loggerErrorMock).not.toHaveBeenCalled();
+      expect(vm.status).toEqual({
+        message: 'Failed to add users due to an expired session. Please sign in again and retry.',
+        severity: 'error',
+      });
       expect(vm.isSubmitting).toBe(false);
       expect(vm.showSyncPendingModal).toBe(false);
       expect(vm.registeredUsers).toBeNull();
@@ -1136,7 +1175,7 @@ describe('AddUsers Page', () => {
 
       expect(createUsers).toHaveBeenCalledOnce();
       expect(vm.status).toEqual({
-        message: 'You do not have permission to add users to this site. Please contact support.',
+        message: 'Failed to add users due to insufficient permissions. Please contact support.',
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);

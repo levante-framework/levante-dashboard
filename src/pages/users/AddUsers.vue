@@ -128,12 +128,11 @@ import CsvUploader from '@/components/CsvUploader.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
 import useCreateUsersMutation from '@/composables/mutations/useCreateUsersMutation';
-import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
 import { useGetSyncStatusQuery } from '@/composables/queries/useGetSyncStatusQuery';
 import { NORMALIZED_USER_CSV_HEADERS, USER_CSV_HEADERS } from '@/constants/csv';
 import { SITE_OVERVIEW_QUERY_KEY, SYNC_STATUS_QUERY_KEY } from '@/constants/queryKeys';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
-import { type FirebaseFailure } from '@/firebase/failure';
+import { type FirebaseFailure, toFirebaseFailureCode } from '@/firebase/failure';
 import { normalizeToLowercase } from '@/helpers';
 import { deriveNextCsvFilename, downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
 import { fetchOrgByName } from '@/helpers/query/orgs';
@@ -164,7 +163,6 @@ const queryClient = useQueryClient();
 const router = useRouter();
 
 const { mutateAsync: createUsers } = useCreateUsersMutation();
-const { mutate: signOut } = useSignOutMutation();
 
 const toast = useToast();
 
@@ -560,13 +558,14 @@ const submitUsers = async () => {
 };
 
 const handleCreateUsersFailure = async (failure: FirebaseFailure<CreateUsersError>) => {
+  let message = 'Failed to add users. Please try again. If the problem persists, contact support.';
+  let shouldLog = true;
+
   if (failure.code === 'app-error') {
     const error = failure.error;
     if (error.code === 'functions/already-exists') {
-      status.value = {
-        message: 'One or more users already exist. Please try again with a different file.',
-        severity: 'error',
-      };
+      message = 'One or more users already exist. Please fix the errors in your CSV file and try again.';
+      shouldLog = false;
       const rowNumMap = validatedData.value!.reduce(
         (acc, user, idx) => {
           acc[user.id] = idx + 2; // +2 for header row and 1-indexing
@@ -584,50 +583,38 @@ const handleCreateUsersFailure = async (failure: FirebaseFailure<CreateUsersErro
         showDownloadButton: true,
       };
     } else if (error.code === 'functions/failed-precondition') {
-      status.value = {
-        message: 'The server is working on other tasks. Please try again in a few minutes.',
-        severity: 'error',
-      };
+      message = 'The server is working on other tasks. Please try again in a few minutes.';
+      shouldLog = false;
       await invalidateSyncStatus();
     } else if (error.code === 'functions/permission-denied') {
-      status.value = {
-        message: 'You do not have permission to add users to this site. Please contact support.',
-        severity: 'error',
-      };
+      message = 'Failed to add users due to insufficient permissions. Please contact support.';
     } else if (error.code === 'functions/unauthenticated') {
-      toast.add({
-        severity: TOAST_SEVERITIES.WARN,
-        summary: 'Session Expired',
-        detail: 'Your session has expired. Please sign in again.',
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
-      signOut();
+      message = 'Failed to add users due to an expired session. Please sign in again and retry.';
+      shouldLog = false;
     } else {
       // The remaining app-error cases are unexpected due to preflight validation above.
       // - functions/invalid-argument/schema
       // - functions/invalid-argument/org-site-mismatch
       // - functions/not-found/orgs
-      logger.error(new Error('Unexpected createUsers app-error', { cause: error }), {
-        tags: {
-          component: 'AddUsers',
-          function: 'submitUsers',
-          errorCode: `${error.code}/${error.details.code}`,
-        },
-      });
-      status.value = {
-        message:
-          'An unexpected error occurred. Please refresh the page and try again. If the problem persists, contact support.',
-        severity: 'error',
-      };
+      message = 'Failed to add users due to an unexpected error. Please contact support.';
     }
-  } else {
-    logger.error(new Error(`Unexpected createUsers ${failure.code}`, { cause: failure.error }), {
+  } else if (failure.code === 'functions-error' && failure.error.code === 'functions/unauthenticated') {
+    message = 'Failed to add users due to an expired session. Please sign in again and retry.';
+    shouldLog = false;
+  }
+
+  status.value = {
+    message,
+    severity: 'error',
+  };
+  if (shouldLog) {
+    logger.error(new Error(`Failed to create users`, { cause: failure }), {
       tags: {
         component: 'AddUsers',
-        function: 'submitUsers',
+        firebaseFailureCode: toFirebaseFailureCode(failure),
       },
+      siteId: selectedSiteId.value,
     });
-    status.value = { message: 'An unexpected error occurred. Please contact support.', severity: 'error' };
   }
 };
 
