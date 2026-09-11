@@ -139,6 +139,7 @@ import { useLevanteStore } from '@/store/levante';
 
 const authStore = useAuthStore();
 const { currentSite, currentSiteName, roarfirekit } = storeToRefs(authStore);
+const authReady = computed(() => authStore.isFirekitInit());
 const isAllSitesSelected = computed(() => currentSite.value === 'any');
 const selectedSiteId = computed(() => currentSite.value ?? '');
 
@@ -146,7 +147,7 @@ const {
   data: syncStatus,
   isLoading: isLoadingSyncStatus,
   isError: isSyncStatusError,
-} = useGetSyncStatusQuery(selectedSiteId, () => !isAllSitesSelected.value);
+} = useGetSyncStatusQuery(selectedSiteId, () => authReady.value && !isAllSitesSelected.value);
 const hasPendingSyncStatus = computed(
   () => !!syncStatus.value && (syncStatus.value.assignments.pending > 0 || syncStatus.value.users.pending > 0),
 );
