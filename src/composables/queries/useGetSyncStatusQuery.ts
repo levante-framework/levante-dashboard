@@ -33,7 +33,9 @@ export const useGetSyncStatusQuery = (
       errorMessage: 'Failed to get sync status',
       errorContext: {
         tags: { composable: 'useGetSyncStatusQuery' },
-        siteId: toValue(siteId),
+        get siteId() {
+          return toValue(siteId);
+        },
       },
     },
   });
