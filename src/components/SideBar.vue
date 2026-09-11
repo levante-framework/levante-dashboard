@@ -110,7 +110,6 @@ import { storeToRefs } from 'pinia';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ASSIGNMENT_STATUSES } from '@/constants';
-import { getTooltip } from '@/helpers';
 import { getAssignmentStatus, isCurrent, isPast, isUpcoming } from '@/helpers/assignments';
 import { useAssignmentsStore } from '@/store/assignments';
 import AssignmentCard from './assignments/AssignmentCard.vue';
