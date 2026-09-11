@@ -1,8 +1,8 @@
+import { TaskLauncher } from '@levante-framework/core-tasks';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { reactive, ref } from 'vue';
-import { TaskLauncher } from '@levante-framework/core-tasks';
 import { logger } from '@/logger';
 import TaskLevante from '../tasks/TaskLevante.vue';
 
