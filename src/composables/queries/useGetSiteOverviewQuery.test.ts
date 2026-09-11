@@ -1,22 +1,21 @@
-import type { RoarFirekit } from '@levante-framework/firekit';
-import { createTestingPinia, type TestingPinia } from '@pinia/testing';
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { type MaybeRefOrGetter, ref } from 'vue';
-import { useAuthStore } from '@/store/auth';
+import { groupsRepository } from '@/firebase/repositories/GroupsRepository';
 import { withSetup } from '@/test-support/withSetup.js';
 import { useGetSiteOverviewQuery } from './useGetSiteOverviewQuery';
 
-describe('useGetSiteOverviewQuery', () => {
-  let pinia: TestingPinia;
-  let queryClient: QueryClient;
-  let getSiteOverview: Mock;
+vi.mock('@/firebase/repositories/GroupsRepository', () => ({
+  groupsRepository: {
+    getSiteOverview: vi.fn(),
+  },
+}));
 
-  const setFirekit = (firekit: { getSiteOverview: Mock } | null) => {
-    const authStore = useAuthStore(pinia);
-    authStore.roarfirekit = (firekit ? { ...firekit, initialized: true } : null) as unknown as RoarFirekit;
-  };
+const getSiteOverview = groupsRepository.getSiteOverview as unknown as Mock;
+
+describe('useGetSiteOverviewQuery', () => {
+  let queryClient: QueryClient;
 
   const mountQuery = (
     siteId: Parameters<typeof useGetSiteOverviewQuery>[0],
@@ -29,10 +28,8 @@ describe('useGetSiteOverviewQuery', () => {
   };
 
   beforeEach(() => {
-    pinia = createTestingPinia({ stubActions: false });
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    getSiteOverview = vi.fn().mockResolvedValue({ code: 'success', data: { siteName: 'default' } });
-    setFirekit({ getSiteOverview });
+    getSiteOverview.mockResolvedValue({ siteName: 'default' });
   });
 
   afterEach(() => {
@@ -42,7 +39,7 @@ describe('useGetSiteOverviewQuery', () => {
 
   it('fetches the site overview for the given siteId and exposes the result', async () => {
     const payload = { siteName: 'Acme School' };
-    getSiteOverview.mockResolvedValueOnce({ code: 'success', data: payload });
+    getSiteOverview.mockResolvedValueOnce(payload);
 
     const { data, isSuccess } = mountQuery('site-1');
     await flushPromises();
@@ -55,9 +52,7 @@ describe('useGetSiteOverviewQuery', () => {
 
   it('refetches when siteId changes and serves the new payload (not stale cache)', async () => {
     const siteId = ref('site-1');
-    getSiteOverview
-      .mockResolvedValueOnce({ code: 'success', data: { siteName: 'one' } })
-      .mockResolvedValueOnce({ code: 'success', data: { siteName: 'two' } });
+    getSiteOverview.mockResolvedValueOnce({ siteName: 'one' }).mockResolvedValueOnce({ siteName: 'two' });
 
     const { data } = mountQuery(siteId);
     await flushPromises();
@@ -86,22 +81,6 @@ describe('useGetSiteOverviewQuery', () => {
     expect(getSiteOverview).toHaveBeenCalledWith({ siteId: 'site-late' });
   });
 
-  it('does not fetch while roarfirekit is unavailable, then fetches once it is set', async () => {
-    setFirekit(null);
-
-    const { data } = mountQuery('site-1');
-    await flushPromises();
-
-    expect(getSiteOverview).not.toHaveBeenCalled();
-    expect(data.value).toBeUndefined();
-
-    setFirekit({ getSiteOverview });
-    await flushPromises();
-
-    expect(getSiteOverview).toHaveBeenCalledTimes(1);
-    expect(getSiteOverview).toHaveBeenCalledWith({ siteId: 'site-1' });
-  });
-
   it('respects a reactive `enabled` argument', async () => {
     const enabled = ref(false);
     const { data } = mountQuery('site-1', enabled);
@@ -124,26 +103,14 @@ describe('useGetSiteOverviewQuery', () => {
     expect(data.value).toBeUndefined();
   });
 
-  it('surfaces a rejected firekit call through the query state', async () => {
-    const error = new Error('firekit boom');
+  it('surfaces a rejected repository call as a FirebaseFailure', async () => {
+    const error = new Error('overview boom');
     getSiteOverview.mockRejectedValueOnce(error);
 
     const { isError, error: queryError } = mountQuery('site-1');
     await flushPromises();
 
     expect(isError.value).toBe(true);
-    expect(queryError.value).toBe(error);
-  });
-
-  it('treats a non-success response code as a query error and does not expose data', async () => {
-    const failure = { code: 'not-found', message: 'no such site' };
-    getSiteOverview.mockResolvedValueOnce(failure);
-
-    const { isError, error: queryError, data } = mountQuery('site-1');
-    await flushPromises();
-
-    expect(isError.value).toBe(true);
-    expect(queryError.value).toEqual(failure);
-    expect(data.value).toBeUndefined();
+    expect(queryError.value).toEqual({ code: 'error', error });
   });
 });

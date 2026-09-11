@@ -1,4 +1,9 @@
-import type { GetSyncStatusParams, GetSyncStatusResult } from '@levante-framework/levante-zod';
+import type {
+  GetSiteOverviewParams,
+  GetSiteOverviewResult,
+  GetSyncStatusParams,
+  GetSyncStatusResult,
+} from '@levante-framework/levante-zod';
 import { Repository } from '@/firebase/Repository';
 
 interface GroupsParams {
@@ -8,12 +13,16 @@ interface GroupsParams {
 }
 
 class GroupsRepository extends Repository {
-  async upsertOrg(params?: GroupsParams): Promise<void> {
-    await this.call<GroupsParams>('upsertOrg', params);
+  async getSiteOverview(params: GetSiteOverviewParams): Promise<GetSiteOverviewResult> {
+    return this.call<GetSiteOverviewParams, GetSiteOverviewResult>('getSiteOverview', params);
   }
 
   async getSyncStatus(params: GetSyncStatusParams): Promise<GetSyncStatusResult> {
     return this.call<GetSyncStatusParams, GetSyncStatusResult>('getSyncStatus', params);
+  }
+
+  async upsertOrg(params?: GroupsParams): Promise<void> {
+    await this.call<GroupsParams>('upsertOrg', params);
   }
 }
 
