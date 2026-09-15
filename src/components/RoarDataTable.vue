@@ -56,7 +56,7 @@
         <span v-if="props.allowExport" class="flex flex-row flex-wrap justify-content-end gap-2 max-h-3 export-wrapper">
           <PvButton
             v-tooltip.bottom="
-              `Export ${selectedRows.length} users${
+              `Export ${selectedRows.length} user${
                 selectedRows.length > 1 ? 's' : ''
               } to CSV file.`
             "
