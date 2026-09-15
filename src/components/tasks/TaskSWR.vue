@@ -126,7 +126,7 @@ async function startTask(selectedAdmin) {
     appKit.sentryDualReport = true;
     const gameParams = { ...appKit._taskInfo.variantParams };
 
-    const roarApp = new TaskLauncher(appKit, gameParams, userParams, 'jspsych-target', false);
+    const roarApp = new TaskLauncher(appKit, gameParams, userParams, 'jspsych-target', false, logger);
 
     await roarApp.run().then(async () => {
       // Handle any post-game actions.

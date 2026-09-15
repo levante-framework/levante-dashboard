@@ -71,7 +71,7 @@ export default defineConfig({
           lodash: ['lodash'],
           tanstack: ['@tanstack/vue-query'],
           chartJs: ['chart.js'],
-          sentry: ['@sentry/browser', '@sentry/integrations', '@sentry/vue'],
+          sentry: ['@sentry/vue'],
           utils: ['@bdelab/roar-utils'],
         },
       },
