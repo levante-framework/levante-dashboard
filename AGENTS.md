@@ -20,7 +20,7 @@ We are updating data model names. The mapping is: child/children (frontend) = st
 ## Code Style Guidelines
 
 - **Language**: Use TypeScript for .ts files, JavaScript for .js files (migration in progress)
-- **Vue**: Use `<script setup>` syntax with Composition API, avoid Options API
+- **Vue**: Use `<script setup lang="ts">` syntax with Composition API, avoid Options API
 - **Imports**: Group by type - Vue/external libs, then @/ aliases, then relative paths
 - **Components**: PascalCase names (e.g., `NavBar.vue`), use PrimeVue v4 components prefixed with `Pv`
 - **Composables**: camelCase with `use` prefix (e.g., `useAuthStore.ts`)
@@ -29,7 +29,7 @@ We are updating data model names. The mapping is: child/children (frontend) = st
 - **Functions**: Arrow functions for methods/computed, `function` keyword for pure functions
 - **Error Handling**: Use try-catch blocks, handle Firebase errors gracefully
 - **Testing**: Use Vitest with @testing-library/vue, mock Firebase services
-- **No Comments**: Avoid adding comments unless explicitly requested
+- **Comments**: Prefer comments that add context the code can't convey on its own. Describing what the code does is fine when summarizing a large or complex block; just avoid comments that merely restate a single obvious line. Structural comments are also welcome where a convention calls for them.
 - **Documentation**: Always consult the official documentation for all packages and dependencies. Regularly review updates to ensure you are using the latest recommended practices.
 
 ## Documentation Sources
