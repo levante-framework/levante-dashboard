@@ -74,11 +74,11 @@
         <!-- Users table -->
         <PvTabs v-model:value="activeTab" lazy class="relative">
           <!-- Search filter, aligned to the right of the tab header row -->
-          <span class="p-input-icon-left p-input-icon-right absolute right-0 z-1" style="top: 0.5rem">
-            <i v-if="!searchQuery" class="pi pi-search" />
-            <i v-if="searchQuery" class="pi pi-times cursor-pointer" @click="resetSearch" />
-            <PvInputText v-model="searchQuery" placeholder="Search users" class="ml-2 p-inputtext-sm" />
-          </span>
+          <PvIconField class="absolute right-0 z-1" style="top: 0.5rem">
+            <PvInputIcon class="pi pi-search" />
+            <PvInputText v-model="searchQuery" placeholder="Search users" class="p-inputtext-sm" />
+            <PvInputIcon v-if="searchQuery" class="pi pi-times cursor-pointer" @click="resetSearch" />
+          </PvIconField>
           <PvTabList>
             <PvTab v-for="tab in USER_TABS" :key="tab.id" :value="tab.id">
               {{ tab.header }} ({{ usersByTab[tab.id].length }})
@@ -149,6 +149,8 @@
 <script setup lang="ts">
 import { watchDebounced } from '@vueuse/core';
 import PvButton from 'primevue/button';
+import PvIconField from 'primevue/iconfield';
+import PvInputIcon from 'primevue/inputicon';
 import PvInputText from 'primevue/inputtext';
 import PvTab from 'primevue/tab';
 import PvTabList from 'primevue/tablist';
