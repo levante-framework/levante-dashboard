@@ -61,7 +61,6 @@ const initialized = ref<boolean>(false);
 watch(
   () => props.isEnabled,
   (isEnabled: boolean) => {
-    console.log('isEnabled from watcher', isEnabled);
     if (isEnabled) {
       isOpen.value = true;
     } else if (!isEnabled) {
