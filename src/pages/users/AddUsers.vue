@@ -103,7 +103,9 @@ import {
   type AddUsersCsv,
   AddUsersCsvHeaderSchema,
   AddUsersCsvSchema,
+  type CreateUsersError,
   CreateUsersParamsSchema,
+  type CreateUsersResult,
   combineUsersCsvIssues,
   makeCustomIssue,
   type ZodIssue,
@@ -125,11 +127,12 @@ import CsvTable from '@/components/CsvTable.vue';
 import CsvUploader from '@/components/CsvUploader.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import AddUsersInfo from '@/components/userInfo/AddUsersInfo.vue';
-import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
+import useCreateUsersMutation from '@/composables/mutations/useCreateUsersMutation';
 import { useGetSyncStatusQuery } from '@/composables/queries/useGetSyncStatusQuery';
 import { NORMALIZED_USER_CSV_HEADERS, USER_CSV_HEADERS } from '@/constants/csv';
 import { SITE_OVERVIEW_QUERY_KEY, SYNC_STATUS_QUERY_KEY } from '@/constants/queryKeys';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
+import { type FirebaseFailure, toFirebaseFailureCode } from '@/firebase/failure';
 import { normalizeToLowercase } from '@/helpers';
 import { deriveNextCsvFilename, downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
 import { fetchOrgByName } from '@/helpers/query/orgs';
@@ -138,7 +141,8 @@ import { useAuthStore } from '@/store/auth';
 import { useLevanteStore } from '@/store/levante';
 
 const authStore = useAuthStore();
-const { currentSite, currentSiteName, roarfirekit } = storeToRefs(authStore);
+const { currentSite, currentSiteName } = storeToRefs(authStore);
+const authReady = computed(() => authStore.isFirekitInit());
 const isAllSitesSelected = computed(() => currentSite.value === 'any');
 const selectedSiteId = computed(() => currentSite.value ?? '');
 
@@ -146,7 +150,7 @@ const {
   data: syncStatus,
   isLoading: isLoadingSyncStatus,
   isError: isSyncStatusError,
-} = useGetSyncStatusQuery(selectedSiteId, () => !isAllSitesSelected.value);
+} = useGetSyncStatusQuery(selectedSiteId, () => authReady.value && !isAllSitesSelected.value);
 const hasPendingSyncStatus = computed(
   () => !!syncStatus.value && (syncStatus.value.assignments.pending > 0 || syncStatus.value.users.pending > 0),
 );
@@ -154,14 +158,11 @@ const hasPendingSyncStatus = computed(
 const levanteStore = useLevanteStore();
 const { setShouldUserConfirm } = levanteStore;
 
-// @TODO: createUsers is called directly rather than through a mutation composable (unlike
-// useUpsertAdministrationMutation etc.), so cache invalidation has to be done manually here
-// instead of in onSuccess. Consider implementing useCreateUsersMutation composable.
 const queryClient = useQueryClient();
 
 const router = useRouter();
 
-const { mutate: signOut } = useSignOutMutation();
+const { mutateAsync: createUsers } = useCreateUsersMutation();
 
 const toast = useToast();
 
@@ -293,7 +294,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   // Validate w/ zod schema
   const validated = AddUsersCsvSchema.safeParse(parsed);
   const issues = combineUsersCsvIssues([...(validated.error?.issues ?? []), ...siteIssues]);
-  if (issues.length > 0) {
+  if (issues.length > 0 || !validated.success) {
     // Validation failed
     status.value = { message: 'The uploaded file is invalid. See table for details.', severity: 'error' };
     validationErrors.value = {
@@ -306,8 +307,8 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   }
 
   // Validation succeeded, filter out users that already have a uid
-  const unregistered = validated
-    .data!.map((user, idx) => ({
+  const unregistered = validated.data
+    .map((user, idx) => ({
       user,
       validatedIdx: idx,
     }))
@@ -322,7 +323,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   unregisteredToValidated.value = unregistered.map(({ validatedIdx }) => validatedIdx);
 
   // There are new, valid users to be added
-  validatedData.value = validated.data!;
+  validatedData.value = validated.data;
   status.value = {
     message: 'File successfully uploaded. See table for summary of users to be added.',
     severity: 'success',
@@ -381,9 +382,10 @@ const submitUsers = async () => {
   }
 
   // Clone the unregistered users and map their validated indices
+  const validatedIdxs = toRaw(unregisteredToValidated.value);
   const unregistered = _cloneDeep(toRaw(unregisteredUsers.value)).map((user, idx) => ({
     user,
-    validatedIdx: unregisteredToValidated.value![idx]!,
+    validatedIdx: validatedIdxs[idx],
   }));
 
   // Ensure the orgs referenced in the user data exist
@@ -397,6 +399,7 @@ const submitUsers = async () => {
   const orgErrors: { field: string; validatedIdx: number }[] = [];
   const getOrgId = createOrgIdResolver();
   for (const { user, validatedIdx } of unregistered) {
+    if (validatedIdx === undefined) continue;
     const orgIds: OrgIds = {
       sites: [siteId],
       schools: [],
@@ -510,55 +513,64 @@ const submitUsers = async () => {
     return;
   }
 
-  // Make the create users request
-  const firekit = roarfirekit.value;
-  if (!firekit) {
-    status.value = { message: 'Unable to create users. Please refresh the page and try again.', severity: 'error' };
-    isSubmitting.value = false;
-    return;
-  }
+  // Call the createUsers firebase function
   showSyncPendingModal.value = true;
 
-  // Call createUsers firebase function
-  const result = await firekit.createUsers(params.data);
+  let result: CreateUsersResult;
+  try {
+    result = await createUsers(params.data);
+  } catch (failure) {
+    await handleCreateUsersFailure(failure as FirebaseFailure<CreateUsersError>);
+    isSubmitting.value = false;
+    showSyncPendingModal.value = false;
+    return;
+  }
 
-  if (result.code === 'success') {
-    // Merge the created users with the validated data
-    const mergedUsers = _cloneDeep(toRaw(validatedData.value));
-    result.data.users.forEach((createdUser) => {
-      const validatedIdx = unregistered.find(({ user }) => user.id === createdUser.id)?.validatedIdx;
-      if (validatedIdx != null) {
-        mergedUsers[validatedIdx] = {
-          ...mergedUsers[validatedIdx]!,
-          email: createdUser.email ?? '',
-          password: createdUser.password ?? '',
-          uid: createdUser.uid ?? '',
-        };
-      } else {
-        logger.error(new Error('Unexpected created user'), {
-          tags: {
-            component: 'AddUsers',
-            function: 'submitUsers',
-          },
-          uid: createdUser.uid,
-        });
-      }
-    });
-    registeredUsers.value = mergedUsers;
-
-    status.value = { message: 'Users created successfully.', severity: 'success' };
-    setShouldUserConfirm(false);
-    downloadRegisteredUsers();
-    await invalidateSyncStatus();
-    await queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY, siteId] });
-  } else if (result.code === 'app-error') {
-    const error = result.data;
-    if (error.code === 'functions/already-exists') {
-      status.value = {
-        message: 'One or more users already exist. Please try again with a different file.',
-        severity: 'error',
+  // Merge the created users with the validated data
+  const mergedUsers = _cloneDeep(toRaw(validatedData.value));
+  result.users.forEach((createdUser) => {
+    const validatedIdx = unregistered.find(({ user }) => user.id === createdUser.id)?.validatedIdx;
+    const existing = validatedIdx != null ? mergedUsers[validatedIdx] : undefined;
+    if (validatedIdx != null && existing) {
+      mergedUsers[validatedIdx] = {
+        ...existing,
+        email: createdUser.email ?? '',
+        password: createdUser.password ?? '',
+        uid: createdUser.uid ?? '',
       };
-      const rowNumMap = validatedData.value!.reduce(
+    } else {
+      logger.error(new Error('Unexpected created user'), {
+        tags: {
+          component: 'AddUsers',
+          function: 'submitUsers',
+        },
+        uid: createdUser.uid,
+      });
+    }
+  });
+  registeredUsers.value = mergedUsers;
+
+  status.value = { message: 'Users created successfully.', severity: 'success' };
+  setShouldUserConfirm(false);
+  downloadRegisteredUsers();
+  await invalidateSyncStatus();
+  await queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY, siteId] });
+
+  isSubmitting.value = false;
+  showSyncPendingModal.value = false;
+};
+
+const handleCreateUsersFailure = async (failure: FirebaseFailure<CreateUsersError>) => {
+  let message = 'Failed to add users. Please try again. If the problem persists, contact support.';
+  let shouldLog = true;
+
+  if (failure.code === 'app-error') {
+    const error = failure.error;
+    if (error.code === 'functions/already-exists') {
+      message = 'One or more users already exist. Please fix the errors in your CSV file and try again.';
+      shouldLog = false;
+      const validatedUsers = validatedData.value ?? [];
+      const rowNumMap = validatedUsers.reduce(
         (acc, user, idx) => {
           acc[user.id] = idx + 2; // +2 for header row and 1-indexing
           return acc;
@@ -575,54 +587,39 @@ const submitUsers = async () => {
         showDownloadButton: true,
       };
     } else if (error.code === 'functions/failed-precondition') {
-      status.value = {
-        message: 'The server is working on other tasks. Please try again in a few minutes.',
-        severity: 'error',
-      };
+      message = 'The server is working on other tasks. Please try again in a few minutes.';
+      shouldLog = false;
       await invalidateSyncStatus();
     } else if (error.code === 'functions/permission-denied') {
-      status.value = {
-        message: 'You do not have permission to add users to this site. Please contact support.',
-        severity: 'error',
-      };
+      message = 'Failed to add users due to insufficient permissions. Please contact support.';
     } else if (error.code === 'functions/unauthenticated') {
-      toast.add({
-        severity: TOAST_SEVERITIES.WARN,
-        summary: 'Session Expired',
-        detail: 'Your session has expired. Please sign in again.',
-        life: TOAST_DEFAULT_LIFE_DURATION,
-      });
-      signOut();
+      message = 'Failed to add users due to an expired session. Please sign in again and retry.';
+      shouldLog = false;
     } else {
       // The remaining app-error cases are unexpected due to preflight validation above.
       // - functions/invalid-argument/schema
       // - functions/invalid-argument/org-site-mismatch
       // - functions/not-found/orgs
-      logger.error(new Error('Unexpected createUsers app-error', { cause: error }), {
-        tags: {
-          component: 'AddUsers',
-          function: 'submitUsers',
-          errorCode: `${error.code}/${error.details.code}`,
-        },
-      });
-      status.value = {
-        message:
-          'An unexpected error occurred. Please refresh the page and try again. If the problem persists, contact support.',
-        severity: 'error',
-      };
+      message = 'Failed to add users due to an unexpected error. Please contact support.';
     }
-  } else {
-    logger.error(new Error(`Unexpected createUsers ${result.code}`, { cause: result.data }), {
-      tags: {
-        component: 'AddUsers',
-        function: 'submitUsers',
-      },
-    });
-    status.value = { message: 'An unexpected error occurred. Please contact support.', severity: 'error' };
+  } else if (failure.code === 'functions-error' && failure.error.code === 'functions/unauthenticated') {
+    message = 'Failed to add users due to an expired session. Please sign in again and retry.';
+    shouldLog = false;
   }
 
-  isSubmitting.value = false;
-  showSyncPendingModal.value = false;
+  status.value = {
+    message,
+    severity: 'error',
+  };
+  if (shouldLog) {
+    logger.error(new Error(`Failed to create users`, { cause: failure }), {
+      tags: {
+        component: 'AddUsers',
+        firebaseFailureCode: toFirebaseFailureCode(failure),
+      },
+      siteId: selectedSiteId.value,
+    });
+  }
 };
 
 /**

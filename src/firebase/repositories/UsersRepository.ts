@@ -1,4 +1,6 @@
 import type {
+  CreateUsersParams,
+  CreateUsersResult,
   GetUsersByOrgParams,
   GetUsersByOrgResult,
   LinkUsersParams,
@@ -53,11 +55,6 @@ export interface CreateUpdateAdministratorPayload {
 }
 
 const CREATE_USERS_CALLABLE_TIMEOUT_MS = 540_000;
-
-export interface CreateUsersPayload {
-  users: Record<string, unknown>[];
-  siteId?: string;
-}
 
 const ADMIN_ROLES = new Set<string>([ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN, ROLES.ADMIN, ROLES.RESEARCH_ASSISTANT]);
 
@@ -131,8 +128,12 @@ class UsersRepository extends Repository {
     return this.call<CreateUpdateAdministratorPayload, unknown>('createAdministrator', payload);
   }
 
-  async createUsers(payload: CreateUsersPayload): Promise<unknown> {
-    return this.callWithTimeout<CreateUsersPayload, unknown>('createUsers', payload, CREATE_USERS_CALLABLE_TIMEOUT_MS);
+  async createUsers(params: CreateUsersParams): Promise<CreateUsersResult> {
+    return this.callWithTimeout<CreateUsersParams, CreateUsersResult>(
+      'createUsers',
+      params,
+      CREATE_USERS_CALLABLE_TIMEOUT_MS,
+    );
   }
 
   async getAdministrationOrgProgress(
