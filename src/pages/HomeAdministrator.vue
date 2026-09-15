@@ -273,10 +273,12 @@ const authStore = useAuthStore();
 const { currentSite, userData } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
 
+const authReady = computed(() => authStore.isFirekitInit());
 const isSiteSelected = computed(() => !!currentSite.value && currentSite.value !== 'any');
 const showSelectSitePrompt = computed(() => !!userData.value && !isSiteSelected.value);
-const { data: siteOverview, isLoading } = useGetSiteOverviewQuery(() =>
-  isSiteSelected.value ? (currentSite.value as string) : '',
+const { data: siteOverview, isLoading } = useGetSiteOverviewQuery(
+  () => (isSiteSelected.value ? (currentSite.value as string) : ''),
+  () => authReady.value,
 );
 
 const userName = computed(() => {
