@@ -301,7 +301,10 @@ describe('ListUsers Page', () => {
       expect(logger.error).toHaveBeenCalledTimes(1);
       const [error, context] = vi.mocked(logger.error).mock.calls[0] ?? [];
       expect(error?.cause).toBe(boom);
-      expect(context).toMatchObject({ uid: 'b', tags: { composable: 'useUpdateUsersInfoMutation' } });
+      expect(context).toMatchObject({
+        uid: 'b',
+        tags: { component: 'ListUsers', function: 'submitUpdateUsersInfo' },
+      });
       expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
       expect(vm.showEditModal).toBe(true);
     });

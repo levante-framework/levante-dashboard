@@ -450,7 +450,10 @@ const submitUpdateUsersInfo = async () => {
     onEditModalClosed();
   } catch (error) {
     logger.error(new Error('Failed to update user info', { cause: error }), {
-      tags: { composable: 'useUpdateUsersInfoMutation' },
+      tags: {
+        component: 'ListUsers',
+        function: 'submitUpdateUsersInfo',
+      },
       uid,
     });
     toast.add({
