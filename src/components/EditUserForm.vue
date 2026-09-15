@@ -25,7 +25,7 @@
         <div v-if="isLoading" class="text-md text-gray-500">Loading…</div>
         <div v-else-if="orgs.length" class="flex flex-column gap-1">
           <div v-for="org in orgs" :key="org.id">
-            {{ org.name }} <span class="text-sm text-gray-500">({{ capitalize(org.orgType) }})</span>
+            {{ org.name }} <span class="text-sm text-gray-500">({{ _capitalize(org.orgType) }})</span>
           </div>
         </div>
         <div v-else class="text-md text-gray-500">None</div>
@@ -39,7 +39,7 @@
               assignment.name
             }}</router-link>
             <span class="text-sm text-gray-500">
-              {{ capitalize(assignment.status) }} · {{ formatDate(assignment.dateOpened) }} –
+              {{ _capitalize(assignment.status) }} · {{ formatDate(assignment.dateOpened) }} –
               {{ formatDate(assignment.dateClosed) }}
             </span>
           </div>
@@ -80,6 +80,7 @@ export type UserOverviewAssignment = GetUserOverviewResult['assignments'][number
 </script>
 
 <script setup lang="ts">
+import _capitalize from 'lodash/capitalize';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { computed, ref, watch } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
@@ -141,10 +142,6 @@ watch(isDirty, (value) => emit('dirty', value), { immediate: true });
 // +---------+
 function assignmentRoute(assignment: UserOverviewAssignment): RouteLocationRaw {
   return { name: 'AdministrationProgressReport', params: { administrationId: assignment.id } };
-}
-
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function formatDate(value: string): string {
