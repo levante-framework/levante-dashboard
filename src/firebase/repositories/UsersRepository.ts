@@ -1,8 +1,8 @@
 import type {
-  GetUserOverviewParams,
-  GetUserOverviewResult,
   CreateUsersParams,
   CreateUsersResult,
+  GetUserOverviewParams,
+  GetUserOverviewResult,
   GetUsersByOrgParams,
   GetUsersByOrgResult,
   LinkUsersParams,
