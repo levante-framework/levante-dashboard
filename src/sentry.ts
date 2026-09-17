@@ -1,7 +1,12 @@
 import * as Sentry from '@sentry/vue';
 import type { App } from 'vue';
 import { isLevante } from '@/constants';
-import { identitySiteName, sentryUserFromUsername, usernameFromIdentity } from '@/helpers/sentryPrivacy';
+import {
+  identitySiteName,
+  omitSensitiveSentryFields,
+  sentryUserFromUsername,
+  usernameFromIdentity,
+} from '@/helpers/sentryPrivacy';
 import { LEVANTE_SENTRY_DSN } from '@/sentryConfig';
 import { useAuthStore } from '@/store/auth';
 import { formattedLocale, languageOptions } from './translations/i18n';
@@ -53,10 +58,6 @@ export function initSentry(app: App) {
     environment:
       (import.meta.env.VITE_FIREBASE_PROJECT ?? 'PROD').toUpperCase() === 'DEV' ? 'development' : 'production',
     integrations: [
-      Sentry.replayIntegration({
-        maskAllText: true,
-        maskAllInputs: true,
-      }),
       Sentry.browserTracingIntegration(),
       Sentry.feedbackIntegration({
         showBranding: false,
@@ -80,9 +81,8 @@ export function initSentry(app: App) {
     // Performance Monitoring
     tracesSampleRate: 0.2, // Capture 20% of the transactions
     tracePropagationTargets,
-    // Session Replay
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 0,
     ignoreErrors: [/Failed to read a named property '__v_isRef' from 'Window'/],
     beforeSend(event) {
       if (isCrossOriginVueRefSecurityError(event)) {
@@ -100,6 +100,14 @@ export function initSentry(app: App) {
 
       if (event.contexts?.geo) {
         delete event.contexts.geo;
+      }
+
+      if (event.extra) {
+        event.extra = omitSensitiveSentryFields(event.extra);
+      }
+
+      if (event.contexts) {
+        event.contexts = omitSensitiveSentryFields(event.contexts);
       }
 
       // Drop benign Firestore permission-denied errors raised while unauthenticated
