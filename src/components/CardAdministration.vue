@@ -323,53 +323,53 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const statusBadge = computed(() => {
-  let icon = "";
-  let label = "";
+  let icon = '';
+  let label = '';
   let pulse = false;
-  let status: StatusBadgeStatus = "default";
+  let status: StatusBadgeStatus = 'default';
 
-  if (displayedSyncStatus.value === "complete") {
-    icon = "pi pi-check";
-    label = "Assigned";
-    status = "success";
+  if (displayedSyncStatus.value === 'complete') {
+    icon = 'pi pi-check';
+    label = 'Assigned';
+    status = 'success';
   }
 
-  if (displayedSyncStatus.value === "failed") {
-    icon = "pi pi-times";
-    label = "Failed";
-    status = "error";
+  if (displayedSyncStatus.value === 'failed') {
+    icon = 'pi pi-times';
+    label = 'Failed';
+    status = 'error';
   }
 
-  if (displayedSyncStatus.value === "pending") {
-    label = "Processing";
+  if (displayedSyncStatus.value === 'pending') {
+    label = 'Processing';
     pulse = true;
-    status = "warn";
+    status = 'warn';
   }
 
   return { icon, label, pulse, status };
 });
 
 const availabilityBadge = computed(() => {
-  let icon = "";
-  let label = "";
-  let status: StatusBadgeStatus = "default";
+  let icon = '';
+  let label = '';
+  let status: StatusBadgeStatus = 'default';
 
-  if (administrationStatusBadge.value === "open") {
-    icon = "pi pi-check";
-    label = "Open";
-    status = "success";
+  if (administrationStatusBadge.value === 'open') {
+    icon = 'pi pi-check';
+    label = 'Open';
+    status = 'success';
   }
 
-  if (administrationStatusBadge.value === "closed") {
-    icon = "pi pi-times";
-    label = "Closed";
-    status = "error";
+  if (administrationStatusBadge.value === 'closed') {
+    icon = 'pi pi-times';
+    label = 'Closed';
+    status = 'error';
   }
 
-  if (administrationStatusBadge.value === "upcoming") {
-    icon = "pi pi-clock";
-    label = "Upcoming";
-    status = "warn";
+  if (administrationStatusBadge.value === 'upcoming') {
+    icon = 'pi pi-clock';
+    label = 'Upcoming';
+    status = 'warn';
   }
 
   return { icon, label, status };

@@ -1,12 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed } from 'vue';
 
-export type StatusBadgeStatus =
-  | "default"
-  | "error"
-  | "info"
-  | "success"
-  | "warn";
+export type StatusBadgeStatus = 'default' | 'error' | 'info' | 'success' | 'warn';
 
 interface Props {
   icon?: string;
@@ -19,7 +14,7 @@ const props = withDefaults(defineProps<Props>(), {
   icon: undefined,
   label: undefined,
   pulse: false,
-  status: "default",
+  status: 'default',
 });
 
 const shouldDisplay = computed(() => props.icon?.length || props.label?.length);
