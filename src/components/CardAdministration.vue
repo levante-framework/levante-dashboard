@@ -7,29 +7,7 @@
         <div class="assignment__details">
           <div class="assignment__detail">
             <p class="m-0 font-semibold">Status:</p>
-            <div
-              :class="[
-                'assignment__badge',
-                `assignment__badge--${displayedSyncStatus}`,
-              ]"
-            >
-              <i
-                v-if="displayedSyncStatus === 'complete'"
-                class="pi pi-check font-semibold text-xs"
-              ></i>
-
-              <i
-                v-if="displayedSyncStatus === 'failed'"
-                class="pi pi-times font-semibold text-xs"
-              ></i>
-
-              <div
-                v-if="displayedSyncStatus === 'pending'"
-                class="assignment__badge-pulse"
-              ></div>
-
-              <p class="m-0">{{ statusToLabel[displayedSyncStatus!] }}</p>
-            </div>
+            <StatusBadge v-if="displayedSyncStatus" v-bind="statusBadge" />
           </div>
 
           <div class="assignment__detail">
@@ -38,23 +16,13 @@
           </div>
 
           <div class="assignment__detail">
-            <div
-              class="flex align-items-center gap-1"
-              v-tooltip.top="getTooltip(administrationStatus, { showDelay: 0 })"
-            >
-              <div
-                :class="[
-                  'assignment__availability',
-                  `assignment__availability--${administrationStatusBadge}`,
-                ]"
-              />
-              <p class="m-0 font-semibold">Availability:</p>
-            </div>
+            <p class="m-0 font-semibold">Availability:</p>
             <p class="m-0">
               {{ processedDates.start.toLocaleDateString() }}
               <i class="pi pi-angle-right text-xs text-gray-400"></i>
               {{ processedDates.end.toLocaleDateString() }}
             </p>
+            <StatusBadge v-if="administrationStatusBadge" v-bind="availabilityBadge" />
           </div>
 
           <div class="assignment__detail">
@@ -132,7 +100,7 @@
             icon="pi pi-chart-bar"
             severity="secondary"
             outlined
-            label="View General Progress"
+            label="View Overall Progress"
             aria-label="View assignment progress"
             size="small"
             data-cy="button-administration-progress"
@@ -145,6 +113,7 @@
         class="assignment__actions"
       >
         <PvButton
+          v-if="hasRole(ROLES.ADMIN)"
           iconOnly
           rounded
           severity="danger"
@@ -154,13 +123,22 @@
         >
           <i class="pi pi-pencil"></i>
         </PvButton>
+
+        <PvButton
+          v-if="hasRole(ROLES.ADMIN) && canRetry"
+          iconOnly
+          rounded
+          severity="danger"
+          variant="outlined"
+          v-tooltip.top="getTooltip('Retry')"
+          @click="() => onRetry()"
+        >
+          <i class="pi pi-sync"></i>
+        </PvButton>
       </div>
     </div>
 
-    <div
-      v-if="isSyncComplete || displayedSyncStatus === 'failed'"
-      class="assignment__progress-table"
-    >
+    <div v-if="isSyncComplete" class="assignment__progress-table">
       <div
         class="assignment__progress-table__header"
         :class="{
@@ -168,7 +146,9 @@
         }"
         @click="onClickProgressTableHeader"
       >
-        <p class="assignment__progress-table__toggle-label">See Progress Details</p>
+        <p class="assignment__progress-table__toggle-label">
+          View Details by Group
+        </p>
         <i v-if="isProgressTableOpen" class="pi pi-angle-up"></i>
         <i v-else class="pi pi-angle-down"></i>
       </div>
@@ -272,16 +252,19 @@ import useAdministrationsQuery from '@/composables/queries/useAdministrationsQue
 import useDsgfOrgQuery from '@/composables/queries/useDsgfOrgQuery';
 import useTasksDictionaryQuery from '@/composables/queries/useTasksDictionaryQuery';
 import { type SyncStatus, useAdministrationSyncStatus } from '@/composables/useAdministrationSyncStatus';
+import { usePermissions } from '@/composables/usePermissions';
 import { isLevante } from '@/constants';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { ADMINISTRATIONS_LIST_QUERY_KEY, ADMINISTRATIONS_QUERY_KEY } from '@/constants/queryKeys';
+import { ROLES } from '@/constants/roles';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { getTooltip } from '@/helpers';
 import { buildRetryAdministrationArgs } from '@/helpers/administrations';
 import { batchGetDocs } from '@/helpers/query/utils';
 import { taskDisplayNames } from '@/helpers/reports';
 import { useAuthStore } from '@/store/auth';
+import StatusBadge, { StatusBadgeStatus } from './StatusBadge.vue';
 
 interface Assessment {
   taskId: string;
@@ -325,9 +308,10 @@ interface TreeNode {
   children?: TreeNode[];
 }
 
-const router = useRouter();
-const queryClient = useQueryClient();
 const authStore = useAuthStore();
+const { hasRole } = usePermissions();
+const queryClient = useQueryClient();
+const router = useRouter();
 
 const props = withDefaults(defineProps<Props>(), {
   creatorName: '--',
@@ -338,11 +322,58 @@ const props = withDefaults(defineProps<Props>(), {
   onDeleteAdministration: () => {},
 });
 
-const statusToLabel = {
-  pending: 'Processing',
-  complete: 'Assigned',
-  failed: 'Failed',
-};
+const statusBadge = computed(() => {
+  let icon = "";
+  let label = "";
+  let pulse = false;
+  let status: StatusBadgeStatus = "default";
+
+  if (displayedSyncStatus.value === "complete") {
+    icon = "pi pi-check";
+    label = "Assigned";
+    status = "success";
+  }
+
+  if (displayedSyncStatus.value === "failed") {
+    icon = "pi pi-times";
+    label = "Failed";
+    status = "error";
+  }
+
+  if (displayedSyncStatus.value === "pending") {
+    label = "Processing";
+    pulse = true;
+    status = "warn";
+  }
+
+  return { icon, label, pulse, status };
+});
+
+const availabilityBadge = computed(() => {
+  let icon = "";
+  let label = "";
+  let status: StatusBadgeStatus = "default";
+
+  if (administrationStatusBadge.value === "open") {
+    icon = "pi pi-check";
+    label = "Open";
+    status = "success";
+  }
+
+  if (administrationStatusBadge.value === "closed") {
+    icon = "pi pi-times";
+    label = "Closed";
+    status = "error";
+  }
+
+  if (administrationStatusBadge.value === "upcoming") {
+    icon = "pi pi-clock";
+    label = "Upcoming";
+    status = "warn";
+  }
+
+  return { icon, label, status };
+});
 
 const toast = useToast();
 
@@ -624,84 +655,10 @@ const onClickEditBtn = () => {
 
   &__detail {
     display: flex;
-    align-items: start;
+    align-items: center;
     gap: 0.25rem;
     min-height: 1.25rem;
     font-size: 14px;
-  }
-
-  &__badge {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin: 0;
-    padding: 0.2rem 0.5rem;
-    border-radius: 99999px;
-    font-family: var(--font-family);
-    font-weight: 700;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-
-    &--complete {
-      background-color: rgba(var(--bright-green-rgb), 0.15);
-      color: var(--bright-green);
-    }
-
-    &--failed {
-      background-color: rgba(var(--bright-red-rgb), 0.15);
-      color: var(--bright-red);
-    }
-
-    &--pending {
-      background-color: rgba(var(--bright-yellow-rgb), 0.15);
-      color: var(--bright-yellow);
-    }
-  }
-
-  &__badge-pulse {
-    display: block;
-    width: 10px;
-    height: 10px;
-    margin: 0 0.25rem 0 0;
-    padding: 0;
-    border-radius: 100%;
-    background-color: var(--bright-yellow);
-    position: relative;
-
-    &::before,
-    &::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border: 2px solid var(--bright-yellow);
-      border-radius: 100%;
-      animation: pulse 2s ease-out infinite;
-    }
-
-    &::after {
-      animation-delay: 1s;
-    }
-  }
-
-  &__availability {
-    display: block;
-    width: 10px;
-    height: 10px;
-    margin: 0;
-    padding: 0;
-    border-radius: 100%;
-  }
-
-  &__availability--upcoming {
-    background-color: var(--bright-yellow);
-  }
-
-  &__availability--open {
-    background-color: var(--bright-green);
-  }
-
-  &__availability--closed {
-    background-color: var(--gray-400);
   }
 
   &__task {
@@ -763,18 +720,6 @@ const onClickEditBtn = () => {
     .p-treetable-thead {
       display: none;
     }
-  }
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-
-  100% {
-    transform: scale(2.5);
-    opacity: 0;
   }
 }
 </style>
