@@ -1,4 +1,3 @@
-import { contextLinesIntegration, extraErrorDataIntegration } from '@sentry/integrations';
 import * as Sentry from '@sentry/vue';
 import type { App } from 'vue';
 import { isLevante } from '@/constants';
@@ -71,8 +70,8 @@ export function initSentry(app: App) {
         messageLabel: languageOptions[language]?.translations?.sentryForm?.messageLabel || 'Message',
         messagePlaceholder: languageOptions[language]?.translations?.sentryForm?.messagePlaceholder || 'Message',
       }),
-      contextLinesIntegration(),
-      extraErrorDataIntegration(),
+      Sentry.contextLinesIntegration(),
+      Sentry.extraErrorDataIntegration(),
     ],
     attachStacktrace: true,
     sendDefaultPii: false,

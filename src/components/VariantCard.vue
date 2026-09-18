@@ -29,7 +29,7 @@
         <div class="w-full">
           <p class="m-0">
             <span class="font-semibold text-sm">Variant name: </span>
-            <span class="text-sm">{{ formattedVariantName(variant.variant.name) }}</span>
+            <span class="text-sm">{{ resolveVariantDisplayName(variant.variant) }}</span>
           </p>
         </div>
         <PvPopover ref="op" append-to="body" style="width: 40vh">
@@ -123,7 +123,7 @@
         <div class="flex-col align-items-center gap-2">
           <p class="m-0">
             <span class="font-semibold text-sm">Variant name: </span>
-            <span class="text-sm">{{ formattedVariantName(variant.variant.name) }}</span>
+            <span class="text-sm">{{ resolveVariantDisplayName(variant.variant) }}</span>
           </p>
 
           <p v-if="formattedAssignedConditions" class="m-0">
@@ -278,7 +278,7 @@ import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { computed, ref } from 'vue';
 import EditVariantDialog from '@/components/EditVariantDialog.vue';
-import { formattedVariantName, getTooltip } from '@/helpers';
+import { getTooltip, resolveVariantDisplayName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 
 interface Condition {
@@ -299,6 +299,7 @@ interface VariantConditions {
 }
 
 interface VariantData {
+  displayName?: string;
   name: string;
   params: Record<string, any>;
   conditions?: VariantConditions;

@@ -88,9 +88,15 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  [isFirekitInit, isLoadingUserData, isTaskSWRReady],
-  async ([newFirekitInitValue, newLoadingUserData, newIsTaskSWRReady]) => {
-    if (newFirekitInitValue && !newLoadingUserData && !taskStarted.value && newIsTaskSWRReady) {
+  [isTaskSWRReady, selectedAssignment, isLoadingUserData, isFirekitInit],
+  async ([newIsTaskSWRReady, newSelectedAssignment, newLoadingUserData, newFirekitInitValue]) => {
+    if (
+      newSelectedAssignment &&
+      newIsTaskSWRReady &&
+      !newLoadingUserData &&
+      !taskStarted.value &&
+      newFirekitInitValue
+    ) {
       taskStarted.value = true;
       await startTask(selectedAssignment);
     }
@@ -112,7 +118,7 @@ async function startTask(selectedAdmin) {
     }, 100);
 
     const appKit = await startAssessmentWithRetry(() =>
-      authStore.roarfirekit.startAssessment(selectedAdmin.value.id, props.taskId, version),
+      authStore.roarfirekit.startAssessment(selectedAdmin.value?.id, props.taskId, version),
     );
 
     startAssessmentSucceeded = true;
@@ -127,12 +133,12 @@ async function startTask(selectedAdmin) {
     appKit.sentryDualReport = true;
     const gameParams = { ...appKit._taskInfo.variantParams };
 
-    const roarApp = new TaskLauncher(appKit, gameParams, userParams, 'jspsych-target', false);
+    const roarApp = new TaskLauncher(appKit, gameParams, userParams, 'jspsych-target', false, logger);
 
     await roarApp.run().then(async () => {
       // Handle any post-game actions.
       await completeAssessmentMutate({
-        adminId: selectedAdmin.value.id,
+        adminId: selectedAdmin.value?.id,
         taskId: props.taskId,
       });
 
@@ -152,7 +158,7 @@ async function startTask(selectedAdmin) {
     );
     logger.error(new Error('Failed to start task', { cause: error }), {
       tags: { function: 'startTask', component: 'TaskSWR' },
-      administrationId: selectedAdmin.value.id,
+      administrationId: selectedAdmin.value?.id,
       taskId: props.taskId,
       userId: getUserId(),
     });

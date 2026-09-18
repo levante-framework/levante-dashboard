@@ -149,6 +149,16 @@ const buildMenuLabels = (actions = []) => {
     }
   });
 
+  const researchersAction = actions.find((action) => action.category === 'Researchers');
+  if (researchersAction) {
+    labels.push(researchersAction.title);
+  }
+
+  const tasksAction = actions.find((action) => action.category === 'Tasks');
+  if (tasksAction) {
+    labels.push(tasksAction.title);
+  }
+
   return labels;
 };
 

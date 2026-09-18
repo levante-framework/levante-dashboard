@@ -88,9 +88,15 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  [isFirekitInit, isLoadingUserData, isTaskSREReady],
-  async ([newFirekitInitValue, newLoadingUserData, newIsTaskSREReady]) => {
-    if (newFirekitInitValue && !newLoadingUserData && !taskStarted.value && newIsTaskSREReady) {
+  [isTaskSREReady, selectedAssignment, isLoadingUserData, isFirekitInit],
+  async ([newIsTaskSREReady, newSelectedAssignment, newLoadingUserData, newFirekitInitValue]) => {
+    if (
+      newIsTaskSREReady &&
+      newSelectedAssignment &&
+      !taskStarted.value &&
+      !newLoadingUserData &&
+      newFirekitInitValue
+    ) {
       taskStarted.value = true;
       await startTask(selectedAssignment);
     }
@@ -112,7 +118,7 @@ async function startTask(selectedAdmin) {
     }, 100);
 
     const appKit = await startAssessmentWithRetry(() =>
-      authStore.roarfirekit.startAssessment(selectedAdmin.value.id, props.taskId, version),
+      authStore.roarfirekit.startAssessment(selectedAdmin.value?.id, props.taskId, version),
     );
 
     startAssessmentSucceeded = true;
@@ -132,7 +138,7 @@ async function startTask(selectedAdmin) {
     await roarApp.run().then(async () => {
       // Handle any post-game actions.
       await completeAssessmentMutate({
-        adminId: selectedAdmin.value.id,
+        adminId: selectedAdmin.value?.id,
         taskId: props.taskId,
       });
 
@@ -152,7 +158,7 @@ async function startTask(selectedAdmin) {
     );
     logger.error(new Error('Failed to start task', { cause: error }), {
       tags: { function: 'startTask', component: 'TaskSRE' },
-      administrationId: selectedAdmin.value.id,
+      administrationId: selectedAdmin.value?.id,
       taskId: props.taskId,
       userId: getUserId(),
     });

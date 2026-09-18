@@ -80,7 +80,6 @@
 
       <div class="sidebar__nav">
         <div
-          v-tooltip.right="getTooltip(t('participantSidebar.statusCurrent'))"
           :class="`sidebar__nav-link --${ASSIGNMENT_STATUSES.CURRENT} ${selectedStatusCurrent ? '--active' : ''}`"
           @click="() => onClickSideBarNavLink(ASSIGNMENT_STATUSES.CURRENT)"
         >
@@ -88,7 +87,6 @@
         </div>
 
         <div
-          v-tooltip.right="getTooltip(t('participantSidebar.statusUpcoming'))"
           :class="`sidebar__nav-link --${ASSIGNMENT_STATUSES.UPCOMING} ${selectedStatusUpcoming ? '--active' : ''}`"
           @click="() => onClickSideBarNavLink(ASSIGNMENT_STATUSES.UPCOMING)"
         >
@@ -96,7 +94,6 @@
         </div>
 
         <div
-          v-tooltip.right="getTooltip(t('participantSidebar.statusPast'))"
           :class="`sidebar__nav-link --${ASSIGNMENT_STATUSES.PAST} ${selectedStatusPast ? '--active' : ''}`"
           @click="() => onClickSideBarNavLink(ASSIGNMENT_STATUSES.PAST)"
         >
@@ -113,7 +110,6 @@ import { storeToRefs } from 'pinia';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ASSIGNMENT_STATUSES } from '@/constants';
-import { getTooltip } from '@/helpers';
 import { getAssignmentStatus, isCurrent, isPast, isUpcoming } from '@/helpers/assignments';
 import { useAssignmentsStore } from '@/store/assignments';
 import AssignmentCard from './assignments/AssignmentCard.vue';

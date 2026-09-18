@@ -23,6 +23,17 @@ function removeHash(to: RouteLocationNormalized) {
   if (to.hash) return { path: to.path, query: to.query, hash: '' };
 }
 
+const CHUNK_RELOAD_KEY = 'chunk-reload';
+
+function isChunkLoadError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes('Failed to fetch dynamically imported module') ||
+    message.includes('error loading dynamically imported module') ||
+    message.includes('Importing a module script failed')
+  );
+}
+
 // '*' = all roles
 const routes: Array<RouteRecordRaw> = [
   {
@@ -91,7 +102,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/pages/ManageTasksVariants.vue'),
     meta: {
       pageTitle: 'Manage Tasks',
-      allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SITE_ADMIN],
+      allowedRoles: [ROLES.SUPER_ADMIN],
     },
   },
   {
@@ -410,12 +421,34 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
   return next();
 });
 
-// PostHog pageview tracking
+// Call for Posthog pageview tracking
 router.afterEach((to, from) => {
+  sessionStorage.removeItem(CHUNK_RELOAD_KEY);
   logger.capture('pageview', {
     to: { name: to.name, path: to.path },
     from: { name: from.name, path: from.path },
   });
+});
+
+router.onError((error, to) => {
+  if (!isChunkLoadError(error)) {
+    logger.error(new Error('Router navigation failed', { cause: error }), {
+      tags: { function: 'router.onError', route: String(to.name ?? 'unknown') },
+      path: to.fullPath,
+    });
+    return;
+  }
+
+  if (sessionStorage.getItem(CHUNK_RELOAD_KEY) === to.fullPath) {
+    sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+    logger.error(new Error('Failed to load app chunk after reload', { cause: error }), {
+      tags: { function: 'router.onError' },
+    });
+    return;
+  }
+
+  sessionStorage.setItem(CHUNK_RELOAD_KEY, to.fullPath);
+  window.location.assign(to.fullPath);
 });
 
 export default router;

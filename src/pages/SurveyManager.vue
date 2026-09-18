@@ -88,6 +88,7 @@ import { getParsedLocale, getPlainSurveyData, setupSurveyMarkdownConverter } fro
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import 'survey-core/survey-core.css';
+import 'survey-core/survey.i18n';
 import { type ICreatorOptions, SurveyCreatorModel } from 'survey-creator-core';
 import 'survey-creator-core/survey-creator-core.css';
 import { SC2020 } from 'survey-creator-core/themes';

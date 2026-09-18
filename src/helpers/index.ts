@@ -274,9 +274,11 @@ export const normalizeToLowercase = (str = ''): string =>
     .replace(/[\u0300-\u036f]/g, '');
 
 export const getTooltip = (value: string, options?: TooltipOptions): TooltipOptions => {
+  const canHover = window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
   const defaultOptions = {
     hideDelay: 0,
     showDelay: 1500,
+    disabled: !canHover,
   } as TooltipOptions;
 
   return { ...defaultOptions, ...options, value };
@@ -300,6 +302,13 @@ export const formattedVariantName = (variantName: string): string => {
 
   const matchedLocale = findBestMatchingLocale(trimmedName);
   return languageOptions[matchedLocale]?.languageTaskPicker ?? rawName;
+};
+
+export const resolveVariantDisplayName = (variant: { displayName?: string | null; name?: string | null }): string => {
+  const displayName = variant.displayName?.trim();
+  if (displayName) return displayName;
+  const name = variant.name?.trim() ?? '';
+  return name ? formattedVariantName(name) : '';
 };
 // Accept Date, Map, and others...
 export const isObject = (obj: unknown): boolean => obj !== null && typeof obj === 'object' && !Array.isArray(obj);

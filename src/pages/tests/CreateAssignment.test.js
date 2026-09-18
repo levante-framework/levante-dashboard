@@ -171,6 +171,7 @@ describe('Create Assignment Page', () => {
             age: null,
           },
           name: 'en',
+          displayName: 'English Instructions',
           registered: true,
           lastUpdated: '2025-05-15T20:12:54.288Z',
           id: 'YXXjBbBuaacSaEV4NGiW',
@@ -268,6 +269,7 @@ describe('Create Assignment Page', () => {
             age: null,
           },
           name: 'en',
+          displayName: 'English Instructions',
           registered: true,
           lastUpdated: '2025-05-15T20:12:54.288Z',
           id: 'YXXjBbBuaacSaEV4NGiW',
@@ -303,5 +305,17 @@ describe('Create Assignment Page', () => {
 
     expect(errorMessages.length).toBe(0);
     expect(mockUpsertAdministration).toHaveBeenCalledTimes(1);
+    expect(mockUpsertAdministration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assessments: expect.arrayContaining([
+          expect.objectContaining({
+            variantName: 'English Instructions',
+            variantId: 'YXXjBbBuaacSaEV4NGiW',
+            taskId: 'intro',
+          }),
+        ]),
+      }),
+      expect.any(Object),
+    );
   });
 });

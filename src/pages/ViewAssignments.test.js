@@ -21,7 +21,7 @@ const mockAdministration = {
   assessments: [
     {
       variantId: 'DRjLxIQsFrgj4VJapHbz',
-      variantName: 'es-CO',
+      variantName: 'Spanish Hearts & Flowers',
       taskId: 'hearts-and-flowers',
       params: {
         storeItemId: false,
@@ -43,7 +43,7 @@ const mockAdministration = {
     },
     {
       variantId: 'Z6Cbf1V6CFGR2pg2iJDA',
-      variantName: 'math-default',
+      variantName: 'Default Math',
       taskId: 'egma-math',
       params: {
         sequentialStimulus: true,
@@ -208,7 +208,8 @@ describe('ViewAssignments', () => {
     vi.mock('@/components/CardAdministration.vue', () => ({
       default: {
         name: 'CardAdministration',
-        template: '<div data-cy="h2-card-admin"><h2 data-cy="h2-card-admin-title">{{ title }}</h2></div>',
+        template:
+          '<div data-cy="h2-card-admin"><h2 data-cy="h2-card-admin-title">{{ title }}</h2><div data-cy="card-admin-assessments">{{ assessments?.map((a) => a.variantName).join(",") }}</div></div>',
         props: [
           'title',
           'stats',
@@ -321,6 +322,8 @@ describe('ViewAssignments', () => {
     const card = wrapper.find('[data-cy="h2-card-admin-title"]');
     expect(card.exists()).toBe(true);
     expect(card.text()).toContain('Newest assignment');
+    expect(wrapper.find('[data-cy="card-admin-assessments"]').text()).toContain('Spanish Hearts & Flowers');
+    expect(wrapper.find('[data-cy="card-admin-assessments"]').text()).toContain('Default Math');
   });
 
   it('Data table search functionality', async () => {
