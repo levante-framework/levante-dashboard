@@ -29,8 +29,8 @@
       <div class="info">
         <i class="pi pi-map" />
         <div class="mr-auto">
-          <div class="font-semibold">Science fair / museum</div>
-          Walk through creating a site, children, and an assignment, then provision tablets offline.
+          <div class="font-semibold">Field collection (offline)</div>
+          Set up a site, pick the children already in LEVANTE, provision tablets, and collect where there is no internet.
         </div>
         <RouterLink :to="{ name: 'ScienceFair' }" class="font-semibold no-underline">Open wizard</RouterLink>
       </div>

@@ -51,3 +51,30 @@ A helper is available to create PDFs from SurveyJS JSON:
 - [`src/helpers/surveyPdfGenerator.ts`](./src/helpers/surveyPdfGenerator.ts)
 
 See usage notes and examples in [`README_SURVEY_PDF.md`](./README_SURVEY_PDF.md) (if present), or integrate the helper by importing it and passing the Survey JSON you wish to export. The helper avoids UI changes and can be called from admin-only flows or scripts.
+
+## Field collection (offline)
+
+DEV-only how-to at `/science-fair` (navbar: **Field collection**). Use it when a site,
+children, and assignment do **not** already exist. The launcher can auto-build a pack from
+an existing assignment, so the wizard is optional.
+
+Preview (admin-dev, expires 2026-10-18):
+https://hs-levante-admin-dev--science-fair-rcdjddph.web.app/science-fair
+
+Anyone can open that URL (no GitHub, no clone). Sign in with a LEVANTE researcher account
+on `hs-levante-admin-dev`. Do not deploy this page to live `hs-levante-admin-dev.web.app`.
+
+Wizard steps: pick or create a site → pick an existing cohort or school+classroom (or
+create a cohort and children) → create or reuse an assignment → optional pack link.
+
+Tablet after that (or instead of the wizard, if the assignment already exists):
+
+1. Select Site — sign in, pick the site
+2. Provision — tap one assignment × group pack, Download pack
+3. Roster — child mode, each child taps their name
+4. Sync — same researcher account
+
+Launcher preview: https://hs-levante-admin-dev--offline-launcher-34g4znyg.web.app
+(see `levante-offline-launcher/README.md`). Pack links look like
+`{LAUNCHER}/?v=google#/provision?admin=&orgType=&orgId=` and preselect that pack after
+sign-in.

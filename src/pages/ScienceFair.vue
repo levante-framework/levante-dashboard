@@ -3,11 +3,12 @@
     <header class="hero">
       <img class="hero-mark" src="/levante_icon.svg" alt="" />
       <div>
-        <p class="eyebrow">Walk-up event guide</p>
-        <h1>Science fair / museum</h1>
+        <p class="eyebrow">Offline field collection</p>
+        <h1>Field collection (offline)</h1>
         <p>
-          Create the site, children, and assignment in this dashboard. Tablets then use the offline
-          launcher to provision, assess, and sync. Checkboxes stay on this browser only.
+          Set up a site, pick the children already in LEVANTE, provision tablets, and collect where
+          there is no internet — at a school site or house to house. Checkboxes stay on this
+          browser only.
         </p>
       </div>
     </header>
@@ -15,8 +16,9 @@
     <div class="callout callout-note">
       <i class="pi pi-info-circle" />
       <div class="callout-body">
-        Pick a site first, then create a cohort and children. Creating a site usually needs a super
-        admin. Creating a cohort needs a site admin (or higher).
+        Pick a site first, then choose who is on the tablet — an existing cohort, or a school and
+        classroom. Creating a site usually needs a super admin. Creating a new cohort needs a site
+        admin (or higher).
       </div>
     </div>
 
@@ -54,7 +56,7 @@
           <div v-if="isCreatingSite" class="new-site">
             <label class="field">
               <span>New site name</span>
-              <PvInputText v-model="newSiteName" :disabled="siteSubmitting" placeholder="Bay Area Science Fair" />
+              <PvInputText v-model="newSiteName" :disabled="siteSubmitting" placeholder="Field collection site" />
             </label>
             <PvButton
               :disabled="!newSiteName.trim() || siteSubmitting"
@@ -71,10 +73,10 @@
         <div class="step-head">
           <span class="step-num">2</span>
           <div>
-            <h2>Create a cohort and children</h2>
+            <h2>Choose who is on the tablet</h2>
             <p>
-              Name the event group, how many visitors you need, and the age span. We create the
-              cohort and children for you.
+              Use children already in LEVANTE: pick a cohort, or a school and classroom. Create a
+              new cohort only if this site has no group yet.
             </p>
           </div>
           <label class="done">
@@ -83,37 +85,130 @@
           </label>
         </div>
         <p v-if="!hasSite" class="setup-warn">Pick or create a site in step 1 first.</p>
-        <div class="setup-grid">
-          <label class="field">
-            <span>Group / cohort name</span>
-            <PvInputText v-model="form.groupName" :disabled="!hasSite || submitting" placeholder="Bay Area Science Fair" />
-          </label>
-          <label class="field">
-            <span>How many children</span>
-            <PvInputText v-model.number="form.count" type="number" :disabled="!hasSite || submitting" min="1" max="80" />
-          </label>
-          <label class="field">
-            <span>Youngest age</span>
-            <PvInputText v-model.number="form.minAge" type="number" :disabled="!hasSite || submitting" min="3" max="21" />
-          </label>
-          <label class="field">
-            <span>Oldest age</span>
-            <PvInputText v-model.number="form.maxAge" type="number" :disabled="!hasSite || submitting" min="3" max="21" />
-          </label>
+        <div v-else class="site-pick">
+          <div class="mode-row">
+            <label>
+              <input v-model="rosterMode" type="radio" value="existing" />
+              Use existing
+            </label>
+            <label>
+              <input v-model="rosterMode" type="radio" value="create" />
+              Create new cohort
+            </label>
+          </div>
+          <template v-if="rosterMode === 'existing'">
+            <div class="mode-row">
+              <label>
+                <input v-model="existingKind" type="radio" value="cohort" />
+                Cohort
+              </label>
+              <label>
+                <input v-model="existingKind" type="radio" value="class" />
+                School and classroom
+              </label>
+            </div>
+            <template v-if="existingKind === 'cohort'">
+              <label class="field">
+                <span>Cohort</span>
+                <PvSelect
+                  v-model="selectedExistingCohortId"
+                  :options="cohortOptions"
+                  option-label="label"
+                  option-value="value"
+                  placeholder="Select a cohort"
+                  filter
+                  class="site-select"
+                  :disabled="!cohortOptions.length"
+                />
+              </label>
+              <p v-if="!cohortOptions.length" class="setup-preview">
+                No cohorts on this site yet. Create one below, or pick a school and classroom.
+              </p>
+              <PvButton
+                :disabled="!selectedExistingCohortId"
+                label="Use this cohort"
+                @click="useExistingCohort"
+              />
+            </template>
+            <template v-else>
+              <label class="field">
+                <span>School</span>
+                <PvSelect
+                  v-model="selectedExistingSchoolId"
+                  :options="schoolOptions"
+                  option-label="label"
+                  option-value="value"
+                  placeholder="Select a school"
+                  filter
+                  class="site-select"
+                  :disabled="!schoolOptions.length"
+                  @change="selectedExistingClassId = null"
+                />
+              </label>
+              <label class="field">
+                <span>Classroom</span>
+                <PvSelect
+                  v-model="selectedExistingClassId"
+                  :options="classOptions"
+                  option-label="label"
+                  option-value="value"
+                  placeholder="Select a classroom"
+                  filter
+                  class="site-select"
+                  :disabled="!selectedExistingSchoolId || !classOptions.length"
+                />
+              </label>
+              <p v-if="!schoolOptions.length" class="setup-preview">
+                No schools on this site. Use a cohort, or create a new one.
+              </p>
+              <p v-else-if="selectedExistingSchoolId && !classOptions.length" class="setup-preview">
+                No classrooms in that school yet.
+              </p>
+              <PvButton
+                :disabled="!selectedExistingClassId"
+                label="Use this classroom"
+                @click="useExistingClass"
+              />
+            </template>
+            <p v-if="chosenRosterLabel" class="setup-preview">
+              Using <strong>{{ chosenRosterLabel }}</strong>. Next, reuse or create an assignment
+              (step 3).
+            </p>
+          </template>
+          <template v-else>
+            <div class="setup-grid">
+              <label class="field">
+                <span>Group / cohort name</span>
+                <PvInputText v-model="form.groupName" :disabled="submitting" placeholder="Field collection cohort" />
+              </label>
+              <label class="field">
+                <span>How many children</span>
+                <PvInputText v-model.number="form.count" type="number" :disabled="submitting" min="1" max="80" />
+              </label>
+              <label class="field">
+                <span>Youngest age</span>
+                <PvInputText v-model.number="form.minAge" type="number" :disabled="submitting" min="3" max="21" />
+              </label>
+              <label class="field">
+                <span>Oldest age</span>
+                <PvInputText v-model.number="form.maxAge" type="number" :disabled="submitting" min="3" max="21" />
+              </label>
+            </div>
+            <p v-if="preview.length" class="setup-preview">
+              {{ preview.length }} children in <strong>{{ form.groupName || 'this cohort' }}</strong>,
+              ages {{ form.minAge }}–{{ form.maxAge }} (birth
+              {{ preview[preview.length - 1]?.month }}/{{ preview[preview.length - 1]?.year }}
+              to {{ preview[0]?.month }}/{{ preview[0]?.year }}).
+            </p>
+            <PvButton
+              class="mb-3"
+              :disabled="!canSubmit"
+              :loading="submitting"
+              label="Create group and children"
+              @click="createCohortAndChildren"
+            />
+          </template>
         </div>
-        <p v-if="preview.length" class="setup-preview">
-          {{ preview.length }} children in <strong>{{ form.groupName || 'this cohort' }}</strong>,
-          ages {{ form.minAge }}–{{ form.maxAge }} (birth
-          {{ preview[preview.length - 1]?.month }}/{{ preview[preview.length - 1]?.year }}
-          to {{ preview[0]?.month }}/{{ preview[0]?.year }}).
-        </p>
-        <PvButton
-          class="mb-3"
-          :disabled="!canSubmit"
-          :loading="submitting"
-          label="Create group and children"
-          @click="createCohortAndChildren"
-        />
         <p v-if="setupError" class="setup-error">{{ setupError }}</p>
         <div v-if="created" class="created">
           <p>
@@ -148,9 +243,10 @@
           <div>
             <h2>Choose or create an assignment</h2>
             <p>
-              Reusing an existing assignment is allowed if this event’s site or cohort is on it —
-              visitors then get those tasks. Use a new assignment if this walk-up data should stay
-              out of a formal study. After you create one, you will come back here.
+              Reusing an assignment is the usual path when the study already exists. The assignment
+              must include this site and the cohort or classroom you picked. Create a new assignment
+              only if this site does not have one yet. After you create one, you will come back
+              here.
             </p>
           </div>
           <label class="done">
@@ -174,7 +270,7 @@
             />
           </label>
           <p v-if="!assignmentOptions.length" class="setup-preview">
-            No assignments on this site yet. Create one and include this site or cohort.
+            No assignments on this site yet. Create one and include this site and the group you picked.
           </p>
           <div class="row-actions">
             <PvButton
@@ -188,7 +284,8 @@
           </div>
           <p v-if="chosenAssignmentName" class="setup-preview">
             Using <strong>{{ chosenAssignmentName }}</strong
-            >. Include this site or the new cohort on that assignment if it is not already there.
+            >. Include this site and the group you picked on that assignment if they are not already
+            there.
           </p>
         </div>
       </li>
@@ -200,8 +297,8 @@
             <h2>On-site Researcher: set up each tablet</h2>
             <p>
               This website cannot push a roster to a device. An On-site Researcher signs in on the
-              offline launcher and downloads the assignment and cohort below. Science-fair tablets
-              do not use a device PIN. Child mode keeps visitors on names and tasks.
+              offline launcher and downloads the assignment and group below. Field-collection
+              tablets do not use a device PIN. Child mode keeps children on names and tasks.
             </p>
           </div>
           <label class="done">
@@ -210,7 +307,7 @@
           </label>
         </div>
         <p v-if="!proctorReady" class="setup-warn">
-          Finish steps 1–3 first. The tablet will ask for an assignment and a cohort by name.
+          Finish steps 1–3 first. The tablet will ask for an assignment and a group by name.
         </p>
         <div class="callout callout-note">
           <i class="pi pi-info-circle" />
@@ -219,8 +316,8 @@
               <strong>Google or dashboard email</strong> — the same account you use here, e.g.
               <span class="mono">{{ proctorEmail || 'your researcher email' }}</span
               >. Most researchers tap <strong>Continue with Google</strong> on the tablet. Needed
-              only while <em>online</em>: once to download the pack, and later to sync. Visitors
-              never enter this. There is no device PIN on science-fair tablets.
+              only while <em>online</em>: once to download the pack, and later to sync. Children
+              never enter this. There is no device PIN on field-collection tablets.
             </p>
           </div>
         </div>
@@ -232,8 +329,8 @@
               <dd>{{ event.assignmentName || 'Finish step 3' }}</dd>
             </div>
             <div>
-              <dt>Cohort</dt>
-              <dd>{{ event.groupName || 'Finish step 2' }}</dd>
+              <dt>{{ event.orgType === 'class' ? 'Classroom' : 'Cohort' }}</dt>
+              <dd>{{ event.orgName || event.groupName || 'Finish step 2' }}</dd>
             </div>
             <div>
               <dt>Site</dt>
@@ -256,18 +353,19 @@
         <div class="proctor-card">
           <h3>Download this event onto each tablet</h3>
           <p v-if="!packLink" class="setup-warn">
-            Finish steps 2–3 first. We need the cohort and assignment to build the pack link.
+            Finish steps 2–3 first. We need the group and assignment to build the pack link.
           </p>
           <template v-else>
             <p class="setup-preview">
-              On any tablet with internet, open this link (Safari or Chrome is fine). Sign in with
-              Google (or email / password) as
+              On any tablet with internet, open the offline launcher and sign in with Google (or
+              email / password) as
               <span class="mono">{{ proctorEmail || 'your researcher email' }}</span
-              >, tap <strong>Download pack</strong> for
+              >. The tablet lists this prepared pack —
               <strong>{{ event.assignmentName }}</strong> /
-              <strong>{{ event.groupName }}</strong
-              >, wait until it finishes, then start child mode. The tablet does not need to be on
-              the same Wi‑Fi as this computer.
+              <strong>{{ event.orgName || event.groupName }}</strong>
+              — you do not pick from all assignments. Tap <strong>Download pack</strong>, wait until
+              it finishes, then start child mode. Or open this pack link directly. The tablet does
+              not need to be on the same Wi‑Fi as this computer.
             </p>
             <p class="mono pack-link">{{ packLink }}</p>
             <div class="row-actions">
@@ -280,38 +378,36 @@
           </template>
         </div>
         <div class="proctor-card">
-          <h3>How to run the kiosk</h3>
+          <h3>How to collect</h3>
           <p class="setup-preview">
-            One tablet holds the whole cohort
-            <span v-if="created?.users.length || form.count">
-              ({{ created?.users.length || form.count }} slots)</span
-            >. You do not provision again between visitors. You do not sign in again. Network is not
-            required to play.
+            One tablet holds that group
+            <span v-if="created?.users.length"> ({{ created.users.length }} children)</span>. You do
+            not provision again between children. You do not sign in again. Network is not required
+            to play — at a school site or house to house.
           </p>
           <ol class="proctor-steps">
             <li>
-              After the pack downloads, tap <strong>Start child mode</strong> so visitors only see
+              After the pack downloads, tap <strong>Start child mode</strong> so children only see
               names and tasks — not Provision or Sync.
             </li>
             <li>
-              Each visitor taps <strong>one unused name</strong> (a slot, not a real name), then a
-              task.
+              Each child taps <strong>their own name</strong>, then a task.
             </li>
             <li>
-              When the task finishes, the roster comes back by itself. The next visitor taps a
+              When the task finishes, the roster comes back by itself. The next child taps a
               <strong>different</strong> name. Use the <span class="mono">n/m tasks done</span>
-              counts to see which slots are still free.
+              counts to see who still has work left.
             </li>
             <li>
-              Stay in child mode all day. To leave it, tap <strong>On-site Researcher</strong> at
-              the bottom and confirm <strong>Exit child mode</strong> — only to sync or change the
-              pack.
+              Stay in child mode while collecting. To leave it, tap
+              <strong>On-site Researcher</strong> at the bottom and confirm
+              <strong>Exit child mode</strong> — only to sync or change the pack.
             </li>
           </ol>
         </div>
         <p class="setup-preview">
-          If that cohort is missing on the tablet, exit child mode, edit the assignment here to add
-          the cohort (or the whole site), then provision again.
+          If that group is missing on the tablet, exit child mode, edit the assignment here to add
+          the cohort or classroom (or the whole site), then provision again.
         </p>
         <div class="shot-row">
           <figure class="shot">
@@ -320,7 +416,7 @@
           </figure>
           <figure class="shot">
             <img src="/science-fair/launcher-roster.png" alt="Offline launcher roster" />
-            <figcaption>Child mode: tap a name, play a task, come back, next visitor taps another name.</figcaption>
+            <figcaption>Child mode: tap a name, play a task, come back, next child taps another name.</figcaption>
           </figure>
         </div>
       </li>
@@ -363,6 +459,7 @@
 <script setup lang="ts">
 import { CreateDistrictSchema, CreateGroupSchema, CreateUsersParamsSchema } from '@levante-framework/levante-zod';
 import { useQueryClient } from '@tanstack/vue-query';
+import { httpsCallable } from 'firebase/functions';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
 import PvInputText from 'primevue/inputtext';
@@ -371,8 +468,9 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import useUpsertOrgMutation from '@/composables/mutations/useUpsertOrgMutation';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
+import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
-import { SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
+import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { DISTRICTS_QUERY_KEY, ORGS_TABLE_QUERY_KEY, SITE_OVERVIEW_QUERY_KEY } from '@/constants/queryKeys';
 import useFetchAllDistrictsQuery from '@/firestore/queries/districts/useFetchAllDistrictsQuery';
 import { normalizeToLowercase } from '@/helpers';
@@ -393,6 +491,43 @@ type SiteOption = { label: string; value: string };
 const extraSites = ref<SiteOption[]>([]);
 const selectedAssignmentId = ref<string | null>(null);
 const chosenAssignmentName = ref('');
+const rosterMode = ref<'existing' | 'create'>('existing');
+const existingKind = ref<'cohort' | 'class'>('cohort');
+const selectedExistingCohortId = ref<string | null>(null);
+const selectedExistingSchoolId = ref<string | undefined>(undefined);
+const selectedExistingClassId = ref<string | null>(null);
+const groupsType = computed(() => ORG_TYPES.GROUPS);
+const schoolsType = computed(() => ORG_TYPES.SCHOOLS);
+const classesType = computed(() => ORG_TYPES.CLASSES);
+const selectedSiteForOrgs = computed(() => (hasSite.value ? String(currentSite.value) : null));
+const noSchool = computed(() => undefined as string | undefined);
+const orgOrderBy = ref([{ field: { fieldPath: 'name' }, direction: 'ASCENDING' }]);
+const { data: siteGroups } = useOrgsTableQuery(groupsType, selectedSiteForOrgs, noSchool, orgOrderBy, false, {
+  enabled: hasSite,
+});
+const { data: siteSchools } = useOrgsTableQuery(schoolsType, selectedSiteForOrgs, noSchool, orgOrderBy, false, {
+  enabled: hasSite,
+});
+const classesEnabled = computed(() => hasSite.value && !!selectedExistingSchoolId.value);
+const { data: siteClasses } = useOrgsTableQuery(
+  classesType,
+  selectedSiteForOrgs,
+  selectedExistingSchoolId,
+  orgOrderBy,
+  false,
+  { enabled: classesEnabled },
+);
+
+function orgSelectOptions(items: Array<{ id?: string; name?: string }> | undefined) {
+  return (items ?? [])
+    .map((item) => ({ label: item.name || item.id || '', value: item.id ?? '' }))
+    .filter((item) => item.value)
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+const cohortOptions = computed(() => orgSelectOptions(siteGroups.value));
+const schoolOptions = computed(() => orgSelectOptions(siteSchools.value));
+const classOptions = computed(() => orgSelectOptions(siteClasses.value));
 const assignmentOrderBy = ref([{ field: { fieldPath: 'name' }, direction: 'ASCENDING' }]);
 const assignmentDistrictId = computed(() => (hasSite.value ? String(currentSite.value) : ''));
 const { data: siteAssignments } = useAdministrationsListQuery(assignmentDistrictId, assignmentOrderBy, false, {
@@ -411,6 +546,39 @@ function useExistingAssignment() {
   chosenAssignmentName.value = option.label;
   saveEvent({ assignmentId: option.value, assignmentName: option.label });
   setDone('assignment', true);
+}
+
+function useExistingCohort() {
+  const option = cohortOptions.value.find((item) => item.value === selectedExistingCohortId.value);
+  if (!option) return;
+  saveEvent({
+    orgType: 'cohort',
+    orgId: option.value,
+    orgName: option.label,
+    groupId: option.value,
+    groupName: option.label,
+    schoolId: undefined,
+    schoolName: undefined,
+  });
+  form.groupName = option.label;
+  setDone('users', true);
+}
+
+function useExistingClass() {
+  const school = schoolOptions.value.find((item) => item.value === selectedExistingSchoolId.value);
+  const classroom = classOptions.value.find((item) => item.value === selectedExistingClassId.value);
+  if (!school || !classroom) return;
+  const label = `${school.label} / ${classroom.label}`;
+  saveEvent({
+    orgType: 'class',
+    orgId: classroom.value,
+    orgName: label,
+    groupId: classroom.value,
+    groupName: label,
+    schoolId: school.value,
+    schoolName: school.label,
+  });
+  setDone('users', true);
 }
 const selectedSiteChoice = ref<string | null>(
   currentSite.value && currentSite.value !== 'any' ? currentSite.value : null,
@@ -528,6 +696,11 @@ type EventContext = {
   siteName?: string;
   groupName?: string;
   groupId?: string;
+  orgType?: 'cohort' | 'class';
+  orgId?: string;
+  orgName?: string;
+  schoolId?: string;
+  schoolName?: string;
   assignmentId?: string;
   assignmentName?: string;
 };
@@ -542,6 +715,7 @@ function loadEvent(): EventContext {
 }
 
 const event = reactive<EventContext>(loadEvent());
+const chosenRosterLabel = computed(() => event.orgName || event.groupName || '');
 
 function saveEvent(patch: EventContext) {
   Object.assign(event, patch);
@@ -550,7 +724,7 @@ function saveEvent(patch: EventContext) {
 
 const proctorEmail = computed(() => authStore.getUserEmail() || '');
 const proctorReady = computed(
-  () => !!(event.assignmentName && event.groupName && (event.siteName || currentSiteName.value)),
+  () => !!(event.assignmentName && (event.orgName || event.groupName) && (event.siteName || currentSiteName.value)),
 );
 const copied = ref(false);
 const copiedPack = ref(false);
@@ -558,11 +732,12 @@ const copiedPack = ref(false);
 const LAUNCHER_ORIGIN = 'https://hs-levante-admin-dev--offline-launcher-34g4znyg.web.app';
 
 const packLink = computed(() => {
-  if (!event.assignmentId || !event.groupId) return '';
+  const orgId = event.orgId || event.groupId;
+  if (!event.assignmentId || !orgId) return '';
   const query = new URLSearchParams({
     admin: event.assignmentId,
-    orgType: 'cohort',
-    orgId: event.groupId,
+    orgType: event.orgType ?? 'cohort',
+    orgId,
   });
   return `${LAUNCHER_ORIGIN}/?v=google#/provision?${query.toString()}`;
 });
@@ -586,10 +761,44 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => [event.assignmentId, event.orgId || event.groupId, event.siteId || currentSite.value] as const,
+  () => {
+    void persistPreparedPack();
+  },
+  { immediate: true },
+);
+
+async function persistPreparedPack() {
+  const administrationId = event.assignmentId;
+  const orgId = event.orgId || event.groupId;
+  const siteId = event.siteId || (hasSite.value ? String(currentSite.value) : '');
+  const functions = (
+    roarfirekit.value as { admin?: { functions?: import('firebase/functions').Functions } } | undefined
+  )?.admin?.functions;
+  if (!administrationId || !orgId || !siteId || !functions) return;
+  try {
+    await httpsCallable(
+      functions,
+      'saveOfflinePack',
+    )({
+      administrationId,
+      assignmentName: event.assignmentName,
+      orgType: event.orgType ?? 'cohort',
+      orgId,
+      orgName: event.orgName || event.groupName,
+      siteId,
+      siteName: event.siteName || currentSiteName.value,
+    });
+  } catch {
+    // Provision can still use the pack link if this save fails.
+  }
+}
+
 async function copyProctorNotes() {
   const lines = [
     `Assignment: ${event.assignmentName}`,
-    `Cohort: ${event.groupName}`,
+    `${event.orgType === 'class' ? 'Classroom' : 'Cohort'}: ${event.orgName || event.groupName}`,
     `Site: ${event.siteName || currentSiteName.value}`,
     `On-site Researcher sign-in: ${proctorEmail.value || 'site admin / research assistant'}`,
     '',
@@ -597,9 +806,9 @@ async function copyProctorNotes() {
     packLink.value ? `Pack link (open on any tablet with internet): ${packLink.value}` : '',
     '',
     'On each tablet: open the pack link, sign in, tap Download pack, then Start child mode.',
-    'Kiosk: each visitor taps one unused name, then a task. Task ends → roster. Next visitor taps a different name. Do not provision or sign in again.',
+    'Collect: each child taps their own name, then a task. Task ends → roster. Next child taps a different name. Do not provision or sign in again.',
     'Leave child mode (On-site Researcher → Exit child mode) only to sync or change the pack.',
-    'After the event (online): leave child mode → #/sync → sign in with Google or email → sync.',
+    'After collection (online): leave child mode → #/sync → sign in with Google or email → sync.',
   ];
   await navigator.clipboard.writeText(lines.join('\n'));
   copied.value = true;
@@ -762,6 +971,11 @@ async function createCohortAndChildren() {
       siteName: currentSiteName.value || event.siteName,
       groupName,
       groupId: cohortId,
+      orgType: 'cohort',
+      orgId: cohortId,
+      orgName: groupName,
+      schoolId: undefined,
+      schoolName: undefined,
     });
     setDone('site', true);
     setDone('users', true);
@@ -805,9 +1019,20 @@ onMounted(async () => {
   if (hasSite.value && currentSiteName.value) {
     saveEvent({ siteId: String(currentSite.value), siteName: currentSiteName.value });
   }
+  if (event.orgType === 'class') {
+    existingKind.value = 'class';
+    selectedExistingSchoolId.value = event.schoolId;
+    selectedExistingClassId.value = event.orgId ?? event.groupId ?? null;
+  } else if (event.orgType === 'cohort' || event.groupId || event.groupName) {
+    existingKind.value = 'cohort';
+    selectedExistingCohortId.value = event.orgId ?? event.groupId ?? null;
+  }
+  if (!event.orgType && event.groupId) {
+    saveEvent({ orgType: 'cohort', orgId: event.groupId, orgName: event.groupName });
+  }
   if (!event.groupId && event.groupName && hasSite.value) {
     const id = await findCohortId(event.groupName, String(currentSite.value));
-    if (id) saveEvent({ groupId: id });
+    if (id) saveEvent({ groupId: id, orgType: event.orgType ?? 'cohort', orgId: id, orgName: event.groupName });
   }
   if (route.query.created === '1') {
     const createdName = typeof route.query.assignment === 'string' ? route.query.assignment.trim() : '';
@@ -1089,16 +1314,33 @@ onMounted(async () => {
   margin-bottom: 0.5rem;
 }
 
+.site-pick:has(.setup-grid) {
+  max-width: none;
+}
+
 .site-select {
   width: 100%;
 }
 
 .new-site,
-.row-actions {
+.row-actions,
+.mode-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
+}
+
+.mode-row {
+  margin-bottom: 0.5rem;
+}
+
+.mode-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--gray-700);
 }
 
 .new-site {

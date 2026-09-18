@@ -297,7 +297,7 @@ const routes: Array<RouteRecordRaw> = [
     name: 'ScienceFair',
     component: () => import('@/pages/ScienceFair.vue'),
     meta: {
-      pageTitle: 'Science fair / museum',
+      pageTitle: 'Field collection (offline)',
       allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
       devOnly: true,
     },

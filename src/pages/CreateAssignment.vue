@@ -162,7 +162,7 @@
               variant="outlined"
               @click="onClickCancelBtn"
             >
-              {{ assignmentReturnPath ? 'Back to science fair' : 'Cancel' }}
+              {{ assignmentReturnPath ? 'Back to field collection' : 'Cancel' }}
             </PvButton>
 
             <PvButton

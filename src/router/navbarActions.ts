@@ -25,7 +25,7 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
     category: 'Groups',
   },
   {
-    title: 'Science Fair',
+    title: 'Field collection',
     icon: 'pi pi-map',
     buttonLink: { name: 'ScienceFair' },
     allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
