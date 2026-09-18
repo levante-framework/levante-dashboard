@@ -1,93 +1,90 @@
 <template>
-  <div class="p-card card-administration mb-4 w-full">
-    <div class="card-admin-body w-full">
-      <div class="flex flex-row w-full md:h-2rem sm:h-3rem">
-        <div class="flex-grow-1 pr-3 mr-2 p-0 m-0">
-          <h2 data-cy="h2-card-admin-title" class="sm:text-lg lg:text-lx m-0 h2-card-admin-title">
-            {{ title }}
-          </h2>
-          <div class="flex flex-wrap align-items-center gap-2">
-            <small class="m-0 ml-1">
-              — Created by <span class="font-bold">{{ props.creatorName }}</span></small
-            >
-            <SyncStatusBadge :status="displayedSyncStatus" class="status-badge" />
+  <div class="assignment">
+    <div class="flex align-items-start w-full">
+      <main class="assignment__main">
+        <h1 class="assignment__name">{{ title }}</h1>
+
+        <div class="assignment__details">
+          <div class="assignment__detail">
+            <p class="m-0 font-semibold">Status:</p>
+            <StatusBadge v-if="displayedSyncStatus" v-bind="statusBadge" />
+          </div>
+
+          <div class="assignment__detail">
+            <p class="m-0 font-semibold">Created by:</p>
+            <p class="m-0">{{ props.creatorName }}</p>
+          </div>
+
+          <div class="assignment__detail">
+            <p class="m-0 font-semibold">Availability:</p>
+            <p class="m-0">
+              {{ processedDates.start.toLocaleDateString() }}
+              <i class="pi pi-angle-right text-xs text-gray-400"></i>
+              {{ processedDates.end.toLocaleDateString() }}
+            </p>
+            <StatusBadge v-if="administrationStatusBadge" v-bind="availabilityBadge" />
+          </div>
+
+          <div class="assignment__detail">
+            <p class="m-0 font-semibold">Tasks:</p>
+            <template v-if="!isLoadingTasksDictionary">
+              <div class="flex align-items-center flex-wrap gap-2">
+                <div
+                  v-for="assessmentId in assessmentIds"
+                  :key="assessmentId"
+                  class="assignment__task"
+                >
+                  <span>
+                    {{ tasksDictionary[assessmentId]?.name ?? assessmentId }}
+                  </span>
+
+                  <span
+                    v-if="showParams"
+                    v-tooltip.top="getTooltip('View parameters')"
+                    class="pi pi-info-circle cursor-pointer ml-1"
+                    style="font-size: 0.8rem"
+                    @click="toggleParams($event, assessmentId)"
+                  />
+                </div>
+              </div>
+            </template>
+
+            <div v-if="showParams">
+              <PvPopover
+                v-for="assessmentId in assessmentIds"
+                :key="assessmentId"
+                :ref="paramPanelRefs[assessmentId]"
+              >
+                <div v-if="getAssessment(assessmentId).variantId">
+                  Variant ID: {{ getAssessment(assessmentId).variantId }}
+                </div>
+                <div v-if="getAssessment(assessmentId).variantName">
+                  Variant Name: {{ getAssessment(assessmentId).variantName }}
+                </div>
+                <PvDataTable
+                  striped-rows
+                  class="p-datatable-small"
+                  table-style="min-width: 30rem"
+                  :value="toEntryObjects(params[assessmentId])"
+                >
+                  <PvColumn
+                    field="key"
+                    header="Parameter"
+                    style="width: 50%"
+                  ></PvColumn>
+                  <PvColumn
+                    field="value"
+                    header="Value"
+                    style="width: 50%"
+                  ></PvColumn>
+                </PvDataTable>
+              </PvPopover>
+            </div>
           </div>
         </div>
-        <div
-          v-if="speedDialItems.length > 0 && (isSyncComplete || displayedSyncStatus === 'failed')"
-          class="flex justify-content-end w-3"
-        >
-          <PvSpeedDial
-            :action-button-props="{
-              rounded: true,
-              severity: 'danger',
-              variant: 'outlined',
-            }"
-            :button-props="{
-              rounded: true,
-              severity: 'danger',
-              variant: 'outlined',
-            }"
-            :model="speedDialItems"
-            :tooltip-options="{
-              event: 'hover',
-              position: 'top',
-            }"
-            :transition-delay="80"
-            class="administration-action"
-            direction="left"
-            hide-icon="pi pi-times"
-            show-icon="pi pi-cog"
-          />
-          <PvConfirmPopup />
-        </div>
-      </div>
-      <div class="card-admin-details">
-        <span class="mr-1"><strong>Availability</strong>:</span>
-        <span>
-          {{ processedDates.start.toLocaleDateString() }} —
-          {{ processedDates.end.toLocaleDateString() }}
-        </span>
-        <span :class="['status-badge', administrationStatusBadge]">
-          {{ administrationStatus }}
-        </span>
-      </div>
-      <div class="card-admin-assessments">
-        <span class="mr-1"><strong>Tasks</strong>:</span>
-        <template v-if="!isLoadingTasksDictionary">
-          <span v-for="assessmentId in assessmentIds" :key="assessmentId" class="card-inline-list-item">
-            <span>{{ tasksDictionary[assessmentId]?.name ?? assessmentId }}</span>
-            <span
-              v-if="showParams"
-              v-tooltip.top="getTooltip('View parameters')"
-              class="pi pi-info-circle cursor-pointer ml-1"
-              style="font-size: 0.8rem"
-              @click="toggleParams($event, assessmentId)"
-            />
-          </span>
-        </template>
+      </main>
 
-        <div v-if="showParams">
-          <PvPopover v-for="assessmentId in assessmentIds" :key="assessmentId" :ref="paramPanelRefs[assessmentId]">
-            <div v-if="getAssessment(assessmentId).variantId">
-              Variant ID: {{ getAssessment(assessmentId).variantId }}
-            </div>
-            <div v-if="getAssessment(assessmentId).variantName">
-              Variant Name: {{ getAssessment(assessmentId).variantName }}
-            </div>
-            <PvDataTable
-              striped-rows
-              class="p-datatable-small"
-              table-style="min-width: 30rem"
-              :value="toEntryObjects(params[assessmentId])"
-            >
-              <PvColumn field="key" header="Parameter" style="width: 50%"></PvColumn>
-              <PvColumn field="value" header="Value" style="width: 50%"></PvColumn>
-            </PvDataTable>
-          </PvPopover>
-        </div>
-      </div>
-      <div v-if="isSyncComplete" class="flex justify-content-end mt-3">
+      <div v-if="isSyncComplete" class="flex justify-content-end mr-4">
         <router-link
           :to="{
             name: 'AdministrationProgressReport',
@@ -103,79 +100,135 @@
             icon="pi pi-chart-bar"
             severity="secondary"
             outlined
-            label="View General Progress"
+            label="View Overall Progress"
             aria-label="View assignment progress"
             size="small"
             data-cy="button-administration-progress"
           />
         </router-link>
       </div>
-      <PvTreeTable
-        v-if="isSyncComplete"
-        class="mt-3"
-        lazy
-        row-hover
-        :loading="loadingTreeTable"
-        :value="treeTableOrgs"
-        @node-expand="onExpand"
+
+      <div
+        v-if="isSyncComplete || displayedSyncStatus === 'failed'"
+        class="assignment__actions"
       >
-        <PvColumn field="name" expander style="width: 20rem"></PvColumn>
-        <PvColumn field="id" header="" style="width: 14rem">
-          <template #body="{ node }">
-            <div v-if="node.data.id" class="flex justify-content-end m-0 w-full">
-              <router-link
-                v-if="isSyncComplete"
-                :to="{
-                  name: 'ProgressReport',
-                  params: {
-                    administrationId: props.id,
-                    orgId: node.data.id,
-                    orgType: node.data.orgType,
-                  },
-                }"
-                class="no-underline text-black"
+        <PvButton
+          v-if="hasRole(ROLES.ADMIN)"
+          iconOnly
+          rounded
+          severity="danger"
+          variant="outlined"
+          v-tooltip.top="getTooltip('Edit assignment')"
+          @click="onClickEditBtn"
+        >
+          <i class="pi pi-pencil"></i>
+        </PvButton>
+
+        <PvButton
+          v-if="hasRole(ROLES.ADMIN) && canRetry"
+          iconOnly
+          rounded
+          severity="danger"
+          variant="outlined"
+          v-tooltip.top="getTooltip('Retry')"
+          @click="() => onRetry()"
+        >
+          <i class="pi pi-sync"></i>
+        </PvButton>
+      </div>
+    </div>
+
+    <div v-if="isSyncComplete" class="assignment__progress-table">
+      <div
+        class="assignment__progress-table__header"
+        :class="{
+          'assignment__progress-table__header--open': isProgressTableOpen,
+        }"
+        @click="onClickProgressTableHeader"
+      >
+        <p class="assignment__progress-table__toggle-label">
+          View Details by Group
+        </p>
+        <i v-if="isProgressTableOpen" class="pi pi-angle-up"></i>
+        <i v-else class="pi pi-angle-down"></i>
+      </div>
+
+      <div
+        v-show="isProgressTableOpen"
+        class="assignment__progress-table__body"
+      >
+        <PvTreeTable
+          v-if="isSyncComplete"
+          lazy
+          row-hover
+          :loading="loadingTreeTable"
+          :value="treeTableOrgs"
+          @node-expand="onExpand"
+        >
+          <PvColumn field="name" expander style="width: 20rem"></PvColumn>
+          <PvColumn field="id" header="" style="width: 14rem">
+            <template #body="{ node }">
+              <div
+                v-if="node.data.id"
+                class="flex justify-content-end m-0 w-full"
               >
-                <PvButton
-                  v-tooltip.top="getTooltip('View detailed progress')"
-                  class="progress-report-button"
-                  icon="pi pi-chart-line"
-                  severity="secondary"
-                  outlined
-                  label="View Detailed Progress"
-                  aria-label="View detailed progress"
-                  size="small"
-                  data-cy="button-progress"
-                />
-              </router-link>
-              <router-link
-                v-if="!isLevante"
-                :to="{
-                  name: 'ScoreReport',
-                  params: {
-                    administrationId: props.id,
-                    orgId: node.data.id,
-                    orgType: node.data.orgType,
-                  },
-                }"
-                class="no-underline"
-              >
-                <PvButton
-                  v-tooltip.top="getTooltip('See Scores')"
-                  class="m-0 mr-1 surface-0 text-bluegray-500 shadow-1 border-none p-2 border-round hover:surface-100"
-                  style="height: 2.5rem; color: var(--primary-color) !important"
-                  severity="secondary"
-                  text
-                  raised
-                  label="Scores"
-                  aria-label="Scores"
-                  size="small"
-                  data-cy="button-scores"
-                />
-              </router-link>
-            </div>
-          </template>
-        </PvColumn>
-      </PvTreeTable>
+                <router-link
+                  v-if="isSyncComplete"
+                  :to="{
+                    name: 'ProgressReport',
+                    params: {
+                      administrationId: props.id,
+                      orgId: node.data.id,
+                      orgType: node.data.orgType,
+                    },
+                  }"
+                  class="no-underline text-black"
+                >
+                  <PvButton
+                    v-tooltip.top="getTooltip('View detailed progress')"
+                    class="progress-report-button"
+                    icon="pi pi-chart-line"
+                    severity="secondary"
+                    outlined
+                    label="Progress Details"
+                    aria-label="View detailed progress"
+                    size="small"
+                    data-cy="button-progress"
+                  />
+                </router-link>
+                <router-link
+                  v-if="!isLevante"
+                  :to="{
+                    name: 'ScoreReport',
+                    params: {
+                      administrationId: props.id,
+                      orgId: node.data.id,
+                      orgType: node.data.orgType,
+                    },
+                  }"
+                  class="no-underline"
+                >
+                  <PvButton
+                    v-tooltip.top="getTooltip('See Scores')"
+                    class="m-0 mr-1 surface-0 text-bluegray-500 shadow-1 border-none p-2 border-round hover:surface-100"
+                    style="
+                      height: 2.5rem;
+                      color: var(--primary-color) !important;
+                    "
+                    severity="secondary"
+                    text
+                    raised
+                    label="Scores"
+                    aria-label="Scores"
+                    size="small"
+                    data-cy="button-scores"
+                  />
+                </router-link>
+              </div>
+            </template>
+          </PvColumn>
+        </PvTreeTable>
+      </div>
     </div>
   </div>
 </template>
@@ -188,17 +241,12 @@ import _mapValues from 'lodash/mapValues';
 import _toPairs from 'lodash/toPairs';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
-import PvConfirmPopup from 'primevue/confirmpopup';
 import PvDataTable from 'primevue/datatable';
 import PvPopover from 'primevue/popover';
-import PvSpeedDial from 'primevue/speeddial';
 import PvTreeTable from 'primevue/treetable';
-import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, onMounted, ref, toValue, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
-import SyncStatusBadge from '@/components/SyncStatusBadge.vue';
-import useDeleteAdministrationMutation from '@/composables/mutations/useDeleteAdministrationMutation';
 import useUpsertAdministrationMutation from '@/composables/mutations/useUpsertAdministrationMutation';
 import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
 import useDsgfOrgQuery from '@/composables/queries/useDsgfOrgQuery';
@@ -216,9 +264,7 @@ import { buildRetryAdministrationArgs } from '@/helpers/administrations';
 import { batchGetDocs } from '@/helpers/query/utils';
 import { taskDisplayNames } from '@/helpers/reports';
 import { useAuthStore } from '@/store/auth';
-
-// TODO: Remove this once we have a proper delete option
-const SHOW_DELETE_OPTION = false;
+import StatusBadge, { StatusBadgeStatus } from './StatusBadge.vue';
 
 interface Assessment {
   taskId: string;
@@ -232,16 +278,12 @@ interface Dates {
   end: string | Date;
 }
 
-interface Assignees {
-  [key: string]: any;
-}
-
 interface Props {
   id: string;
   title: string;
   publicName: string;
   dates: Dates;
-  assignees: Assignees;
+  assignees: any;
   assessments: Assessment[];
   showParams: boolean;
   isSuperAdmin: boolean;
@@ -251,12 +293,6 @@ interface Props {
   rowsPerPage?: number;
   cardIndexInPage?: number;
   onDeleteAdministration?: (administrationId: string) => void;
-}
-
-interface SpeedDialItem {
-  label: string;
-  icon: string;
-  command: (event?: any) => void;
 }
 
 interface TreeNode {
@@ -272,9 +308,10 @@ interface TreeNode {
   children?: TreeNode[];
 }
 
-const router = useRouter();
-const queryClient = useQueryClient();
 const authStore = useAuthStore();
+const { hasRole } = usePermissions();
+const queryClient = useQueryClient();
+const router = useRouter();
 
 const props = withDefaults(defineProps<Props>(), {
   creatorName: '--',
@@ -285,12 +322,61 @@ const props = withDefaults(defineProps<Props>(), {
   onDeleteAdministration: () => {},
 });
 
-const { hasRole } = usePermissions();
+const statusBadge = computed(() => {
+  let icon = '';
+  let label = '';
+  let pulse = false;
+  let status: StatusBadgeStatus = 'default';
 
-const confirm = useConfirm();
+  if (displayedSyncStatus.value === 'complete') {
+    icon = 'pi pi-check';
+    label = 'Assigned';
+    status = 'success';
+  }
+
+  if (displayedSyncStatus.value === 'failed') {
+    icon = 'pi pi-times';
+    label = 'Failed';
+    status = 'error';
+  }
+
+  if (displayedSyncStatus.value === 'pending') {
+    label = 'Processing';
+    pulse = true;
+    status = 'warn';
+  }
+
+  return { icon, label, pulse, status };
+});
+
+const availabilityBadge = computed(() => {
+  let icon = '';
+  let label = '';
+  let status: StatusBadgeStatus = 'default';
+
+  if (administrationStatusBadge.value === 'open') {
+    icon = 'pi pi-check';
+    label = 'Open';
+    status = 'success';
+  }
+
+  if (administrationStatusBadge.value === 'closed') {
+    icon = 'pi pi-times';
+    label = 'Closed';
+    status = 'error';
+  }
+
+  if (administrationStatusBadge.value === 'upcoming') {
+    icon = 'pi pi-clock';
+    label = 'Upcoming';
+    status = 'warn';
+  }
+
+  return { icon, label, status };
+});
+
 const toast = useToast();
 
-const { mutateAsync: deleteAdministration } = useDeleteAdministrationMutation();
 const { mutate: upsertAdministration, isPending: isRetrying } = useUpsertAdministrationMutation();
 
 const now = computed(() => new Date());
@@ -368,7 +454,9 @@ const onRetry = () => {
         detail: 'Assignment sync has been retried. Please check back in a few minutes.',
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
-      queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_LIST_QUERY_KEY] });
+      queryClient.invalidateQueries({
+        queryKey: [ADMINISTRATIONS_LIST_QUERY_KEY],
+      });
       queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_QUERY_KEY] });
     },
     onError: (error: Error) => {
@@ -381,67 +469,6 @@ const onRetry = () => {
     },
   });
 };
-
-const speedDialItems = computed((): SpeedDialItem[] => {
-  const items: SpeedDialItem[] = [];
-
-  // TODO: Change this to admin when edit assignment refactor is complete
-  if (SHOW_DELETE_OPTION && isSyncComplete.value && isUpcoming.value && hasRole(ROLES.SUPER_ADMIN)) {
-    items.push({
-      label: 'Delete',
-      icon: 'pi pi-trash',
-      command: (event) => {
-        confirm.require({
-          target: event.originalEvent.currentTarget,
-          message: 'Are you sure you want to delete this administration?',
-          icon: 'pi pi-exclamation-triangle',
-          accept: async () => {
-            props?.onDeleteAdministration?.(props?.id);
-
-            toast.add({
-              severity: TOAST_SEVERITIES.INFO,
-              summary: 'Confirmed',
-              detail: `The deletion of ${props.title} is being processed. Please check back in a few minutes.`,
-              life: TOAST_DEFAULT_LIFE_DURATION,
-            });
-
-            await deleteAdministration(props.id);
-            queryClient.invalidateQueries({ queryKey: [ADMINISTRATIONS_LIST_QUERY_KEY] });
-            console.log(`Administration ${props.title} deleted successfully`);
-          },
-          reject: () => {
-            toast.add({
-              severity: TOAST_SEVERITIES.ERROR,
-              summary: 'Rejected',
-              detail: `Failed to delete administration ${props.title}`,
-              life: TOAST_DEFAULT_LIFE_DURATION,
-            });
-          },
-        });
-      },
-    });
-  }
-  if (hasRole(ROLES.ADMIN) && isSyncComplete.value) {
-    items.push({
-      label: 'Edit',
-      icon: 'pi pi-pencil',
-      command: () => {
-        router.push({
-          name: 'EditAssignment',
-          params: { adminId: props.id },
-        });
-      },
-    });
-  }
-  if (hasRole(ROLES.ADMIN) && displayedSyncStatus.value === 'failed' && canRetry.value) {
-    items.push({
-      label: 'Retry',
-      icon: 'pi pi-sync',
-      command: () => onRetry(),
-    });
-  }
-  return items;
-});
 
 const processedDates = computed(() => {
   return _mapValues(props.dates, (date) => {
@@ -505,6 +532,9 @@ const cloneTreeNodes = (nodes: TreeNode[] = []): TreeNode[] =>
 watchEffect(() => {
   treeTableOrgs.value = cloneTreeNodes(orgs.value ?? []);
 });
+
+const isProgressTableOpen = ref(false);
+const onClickProgressTableHeader = () => (isProgressTableOpen.value = !isProgressTableOpen.value);
 
 const expanding = ref<boolean>(false);
 const onExpand = async (node: TreeNode): Promise<void> => {
@@ -584,189 +614,112 @@ const onExpand = async (node: TreeNode): Promise<void> => {
     expanding.value = false;
   }
 };
+
+const onClickEditBtn = () => {
+  router.push({
+    name: 'EditAssignment',
+    params: { adminId: props.id },
+  });
+};
 </script>
 
 <style lang="scss">
-.p-treetable-header-cell {
-  display: none;
-}
-
-.p-confirm-popup .p-confirm-popup-footer button {
-  background-color: var(--primary-color);
-  border: none;
-  border-radius: 0.35rem;
-  padding: 0.4em;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-  color: white;
-}
-
-.p-confirm-popup .p-confirm-popup-footer button:hover {
-  background-color: var(--red-900);
-}
-
-.card-admin-assessments {
-  margin-top: 10px;
-}
-
-.p-dataview-paginator-top {
-  border-bottom: 0px solid transparent !important;
-}
-
-.card-administration {
-  text-align: left;
+.assignment {
+  display: block;
   width: 100%;
-  background: var(--surface-b);
+  height: auto;
+  margin: 0;
+  padding: 1.5rem;
+  background-color: var(--surface-b);
   border: 1px solid var(--gray-200);
   border-radius: calc(var(--border-radius) * 4);
-  display: flex;
-  flex-direction: row;
-  gap: 2rem;
-  padding: 2rem;
-  overflow-y: hidden;
-  overflow-x: auto;
+  overflow-x: hidden;
 
-  .card-admin-chart {
-    width: 12ch;
-    @media (max-width: 768px) {
-      display: none;
-    }
+  &__main {
+    flex: 1;
   }
 
-  .card-admin-body {
+  &__name {
+    display: block;
+    margin: 0 0 1rem;
+    font-weight: 700;
+    font-size: 1.25rem;
+  }
+
+  &__details {
     display: flex;
     flex-direction: column;
-    flex-wrap: wrap;
-    align-content: start;
+    align-items: flex-start;
+    gap: 0.25rem;
   }
 
-  .break {
-    flex-basis: 100%;
-    height: 0;
+  &__detail {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 1.25rem;
+    font-size: 14px;
   }
 
-  .card-admin-title {
-    font-weight: bold;
-    width: 100%;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--surface-d);
-    flex: 1 1 100%;
-  }
-
-  .card-admin-link {
-    margin-top: 2rem;
-    width: 100%;
-  }
-
-  .card-admin-class-list {
-    width: 100%;
-    margin-top: 2rem;
-  }
-
-  .cursor-pointer {
-    cursor: pointer;
-  }
-}
-
-.card-inline-list-item {
-  position: relative;
-
-  &:not(:last-of-type):after {
-    content: ', ';
-  }
-}
-
-.card-admin-details {
-  display: flex;
-  justify-content: start;
-  align-items: center;
-}
-
-.status-badge {
-  font-weight: bold;
-  font-family: var(--font-family);
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--p-border-radius-xl);
-  font-size: 0.7rem;
-  margin: 0 0 0 0.8rem;
-  text-transform: uppercase;
-
-  &.open {
-    background: rgba(var(--bright-green-rgb), 0.2);
-    color: var(--bright-green);
-  }
-
-  &.closed {
-    background-color: rgba(var(--bright-red-rgb), 0.2);
-    color: var(--bright-red);
-  }
-
-  &.upcoming {
-    background-color: rgba(var(--bright-yellow-rgb), 0.2);
-    color: var(--bright-yellow);
-  }
-}
-
-.h2-card-admin-title {
-  float: left;
-  font-weight: bold;
-
-  @media (max-width: 768px) {
-    font-size: 1.1rem;
-  }
-}
-
-.administration-action {
-  display: flex;
-  justify-content: end;
-  align-items: center;
-
-  .p-speeddial-item {
-    width: 2rem;
-    height: 2rem;
+  &__task {
+    display: block;
     margin: 0;
-    padding: 0;
+    padding: 0.25rem 0.35rem;
+    background-color: var(--surface-d);
+    border-radius: 6px;
+    line-height: 1;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-shrink: none;
+    gap: 1rem;
 
     .p-button {
-      display: flex;
-      width: 2rem;
-      height: 2rem;
-      margin: 0;
-      padding: 0;
+      padding: 0.5rem;
+      flex-shrink: none;
     }
   }
 
-  &.p-speeddial-open {
-    .p-speeddial-button {
-      background: var(--primary-color);
-      border: 1px solid var(--primary-color);
-      color: white;
+  &__progress-table {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 1rem 0 0;
+    padding: 0;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.65rem;
+    overflow: hidden;
 
-      &:hover {
-        background: var(--primary-color-hover);
-        border: 1px solid var(--primary-color-hover);
-        color: white;
+    &__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      height: auto;
+      margin: 0;
+      padding: 0.75rem;
+      background-color: white;
+      cursor: pointer;
+
+      &--open {
+        background-color: transparent;
       }
     }
-  }
-}
 
-.progress-report-button {
-  min-width: 13rem;
-  justify-content: center;
-  border-color: rgba(var(--bright-red-rgb), 0.28) !important;
-  background: rgba(var(--bright-red-rgb), 0.04) !important;
-  color: var(--primary-color) !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    &__toggle-label {
+      display: block;
+      margin: 0;
+      font-weight: 600;
+      font-size: 14px;
+      user-select: none;
+    }
 
-  &:enabled:hover {
-    border-color: var(--primary-color) !important;
-    background: rgba(var(--bright-red-rgb), 0.08) !important;
-    color: var(--primary-color) !important;
-  }
-
-  .p-button-icon {
-    font-size: 0.85rem;
+    .p-treetable-thead {
+      display: none;
+    }
   }
 }
 </style>

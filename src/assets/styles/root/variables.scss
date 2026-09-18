@@ -195,10 +195,15 @@
   --sidebar-width: 64px;
   --sidebar-panel-width: 360px;
 
-  --docs-btn: #217af4;
-  --docs-btn-rgb: 33, 122, 244;
-  --docs-btn-hover: #e4effe;
-  --docs-btn-hover-rgb: 228, 239, 254;
-  --docs-btn-border: #6aa6f8;
-  --docs-btn-border-rgb: 106, 166, 248;
+  --info-blue: #217af4;
+  --info-blue-rgb: 33, 122, 244;
+  --info-blue-hover: #e4effe;
+  --info-blue-hover-rgb: 228, 239, 254;
+  --info-blue-border: #6aa6f8;
+  --info-blue-border-rgb: 106, 166, 248;
+
+  // Colorblindness
+  --cb-blue: #0072b2;
+  --cb-gray: #6b7280;
+  --cb-orange: #e69f00;
 }
