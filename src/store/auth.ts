@@ -4,6 +4,7 @@ import { type Auth, onAuthStateChanged, type Unsubscribe, type User } from 'fire
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { markRaw, type Ref, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { usernameFromIdentity } from '@/helpers/sentryPrivacy';
 import { logger } from '@/logger';
 import posthogInstance from '@/plugins/posthog';
 import { AUTH_SSO_PROVIDERS } from '../constants/auth';
@@ -158,10 +159,9 @@ export const useAuthStore = defineStore(
               // Store raw so Vue doesn't proxy the Firebase User; proxying it
               // breaks the SDK's internal token-refresh timers.
               firebaseUser.value.adminFirebaseUser = markRaw(user);
-              logger.setUser({
-                uid: user.uid,
-                email: user.email ?? '',
-              });
+              const username = usernameFromIdentity({ email: user.email });
+              if (username) logger.setUser({ username });
+              else logger.setUser(null);
             } else {
               firebaseUser.value.adminFirebaseUser = null;
               logger.setUser(null);
@@ -276,6 +276,11 @@ export const useAuthStore = defineStore(
 
     function setUserData(data: UserData): void {
       userData.value = data;
+      const username = usernameFromIdentity({
+        username: typeof data.username === 'string' ? data.username : undefined,
+        email: typeof data.email === 'string' ? data.email : undefined,
+      });
+      if (username) logger.setUser({ username });
 
       // Hide the LEVANTE_AUDIO_REVIEW site from non-superadmins.
       // NB: this becomes deprecated once translation utilities use a different

@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/vue';
 import type { App } from 'vue';
 import { isLevante } from '@/constants';
+import { sentryUserFromUsername, usernameFromIdentity } from '@/helpers/sentryPrivacy';
 import { useAuthStore } from '@/store/auth';
 import { formattedLocale, languageOptions } from './translations/i18n';
 
@@ -87,7 +88,13 @@ export function initSentry(app: App) {
         return null;
       }
 
-      delete event.user?.ip_address;
+      if (event.user) {
+        const username = usernameFromIdentity({
+          username: event.user.username,
+          email: event.user.email,
+        });
+        event.user = username ? sentryUserFromUsername(username) : {};
+      }
 
       if (event.contexts?.geo) {
         delete event.contexts.geo;
@@ -112,9 +119,10 @@ export function initSentry(app: App) {
   Sentry.setTag('user.language', language);
   // Set user information if authenticated
   if (authStore.isAuthenticated() && authStore.userData) {
-    Sentry.setUser({
-      id: authStore.userData.uid,
-      email: authStore.userData.email,
+    const username = usernameFromIdentity({
+      username: typeof authStore.userData.username === 'string' ? authStore.userData.username : undefined,
+      email: typeof authStore.userData.email === 'string' ? authStore.userData.email : undefined,
     });
+    if (username) Sentry.setUser(sentryUserFromUsername(username));
   }
 }

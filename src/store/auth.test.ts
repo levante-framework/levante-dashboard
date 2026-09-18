@@ -163,4 +163,18 @@ describe('auth store — setUserData', () => {
       expect.objectContaining({ siteName: 'Audio Review' }),
     );
   });
+
+  it('identifies telemetry by username from the user doc, not uid', () => {
+    const store = useAuthStore();
+    const data = {
+      roles: [makeRole('siteA', 'Site A')],
+      uid: 'firebase-uid',
+      email: 'quqa2y1jss@levante.com',
+      username: 'quqa2y1jss',
+    } as UserData;
+
+    store.setUserData(data);
+
+    expect(loggerMock.setUser).toHaveBeenCalledWith({ username: 'quqa2y1jss' });
+  });
 });

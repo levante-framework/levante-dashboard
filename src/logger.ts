@@ -1,13 +1,12 @@
 import * as Sentry from '@sentry/vue';
+import { sentryUserFromUsername } from '@/helpers/sentryPrivacy';
 import posthogInstance from '@/plugins/posthog';
 // Get package info
 import packageJson from '../package.json';
 
 interface UserData {
-  uid: string;
-  email: string;
-  // Add other user properties you might want to track
-  [key: string]: any; // Allow other properties
+  username: string;
+  [key: string]: any;
 }
 
 const HIGH_ENTROPY_HINTS = ['architecture', 'bitness', 'model', 'platformVersion', 'fullVersionList', 'wow64'];
@@ -98,24 +97,18 @@ function error(
  * If null is passed, resets user data in PostHog and Sentry.
  * Otherwise, logs to the console.
  *
- * @param userData - An object containing user information (e.g., uid, email) or null to reset.
+ * @param userData - Username (local-part of the login email) or null to reset.
  */
 function setUser(userData: UserData | null, force: boolean = false): void {
   if (isProduction || force) {
-    if (userData) {
-      // Check for identify existence on posthogInstance due to mock in dev
-      // Only set identify if the user has changed since this is a backend call
-      if (typeof posthogInstance.identify === 'function' && currentUser?.uid !== userData.uid) {
-        posthogInstance.identify(userData.uid, {
-          email: userData.email,
-        });
+    if (userData?.username) {
+      if (typeof posthogInstance.identify === 'function' && currentUser?.username !== userData.username) {
+        posthogInstance.identify(userData.username);
       }
-      const { uid, email } = userData;
-      Sentry.setUser({ id: uid, email });
+      Sentry.setUser(sentryUserFromUsername(userData.username));
       currentUser = userData;
     } else {
-      // Check for reset existence on posthogInstance due to mock in dev
-      if (typeof posthogInstance.reset === 'function' && currentUser?.uid) {
+      if (typeof posthogInstance.reset === 'function' && currentUser?.username) {
         posthogInstance.reset();
       }
       Sentry.setUser(null);
