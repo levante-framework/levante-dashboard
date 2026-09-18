@@ -2,6 +2,7 @@ import { contextLinesIntegration, extraErrorDataIntegration } from '@sentry/inte
 import * as Sentry from '@sentry/vue';
 import type { App } from 'vue';
 import { isLevante } from '@/constants';
+import { LEVANTE_SENTRY_DSN } from '@/sentryConfig';
 import { useAuthStore } from '@/store/auth';
 import { formattedLocale, languageOptions } from './translations/i18n';
 
@@ -31,7 +32,7 @@ export function initSentry(app: App) {
   let regex: RegExp;
   let tracePropagationTargets: (string | RegExp)[];
   if (isLevante) {
-    dsn = 'https://458fd3b1207c12df79f554b94f22833f@o4507250485035008.ingest.us.sentry.io/4508480347832320';
+    dsn = LEVANTE_SENTRY_DSN;
     regex = /https:\/\/hs-levante-admin-dev(--pr\d+-\w+)?\.web\.app/;
     tracePropagationTargets = [
       'https://hs-levante-admin-prod.web.app/**/*',
