@@ -132,12 +132,7 @@ async function startTask(selectedAdmin) {
     const trialContainer = props.taskId === 'child-survey' ? 'surveyResponses' : 'runs';
 
     const appKit = await startAssessmentWithRetry(() =>
-      authStore.roarfirekit.startAssessment(
-        selectedAdmin.value?.id,
-        props.taskId,
-        version,
-        trialContainer,
-      ),
+      authStore.roarfirekit.startAssessment(selectedAdmin.value?.id, props.taskId, version, trialContainer),
     );
 
     startAssessmentSucceeded = true;
