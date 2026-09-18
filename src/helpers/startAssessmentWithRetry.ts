@@ -1,15 +1,11 @@
-const RETRYABLE_START_ASSESSMENT_CODES = new Set([
-  'internal',
-  'unavailable',
-  'deadline-exceeded',
-  'functions/internal',
-  'functions/unavailable',
-  'functions/deadline-exceeded',
-]);
+// Firebase callable errors surface as `functions/<code>` while Firestore errors use the bare code,
+// so we normalize away the optional `functions/` prefix before matching.
+const RETRYABLE_START_ASSESSMENT_CODES = new Set(['internal', 'unavailable', 'deadline-exceeded']);
 
 export function isRetryableStartAssessmentError(error: unknown): boolean {
   if (typeof error !== 'object' || error === null || !('code' in error)) return false;
-  return RETRYABLE_START_ASSESSMENT_CODES.has(String((error as { code: unknown }).code));
+  const code = String((error as { code: unknown }).code).replace(/^functions\//, '');
+  return RETRYABLE_START_ASSESSMENT_CODES.has(code);
 }
 
 function wait(ms: number) {
