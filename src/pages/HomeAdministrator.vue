@@ -363,7 +363,7 @@ watch(
 }
 
 .docs-button-wrapper {
-  border: 4px solid var(--docs-btn-hover);
+  border: 4px solid var(--info-blue-hover);
   border-radius: 10px;
 }
 
