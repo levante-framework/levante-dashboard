@@ -14,11 +14,24 @@ export function omitSensitiveSentryFields<T>(value: T): T {
   return result as T;
 }
 
-export function usernameFromIdentity(input: { username?: string | null; email?: string | null }): string | null {
+export function identitySiteName(roles: Array<{ siteName?: string | null } | null | undefined>): string | null {
+  const names = roles.map((role) => (role?.siteName ?? '').trim()).filter(Boolean);
+  if (names.length === 0) return null;
+  names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  return names[0];
+}
+
+export function usernameFromIdentity(input: {
+  username?: string | null;
+  email?: string | null;
+  siteName?: string | null;
+}): string | null {
   const raw = (input.username ?? input.email ?? '').trim();
   if (!raw) return null;
   const local = raw.includes('@') ? raw.slice(0, raw.indexOf('@')) : raw;
-  return local || null;
+  if (!local) return null;
+  const site = (input.siteName ?? '').trim();
+  return site ? `${local}@${site}` : local;
 }
 
 export function sentryUserFromUsername(username: string) {

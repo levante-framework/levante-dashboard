@@ -97,7 +97,7 @@ function error(
  * If null is passed, resets user data in PostHog and Sentry.
  * Otherwise, logs to the console.
  *
- * @param userData - Username (local-part of the login email) or null to reset.
+ * @param userData - Username (local-part@site-name) or null to reset.
  */
 function setUser(userData: UserData | null, force: boolean = false): void {
   if (isProduction || force) {

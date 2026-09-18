@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/vue';
 import type { App } from 'vue';
 import { isLevante } from '@/constants';
-import { sentryUserFromUsername, usernameFromIdentity } from '@/helpers/sentryPrivacy';
+import { identitySiteName, sentryUserFromUsername, usernameFromIdentity } from '@/helpers/sentryPrivacy';
 import { LEVANTE_SENTRY_DSN } from '@/sentryConfig';
 import { useAuthStore } from '@/store/auth';
 import { formattedLocale, languageOptions } from './translations/i18n';
@@ -93,6 +93,7 @@ export function initSentry(app: App) {
         const username = usernameFromIdentity({
           username: event.user.username,
           email: event.user.email,
+          siteName: identitySiteName(authStore.sites),
         });
         event.user = username ? sentryUserFromUsername(username) : {};
       }
@@ -123,6 +124,7 @@ export function initSentry(app: App) {
     const username = usernameFromIdentity({
       username: typeof authStore.userData.username === 'string' ? authStore.userData.username : undefined,
       email: typeof authStore.userData.email === 'string' ? authStore.userData.email : undefined,
+      siteName: identitySiteName(authStore.sites),
     });
     if (username) Sentry.setUser(sentryUserFromUsername(username));
   }

@@ -164,7 +164,7 @@ describe('auth store — setUserData', () => {
     );
   });
 
-  it('identifies telemetry by username from the user doc, not uid', () => {
+  it('identifies telemetry by username@siteName from the user doc, not uid', () => {
     const store = useAuthStore();
     const data = {
       roles: [makeRole('siteA', 'Site A')],
@@ -175,6 +175,18 @@ describe('auth store — setUserData', () => {
 
     store.setUserData(data);
 
-    expect(loggerMock.setUser).toHaveBeenCalledWith({ username: 'quqa2y1jss' });
+    expect(loggerMock.setUser).toHaveBeenCalledWith({ username: 'quqa2y1jss@Site A' });
+  });
+
+  it('uses a stable site name when the user has roles at more than one site', () => {
+    const store = useAuthStore();
+    const data = {
+      roles: [makeRole('siteB', 'Washington'), makeRole('siteA', 'Lincoln')],
+      username: 'maria',
+    } as UserData;
+
+    store.setUserData(data);
+
+    expect(loggerMock.setUser).toHaveBeenCalledWith({ username: 'maria@Lincoln' });
   });
 });

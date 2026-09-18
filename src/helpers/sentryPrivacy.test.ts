@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { omitSensitiveSentryFields, sentryUserFromUsername, usernameFromIdentity } from './sentryPrivacy';
+import {
+  identitySiteName,
+  omitSensitiveSentryFields,
+  sentryUserFromUsername,
+  usernameFromIdentity,
+} from './sentryPrivacy';
 
 describe('omitSensitiveSentryFields', () => {
   it('drops trial payloads and demographics while keeping operational ids', () => {
@@ -34,8 +39,25 @@ describe('usernameFromIdentity', () => {
     expect(usernameFromIdentity({ email: 'david81@stanford.edu' })).toBe('david81');
   });
 
+  it('appends site name when provided', () => {
+    expect(usernameFromIdentity({ username: 'maria', siteName: 'Lincoln' })).toBe('maria@Lincoln');
+    expect(usernameFromIdentity({ email: 'david81@stanford.edu', siteName: ' Site A ' })).toBe('david81@Site A');
+  });
+
   it('returns null when neither field is present', () => {
     expect(usernameFromIdentity({})).toBeNull();
+  });
+});
+
+describe('identitySiteName', () => {
+  it('picks a stable site name so role order does not change identity', () => {
+    expect(identitySiteName([{ siteName: 'Washington' }, { siteName: 'Lincoln' }])).toBe('Lincoln');
+    expect(identitySiteName([{ siteName: 'Lincoln' }, { siteName: 'Washington' }])).toBe('Lincoln');
+  });
+
+  it('returns null when no site names are present', () => {
+    expect(identitySiteName([])).toBeNull();
+    expect(identitySiteName([{ siteName: '  ' }])).toBeNull();
   });
 });
 
