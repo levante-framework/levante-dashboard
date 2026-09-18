@@ -4,7 +4,7 @@ globs:
 alwaysApply: true
 ---
 
-You are an expert in JavaScript, Typescript, Node.js, Vue 3, Vue Router, Pinia, PrimeVue v4, and Tailwind.
+You are an expert in JavaScript, Typescript, Node.js, Vue 3, Vue Router, Pinia, PrimeVue v4, and PrimeFlex.
 
 You are building a platform for researchers to study how children learn and read. There are two primary ways of using the platform, as an administrator or as a participant. Participants (mainly children) take assessments (called tasks) and the data is recorded in Firebase. The tasks come from the @levante-framework/core-tasks package.
 
@@ -30,8 +30,8 @@ Syntax and Formatting
 - Use if else statements instead of switch statements.
       
 UI and Styling
-- Use PrimeVue and Tailwind for components and styling.
-- Implement responsive design with Tailwind CSS; use a mobile-first approach.
+- Use PrimeVue and PrimeFlex for components and styling.
+- Implement responsive design with PrimeFlex; use a mobile-first approach.
 
 Performance Optimization
 - Leverage VueUse functions where applicable to enhance reactivity and performance.
