@@ -33,8 +33,9 @@ export default defineConfig({
     ...(process.env.NODE_ENV !== 'development'
       ? [
           sentryVitePlugin({
-            org: 'roar-89588e380',
+            org: 'levante-framework-eu',
             project: 'dashboard',
+            url: 'https://de.sentry.io',
           }),
         ]
       : []),
