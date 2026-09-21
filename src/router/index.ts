@@ -1,366 +1,304 @@
-import { allowedUnauthenticatedRoutes } from "@/constants/auth";
-import { ROLES } from "@/constants/roles";
-import { APP_ROUTES } from "@/constants/routes";
-import { logger } from "@/logger";
-import { useAuthStore } from "@/store/auth";
-import type { Role } from "@/types";
-import { fetchWizardSteps } from "@/wizard/index.js";
-import { storeToRefs } from "pinia";
+import { storeToRefs } from 'pinia';
 import {
   createRouter,
   createWebHistory,
-  NavigationGuardNext,
-  RouteLocationNormalized,
-  RouteRecordRaw,
-  RouterScrollBehavior,
-} from "vue-router";
+  type NavigationGuardNext,
+  type RouteLocationNormalized,
+  type RouteRecordRaw,
+  type RouterScrollBehavior,
+} from 'vue-router';
+import { allowedUnauthenticatedRoutes } from '@/constants/auth';
+import { ROLES } from '@/constants/roles';
+import { APP_ROUTES } from '@/constants/routes';
+import { logger } from '@/logger';
+import { useAuthStore } from '@/store/auth';
+import type { Role } from '@/types';
+import { fetchWizardSteps } from '@/wizard/index.js';
 
 function removeQueryParams(to: RouteLocationNormalized) {
-  if (Object.keys(to.query).length)
-    return { path: to.path, query: {}, hash: to.hash };
+  if (Object.keys(to.query).length) return { path: to.path, query: {}, hash: to.hash };
 }
 
 function removeHash(to: RouteLocationNormalized) {
-  if (to.hash) return { path: to.path, query: to.query, hash: "" };
+  if (to.hash) return { path: to.path, query: to.query, hash: '' };
 }
 
-const CHUNK_RELOAD_KEY = "chunk-reload";
+const CHUNK_RELOAD_KEY = 'chunk-reload';
 
 function isChunkLoadError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return (
-    message.includes("Failed to fetch dynamically imported module") ||
-    message.includes("error loading dynamically imported module") ||
-    message.includes("Importing a module script failed")
+    message.includes('Failed to fetch dynamically imported module') ||
+    message.includes('error loading dynamically imported module') ||
+    message.includes('Importing a module script failed')
   );
 }
 
 // '*' = all roles
 const routes: Array<RouteRecordRaw> = [
   {
-    path: "/",
-    name: "Home",
-    component: () => import("@/pages/HomeSelector.vue"),
+    path: '/',
+    name: 'Home',
+    component: () => import('@/pages/HomeSelector.vue'),
     meta: {
-      pageTitle: { translationKey: "home" },
-      allowedRoles: ["*"],
+      pageTitle: { translationKey: 'home' },
+      allowedRoles: ['*'],
     },
   },
   {
-    path: "/debug",
-    name: "Debug",
-    component: () => import("@/pages/Debug.vue"),
+    path: '/debug',
+    name: 'Debug',
+    component: () => import('@/pages/Debug.vue'),
     meta: {
-      pageTitle: "Debug Information",
-      allowedRoles: ["*"],
+      pageTitle: 'Debug Information',
+      allowedRoles: ['*'],
     },
   },
   {
-    path: "/game/swr",
-    name: "SWR",
-    component: () => import("../components/tasks/TaskSWR.vue"),
-    props: { taskId: "swr" },
+    path: '/game/swr',
+    name: 'SWR',
+    component: () => import('../components/tasks/TaskSWR.vue'),
+    props: { taskId: 'swr' },
     meta: {
-      pageTitle: "SWR",
-      allowedRoles: ["participant"],
+      pageTitle: 'SWR',
+      allowedRoles: ['participant'],
     },
   },
   {
-    path: "/game/pa",
-    name: "PA",
-    component: () => import("../components/tasks/TaskPA.vue"),
-    props: { taskId: "pa" },
+    path: '/game/pa',
+    name: 'PA',
+    component: () => import('../components/tasks/TaskPA.vue'),
+    props: { taskId: 'pa' },
     meta: {
-      pageTitle: "PA",
-      allowedRoles: ["participant"],
+      pageTitle: 'PA',
+      allowedRoles: ['participant'],
     },
   },
   {
-    path: "/game/sre",
-    name: "SRE",
-    component: () => import("../components/tasks/TaskSRE.vue"),
-    props: { taskId: "sre" },
+    path: '/game/sre',
+    name: 'SRE',
+    component: () => import('../components/tasks/TaskSRE.vue'),
+    props: { taskId: 'sre' },
     meta: {
-      pageTitle: "SRE",
-      allowedRoles: ["participant"],
+      pageTitle: 'SRE',
+      allowedRoles: ['participant'],
     },
   },
   {
-    path: "/game/core-tasks/:taskId",
-    name: "Core Tasks",
-    component: () => import("../components/tasks/TaskLevante.vue"),
+    path: '/game/core-tasks/:taskId',
+    name: 'Core Tasks',
+    component: () => import('../components/tasks/TaskLevante.vue'),
     props: true,
     // Add which specific task?
     // Code in App.vue overwrites updating it programmatically
     meta: {
-      pageTitle: "Core Tasks",
-      allowedRoles: ["participant"],
+      pageTitle: 'Core Tasks',
+      allowedRoles: ['participant'],
     },
   },
   {
-    path: "/manage-tasks-variants",
-    name: "ManageTasksVariants",
-    component: () => import("@/pages/ManageTasksVariants.vue"),
+    path: '/manage-tasks-variants',
+    name: 'ManageTasksVariants',
+    component: () => import('@/pages/ManageTasksVariants.vue'),
     meta: {
-      pageTitle: "Manage Tasks",
+      pageTitle: 'Manage Tasks',
       allowedRoles: [ROLES.SUPER_ADMIN],
     },
   },
   {
     path: APP_ROUTES.SIGN_IN,
-    name: "SignIn",
-    component: () => import("@/pages/SignIn.vue"),
+    name: 'SignIn',
+    component: () => import('@/pages/SignIn.vue'),
     meta: {
-      pageTitle: { translationKey: "signIn" },
-      allowedRoles: ["*"],
+      pageTitle: { translationKey: 'signIn' },
+      allowedRoles: ['*'],
     },
   },
   {
-    path: "/login",
-    name: "Login",
-    component: () => import("@/pages/Login.vue"),
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/pages/Login.vue'),
     meta: {
-      pageTitle: { translationKey: "login" },
-      allowedRoles: ["*"],
+      pageTitle: { translationKey: 'login' },
+      allowedRoles: ['*'],
     },
   },
   {
-    path: "/auth-email-link",
-    name: "AuthEmailLink",
+    path: '/auth-email-link',
+    name: 'AuthEmailLink',
     beforeRouteLeave: [removeQueryParams, removeHash],
-    component: () => import("../components/auth/AuthEmailLink.vue"),
+    component: () => import('../components/auth/AuthEmailLink.vue'),
     meta: {
-      pageTitle: "Email Link Authentication",
-      allowedRoles: ["*"],
+      pageTitle: 'Email Link Authentication',
+      allowedRoles: ['*'],
     },
   },
   {
-    path: "/auth-email-sent",
-    name: "AuthEmailSent",
-    component: () => import("../components/auth/AuthEmailSent.vue"),
+    path: '/auth-email-sent',
+    name: 'AuthEmailSent',
+    component: () => import('../components/auth/AuthEmailSent.vue'),
     meta: {
-      pageTitle: "Authentication Email Sent",
-      allowedRoles: ["*"],
+      pageTitle: 'Authentication Email Sent',
+      allowedRoles: ['*'],
     },
   },
   {
-    path: "/administrator",
-    name: "Administrator",
-    component: () => import("@/pages/HomeAdministrator.vue"),
+    path: '/administrator',
+    name: 'Administrator',
+    component: () => import('@/pages/HomeAdministrator.vue'),
     meta: {
-      pageTitle: "Administrator",
-      allowedRoles: [
-        ROLES.ADMIN,
-        ROLES.SITE_ADMIN,
-        ROLES.SUPER_ADMIN,
-        ROLES.RESEARCH_ASSISTANT,
-      ],
+      pageTitle: 'Administrator',
+      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
   {
-    path: "/view-assignments",
-    name: "ViewAssignments",
-    component: () => import("@/pages/ViewAssignments.vue"),
+    path: '/view-assignments',
+    name: 'ViewAssignments',
+    component: () => import('@/pages/ViewAssignments.vue'),
     meta: {
-      pageTitle: "View Assignments",
-      allowedRoles: [
-        ROLES.RESEARCH_ASSISTANT,
-        ROLES.ADMIN,
-        ROLES.SITE_ADMIN,
-        ROLES.SUPER_ADMIN,
-      ],
+      pageTitle: 'View Assignments',
+      allowedRoles: [ROLES.RESEARCH_ASSISTANT, ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
     },
   },
   {
-    path: "/create-assignment",
-    name: "CreateAssignment",
-    component: () => import("@/pages/CreateAssignment.vue"),
+    path: '/create-assignment',
+    name: 'CreateAssignment',
+    component: () => import('@/pages/CreateAssignment.vue'),
     meta: {
-      pageTitle: "Create Assignment",
+      pageTitle: 'Create Assignment',
       allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SITE_ADMIN],
     },
   },
   {
-    path: "/edit-assignment/:adminId",
-    name: "EditAssignment",
+    path: '/edit-assignment/:adminId',
+    name: 'EditAssignment',
     props: true,
-    component: () => import("../pages/CreateAssignment.vue"),
+    component: () => import('../pages/CreateAssignment.vue'),
     meta: {
-      pageTitle: "Edit an Assignment",
+      pageTitle: 'Edit an Assignment',
       allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SITE_ADMIN],
     },
   },
   {
-    path: "/create-administrator",
-    name: "CreateAdministrator",
-    component: () => import("@/pages/CreateAdministrator.vue"),
+    path: '/create-administrator',
+    name: 'CreateAdministrator',
+    component: () => import('@/pages/CreateAdministrator.vue'),
     meta: {
-      pageTitle: "Create an administrator account",
+      pageTitle: 'Create an administrator account',
       allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
     },
   },
   {
-    path: "/manage-researchers",
-    name: "ManageResearchers",
-    component: () => import("@/pages/ManageAdministrators.vue"),
+    path: '/manage-researchers',
+    name: 'ManageResearchers',
+    component: () => import('@/pages/ManageAdministrators.vue'),
     meta: {
-      pageTitle: "Manage Researchers",
-      allowedRoles: [
-        ROLES.ADMIN,
-        ROLES.SITE_ADMIN,
-        ROLES.SUPER_ADMIN,
-        ROLES.RESEARCH_ASSISTANT,
-      ],
+      pageTitle: 'Manage Researchers',
+      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
       requiresNewPermissions: true,
     },
   },
   {
-    path: "/list-groups",
-    name: "ListGroups",
-    component: () => import("@/pages/groups/ListGroups.vue"),
+    path: '/list-groups',
+    name: 'ListGroups',
+    component: () => import('@/pages/groups/ListGroups.vue'),
     meta: {
-      pageTitle: "Groups",
-      allowedRoles: [
-        ROLES.ADMIN,
-        ROLES.SITE_ADMIN,
-        ROLES.SUPER_ADMIN,
-        ROLES.RESEARCH_ASSISTANT,
-      ],
+      pageTitle: 'Groups',
+      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
   {
-    path: "/list-users/:orgType/:orgId/:orgName",
-    name: "ListUsers",
+    path: '/list-users/:orgType/:orgId/:orgName',
+    name: 'ListUsers',
     props: true,
-    component: () => import("@/pages/users/ListUsers.vue"),
+    component: () => import('@/pages/users/ListUsers.vue'),
     meta: {
-      pageTitle: "List users",
-      allowedRoles: [
-        ROLES.ADMIN,
-        ROLES.SITE_ADMIN,
-        ROLES.SUPER_ADMIN,
-        ROLES.RESEARCH_ASSISTANT,
-      ],
+      pageTitle: 'List users',
+      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
   {
-    path: "/administration/:administrationId",
-    name: "AdministrationProgressReport",
+    path: '/administration/:administrationId',
+    name: 'AdministrationProgressReport',
     props: true,
-    component: () => import("@/pages/AdministrationProgressReport.vue"),
+    component: () => import('@/pages/AdministrationProgressReport.vue'),
     meta: {
-      pageTitle: "Assignment Progress Report",
-      allowedRoles: [
-        ROLES.ADMIN,
-        ROLES.SITE_ADMIN,
-        ROLES.SUPER_ADMIN,
-        ROLES.RESEARCH_ASSISTANT,
-      ],
+      pageTitle: 'Assignment Progress Report',
+      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
   {
-    path: "/administration/:administrationId/:orgType/:orgId",
-    name: "ProgressReport",
+    path: '/administration/:administrationId/:orgType/:orgId',
+    name: 'ProgressReport',
     props: true,
-    component: () => import("@/pages/ProgressReportFeature.vue"),
+    component: () => import('@/pages/ProgressReportFeature.vue'),
     meta: {
-      pageTitle: "View Administration",
-      allowedRoles: [
-        ROLES.ADMIN,
-        ROLES.SITE_ADMIN,
-        ROLES.SUPER_ADMIN,
-        ROLES.RESEARCH_ASSISTANT,
-      ],
+      pageTitle: 'View Administration',
+      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
   {
     path: APP_ROUTES.ACCOUNT_PROFILE,
-    name: "Profile",
-    component: () => import("@/pages/AdminProfile.vue"),
+    name: 'Profile',
+    component: () => import('@/pages/AdminProfile.vue'),
     children: [
       {
-        path: "accounts",
-        name: "ProfileAccounts",
-        component: () =>
-          import("../components/adminSettings/LinkAccountsView.vue"),
+        path: 'accounts',
+        name: 'ProfileAccounts',
+        component: () => import('../components/adminSettings/LinkAccountsView.vue'),
         meta: {
-          allowedRoles: [
-            ROLES.ADMIN,
-            ROLES.SITE_ADMIN,
-            ROLES.SUPER_ADMIN,
-            ROLES.RESEARCH_ASSISTANT,
-          ],
+          allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
         },
       },
       {
-        path: "settings",
-        name: "ProfileSettings",
-        component: () => import("../components/adminSettings/Settings.vue"),
+        path: 'settings',
+        name: 'ProfileSettings',
+        component: () => import('../components/adminSettings/Settings.vue'),
         meta: {
-          allowedRoles: [
-            ROLES.ADMIN,
-            ROLES.SITE_ADMIN,
-            ROLES.SUPER_ADMIN,
-            ROLES.RESEARCH_ASSISTANT,
-          ],
+          allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
         },
       },
     ],
     meta: {
-      pageTitle: "Profile",
-      allowedRoles: [
-        ROLES.ADMIN,
-        ROLES.SITE_ADMIN,
-        ROLES.SUPER_ADMIN,
-        ROLES.RESEARCH_ASSISTANT,
-      ],
+      pageTitle: 'Profile',
+      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
   {
-    path: "/enable-cookies",
-    name: "EnableCookies",
-    component: () => import("@/pages/EnableCookies.vue"),
+    path: '/enable-cookies',
+    name: 'EnableCookies',
+    component: () => import('@/pages/EnableCookies.vue'),
     meta: {
-      pageTitle: "Enable Cookies",
-      allowedRoles: ["*"],
+      pageTitle: 'Enable Cookies',
+      allowedRoles: ['*'],
     },
   },
   {
-    path: "/:pathMatch(.*)*",
-    name: "NotFound",
-    component: () => import("@/pages/NotFound.vue"),
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/pages/NotFound.vue'),
     meta: {
-      pageTitle: "Whoops! 404 Page!",
-      allowedRoles: ["*"],
+      pageTitle: 'Whoops! 404 Page!',
+      allowedRoles: ['*'],
     },
   },
   {
-    path: "/add-users",
-    name: "Add Users",
-    component: () => import("@/pages/users/AddUsers.vue"),
+    path: '/add-users',
+    name: 'Add Users',
+    component: () => import('@/pages/users/AddUsers.vue'),
     meta: {
-      pageTitle: "Add Users",
-      allowedRoles: [
-        ROLES.SUPER_ADMIN,
-        ROLES.SITE_ADMIN,
-        ROLES.ADMIN,
-        ROLES.RESEARCH_ASSISTANT,
-      ],
+      pageTitle: 'Add Users',
+      allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN, ROLES.ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
 
   {
-    path: "/link-users",
-    name: "Link Users",
-    component: () => import("@/pages/users/LinkUsers.vue"),
+    path: '/link-users',
+    name: 'Link Users',
+    component: () => import('@/pages/users/LinkUsers.vue'),
     meta: {
-      pageTitle: "Link Users",
-      allowedRoles: [
-        ROLES.SUPER_ADMIN,
-        ROLES.SITE_ADMIN,
-        ROLES.ADMIN,
-        ROLES.RESEARCH_ASSISTANT,
-      ],
+      pageTitle: 'Link Users',
+      allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN, ROLES.ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
   // {
@@ -370,56 +308,56 @@ const routes: Array<RouteRecordRaw> = [
   //   meta: { allowedRoles: [],  pageTitle: 'Edit Users', requireAdmin: true, project: 'LEVANTE' },
   // },
   {
-    path: "/survey",
-    name: "Survey",
-    component: () => import("@/pages/UserSurvey.vue"),
+    path: '/survey',
+    name: 'Survey',
+    component: () => import('@/pages/UserSurvey.vue'),
     meta: {
-      pageTitle: "Survey",
-      allowedRoles: ["participant"],
+      pageTitle: 'Survey',
+      allowedRoles: ['participant'],
     },
   },
   {
-    path: "/survey-manager/:surveyPreview?/:surveyId?/:surveyLanguage?",
-    name: "SurveyManager",
-    component: () => import("@/pages/SurveyManager.vue"),
+    path: '/survey-manager/:surveyPreview?/:surveyId?/:surveyLanguage?',
+    name: 'SurveyManager',
+    component: () => import('@/pages/SurveyManager.vue'),
     meta: {
-      pageTitle: "SurveyManager",
+      pageTitle: 'SurveyManager',
       allowedRoles: [],
     },
   },
   {
-    path: "/maintenance",
-    name: "Maintenance",
-    component: () => import("@/pages/MaintenancePage.vue"),
+    path: '/maintenance',
+    name: 'Maintenance',
+    component: () => import('@/pages/MaintenancePage.vue'),
     meta: {
-      pageTitle: "Down for Maintenance",
+      pageTitle: 'Down for Maintenance',
       allowedRoles: [],
     },
   },
   {
-    path: "/translations/:taskId?",
-    name: "Translations",
-    component: () => import("@/pages/Translations.vue"),
+    path: '/translations/:taskId?',
+    name: 'Translations',
+    component: () => import('@/pages/Translations.vue'),
     meta: {
-      pageTitle: "Translations",
-      allowedRoles: ["*"],
+      pageTitle: 'Translations',
+      allowedRoles: ['*'],
     },
   },
   {
-    path: "/privacy-policy",
-    name: "PrivacyPolicy",
-    component: () => import("@/pages/PrivacyPolicy.vue"),
+    path: '/privacy-policy',
+    name: 'PrivacyPolicy',
+    component: () => import('@/pages/PrivacyPolicy.vue'),
     meta: {
-      pageTitle: "Privacy Policy",
-      allowedRoles: ["*"],
+      pageTitle: 'Privacy Policy',
+      allowedRoles: ['*'],
     },
   },
   {
-    path: "/survey-form-preview/:formType?",
-    name: "SurveyFormPreview",
-    component: () => import("@/pages/SurveyFormPreview.vue"),
+    path: '/survey-form-preview/:formType?',
+    name: 'SurveyFormPreview',
+    component: () => import('@/pages/SurveyFormPreview.vue'),
     meta: {
-      pageTitle: "Survey Form Preview",
+      pageTitle: 'Survey Form Preview',
       allowedRoles: [ROLES.SUPER_ADMIN],
     },
   },
@@ -431,7 +369,7 @@ const scrollBehavior: RouterScrollBehavior = (to, _from, savedPosition) => {
   } else if (to.hash) {
     return {
       el: to.hash,
-      behavior: "smooth",
+      behavior: 'smooth',
     };
   } else {
     return { left: 0, top: 0 };
@@ -444,79 +382,58 @@ const router = createRouter({
   scrollBehavior,
 });
 
-router.beforeEach(
-  async (
-    to: RouteLocationNormalized,
-    _from: RouteLocationNormalized,
-    next: NavigationGuardNext,
-  ) => {
-    const authStore = useAuthStore();
-    const { shouldUsePermissions, userData } = storeToRefs(authStore);
-    const { isAuthenticated } = authStore;
-    const inMaintenanceMode = false;
+router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormalized, next: NavigationGuardNext) => {
+  const authStore = useAuthStore();
+  const { shouldUsePermissions, userData } = storeToRefs(authStore);
+  const { isAuthenticated } = authStore;
+  const inMaintenanceMode = false;
 
-    if (inMaintenanceMode && to.name !== "Maintenance") {
-      return next({ name: "Maintenance" });
-    } else if (!inMaintenanceMode && to.name === "Maintenance") {
-      return next({ name: "Home" });
-    }
+  if (inMaintenanceMode && to.name !== 'Maintenance') {
+    return next({ name: 'Maintenance' });
+  } else if (!inMaintenanceMode && to.name === 'Maintenance') {
+    return next({ name: 'Home' });
+  }
 
-    // Check if user is signed in. If not, go to signin
-    if (
-      !to.path.includes("__/auth/handler") &&
-      !isAuthenticated() &&
-      !allowedUnauthenticatedRoutes.includes(to.name)
-    ) {
-      return next({ name: "SignIn" });
-    }
+  // Check if user is signed in. If not, go to signin
+  if (!to.path.includes('__/auth/handler') && !isAuthenticated() && !allowedUnauthenticatedRoutes.includes(to.name)) {
+    return next({ name: 'SignIn' });
+  }
 
-    // @TODO
-    // If we're gonna keep this solution,
-    // we need to think about setting up a max num of tries and an error handler.
-    if (!userData.value && !allowedUnauthenticatedRoutes.includes(to.name)) {
-      await new Promise<void>((resolve) => {
-        const checkUserData = () => {
-          if (userData.value) return resolve();
-          setTimeout(checkUserData, 50);
-        };
+  // @TODO
+  // If we're gonna keep this solution,
+  // we need to think about setting up a max num of tries and an error handler.
+  if (!userData.value && !allowedUnauthenticatedRoutes.includes(to.name)) {
+    await new Promise<void>((resolve) => {
+      const checkUserData = () => {
+        if (userData.value) return resolve();
+        setTimeout(checkUserData, 50);
+      };
 
-        checkUserData();
-      });
-    }
+      checkUserData();
+    });
+  }
 
-    const allowedRoles = to.meta.allowedRoles as string[];
-    const userRoles = userData.value?.roles?.map((role: Role) => role.role) || [
-      ROLES.PARTICIPANT,
-    ];
-    const isUserAllowed =
-      allowedRoles.includes("*") ||
-      allowedRoles.some((allowedRole: string) =>
-        userRoles.includes(allowedRole),
-      );
-    const requiresNewPermissions: boolean =
-      (to?.meta?.requiresNewPermissions as boolean) || false;
+  const allowedRoles = to.meta.allowedRoles as string[];
+  const userRoles = userData.value?.roles?.map((role: Role) => role.role) || [ROLES.PARTICIPANT];
+  const isUserAllowed =
+    allowedRoles.includes('*') || allowedRoles.some((allowedRole: string) => userRoles.includes(allowedRole));
+  const requiresNewPermissions: boolean = (to?.meta?.requiresNewPermissions as boolean) || false;
 
-    if (
-      (requiresNewPermissions && !shouldUsePermissions.value) ||
-      (allowedRoles.length && !isUserAllowed)
-    ) {
-      return next({ name: "Home" });
-    }
+  if ((requiresNewPermissions && !shouldUsePermissions.value) || (allowedRoles.length && !isUserAllowed)) {
+    return next({ name: 'Home' });
+  }
 
-    if (
-      (import.meta.env.VITE_FIREBASE_PROJECT ?? "PROD").toUpperCase() === "DEV"
-    ) {
-      await fetchWizardSteps(String(to.name));
-    }
+  if ((import.meta.env.VITE_FIREBASE_PROJECT ?? 'PROD').toUpperCase() === 'DEV') {
+    await fetchWizardSteps(String(to.name));
+  }
 
-    return next();
-  },
-);
+  return next();
+});
 
 // Call for Posthog pageview tracking
 router.afterEach((to, from) => {
   sessionStorage.removeItem(CHUNK_RELOAD_KEY);
-  logger.capture("pageview", {
+  logger.capture('pageview', {
     to: { name: to.name, path: to.path },
     from: { name: from.name, path: from.path },
   });
@@ -524,8 +441,8 @@ router.afterEach((to, from) => {
 
 router.onError((error, to) => {
   if (!isChunkLoadError(error)) {
-    logger.error(new Error("Router navigation failed", { cause: error }), {
-      tags: { function: "router.onError", route: String(to.name ?? "unknown") },
+    logger.error(new Error('Router navigation failed', { cause: error }), {
+      tags: { function: 'router.onError', route: String(to.name ?? 'unknown') },
       path: to.fullPath,
     });
     return;
@@ -533,12 +450,9 @@ router.onError((error, to) => {
 
   if (sessionStorage.getItem(CHUNK_RELOAD_KEY) === to.fullPath) {
     sessionStorage.removeItem(CHUNK_RELOAD_KEY);
-    logger.error(
-      new Error("Failed to load app chunk after reload", { cause: error }),
-      {
-        tags: { function: "router.onError" },
-      },
-    );
+    logger.error(new Error('Failed to load app chunk after reload', { cause: error }), {
+      tags: { function: 'router.onError' },
+    });
     return;
   }
 
