@@ -169,9 +169,9 @@
 <script setup lang="ts">
 import DOMPurify from 'dompurify';
 import PvButton from 'primevue/button';
+import PvDialog from 'primevue/dialog';
 import PvInputText from 'primevue/inputtext';
 import PvMultiSelect from 'primevue/multiselect';
-import PvDialog from 'primevue/dialog';
 import PvSelect from 'primevue/select';
 import PvTextarea from 'primevue/textarea';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
@@ -197,10 +197,7 @@ const props = defineProps<{
   sectionInfo?: FormSectionInfo[];
   isSaving?: boolean;
   isComplete?: boolean;
-  saveDraft: (
-    values: Record<string, unknown>,
-    options?: { silent?: boolean },
-  ) => Promise<boolean>;
+  saveDraft: (values: Record<string, unknown>, options?: { silent?: boolean }) => Promise<boolean>;
 }>();
 
 // `sectionInfo` arrives as an ordered array; index it by id for quick lookup.
