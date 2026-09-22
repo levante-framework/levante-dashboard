@@ -119,7 +119,6 @@ import PvDialog from 'primevue/dialog';
 import PvDivider from 'primevue/divider';
 import type { FileUploadUploaderEvent } from 'primevue/fileupload';
 import PvMessage from 'primevue/message';
-import { useToast } from 'primevue/usetoast';
 import { computed, nextTick, ref, toRaw, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import AppSpinner from '@/components/AppSpinner.vue';
@@ -131,7 +130,6 @@ import useCreateUsersMutation from '@/composables/mutations/useCreateUsersMutati
 import { useGetSyncStatusQuery } from '@/composables/queries/useGetSyncStatusQuery';
 import { NORMALIZED_USER_CSV_HEADERS, USER_CSV_HEADERS } from '@/constants/csv';
 import { SITE_OVERVIEW_QUERY_KEY, SYNC_STATUS_QUERY_KEY } from '@/constants/queryKeys';
-import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { type FirebaseFailure, toFirebaseFailureCode } from '@/firebase/failure';
 import { normalizeToLowercase } from '@/helpers';
 import { deriveNextCsvFilename, downloadCsv, parseCsvFile, unparseCsvFile } from '@/helpers/csv';
@@ -163,8 +161,6 @@ const queryClient = useQueryClient();
 const router = useRouter();
 
 const { mutateAsync: createUsers } = useCreateUsersMutation();
-
-const toast = useToast();
 
 const isSubmitting = ref(false);
 const parsedData = ref<Record<string, string>[] | null>(null);
