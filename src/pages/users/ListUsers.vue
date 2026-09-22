@@ -89,6 +89,7 @@
               <RoarDataTable
                 :columns="COLUMNS"
                 :data="usersByTab[tab.id]"
+                data-key="uid"
                 :loading="isLoading || isFetching"
                 :allow-export="true"
                 :allow-filtering="false"
