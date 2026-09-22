@@ -1,0 +1,31 @@
+---
+description: Ordering convention for the <script setup> block of Vue SFCs
+globs: **/*.vue
+alwaysApply: false
+---
+
+# Vue `<script setup>` Organization
+
+Order the top-level bindings in `<script setup>` into these sections, declaring each only when the component needs it. Respect dependency order (e.g. a ref feeding a query is declared before the query).
+
+1. Types (interfaces/type aliases)
+2. Constants (module-level, `UPPER_SNAKE_CASE`)
+3. Props (`defineProps`) and emits (`defineEmits`)
+4. Composables and stores
+5. Reactive state (`ref`/`reactive`)
+6. Data fetching (queries) and mutations
+7. Computed
+8. Form validation
+9. Watchers
+10. Methods (grouped by concern)
+11. Lifecycle hooks
+
+Label each present section with a banner comment sized to its label:
+
+```
+// +----------------+
+// | Reactive state |
+// +----------------+
+```
+
+Do not scatter declarations by ad-hoc proximity or place a lifecycle hook before the state it resets. Do co-locate a declaration with the section it belongs to, moving it earlier only when a later binding depends on it.

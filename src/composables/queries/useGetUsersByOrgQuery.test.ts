@@ -20,9 +20,9 @@ describe('useGetUsersByOrgQuery', () => {
   const mountQuery = (
     orgType: string,
     orgId: string,
-    enabled?: Parameters<typeof useGetUsersByOrgQuery>[4],
+    enabled?: Parameters<typeof useGetUsersByOrgQuery>[2],
   ): ReturnType<typeof useGetUsersByOrgQuery> => {
-    const [result] = withSetup(() => useGetUsersByOrgQuery(orgType, orgId, 1, 'name', enabled), {
+    const [result] = withSetup(() => useGetUsersByOrgQuery(orgType, orgId, enabled), {
       plugins: [[VueQueryPlugin, { queryClient }]],
     });
     return result;

@@ -21,8 +21,6 @@ const ROAR_TO_LEVANTE_ORG_TYPE: Record<string, string> = {
 const useGetUsersByOrgQuery = (
   orgType: string,
   orgId: string,
-  _page: MaybeRefOrGetter<number>, // TODO: implement pagination
-  _orderBy: MaybeRefOrGetter<string>, // TODO: implement ordering
   enabled: MaybeRefOrGetter<boolean> = true,
 ): UseQueryReturnType<GetUsersByOrgResult, FirebaseFailure<GetUsersByOrgError>> => {
   return useQuery({
