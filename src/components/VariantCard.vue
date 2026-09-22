@@ -21,7 +21,10 @@
               class="pi pi-info-circle text-primary p-1 border-circle hover:text-100"
             ></i
           ></PvButton>
-          <i v-if="isUserSuperAdmin() && variant?.variant?.registered" class="pi pi-verified ml-1 text-primary"></i>
+
+          <i v-if="!isParticipant && variant?.variant?.registered" v-tooltip.top="getTooltip('Variant is up-to-date', { showDelay: 0 })" class="pi pi-verified ml-1 variantUpToDate"></i>
+          <i v-else-if="!isParticipant && !variant?.variant?.registered" v-tooltip.top="getTooltip('Variant is outdated', { showDelay: 0 })" class="pi pi-exclamation-triangle ml-1 variantOutdated"></i>
+          
           <div v-if="variant?.variant?.params?.cat" class="flex ml-2 gap-2">
             <PvTag severity="warn" rounded><div class="font-semibold text-xs">Adaptive</div></PvTag>
           </div>
@@ -114,7 +117,10 @@
               class="pi pi-info-circle text-primary p-1 border-circle hover:text-100"
             ></i
           ></PvButton>
-          <i v-if="isUserSuperAdmin() && variant?.variant?.registered" class="pi pi-verified ml-1 text-primary"></i>
+          
+          <i v-if="!isParticipant && variant?.variant?.registered" v-tooltip.top="getTooltip('Variant is up-to-date', { showDelay: 0 })" class="pi pi-verified ml-1 variantUpToDate"></i>
+          <i v-else-if="!isParticipant && !variant?.variant?.registered" v-tooltip.top="getTooltip('Variant is outdated', { showDelay: 0 })" class="pi pi-exclamation-triangle ml-1 variantOutdated"></i>
+          
           <div v-if="variant?.variant?.params?.cat" class="flex ml-2 gap-2">
             <PvTag severity="warn" rounded><div class="font-semibold text-xs">Adaptive</div></PvTag>
           </div>
@@ -269,6 +275,7 @@
 </template>
 
 <script setup lang="ts">
+import { ROLES } from '@levante-framework/permissions-core';
 import _toPairs from 'lodash/toPairs';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
@@ -278,6 +285,7 @@ import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { computed, ref } from 'vue';
 import EditVariantDialog from '@/components/EditVariantDialog.vue';
+import { usePermissions } from '@/composables/usePermissions';
 import { getTooltip, resolveVariantDisplayName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 
@@ -339,6 +347,9 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 const authStore = useAuthStore();
 const { isUserSuperAdmin } = authStore;
+const { userRole } = usePermissions();
+
+const isParticipant = computed(() => userRole?.value === ROLES.PARTICIPANT);
 
 const backupImage = '/src/assets/roar-logo.png';
 const showContent = ref<boolean>(false);
@@ -428,3 +439,18 @@ const toggle = (event: Event): void => {
   op.value.toggle(event);
 };
 </script>
+
+<style scoped lang="scss">
+.variantOutdated,
+.variantUpToDate {
+  cursor: pointer;
+}
+
+.variantOutdated {
+  color: var(--primary-color);
+}
+
+.variantUpToDate {
+  color: var(--bright-green);
+}
+</style>
