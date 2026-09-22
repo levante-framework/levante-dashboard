@@ -23,6 +23,7 @@
       <div class="col-12 md:col-6 flex flex-column">
         <label class="font-light uppercase text-sm">Groups</label>
         <div v-if="isLoading" class="text-md text-gray-500">Loading…</div>
+        <div v-else-if="isError" class="text-md text-red-500">Failed to load groups.</div>
         <div v-else-if="orgs.length" class="flex flex-column gap-1">
           <div v-for="org in orgs" :key="org.id">
             {{ org.name }} <span class="text-sm text-gray-500">({{ _capitalize(org.orgType) }})</span>
@@ -33,6 +34,7 @@
       <div class="col-12 md:col-6 flex flex-column">
         <label class="font-light uppercase text-sm">Assignments</label>
         <div v-if="isLoading" class="text-md text-gray-500">Loading…</div>
+        <div v-else-if="isError" class="text-md text-red-500">Failed to load assignments.</div>
         <div v-else-if="assignments.length" class="flex flex-column gap-2">
           <div v-for="assignment in assignments" :key="assignment.id" class="flex flex-column">
             <router-link :to="assignmentRoute(assignment)" class="text-primary hover:underline">{{
@@ -94,8 +96,9 @@ const props = withDefaults(
     orgs?: UserOverviewOrg[];
     assignments?: UserOverviewAssignment[];
     isLoading?: boolean;
+    isError?: boolean;
   }>(),
-  { orgs: () => [], assignments: () => [], isLoading: false },
+  { orgs: () => [], assignments: () => [], isLoading: false, isError: false },
 );
 const emit = defineEmits<{
   change: [update: EditableUserUpdate];

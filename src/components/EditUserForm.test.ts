@@ -101,6 +101,16 @@ describe('EditUserForm', () => {
       });
       expect(loading.text()).toContain('Loading…');
     });
+
+    it('distinguishes a load failure from an empty result', () => {
+      const wrapper = mount(EditUserForm, {
+        props: { user: DEFAULT_USER, isError: true },
+        global: globalMountOptions,
+      });
+      expect(wrapper.text()).toContain('Failed to load groups.');
+      expect(wrapper.text()).toContain('Failed to load assignments.');
+      expect(wrapper.text()).not.toContain('None');
+    });
   });
 
   describe('dirty state', () => {

@@ -115,9 +115,10 @@
         <EditUserForm
           v-if="currentEditUser"
           :user="currentEditUser"
-          :orgs="userOverview?.orgs ?? []"
-          :assignments="userOverview?.assignments ?? []"
+          :orgs="userOverview?.orgs"
+          :assignments="userOverview?.assignments"
           :is-loading="isOverviewLoading"
+          :is-error="isOverviewError"
           @change="pendingUserUpdate = $event"
           @dirty="isUserDirty = $event"
         />
@@ -294,7 +295,11 @@ const {
   isError,
 } = useGetUsersByOrgQuery(props.orgType, props.orgId, authReady);
 
-const { data: userOverview, isLoading: isOverviewLoading } = useGetUserOverviewQuery(
+const {
+  data: userOverview,
+  isLoading: isOverviewLoading,
+  isError: isOverviewError,
+} = useGetUserOverviewQuery(
   () => currentEditUser.value?.uid ?? '',
   () => showEditModal.value && authReady.value,
 );
