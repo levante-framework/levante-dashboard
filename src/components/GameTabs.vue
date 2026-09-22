@@ -108,6 +108,7 @@ import {
   isSurveyPartComplete,
   isSurveyPartLocked,
 } from '@/helpers/surveyGameCards';
+import { getTeacherClassroomSurveyIds } from '@/helpers/teacherSurveyRelations';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
@@ -131,6 +132,9 @@ interface UserData {
   assessmentPid?: string;
   childIds?: string[];
   classes?: {
+    current: string[];
+  };
+  groups?: {
     current: string[];
   };
   schools?: {
@@ -184,7 +188,7 @@ const isLevanteTask = (taskId: string): boolean => normalizedLevanteTaskIds.has(
 const isRoarTask = (taskId: string): boolean => normalizedRoarTaskIds.has(toCamelCase(taskId));
 
 const relationIds = computed((): (string | number)[] => {
-  if (props.userData.userType === 'teacher') return props.userData.classes?.current ?? [];
+  if (props.userData.userType === 'teacher') return getTeacherClassroomSurveyIds(props.userData);
   return props.userData.childIds ?? [];
 });
 
