@@ -1,13 +1,26 @@
 import { mount, RouterLinkStub } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
 import PvToggleSwitch from 'primevue/toggleswitch';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EditUserForm, { type EditableUser } from './EditUserForm.vue';
+
+// Stub the confirm/router composables so navigation and the confirm dialog are
+// observable without a real router or ConfirmationService.
+const { confirmRequireMock, routerPushMock } = vi.hoisted(() => ({
+  confirmRequireMock: vi.fn(),
+  routerPushMock: vi.fn(),
+}));
+vi.mock('primevue/useconfirm', () => ({ useConfirm: () => ({ require: confirmRequireMock }) }));
+vi.mock('vue-router', () => ({ useRouter: () => ({ push: routerPushMock }) }));
 
 const globalMountOptions = {
   plugins: [PrimeVue],
-  stubs: { RouterLink: RouterLinkStub },
+  stubs: { RouterLink: RouterLinkStub, PvConfirmDialog: true },
 };
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 // ─── Mount helper ─────────────────────────────────────────────────────────────
 
@@ -110,6 +123,46 @@ describe('EditUserForm', () => {
       expect(wrapper.text()).toContain('Failed to load groups.');
       expect(wrapper.text()).toContain('Failed to load assignments.');
       expect(wrapper.text()).not.toContain('None');
+    });
+  });
+
+  describe('assignment navigation guard', () => {
+    const ASSIGNMENT = {
+      id: 'a1',
+      name: 'Fall Screening',
+      status: 'open',
+      dateOpened: '2026-01-01',
+      dateClosed: '2026-02-01',
+    };
+    const ROUTE = { name: 'AdministrationProgressReport', params: { administrationId: 'a1' } };
+
+    const mountWithAssignment = () =>
+      mount(EditUserForm, {
+        props: { user: DEFAULT_USER, assignments: [ASSIGNMENT] },
+        global: globalMountOptions,
+      });
+
+    it('navigates directly when the form is not dirty', async () => {
+      const wrapper = mountWithAssignment();
+
+      await wrapper.get('a').trigger('click');
+
+      expect(routerPushMock).toHaveBeenCalledWith(ROUTE);
+      expect(confirmRequireMock).not.toHaveBeenCalled();
+    });
+
+    it('confirms before navigating when the form is dirty, discarding on accept', async () => {
+      const wrapper = mountWithAssignment();
+      await setToggle(wrapper, 0, true);
+
+      await wrapper.get('a').trigger('click');
+
+      expect(confirmRequireMock).toHaveBeenCalledTimes(1);
+      expect(routerPushMock).not.toHaveBeenCalled();
+
+      // Invoking the confirm's accept callback performs the deferred navigation.
+      confirmRequireMock.mock.calls[0]?.[0]?.accept?.();
+      expect(routerPushMock).toHaveBeenCalledWith(ROUTE);
     });
   });
 

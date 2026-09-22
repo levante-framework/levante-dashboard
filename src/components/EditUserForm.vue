@@ -37,9 +37,11 @@
         <div v-else-if="isError" class="text-md text-red-500">Failed to load assignments.</div>
         <div v-else-if="assignments.length" class="flex flex-column gap-2">
           <div v-for="assignment in assignments" :key="assignment.id" class="flex flex-column">
-            <router-link :to="assignmentRoute(assignment)" class="text-primary hover:underline">{{
-              assignment.name
-            }}</router-link>
+            <router-link v-slot="{ href }" :to="assignmentRoute(assignment)" custom>
+              <a :href="href" class="text-primary hover:underline" @click.prevent="onAssignmentClick(assignment)">{{
+                assignment.name
+              }}</a>
+            </router-link>
             <span class="text-sm text-gray-500">
               {{ _capitalize(assignment.status) }} · {{ formatDate(assignment.dateOpened) }} –
               {{ formatDate(assignment.dateClosed) }}
@@ -60,6 +62,8 @@
         <label for="disabled" class="font-light uppercase text-sm">Disabled</label>
       </div>
     </div>
+
+    <PvConfirmDialog group="edit-user-nav" :draggable="false" />
   </div>
 </template>
 
@@ -83,9 +87,11 @@ export type UserOverviewAssignment = GetUserOverviewResult['assignments'][number
 
 <script setup lang="ts">
 import _capitalize from 'lodash/capitalize';
+import PvConfirmDialog from 'primevue/confirmdialog';
 import PvToggleSwitch from 'primevue/toggleswitch';
+import { useConfirm } from 'primevue/useconfirm';
 import { computed, ref, watch } from 'vue';
-import type { RouteLocationRaw } from 'vue-router';
+import { type RouteLocationRaw, useRouter } from 'vue-router';
 
 // +-------+
 // | Props |
@@ -104,6 +110,12 @@ const emit = defineEmits<{
   change: [update: EditableUserUpdate];
   dirty: [isDirty: boolean];
 }>();
+
+// +----------------------+
+// | Composables & stores |
+// +----------------------+
+const confirm = useConfirm();
+const router = useRouter();
 
 // +----------------+
 // | Reactive state |
@@ -145,6 +157,26 @@ watch(isDirty, (value) => emit('dirty', value), { immediate: true });
 // +---------+
 function assignmentRoute(assignment: UserOverviewAssignment): RouteLocationRaw {
   return { name: 'AdministrationProgressReport', params: { administrationId: assignment.id } };
+}
+
+// Navigating to an assignment unmounts this form, so guard against silently
+// discarding unsaved toggle changes: confirm first when the form is dirty.
+function onAssignmentClick(assignment: UserOverviewAssignment): void {
+  const to = assignmentRoute(assignment);
+  if (!isDirty.value) {
+    router.push(to);
+    return;
+  }
+  confirm.require({
+    group: 'edit-user-nav',
+    header: 'Discard unsaved changes?',
+    message: 'You have unsaved changes that will be lost if you navigate away. Continue?',
+    icon: 'pi pi-exclamation-triangle',
+    rejectClass: 'p-button-secondary p-button-outlined',
+    rejectLabel: 'Cancel',
+    acceptLabel: 'Continue',
+    accept: () => router.push(to),
+  });
 }
 
 function formatDate(value: string): string {
