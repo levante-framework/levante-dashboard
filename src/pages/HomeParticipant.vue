@@ -123,6 +123,7 @@ import {
   setupSurveyMarkdownConverter,
 } from '@/helpers/survey';
 import { bootstrapSurveyInstance, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
+import { GENERIC_TEACHER_CLASSROOM_ID, getTeacherClassroomSurveyIds } from '@/helpers/teacherSurveyRelations';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
@@ -507,7 +508,9 @@ watch(
 
     // Calculate number of specific surveys for teachers/parents
     const numOfSpecificSurveys =
-      userType.value === 'parent' ? userData.value?.childIds?.length : userData.value?.classes?.current?.length;
+      userType.value === 'parent'
+        ? userData.value?.childIds?.length
+        : getTeacherClassroomSurveyIds(userData.value).length;
 
     if (surveyResponseDoc) {
       if (userType.value === 'student') {
@@ -560,12 +563,17 @@ watch(
             docId: childId,
             select: ['birthMonth', 'birthYear', 'childLabelIndex'],
           }));
-        } else if (userType.value === 'teacher' && userData.value.classes?.current) {
-          fetchConfig = userData.value.classes.current.map((classId) => ({
-            collection: 'classes',
-            docId: classId,
-            select: ['name'],
-          }));
+        } else if (userType.value === 'teacher') {
+          const classroomIds = getTeacherClassroomSurveyIds(userData.value);
+          if (classroomIds.length === 1 && classroomIds[0] === GENERIC_TEACHER_CLASSROOM_ID) {
+            surveyStore.setSpecificSurveyRelationData([{ id: GENERIC_TEACHER_CLASSROOM_ID }]);
+          } else {
+            fetchConfig = classroomIds.map((classId) => ({
+              collection: 'classes',
+              docId: classId,
+              select: ['name'],
+            }));
+          }
         }
 
         if (fetchConfig.length > 0) {
