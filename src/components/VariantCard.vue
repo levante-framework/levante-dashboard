@@ -405,7 +405,7 @@ const toggle = (event: Event): void => {
 }
 
 .variant-outdated {
-  color: var(--primary-color);
+  color: var(--bright-yellow);
 }
 
 .variant-up-to-date {
