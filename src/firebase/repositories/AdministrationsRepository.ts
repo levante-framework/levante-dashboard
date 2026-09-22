@@ -11,6 +11,7 @@ import type {
 
 interface GetAdministrationsParams {
   idsOnly: boolean;
+  siteId?: string;
   testData: boolean;
 }
 

@@ -126,7 +126,7 @@
               </template>
 
               <template #list="slotProps">
-                <div class="mb-2 w-full">
+                <div class="flex flex-column gap-4 my-4 w-full">
                   <CardAdministration
                     v-for="(item, cardIndexInPage) in slotProps.items"
                     :id="item.id"

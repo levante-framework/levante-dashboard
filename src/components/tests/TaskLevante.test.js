@@ -1,3 +1,4 @@
+import { TaskLauncher } from '@levante-framework/core-tasks';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -168,6 +169,28 @@ describe('TaskLevante.vue', () => {
       expect(logger.error).toHaveBeenCalled();
       expect(routerPush).not.toHaveBeenCalled();
       expect(mockAssignmentsStore.setHomeRefresh).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('does not relaunch the task when the game run fails after a successful start', async () => {
+      selectedAssignmentRef.value = { id: 'assignment-1' };
+      TaskLauncher.mockImplementationOnce(() => ({
+        run: vi.fn().mockRejectedValue(new Error('mid-game boom')),
+      }));
+
+      const wrapper = await mountTaskLevante();
+      await flushPromises();
+
+      // startAssessment succeeded, so this is a mid-game failure: surface it but keep taskStarted latched.
+      expect(startAssessment).toHaveBeenCalledTimes(1);
+      expect(window.alert).toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalled();
+
+      // Re-trigger the launch watcher; the task must not start a second time.
+      selectedAssignmentRef.value = { id: 'assignment-2' };
+      await flushPromises();
+
+      expect(startAssessment).toHaveBeenCalledTimes(1);
       wrapper.unmount();
     });
   });

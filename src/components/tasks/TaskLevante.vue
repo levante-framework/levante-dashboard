@@ -9,6 +9,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import useCompleteAssessmentMutation from '@/composables/mutations/useCompleteAssessmentMutation';
 import useUserChildDataQuery from '@/composables/queries/useUserChildDataQuery';
+import { startAssessmentWithRetry } from '@/helpers/startAssessmentWithRetry';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
@@ -116,6 +117,8 @@ function goHome() {
 }
 
 async function startTask(selectedAdmin) {
+  let startAssessmentSucceeded = false;
+
   try {
     checkGameStarted = setInterval(() => {
       // Poll for the preload trials progress bar to exist and then begin the game
@@ -128,12 +131,11 @@ async function startTask(selectedAdmin) {
 
     const trialContainer = props.taskId === 'child-survey' ? 'surveyResponses' : 'runs';
 
-    const appKit = await authStore.roarfirekit.startAssessment(
-      selectedAdmin.value?.id,
-      props.taskId,
-      version,
-      trialContainer,
+    const appKit = await startAssessmentWithRetry(() =>
+      authStore.roarfirekit.startAssessment(selectedAdmin.value?.id, props.taskId, version, trialContainer),
     );
+
+    startAssessmentSucceeded = true;
 
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
@@ -160,6 +162,12 @@ async function startTask(selectedAdmin) {
     if (error?.name === 'AbortError') {
       goHome();
     } else {
+      // Only unlatch when the callable never succeeded. A later failure means the
+      // assessment is already started server-side, so the watcher must not relaunch it.
+      if (!startAssessmentSucceeded) {
+        taskStarted.value = false;
+      }
+
       alert(
         'An error occurred while starting the task. Please refresh the page and try again. If the error persists, please submit an issue report.',
       );
