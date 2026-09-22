@@ -33,14 +33,15 @@
       />
       <div :class="hasControls ? 'pl-2' : 'h-auto m-0 p-0 pl-2'">
         <div class="flex align-items-center flex-row">
-          <span class="font-bold">{{ variant.task.name }}</span>
+          <span class="font-bold mr-1">{{ variant.task.name }}</span>
           <PvButton
             v-if="hasControls || isUserSuperAdmin()"
-            class="ml-2 p-0 surface-hover border-none border-circle hover:text-100 hover:bg-primary"
+            class="p-0"
+            variant="link"
             @click="toggle($event)"
             ><i
-              v-tooltip.top="getTooltip('View parameters')"
-              class="pi pi-info-circle text-primary p-1 border-circle hover:text-100"
+              v-tooltip.top="getTooltip('View parameters', { showDelay: 0 })"
+              class="pi pi-info-circle text-primary p-1 border-circle hover:text-primary"
             ></i
           ></PvButton>
 
@@ -401,7 +402,7 @@ const toggle = (event: Event): void => {
 
 .variant-outdated,
 .variant-up-to-date {
-  cursor: pointer;
+  cursor: default;
 }
 
 .variant-outdated {
