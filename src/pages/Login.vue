@@ -8,8 +8,6 @@
   </div>
 
   <div :class="`login login--${mode}`">
-    <img src="/levante-icon-black.svg" alt="Levante" class="levante-icon-black" />
-
     <div class="login-card">
       <div class="logo-wrapper">
         <img src="/LEVANTE/Levante_Logo.png" alt="Levante" class="logo" />
@@ -18,9 +16,8 @@
         </div>
       </div>
 
-      <div v-if="isParticipantMode" class="m-0 mt-4 font-semibold text-xl text-color text-center">
-        {{ $t('pageSignIn.login') }}
-      </div>
+      <div v-if="isParticipantMode" class="m-0 mt-4 font-semibold text-xl text-color text-center">{{ $t('pageSignIn.login') }}</div>
+
       <div v-else class="m-0 mt-4 font-semibold text-xl text-color text-center">Log in to access your dashboard</div>
 
       <PvMessage
@@ -56,7 +53,6 @@
           <PvPassword
             :id="$t('authSignIn.passwordId')"
             v-model="v$.password.$model"
-            :disabled="isSigningInWithEmailLink"
             :feedback="false"
             :placeholder="isParticipantMode ? $t('authSignIn.passwordPlaceholder') : 'Password'"
             class="w-full"
@@ -75,27 +71,7 @@
 
         <div v-if="isCapsLockOn" class="text-center p-error font-medium">⇪ {{ $t('capsLockIsOn') }}</div>
 
-        <div v-if="!isParticipantMode" class="flex justify-content-between">
-          <small
-            v-if="isSigningInWithEmailLink"
-            class="sign-in-with-email-link"
-            data-cy="sign-in-with-email-link"
-            @click="isSigningInWithEmailLink = false"
-          >
-            Sign in with email and password
-          </small>
-          <small
-            v-else
-            class="sign-in-with-email-link"
-            data-cy="sign-in-with-email-link"
-            @click="isSigningInWithEmailLink = true"
-          >
-            Sign in with email link
-          </small>
-          <small class="forgot-password-link" data-cy="sign-in-with-password" @click="isOpenForgotPasswordModal = true">
-            Forgot your password?
-          </small>
-        </div>
+        <small v-if="!isParticipantMode" class="ml-auto font-medium cursor-pointer select-none hover:underline" @click="isOpenTroubleOnSignInModal = true">Trouble logging in?</small>
 
         <PvButton
           v-if="isParticipantMode"
@@ -106,6 +82,7 @@
         >
           {{ $t('authSignIn.buttonLabel') + ' &rarr;' }}
         </PvButton>
+
         <PvButton v-else class="submit-btn" data-cy="submit-sign-in-with-password" type="submit">Continue</PvButton>
       </form>
 
@@ -116,6 +93,7 @@
       <div v-if="isParticipantMode" class="flex justify-content-center gap-1 mt-5">
         <div class="text-color-secondary text-center">{{ $t('pageSignIn.participantHelpMessage') }}</div>
       </div>
+
       <div v-else class="flex flex-column align-items-center">
         <div class="flex justify-content-between align-items-center w-full mt-3">
           <div class="flex gap-1 text-sm">
@@ -129,7 +107,7 @@
             </a>
           </div>
 
-          <a href="https://levante-support.freshdesk.com/support/tickets/new" target="_blank" class="help-link">
+          <a :href="freshdeskLink" target="_blank" class="help-link">
             <i class="pi pi-info-circle" /> Help
           </a>
         </div>
@@ -146,11 +124,13 @@
       <div v-if="isParticipantMode" class="uppercase font-medium text-xs text-white opacity-70">
         {{ $t('pageSignIn.areYouAResearcher') }}
       </div>
+
       <div v-else class="uppercase font-medium text-xs text-white opacity-70">Are you not a researcher?</div>
 
       <PvButton v-if="isParticipantMode" :class="`change-mode-btn change-mode-btn--${mode}`" @click="changeMode">
         {{ $t('pageSignIn.researcherLoginBtn') }}
       </PvButton>
+
       <PvButton v-else :class="`change-mode-btn change-mode-btn--${mode}`" @click="changeMode">
         Participant Login
       </PvButton>
@@ -158,40 +138,54 @@
   </div>
 
   <RoarModal
-    :is-enabled="isOpenForgotPasswordModal"
+    :draggable="false"
+    :is-enabled="isOpenTroubleOnSignInModal"
     small
-    subtitle="Enter your email to reset your password"
-    title="Forgot Password"
-    @modal-closed="isOpenForgotPasswordModal = false"
+    style="max-width: 600px;"
+    subtitle=""
+    title="Trouble logging in?"
+    @modal-closed="isOpenTroubleOnSignInModal = false"
   >
     <template #default>
-      <div class="flex flex-column">
-        <label>Email</label>
-        <PvInputText v-model="forgotEmail" />
+      <div class="flex flex-column gap-3">
+        <p class="m-0">Users should set a password for a more reliable login experience. Click <span class="font-semibold">Reset Password</span> to receive an email to reset your password. If you need a temporary solution, use a <span class="font-semibold">Login link</span>.</p>
+        <small class="m-0 text-gray-500">Expect an email from <span class="font-semibold">{{ supportEmail }}</span>. Please add it to your approved senders list. You may also need to look for it in your junkmail folder.</small>
+        <PvInputText v-model="v$.email.$model" placeholder="Username or email" class="w-full" />
       </div>
     </template>
 
     <template #footer>
-      <PvButton tabindex="0" text label="Cancel" @click="closeForgotPasswordModal" />
+      <PvButton
+        :disabled="!isResetEmailValid"
+        label="Login Link"
+        severity="danger"
+        tabindex="0"
+        text
+        @click="signInWithEmailLink"
+      />
 
       <PvButton
+        :disabled="!isResetEmailValid"
+        label="Reset Password"
         tabindex="0"
-        label="Send Reset Email"
-        :disabled="forgotEmail?.length <= 0"
         @click="sendResetPasswordEmail"
       />
     </template>
   </RoarModal>
+
+  <PvConfirmDialog group="login" style="max-width: 600px;" />
 </template>
 
 <script setup lang="ts">
 import useVuelidate from '@vuelidate/core';
-import { helpers, required, requiredUnless } from '@vuelidate/validators';
+import { helpers, required } from '@vuelidate/validators';
 import { storeToRefs } from 'pinia';
 import PvButton from 'primevue/button';
+import PvConfirmDialog from 'primevue/confirmdialog';
 import PvInputText from 'primevue/inputtext';
 import PvMessage from 'primevue/message';
 import PvPassword from 'primevue/password';
+import { useConfirm } from 'primevue/useconfirm';
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AppSpinner from '@/components/AppSpinner.vue';
@@ -221,6 +215,7 @@ type Message = {
 
 const assignmentsStore = useAssignmentsStore();
 const authStore = useAuthStore();
+const confirm = useConfirm();
 const router = useRouter();
 
 const { setUserAssignments } = assignmentsStore;
@@ -249,12 +244,12 @@ function redirectAfterLogin() {
   }
 }
 
-const forgotEmail = ref('');
+const freshdeskLink = 'https://levante-support.freshdesk.com/support/tickets/new';
+const supportEmail = 'levantedcc@gmail.com';
 const googleSignInErrorKey = ref('');
 const isCapsLockOn = ref(false);
-const isOpenForgotPasswordModal = ref(false);
+const isOpenTroubleOnSignInModal = ref(false);
 const isOpenWarningModal = ref(false);
-const isSigningInWithEmailLink = ref(false);
 const messages = ref<Array<Message>>([]);
 const mode = ref<Mode>(MODES.participant);
 
@@ -268,14 +263,13 @@ const formState = reactive({
 const formRules = {
   email: { required: helpers.withMessage('Username/email is required', required) },
   password: {
-    required: helpers.withMessage(
-      'Password is required',
-      requiredUnless(() => isSigningInWithEmailLink.value),
-    ),
+    required: helpers.withMessage('Password is required', required),
   },
 };
 
 const v$ = useVuelidate(formRules, formState);
+
+const isResetEmailValid = computed(() => isEmailValid(formState.email));
 
 const authWithEmailOrUsername = async () => {
   spinner.value = true;
@@ -292,26 +286,6 @@ const authWithEmailOrUsername = async () => {
 
   if (!email.includes('@')) {
     email = `${email}@levante.com`;
-  }
-
-  if (isSigningInWithEmailLink.value) {
-    return initiateLoginWithEmailLink({ email })
-      .then(() => {
-        router.push({ name: 'AuthEmailSent' });
-      })
-      .catch((e) => {
-        messages.value.push({
-          id: e?.code || 'email-link',
-          severity: 'error',
-          content:
-            e?.code === 'levante/email-not-registered'
-              ? e.message
-              : 'There was a problem sending the sign-in link. Please try again.',
-        });
-      })
-      .finally(() => {
-        spinner.value = false;
-      });
   }
 
   logInWithEmailAndPassword({ email, password })
@@ -418,7 +392,6 @@ const getAuthUserData = async () => {
 
 const changeMode = async (): Promise<void> => {
   v$.value.$reset();
-  isSigningInWithEmailLink.value = false;
   mode.value = isParticipantMode.value ? MODES.researcher : MODES.participant;
 };
 
@@ -426,15 +399,87 @@ const checkForCapsLock = (e: KeyboardEvent): void => {
   isCapsLockOn.value = e.getModifierState('CapsLock');
 };
 
-const closeForgotPasswordModal = () => {
-  forgotEmail.value = '';
-  isOpenForgotPasswordModal.value = false;
+const closeTroubleOnSignInModal = () => {
+  isOpenTroubleOnSignInModal.value = false;
+};
+
+const handleTroubleModalError = (e: unknown, fallbackCode: string, fallbackMessage: string) => {
+  closeTroubleOnSignInModal();
+
+  const code = typeof e === 'object' && e !== null && 'code' in e ? String(e.code) : fallbackCode;
+  const isEmailNotRegistered = code === 'levante/email-not-registered';
+
+  messages.value = [
+    {
+      id: code,
+      severity: 'error',
+      content: e instanceof Error && isEmailNotRegistered ? e.message : fallbackMessage,
+    },
+  ];
+
+  if (!isEmailNotRegistered) {
+    logger.error(new Error('Trouble-logging-in modal action failed', { cause: e }), {
+      tags: { action: fallbackCode, component: 'Login' },
+    });
+  }
 };
 
 const sendResetPasswordEmail = () => {
-  if (!isEmailValid(forgotEmail.value)) return false;
-  roarfirekit.value!.sendPasswordResetEmail(forgotEmail.value);
-  closeForgotPasswordModal();
+  const { email } = formState;
+  if (!isEmailValid(email)) return false;
+
+  return roarfirekit
+    .value!.sendPasswordResetEmail(email)
+    .then(() => {
+      closeTroubleOnSignInModal();
+      confirmEmailSent(
+        `An email to reset your password is on its way to you from ${supportEmail}. This could take 5-10 minutes. Check your spam folder if you can't find it. If it never arrives, open a ticket with us.`,
+      );
+    })
+    .catch((e) => {
+      handleTroubleModalError(
+        e,
+        'sendResetPasswordEmail',
+        'There was a problem sending the password reset email. Please try again.',
+      );
+    });
+};
+
+const confirmEmailSent = (message: string) => {
+  confirm.require({
+    group: 'login',
+    message,
+    header: 'Email sent',
+    acceptProps: {
+      label: 'Continue',
+    },
+    rejectProps: {
+      label: 'Open ticket',
+      outlined: true,
+      severity: 'danger',
+    },
+    reject: () => window.open(freshdeskLink, '_blank'),
+  });
+};
+
+const signInWithEmailLink = () => {
+  const { email } = formState;
+  if (!isEmailValid(email)) return false;
+
+  return initiateLoginWithEmailLink({ email })
+    .then(() => {
+      closeTroubleOnSignInModal();
+      confirmEmailSent(
+        `An email to login with a link is on its way to you from ${supportEmail}. This could take 5-10 minutes. Check your spam folder if you can't find it. If it never arrives, open a ticket with us.`,
+      );
+    })
+    .catch((e) => {
+      handleTroubleModalError(
+        e,
+        'signInWithEmailLink',
+        'There was a problem sending the sign-in link. Please try again.',
+      );
+    });
 };
 </script>
 
@@ -459,6 +504,7 @@ const sendResetPasswordEmail = () => {
   position: absolute;
   top: 1rem;
   right: 1rem;
+  z-index: 1;
 }
 
 .login {
@@ -472,6 +518,22 @@ const sendResetPasswordEmail = () => {
   margin: 0;
   padding: 2rem 0;
   background-color: var(--primary-color);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    display: block;
+    background-image: url('/levante-icon-black.svg');
+    background-position: center;
+    background-size: 150% auto;
+    opacity: 0.04;
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
 
   &.login--researcher {
     background-color: var(--secondary-color);
