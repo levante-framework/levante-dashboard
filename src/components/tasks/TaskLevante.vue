@@ -20,7 +20,9 @@ const props = defineProps({
 });
 
 let levanteTaskLauncher;
+let levanteTask;
 let checkGameStarted;
+let isUnmounted = false;
 
 const { version } = packageLockJson.packages['node_modules/@levante-framework/core-tasks'];
 const router = useRouter();
@@ -56,13 +58,7 @@ const { isLoading: isLoadingUserData, data: userData } = useUserChildDataQuery({
 
 // The following code intercepts the back button and instead forces a refresh.
 // We add { once: true } to prevent an infinite loop.
-window.addEventListener(
-  'popstate',
-  () => {
-    handlePopState();
-  },
-  { once: true },
-);
+window.addEventListener('popstate', handlePopState, { once: true });
 
 onMounted(async () => {
   try {
@@ -84,8 +80,10 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  isUnmounted = true;
   window.removeEventListener('popstate', handlePopState);
   if (checkGameStarted) clearInterval(checkGameStarted);
+  levanteTask?.abort();
 });
 
 watch(
@@ -111,7 +109,7 @@ watch(
 );
 
 function goHome() {
-  // Navigate to home, but first set the refresh flag to true.
+  if (isUnmounted) return;
   assignmentsStore.setHomeRefresh();
   router.push({ name: 'Home' });
 }
@@ -147,10 +145,13 @@ async function startTask(selectedAdmin) {
 
     const gameParams = { ...appKit._taskInfo.variantParams };
 
-    const levanteTask = new levanteTaskLauncher(appKit, gameParams, userParams, logger);
+    if (isUnmounted) return;
+
+    levanteTask = new levanteTaskLauncher(appKit, gameParams, userParams, logger);
 
     await levanteTask.run().then(async () => {
-      // Handle any post-game actions.
+      if (isUnmounted) return;
+
       await completeAssessmentMutate({
         adminId: selectedAdmin.value?.id,
         taskId: props.taskId,
