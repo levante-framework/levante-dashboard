@@ -4,6 +4,7 @@ import { type Auth, onAuthStateChanged, type Unsubscribe, type User } from 'fire
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { markRaw, type Ref, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { identitySiteName, usernameFromIdentity } from '@/helpers/sentryPrivacy';
 import { logger } from '@/logger';
 import posthogInstance from '@/plugins/posthog';
 import { AUTH_SSO_PROVIDERS } from '../constants/auth';
@@ -158,10 +159,6 @@ export const useAuthStore = defineStore(
               // Store raw so Vue doesn't proxy the Firebase User; proxying it
               // breaks the SDK's internal token-refresh timers.
               firebaseUser.value.adminFirebaseUser = markRaw(user);
-              logger.setUser({
-                uid: user.uid,
-                email: user.email ?? '',
-              });
             } else {
               firebaseUser.value.adminFirebaseUser = null;
               logger.setUser(null);
@@ -297,6 +294,13 @@ export const useAuthStore = defineStore(
       const matchingRole = visibleRoles.find((role) => role?.siteId === siteId) ?? visibleRoles[0] ?? undefined;
       const siteName = currentSiteName.value ?? matchingRole?.siteName ?? null;
       stampTelemetrySite(siteId, siteName);
+
+      const username = usernameFromIdentity({
+        username: typeof data.username === 'string' ? data.username : undefined,
+        email: typeof data.email === 'string' ? data.email : undefined,
+        siteName: identitySiteName(visibleRoles),
+      });
+      if (username) logger.setUser({ username });
     }
 
     function setCurrentSite(siteId: string | null, siteName: string | null): void {
