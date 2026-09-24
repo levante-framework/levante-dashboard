@@ -24,8 +24,22 @@
           :loading="isTasksFetching"
         />
       </div>
+      <div v-if="selectedTaskId" class="flex flex-column gap-1" style="min-width: 12rem">
+        <label for="registered-filter" class="text-sm text-gray-500 font-medium">Status</label>
+        <PvSelect
+          id="registered-filter"
+          v-model="registeredFilter"
+          :options="registeredFilterOptions"
+          option-label="label"
+          option-value="value"
+          class="w-full"
+        />
+      </div>
       <span v-if="selectedTaskId && variants?.length" class="text-sm text-gray-500">
-        {{ variants.length }} variant{{ variants.length === 1 ? '' : 's' }}
+        <template v-if="hasActiveFilters">
+          Showing {{ filteredVariants.length }} of {{ variants.length }} variant{{ variants.length === 1 ? '' : 's' }}
+        </template>
+        <template v-else>{{ variants.length }} variant{{ variants.length === 1 ? '' : 's' }}</template>
       </span>
       <PvButton
         v-if="selectedTaskId"
@@ -62,7 +76,22 @@
       <span>No variants found for this task.</span>
     </div>
 
-    <ol v-else class="timeline list-none m-0 p-0 flex flex-column gap-0">
+    <VariantParamFilters
+      v-else
+      :key="selectedTaskId"
+      v-model="paramFilters"
+      :variants="variants"
+    />
+
+    <div
+      v-if="selectedTaskId && !isFetching && !isError && variants?.length && !filteredVariants.length"
+      class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-200"
+    >
+      <i class="pi pi-info-circle text-gray-500" />
+      <span>No variants match the current filters.</span>
+    </div>
+
+    <ol v-else-if="filteredVariants.length" class="timeline list-none m-0 p-0 flex flex-column gap-0">
       <li v-for="(entry, index) in timelineEntries" :key="entry.variant.id" class="timeline-item">
         <div class="timeline-rail" aria-hidden="true">
           <span class="timeline-dot" :class="{ 'timeline-dot-latest': entry.isLatest }" />
@@ -172,13 +201,19 @@ import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { useToast } from 'primevue/usetoast';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import VariantCreateDialog from '@/components/tasks/VariantCreateDialog.vue';
+import VariantParamFilters from '@/components/tasks/VariantParamFilters.vue';
 import VariantRegistrationHistoryDialog from '@/components/tasks/VariantRegistrationHistoryDialog.vue';
 import useUpdateTaskVariantMutation from '@/composables/mutations/useUpdateTaskVariantMutation';
 import useTasksCatalogQuery from '@/composables/queries/useTasksCatalogQuery';
 import useTaskVariantsCatalogQuery from '@/composables/queries/useTaskVariantsCatalogQuery';
 import { diffVariantParams, hasVariantParamDiff } from '@/helpers/diffVariantParams';
+import {
+  filterVariantsByParamQuery,
+  hasCompleteParamFilters,
+  type VariantParamFilterClause,
+} from '@/helpers/filterVariantsByParamQuery';
 import { getCallableErrorMessage } from '@/helpers/taskCatalog';
 import type { SerializedTaskVariant, VariantParamDiff, VariantParamValue } from '@/types/taskCatalog';
 
@@ -189,6 +224,12 @@ const createSourceVariant = ref<SerializedTaskVariant | null>(null);
 const historyDialogVisible = ref(false);
 const historyVariantId = ref<string | null>(null);
 const updatingVariantId = ref<string | null>(null);
+const paramFilters = ref<VariantParamFilterClause[]>([]);
+const registeredFilter = ref<RegisteredFilter>('all');
+const registeredFilterOptions = [
+  { label: 'All variants', value: 'all' satisfies RegisteredFilter },
+  { label: 'Registered only', value: 'registered' satisfies RegisteredFilter },
+];
 
 const { data: tasks, isFetching: isTasksFetching } = useTasksCatalogQuery();
 const {
@@ -211,27 +252,46 @@ const taskOptions = computed(() => {
     }));
 });
 
+type RegisteredFilter = 'all' | 'registered';
+
 interface TimelineEntry {
   variant: SerializedTaskVariant;
   diff: VariantParamDiff | null;
   isLatest: boolean;
 }
 
+const filteredVariants = computed(() => {
+  const byParams = filterVariantsByParamQuery(variants.value ?? [], paramFilters.value);
+  if (registeredFilter.value !== 'registered') return byParams;
+  return byParams.filter((variant) => variant.registered);
+});
+const hasActiveFilters = computed(
+  () => hasCompleteParamFilters(paramFilters.value) || registeredFilter.value === 'registered',
+);
+
 const timelineEntries = computed((): TimelineEntry[] => {
   // variants arrive newest-first; diffs compare each to the chronologically older neighbor.
   const list = variants.value ?? [];
-  return list.map((variant, index) => {
-    const isLatest = index === 0;
-    const older = list[index + 1];
-    if (!older) {
-      return { variant, diff: null, isLatest };
-    }
-    return {
-      variant,
-      diff: diffVariantParams(older.params, variant.params),
-      isLatest,
-    };
-  });
+  const visibleIds = new Set(filteredVariants.value.map((variant) => variant.id));
+  return list
+    .map((variant, index) => {
+      const isLatest = index === 0;
+      const older = list[index + 1];
+      if (!older) {
+        return { variant, diff: null, isLatest };
+      }
+      return {
+        variant,
+        diff: diffVariantParams(older.params, variant.params),
+        isLatest,
+      };
+    })
+    .filter((entry) => visibleIds.has(entry.variant.id));
+});
+
+watch(selectedTaskId, () => {
+  paramFilters.value = [];
+  registeredFilter.value = 'all';
 });
 
 function openCreate(source: SerializedTaskVariant | null = null): void {

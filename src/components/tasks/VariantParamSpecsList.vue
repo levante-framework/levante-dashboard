@@ -3,7 +3,10 @@
     <div class="flex flex-wrap align-items-start justify-content-between gap-3">
       <div class="flex flex-column gap-1">
         <h2 class="text-xl font-bold m-0">Variant parameter specs</h2>
-        <p class="text-md text-gray-500 m-0">Catalog of allowed variant parameter names and types.</p>
+        <p class="text-md text-gray-500 m-0">
+          Catalog of allowed variant parameter names and types. Specs tagged Live are passed to the task launcher on
+          main.
+        </p>
       </div>
       <PvButton label="Create param spec" icon="pi pi-plus" @click="openCreate" />
     </div>
@@ -42,7 +45,12 @@
         </thead>
         <tbody>
           <tr v-for="spec in sortedSpecs" :key="spec.id" class="border-bottom-1 border-100">
-            <td class="p-2 font-semibold">{{ spec.name || spec.id }}</td>
+            <td class="p-2 font-semibold">
+              <div class="flex align-items-center gap-2">
+                <span>{{ spec.name || spec.id }}</span>
+                <PvTag v-if="isLive(spec)" value="Live" severity="success" rounded />
+              </div>
+            </td>
             <td class="p-2">
               <PvTag :value="spec.type" severity="secondary" rounded />
             </td>
@@ -65,10 +73,19 @@ import PvButton from 'primevue/button';
 import PvTag from 'primevue/tag';
 import { computed, ref } from 'vue';
 import VariantParamSpecUpsertDialog from '@/components/tasks/VariantParamSpecUpsertDialog.vue';
+import useLauncherParamNamesQuery from '@/composables/queries/useLauncherParamNamesQuery';
 import useVariantParamSpecsQuery from '@/composables/queries/useVariantParamSpecsQuery';
+import { toLaunchedParamNameSet } from '@/helpers/extractTaskLauncherParams';
 import type { SerializedVariantParamSpec } from '@/types/taskCatalog';
 
 const { data: specs, isFetching, isError } = useVariantParamSpecsQuery();
+const { data: launcherParamNames } = useLauncherParamNamesQuery();
+
+const liveParamNames = computed(() =>
+  launcherParamNames.value ? toLaunchedParamNameSet(launcherParamNames.value) : new Set<string>(),
+);
+
+const isLive = (spec: SerializedVariantParamSpec): boolean => liveParamNames.value.has(spec.name || spec.id);
 
 const dialogVisible = ref(false);
 const editingSpec = ref<SerializedVariantParamSpec | null>(null);
