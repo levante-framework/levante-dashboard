@@ -24,8 +24,19 @@
           :loading="isTasksFetching"
         />
       </div>
+      <div v-if="selectedTaskId" class="flex flex-column gap-1" style="min-width: 12rem">
+        <label for="registered-filter" class="text-sm text-gray-500 font-medium">Status</label>
+        <PvSelect
+          id="registered-filter"
+          v-model="registeredFilter"
+          :options="registeredFilterOptions"
+          option-label="label"
+          option-value="value"
+          class="w-full"
+        />
+      </div>
       <span v-if="selectedTaskId && variants?.length" class="text-sm text-gray-500">
-        <template v-if="hasActiveParamFilters">
+        <template v-if="hasActiveFilters">
           Showing {{ filteredVariants.length }} of {{ variants.length }} variant{{ variants.length === 1 ? '' : 's' }}
         </template>
         <template v-else>{{ variants.length }} variant{{ variants.length === 1 ? '' : 's' }}</template>
@@ -77,7 +88,7 @@
       class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-200"
     >
       <i class="pi pi-info-circle text-gray-500" />
-      <span>No variants match the current param filters.</span>
+      <span>No variants match the current filters.</span>
     </div>
 
     <ol v-else-if="filteredVariants.length" class="timeline list-none m-0 p-0 flex flex-column gap-0">
@@ -214,6 +225,11 @@ const historyDialogVisible = ref(false);
 const historyVariantId = ref<string | null>(null);
 const updatingVariantId = ref<string | null>(null);
 const paramFilters = ref<VariantParamFilterClause[]>([]);
+const registeredFilter = ref<RegisteredFilter>('all');
+const registeredFilterOptions = [
+  { label: 'All variants', value: 'all' satisfies RegisteredFilter },
+  { label: 'Registered only', value: 'registered' satisfies RegisteredFilter },
+];
 
 const { data: tasks, isFetching: isTasksFetching } = useTasksCatalogQuery();
 const {
@@ -236,14 +252,22 @@ const taskOptions = computed(() => {
     }));
 });
 
+type RegisteredFilter = 'all' | 'registered';
+
 interface TimelineEntry {
   variant: SerializedTaskVariant;
   diff: VariantParamDiff | null;
   isLatest: boolean;
 }
 
-const filteredVariants = computed(() => filterVariantsByParamQuery(variants.value ?? [], paramFilters.value));
-const hasActiveParamFilters = computed(() => hasCompleteParamFilters(paramFilters.value));
+const filteredVariants = computed(() => {
+  const byParams = filterVariantsByParamQuery(variants.value ?? [], paramFilters.value);
+  if (registeredFilter.value !== 'registered') return byParams;
+  return byParams.filter((variant) => variant.registered);
+});
+const hasActiveFilters = computed(
+  () => hasCompleteParamFilters(paramFilters.value) || registeredFilter.value === 'registered',
+);
 
 const timelineEntries = computed((): TimelineEntry[] => {
   // variants arrive newest-first; diffs compare each to the chronologically older neighbor.
@@ -267,6 +291,7 @@ const timelineEntries = computed((): TimelineEntry[] => {
 
 watch(selectedTaskId, () => {
   paramFilters.value = [];
+  registeredFilter.value = 'all';
 });
 
 function openCreate(source: SerializedTaskVariant | null = null): void {
