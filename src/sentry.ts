@@ -1,6 +1,12 @@
 import * as Sentry from '@sentry/vue';
 import type { App } from 'vue';
 import { isLevante } from '@/constants';
+import {
+  identitySiteName,
+  omitSensitiveSentryFields,
+  sentryUserFromUsername,
+  usernameFromIdentity,
+} from '@/helpers/sentryPrivacy';
 import { LEVANTE_SENTRY_DSN } from '@/sentryConfig';
 import { useAuthStore } from '@/store/auth';
 import { formattedLocale, languageOptions } from './translations/i18n';
@@ -52,10 +58,6 @@ export function initSentry(app: App) {
     environment:
       (import.meta.env.VITE_FIREBASE_PROJECT ?? 'PROD').toUpperCase() === 'DEV' ? 'development' : 'production',
     integrations: [
-      Sentry.replayIntegration({
-        maskAllText: true,
-        maskAllInputs: true,
-      }),
       Sentry.browserTracingIntegration(),
       Sentry.feedbackIntegration({
         showBranding: false,
@@ -79,19 +81,33 @@ export function initSentry(app: App) {
     // Performance Monitoring
     tracesSampleRate: 0.2, // Capture 20% of the transactions
     tracePropagationTargets,
-    // Session Replay
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 0,
     ignoreErrors: [/Failed to read a named property '__v_isRef' from 'Window'/],
     beforeSend(event) {
       if (isCrossOriginVueRefSecurityError(event)) {
         return null;
       }
 
-      delete event.user?.ip_address;
+      if (event.user) {
+        const username = usernameFromIdentity({
+          username: event.user.username,
+          email: event.user.email,
+          siteName: identitySiteName(authStore.sites),
+        });
+        event.user = username ? sentryUserFromUsername(username) : {};
+      }
 
       if (event.contexts?.geo) {
         delete event.contexts.geo;
+      }
+
+      if (event.extra) {
+        event.extra = omitSensitiveSentryFields(event.extra);
+      }
+
+      if (event.contexts) {
+        event.contexts = omitSensitiveSentryFields(event.contexts);
       }
 
       // Drop benign Firestore permission-denied errors raised while unauthenticated
@@ -113,9 +129,11 @@ export function initSentry(app: App) {
   Sentry.setTag('user.language', language);
   // Set user information if authenticated
   if (authStore.isAuthenticated() && authStore.userData) {
-    Sentry.setUser({
-      id: authStore.userData.uid,
-      email: authStore.userData.email,
+    const username = usernameFromIdentity({
+      username: typeof authStore.userData.username === 'string' ? authStore.userData.username : undefined,
+      email: typeof authStore.userData.email === 'string' ? authStore.userData.email : undefined,
+      siteName: identitySiteName(authStore.sites),
     });
+    if (username) Sentry.setUser(sentryUserFromUsername(username));
   }
 }

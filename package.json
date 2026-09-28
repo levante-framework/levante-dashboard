@@ -24,6 +24,7 @@
     "preview": "vite preview",
     "test": "vitest --config vitest.config.js",
     "test:watch": "vitest --watch",
+    "test:posthog-eu": "node scripts/posthog-eu-ingest-smoke.mjs",
     "i18n:download-rebuild": "node src/translations/tools/download-and-rebuild.js",
     "i18n:consolidate": "node src/translations/tools/create-consolidated-translations.js",
     "i18n:crowdin:upload": "npx -y -p @crowdin/cli crowdin upload sources --config src/translations/crowdin/crowdin.yml",
