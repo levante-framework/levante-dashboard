@@ -62,7 +62,7 @@
         <PvToggleSwitch v-model="disabled" input-id="disabled" />
       </div>
 
-      <div class="row row--top">
+      <div class="row">
         <div class="flex flex-column w-full gap-2">
           <label class="font-bold text-xs text-color-secondary uppercase">
             Groups
@@ -84,21 +84,32 @@
         </div>
       </div>
 
-      <div class="row row--top">
+      <div class="row">
         <div class="flex flex-column gap-2 w-full">
-          <label class="font-bold text-xs text-color-secondary uppercase">
-            Assignments
-          </label>
+          <div class="flex justify-content-between align-items-center w-full">
+            <label class="font-bold text-xs text-color-secondary uppercase">
+              Assignments
+            </label>
+
+            <PvSelect
+              v-model="selectedAssignmentStatus"
+              :options="assignmentStatusOptions"
+              optionLabel="label"
+              optionValue="value"
+              size="small"
+            />
+          </div>
+
           <div v-if="isLoading" class="text-md text-gray-500">Loading…</div>
           <div v-else-if="isError" class="text-md text-red-500">
             Failed to load assignments.
           </div>
           <div
-            v-else-if="assignments.length"
+            v-else-if="filteredAssignments.length"
             class="flex flex-column gap-2 w-full"
           >
             <div
-              v-for="assignment in assignments"
+              v-for="assignment in filteredAssignments"
               :key="assignment.id"
               class="flex gap-1"
             >
@@ -111,14 +122,14 @@
                 >
                   <a
                     :href="href"
-                    class="font-medium text-primary no-underline hover:underline"
+                    class="flex align-items-center gap-2 font-medium text-color-secondary no-underline hover:text-primary"
                     @click.prevent="onAssignmentClick(assignment)"
                   >
-                    {{ assignment.name }}
+                    {{ assignment.name }} <i class="pi pi-external-link font-bold text-sm"></i>
                   </a>
                 </router-link>
                 <span class="font-medium text-xs text-gray-500">
-                  {{ _capitalize(assignment.status) }} &bull;
+                  <span :class="`assignment-status assignment-status--${assignment.status}`">{{ _capitalize(assignment.status) }}</span> &bull;
                   {{ formatDate(assignment.dateOpened) }} –>
                   {{ formatDate(assignment.dateClosed) }}
                 </span>
@@ -147,7 +158,6 @@ export interface EditableUser {
 }
 
 export type EditableUserUpdate = Pick<EditableUser, 'uid' | 'archived' | 'disabled'>;
-
 export type UserOverviewOrg = GetUserOverviewResult['orgs'][number];
 export type UserOverviewAssignment = GetUserOverviewResult['assignments'][number];
 </script>
@@ -161,6 +171,7 @@ import { computed, ref, watch } from "vue";
 import { type RouteLocationRaw, useRouter } from "vue-router";
 import PvInputText from "primevue/inputtext";
 import PvDatePicker from "primevue/datepicker";
+import PvSelect from 'primevue/select';
 
 // +-------+
 // | Props |
@@ -193,6 +204,19 @@ const archived = ref(props.user.archived);
 const disabled = ref(props.user.disabled);
 const userChildLabel = ref(props.user?.childLabel);
 const userChildBirthDate = ref(new Date());
+const assignmentStatusOptions = ref([
+  { label: 'All', value: 'all', },
+  { label: 'Closed', value: 'closed', },
+  { label: 'Open', value: 'open', },
+  { label: 'Upcoming', value: 'upcoming', },
+]);
+const selectedAssignmentStatus = ref('all');
+const filteredAssignments = computed(() => {
+  if (selectedAssignmentStatus.value === "all") return props.assignments;
+  return props.assignments.filter(
+    (assignment) => assignment.status === selectedAssignmentStatus.value,
+  ) || [];
+});
 
 // +----------+
 // | Computed |
@@ -281,9 +305,14 @@ function formatDate(value: string): string {
     border-top: none;
     padding: 0;
   }
+}
 
-  &.row--top {
-    align-items: flex-start;
-  }
+.assignment-status {
+  font-weight: 700;
+  text-transform: uppercase;
+
+  &.assignment-status--closed { color: var(--bright-red); }
+  &.assignment-status--open { color: var(--bright-green); }
+  &.assignment-status--upcoming { color: var(--bright-yellow); }
 }
 </style>
