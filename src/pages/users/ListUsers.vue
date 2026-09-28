@@ -18,7 +18,7 @@
               <div
                 class="flex flex-wrap align-items-center gap-2 justify-content-between"
               >
-                <div class="uppercase font-light font-sm text-gray-400 mr-2">
+                <div class="uppercase font-light text-sm text-gray-400 mr-2">
                   {{ displayOrgType }}
                 </div>
                 <div class="text-xl text-gray-600">
@@ -32,7 +32,7 @@
                   :aria-expanded="isUserCountExpanded"
                   @click="isUserCountExpanded = !isUserCountExpanded"
                 >
-                  <div class="uppercase font-light font-sm text-gray-400 mb-1">
+                  <div class="uppercase font-light text-sm text-gray-400 mb-1">
                     <i
                       :class="[
                         'pi text-gray-400 transition-transform transition-duration-200',
@@ -56,7 +56,7 @@
                 >
                   <div class="flex flex-wrap gap-2 justify-content-between">
                     <div
-                      class="uppercase font-light font-sm text-gray-400 mb-1"
+                      class="uppercase font-light text-sm text-gray-400 mb-1"
                     >
                       Children
                     </div>
@@ -66,7 +66,7 @@
                   </div>
                   <div class="flex flex-wrap gap-2 justify-content-between">
                     <div
-                      class="uppercase font-light font-sm text-gray-400 mb-1"
+                      class="uppercase font-light text-sm text-gray-400 mb-1"
                     >
                       Caregivers
                     </div>
@@ -76,7 +76,7 @@
                   </div>
                   <div class="flex flex-wrap gap-2 justify-content-between">
                     <div
-                      class="uppercase font-light font-sm text-gray-400 mb-1"
+                      class="uppercase font-light text-sm text-gray-400 mb-1"
                     >
                       Teachers
                     </div>
@@ -135,93 +135,104 @@
           </PvTabPanels>
         </PvTabs>
       </div>
-      <!-- Edit user modal -->
-      <RoarModal
-        title="Edit User"
-        subtitle="View and update user information"
-        :is-enabled="showEditModal"
-        @modal-closed="onEditModalClosed"
+
+      <PvDrawer
+        v-model:visible="isOpenEditUserDrawer"
+        :dismissable="false"
+        class="edit-user-drawer"
+        header="Drawer Title"
+        position="right"
       >
-        <EditUserForm
-          v-if="currentEditUser"
-          :user="currentEditUser"
-          :orgs="userOverview?.orgs"
-          :assignments="userOverview?.assignments"
-          :is-loading="isOverviewLoading"
-          :is-error="isOverviewError"
-          @change="pendingUserUpdate = $event"
-          @dirty="isUserDirty = $event"
-        />
-        <template #footer>
-          <div class="flex gap-2">
+        <template #container>
+          <div
+            class="flex justify-content-between align-items-center w-full p-4 py-3 border-bottom-1 border-gray-200 border-top-6"
+          >
+            <div class="flex flex-column">
+              <h3 class="m-0 font-semibold">Edit User</h3>
+              <small class="m-0">View and update user information</small>
+            </div>
+
+            <PvButton
+              class="p-0 py-2 text-color-secondary hover:text-primary"
+              severity="secondary"
+              variant="link"
+              @click="isOpenEditUserDrawer = false"
+            >
+              <i class="pi pi-times"></i>
+            </PvButton>
+          </div>
+
+          <div class="flex-1 overflow-auto">
+            <EditUserForm
+              v-if="currentEditUser"
+              :user="currentEditUser"
+              :orgs="userOverview?.orgs"
+              :assignments="userOverview?.assignments"
+              :is-loading="isOverviewLoading"
+              :is-error="isOverviewError"
+              @change="pendingUserUpdate = $event"
+              @dirty="isUserDirty = $event"
+            />
+          </div>
+
+          <div
+            class="flex justify-content-end align-items-center gap-2 w-full mt-auto p-4 py-3 border-top-1 border-gray-200"
+          >
             <PvButton
               tabindex="0"
-              class="border-none border-round bg-white text-primary p-2 hover:surface-200"
-              text
-              label="Cancel"
-              outlined
+              class="text-color-secondary hover:text-primary"
+              variant="link"
               @click="onEditModalClosed"
-            ></PvButton>
+            >
+              <p class="m-0">
+                {{ isUserDirty ? "Discard" : "Cancel" }}
+              </p>
+            </PvButton>
             <PvButton
               tabindex="0"
-              class="border-none border-round bg-primary text-white p-2 hover:surface-400"
+              :disabled="!isUserDirty"
               :label="isSubmitting ? 'Saving...' : 'Save'"
               :loading="isSubmitting"
-              :disabled="!isUserDirty"
               @click="submitUpdateUsersInfo"
             ></PvButton>
           </div>
         </template>
-      </RoarModal>
+      </PvDrawer>
     </section>
   </main>
 </template>
 
 <script setup lang="ts">
-import { watchDebounced } from "@vueuse/core";
-import PvButton from "primevue/button";
-import PvIconField from "primevue/iconfield";
-import PvInputIcon from "primevue/inputicon";
-import PvInputText from "primevue/inputtext";
-import PvTab from "primevue/tab";
-import PvTabList from "primevue/tablist";
-import PvTabPanel from "primevue/tabpanel";
-import PvTabPanels from "primevue/tabpanels";
-import PvTabs from "primevue/tabs";
-import { useToast } from "primevue/usetoast";
-import { computed, ref, watch } from "vue";
-import AppSpinner from "@/components/AppSpinner.vue";
-import EditUserForm, {
-  type EditableUser,
-  type EditableUserUpdate,
-} from "@/components/EditUserForm.vue";
-import RoarModal from "@/components/modals/RoarModal.vue";
-import RoarDataTable from "@/components/RoarDataTable.vue";
-import useUpdateUsersInfoMutation from "@/composables/mutations/useUpdateUsersInfoMutation";
-import { useGetUserOverviewQuery } from "@/composables/queries/useGetUserOverviewQuery";
-import useGetUsersByOrgQuery from "@/composables/queries/useGetUsersByOrgQuery";
-import {
-  TOAST_DEFAULT_LIFE_DURATION,
-  TOAST_SEVERITIES,
-} from "@/constants/toasts";
-import {
-  normalizeToLowercase,
-  singularizeFirestoreCollection,
-} from "@/helpers";
-import { getChildLabel } from "@/helpers/childLabels";
-import {
-  deriveNextCsvFilename,
-  downloadCsv,
-  sanitizeCsvFilename,
-  unparseCsvFile,
-} from "@/helpers/csv";
-import { logger } from "@/logger";
-import { useAuthStore } from "@/store/auth";
+import { watchDebounced } from '@vueuse/core';
+import PvButton from 'primevue/button';
+import PvDrawer from 'primevue/drawer';
+import PvIconField from 'primevue/iconfield';
+import PvInputIcon from 'primevue/inputicon';
+import PvInputText from 'primevue/inputtext';
+import PvTab from 'primevue/tab';
+import PvTabList from 'primevue/tablist';
+import PvTabPanel from 'primevue/tabpanel';
+import PvTabPanels from 'primevue/tabpanels';
+import PvTabs from 'primevue/tabs';
+import { useToast } from 'primevue/usetoast';
+import { computed, ref, watch } from 'vue';
+import AppSpinner from '@/components/AppSpinner.vue';
+import EditUserForm, { type EditableUser, type EditableUserUpdate } from '@/components/EditUserForm.vue';
+import RoarDataTable from '@/components/RoarDataTable.vue';
+import useUpdateUsersInfoMutation from '@/composables/mutations/useUpdateUsersInfoMutation';
+import { useGetUserOverviewQuery } from '@/composables/queries/useGetUserOverviewQuery';
+import useGetUsersByOrgQuery from '@/composables/queries/useGetUsersByOrgQuery';
+import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
+import { normalizeToLowercase, singularizeFirestoreCollection } from '@/helpers';
+import { getChildLabel } from '@/helpers/childLabels';
+import { deriveNextCsvFilename, downloadCsv, sanitizeCsvFilename, unparseCsvFile } from '@/helpers/csv';
+import { logger } from '@/logger';
+import { useAuthStore } from '@/store/auth';
 
 // +-------+
 // | Types |
 // +-------+
-type UserTabId = "active" | "inactive";
+type UserTabId = 'active' | 'inactive';
 
 interface UserTab {
   id: UserTabId;
@@ -242,52 +253,52 @@ interface UserTableColumn {
 // | Constants |
 // +-----------+
 const USER_TABS: UserTab[] = [
-  { id: "active", header: "Active" },
-  { id: "inactive", header: "Inactive" },
+  { id: 'active', header: 'Active' },
+  { id: 'inactive', header: 'Inactive' },
 ];
 
 const COLUMNS: UserTableColumn[] = [
   {
-    field: "uid",
-    header: "UID",
-    dataType: "string",
+    field: 'uid',
+    header: 'UID',
+    dataType: 'string',
     sort: false,
   },
   {
-    field: "email",
-    header: "User Login",
-    dataType: "string",
+    field: 'email',
+    header: 'User Login',
+    dataType: 'string',
     sort: false,
   },
   {
-    field: "userType",
-    header: "User Type",
-    dataType: "string",
+    field: 'userType',
+    header: 'User Type',
+    dataType: 'string',
     sort: false,
   },
   {
-    field: "childLabel",
-    header: "Child Label",
-    dataType: "string",
+    field: 'childLabel',
+    header: 'Child Label',
+    dataType: 'string',
     sort: false,
   },
   {
-    header: "Edit",
+    header: 'Edit',
     button: true,
-    eventName: "edit-button",
-    buttonIcon: "pi pi-user-edit",
+    eventName: 'edit-button',
+    buttonIcon: 'pi pi-user-edit',
     sort: false,
   },
 ];
 const CSV_EXPORT_COLUMNS: UserTableColumn[] = [
   ...COLUMNS.filter((column) => !column.button),
-  { field: "archived", header: "Archived", dataType: "boolean" },
-  { field: "disabled", header: "Disabled", dataType: "boolean" },
+  { field: 'archived', header: 'Archived', dataType: 'boolean' },
+  { field: 'disabled', header: 'Disabled', dataType: 'boolean' },
 ];
 
-const SEARCHABLE_FIELDS = COLUMNS.filter(
-  (column) => column.field && !column.button,
-).map((column) => column.field as keyof EditableUser);
+const SEARCHABLE_FIELDS = COLUMNS.filter((column) => column.field && !column.button).map(
+  (column) => column.field as keyof EditableUser,
+);
 
 // +-------+
 // | Props |
@@ -318,14 +329,15 @@ const toast = useToast();
 // +----------------+
 // | Reactive state |
 // +----------------+
-const activeTab = ref<UserTabId>("active");
+const activeTab = ref<UserTabId>('active');
 const currentEditUser = ref<EditableUser | null>(null);
 const isUserCountExpanded = ref(false);
 const isUserDirty = ref(false);
 const pendingUserUpdate = ref<EditableUserUpdate | null>(null);
-const searchQuery = ref("");
-const debouncedSearchQuery = ref("");
+const searchQuery = ref('');
+const debouncedSearchQuery = ref('');
 const showEditModal = ref(false);
+const isOpenEditUserDrawer = ref(false);
 
 watchDebounced(searchQuery, (value) => (debouncedSearchQuery.value = value), {
   debounce: 300,
@@ -346,12 +358,11 @@ const {
   isLoading: isOverviewLoading,
   isError: isOverviewError,
 } = useGetUserOverviewQuery(
-  () => currentEditUser.value?.uid ?? "",
+  () => currentEditUser.value?.uid ?? '',
   () => showEditModal.value && authReady.value,
 );
 
-const { mutateAsync: updateUsersInfo, isPending: isSubmitting } =
-  useUpdateUsersInfoMutation();
+const { mutateAsync: updateUsersInfo, isPending: isSubmitting } = useUpdateUsersInfoMutation();
 
 // +----------+
 // | Computed |
@@ -360,7 +371,7 @@ const users = computed(() => usersResult.value?.users ?? []);
 
 const nonAdminUsers = computed<EditableUser[]>(() =>
   users.value
-    .filter((user) => user.userType !== "admin")
+    .filter((user) => user.userType !== 'admin')
     .map((user) => ({
       uid: user.uid,
       archived: user.archived,
@@ -385,9 +396,7 @@ const filterBySearch = (users: EditableUser[]): EditableUser[] => {
   return users.filter((user) =>
     SEARCHABLE_FIELDS.some((field) => {
       const value = user[field];
-      return (
-        value != null && normalizeToLowercase(String(value)).includes(query)
-      );
+      return value != null && normalizeToLowercase(String(value)).includes(query);
     }),
   );
 };
@@ -398,24 +407,22 @@ const usersByTab = computed<Record<UserTabId, EditableUser[]>>(() => ({
 }));
 
 const childrenCount = computed(() => {
-  return nonAdminUsers.value.filter((user) => user.userType === "child").length;
+  return nonAdminUsers.value.filter((user) => user.userType === 'child').length;
 });
 
 const caregiversCount = computed(() => {
-  return nonAdminUsers.value.filter((user) => user.userType === "caregiver")
-    .length;
+  return nonAdminUsers.value.filter((user) => user.userType === 'caregiver').length;
 });
 
 const teachersCount = computed(() => {
-  return nonAdminUsers.value.filter((user) => user.userType === "teacher")
-    .length;
+  return nonAdminUsers.value.filter((user) => user.userType === 'teacher').length;
 });
 
 const displayOrgType = computed(() => {
-  if (props.orgType === "districts") {
-    return "Site";
-  } else if (props.orgType === "groups") {
-    return "Cohort";
+  if (props.orgType === 'districts') {
+    return 'Site';
+  } else if (props.orgType === 'groups') {
+    return 'Cohort';
   } else {
     return singularizeFirestoreCollection(props.orgType);
   }
@@ -428,9 +435,9 @@ watch(isError, (hasError) => {
   if (!hasError) return;
   toast.add({
     severity: TOAST_SEVERITIES.ERROR,
-    summary: "Failed to load users",
+    summary: 'Failed to load users',
     // TODO: handle error cases to provide more specific error messages
-    detail: "An error occurred while loading users. Please try again.",
+    detail: 'An error occurred while loading users. Please try again.',
     life: TOAST_DEFAULT_LIFE_DURATION,
   });
 });
@@ -439,8 +446,8 @@ watch(isError, (hasError) => {
 // | Search |
 // +--------+
 const resetSearch = () => {
-  searchQuery.value = "";
-  debouncedSearchQuery.value = "";
+  searchQuery.value = '';
+  debouncedSearchQuery.value = '';
 };
 
 // +------------+
@@ -450,8 +457,8 @@ const exportRowsToCsv = (rows: EditableUser[], filename: string) => {
   if (!rows.length) {
     toast.add({
       severity: TOAST_SEVERITIES.WARN,
-      summary: "No users to export",
-      detail: "There are no users available for this export.",
+      summary: 'No users to export',
+      detail: 'There are no users available for this export.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     return;
@@ -474,8 +481,7 @@ const exportRowsToCsv = (rows: EditableUser[], filename: string) => {
 };
 
 const downloadAllUsers = () => {
-  const rows =
-    activeTab.value === "active" ? activeUsers.value : inactiveUsers.value;
+  const rows = activeTab.value === 'active' ? activeUsers.value : inactiveUsers.value;
   exportRowsToCsv(rows, `${props.orgName}-${activeTab.value}-users`);
 };
 
@@ -489,10 +495,12 @@ const downloadSelectedUsers = (rows: EditableUser[]) => {
 const onEditButtonClick = (event: EditableUser) => {
   currentEditUser.value = event;
   showEditModal.value = true;
+  isOpenEditUserDrawer.value = true;
 };
 
 const onEditModalClosed = () => {
   showEditModal.value = false;
+  isOpenEditUserDrawer.value = false;
   currentEditUser.value = null;
   pendingUserUpdate.value = null;
   isUserDirty.value = false;
@@ -507,23 +515,23 @@ const submitUpdateUsersInfo = async () => {
     await updateUsersInfo({ users: [pendingUserUpdate.value] });
     toast.add({
       severity: TOAST_SEVERITIES.SUCCESS,
-      summary: "User updated",
-      detail: "The user was updated successfully.",
+      summary: 'User updated',
+      detail: 'The user was updated successfully.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
     onEditModalClosed();
   } catch (error) {
-    logger.error(new Error("Failed to update user info", { cause: error }), {
+    logger.error(new Error('Failed to update user info', { cause: error }), {
       tags: {
-        component: "ListUsers",
-        function: "submitUpdateUsersInfo",
+        component: 'ListUsers',
+        function: 'submitUpdateUsersInfo',
       },
       uid,
     });
     toast.add({
       severity: TOAST_SEVERITIES.ERROR,
-      summary: "Failed to update user",
-      detail: "An error occurred while updating the user. Please try again.",
+      summary: 'Failed to update user',
+      detail: 'An error occurred while updating the user. Please try again.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
   }
