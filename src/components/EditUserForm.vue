@@ -19,12 +19,7 @@
         <label class="font-bold text-xs text-color-secondary uppercase">
           Email
         </label>
-        <PvInputText
-          v-model="userEmail"
-          placeholder="Email"
-          size="small"
-          type="text"
-        />
+        <p class="m-0">{{ user.email }}</p>
       </div>
 
       <div v-if="user.childLabel" class="row">
@@ -196,7 +191,6 @@ const router = useRouter();
 // +----------------+
 const archived = ref(props.user.archived);
 const disabled = ref(props.user.disabled);
-const userEmail = ref(props.user.email);
 const userChildLabel = ref(props.user?.childLabel);
 const userChildBirthDate = ref(new Date());
 

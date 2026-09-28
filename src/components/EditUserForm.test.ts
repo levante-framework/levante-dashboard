@@ -59,7 +59,7 @@ describe('EditUserForm', () => {
     it('shows the read-only user fields', () => {
       const wrapper = mountForm();
       expect(wrapper.text()).toContain('user-1');
-      expect(inputValue(wrapper, 'Email')).toBe('child@levante.com');
+      expect(wrapper.text()).toContain('child@levante.com');
       expect(wrapper.text()).toContain('child');
     });
 
