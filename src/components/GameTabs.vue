@@ -121,6 +121,7 @@ interface SelectedAssignment extends AdministrationType {
 interface SurveyInstance {
   data: Record<string, unknown>;
   currentPageNo: number;
+  title: string;
 }
 
 interface UserData {
@@ -391,6 +392,7 @@ const launchSurveyPart = (game: DisplayGame): void => {
   const progress = getSurveyPartProgressValue(game);
   const surveyInstance = getSurveyInstance();
   if (surveyInstance) {
+    surveyInstance.title = getTaskName(game);
     surveyInstance.currentPageNo = progress > 0 && progress < 100 ? surveyResponseDoc.value?.pageNo || 0 : 0;
   }
 
