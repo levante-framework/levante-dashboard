@@ -39,6 +39,7 @@
           dateFormat="mm/yy"
           :minDate="BIRTH_DATE_MIN"
           :maxDate="BIRTH_DATE_MAX"
+          :manual-input="false"
           fluid
           iconDisplay="input"
           placeholder="Select birth month/year"
