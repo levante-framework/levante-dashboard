@@ -26,12 +26,7 @@
         <label class="font-bold text-xs text-color-secondary uppercase">
           Child Label
         </label>
-        <PvInputText
-          v-model="userChildLabel"
-          placeholder="Label"
-          size="small"
-          type="text"
-        />
+        <p class="m-0">{{ user.childLabel }}</p>
       </div>
 
       <div v-if="user.userType === 'child'" class="row">
@@ -169,7 +164,6 @@ import PvToggleSwitch from "primevue/toggleswitch";
 import { useConfirm } from "primevue/useconfirm";
 import { computed, ref, watch } from "vue";
 import { type RouteLocationRaw, useRouter } from "vue-router";
-import PvInputText from "primevue/inputtext";
 import PvDatePicker from "primevue/datepicker";
 import PvSelect from 'primevue/select';
 
@@ -202,7 +196,6 @@ const router = useRouter();
 // +----------------+
 const archived = ref(props.user.archived);
 const disabled = ref(props.user.disabled);
-const userChildLabel = ref(props.user?.childLabel);
 const userChildBirthDate = ref(new Date());
 const assignmentStatusOptions = ref([
   { label: 'All', value: 'all', },

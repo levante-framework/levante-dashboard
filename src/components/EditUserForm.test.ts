@@ -1,6 +1,5 @@
 import { mount, RouterLinkStub } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
-import PvInputText from 'primevue/inputtext';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EditUserForm, { type EditableUser } from './EditUserForm.vue';
@@ -46,12 +45,6 @@ const setToggle = async (wrapper: ReturnType<typeof mountForm>, index: number, v
   await wrapper.vm.$nextTick();
 };
 
-const inputValue = (wrapper: ReturnType<typeof mountForm>, placeholder: string) =>
-  wrapper
-    .findAllComponents(PvInputText)
-    .find((component) => component.attributes('placeholder') === placeholder)
-    ?.props('modelValue');
-
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('EditUserForm', () => {
@@ -66,7 +59,7 @@ describe('EditUserForm', () => {
     it('renders the child label when present', () => {
       const wrapper = mountForm({ childLabel: 'Child 3' });
       expect(wrapper.text()).toContain('Child Label');
-      expect(inputValue(wrapper, 'Label')).toBe('Child 3');
+      expect(wrapper.text()).toContain('Child 3');
     });
 
     it('omits the child label when absent', () => {
@@ -140,7 +133,7 @@ describe('EditUserForm', () => {
       status: 'open',
       dateOpened: '2026-01-01',
       dateClosed: '2026-02-01',
-    };
+    } as const;
     const ROUTE = { name: 'AdministrationProgressReport', params: { administrationId: 'a1' } };
 
     const mountWithAssignment = () =>
