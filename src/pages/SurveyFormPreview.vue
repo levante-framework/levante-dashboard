@@ -18,10 +18,7 @@
       {{ (error as Error)?.message ?? 'Failed to load survey definition.' }}
     </PvMessage>
 
-    <div v-else-if="isLoading" class="survey-preview__loading">
-      <PvProgressSpinner />
-      <span>Loading survey definition…</span>
-    </div>
+    <LevanteSpinner v-else-if="isLoading" fullscreen />
 
     <div v-else-if="data" class="survey-preview__body">
       <FormRenderer
@@ -40,11 +37,11 @@
 
 <script setup lang="ts">
 import PvMessage from 'primevue/message';
-import PvProgressSpinner from 'primevue/progressspinner';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import FormRenderer from '@/components/FormRenderer.vue';
+import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { type SurveyFormType, useSurveyFormDefinitionQuery } from '@/composables/queries/useSurveyFormDefinitionQuery';
 import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsRepository';
 
@@ -140,12 +137,6 @@ function onClose() {
   flex-direction: column;
   gap: 0.75rem;
   padding-bottom: 0;
-}
-
-.survey-preview__loading {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
 }
 
 .survey-preview__title {
