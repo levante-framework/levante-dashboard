@@ -583,7 +583,7 @@ watch(
     const surveyDataToStartAt = isGeneralSurvey ? surveyData.value.general : surveyData.value.specific;
     const surveyId = getParticipantSurveyId(userType.value, isGeneralSurvey);
 
-    const surveyInstance = createSurveyInstance(surveyDataToStartAt);
+    const surveyInstance = createSurveyInstance(surveyDataToStartAt, surveyId);
     setupSurveyMarkdownConverter(surveyInstance);
 
     bootstrapSurveyInstance({
