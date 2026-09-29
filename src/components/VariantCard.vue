@@ -2,10 +2,10 @@
   <div
     :id="hasControls ? variant.id : undefined"
     class="variant-card"
-    :class="[
-      showContent && 'variant-card--active',
-      variant?.variant?.registered || 'variant-card--unregistered', 
-    ]"
+    :class="{
+      'variant-card--active': showContent,
+      'variant-card--unregistered': !variant?.variant?.registered,
+    }"
   >
     <div
       v-if="!variant?.variant?.registered" class="variant-outdated-badge"
@@ -50,7 +50,7 @@
           </PvButton>
 
           <i
-            v-if="!isParticipant && variant?.variant?.registered"
+            v-if="variant?.variant?.registered"
             v-tooltip.top="getTooltip('Variant is up-to-date', { showDelay: 0 })"
             class="pi pi-verified ml-1 variant-up-to-date"
           ></i>
@@ -147,7 +147,6 @@
 </template>
 
 <script setup lang="ts">
-import { ROLES } from '@levante-framework/permissions-core';
 import _toPairs from 'lodash/toPairs';
 import PvButton from 'primevue/button';
 import PvColumn from 'primevue/column';
@@ -157,7 +156,6 @@ import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { computed, h, ref } from 'vue';
 import EditVariantDialog from '@/components/EditVariantDialog.vue';
-import { usePermissions } from '@/composables/usePermissions';
 import { getTooltip, resolveVariantDisplayName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 
@@ -221,9 +219,6 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 const authStore = useAuthStore();
 const { isUserSuperAdmin } = authStore;
-const { userRole } = usePermissions();
-
-const isParticipant = computed(() => userRole?.value === ROLES.PARTICIPANT);
 
 const backupImage = '/src/assets/roar-logo.png';
 const showContent = ref<boolean>(false);
@@ -311,12 +306,6 @@ const conditionTables = computed(() => {
 
   return sections;
 });
-
-const isActive = (): string => {
-  return !showContent.value
-    ? 'flex-1 flex flex-row gap-2 border-1 border-round surface-border bg-white-alpha-90 mb-2 hover:surface-hover z-1 relative'
-    : 'flex-1 flex flex-row gap-2 border-1 border-round surface-border bg-white-alpha-90 mb-2 hover:surface-hover z-1 relative shadow-2';
-};
 
 const displayParamList = (inputObj: Record<string, any>): Array<{ key: string; value: any }> => {
   return _toPairs(inputObj).map(([key, value]) => ({ key, value }));
