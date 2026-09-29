@@ -33,6 +33,8 @@ const FIELDS: InformationFormField[] = [
     required: true,
     sectionId: 'recruitment',
     questionText: 'Recruitment notes',
+    infoExample:
+      '<p>For example,</p><ul><li>Family-based remote assessment.</li><li>School-based data collection.</li></ul>',
   },
   {
     itemId: 'site_03',
@@ -194,5 +196,33 @@ describe('FormRenderer', () => {
       sampleApproachOther: null,
       siteRecruitment: 'email',
     });
+  });
+
+  it('renders example HTML lists as stored instead of rewriting them to paragraphs', async () => {
+    const wrapper = mount(FormRenderer, {
+      props: {
+        fields: FIELDS,
+        generalPrompt: 'Please complete.',
+        sectionInfo: SECTION_INFO,
+        saveDraft: vi.fn().mockResolvedValue(true),
+      },
+      global: {
+        plugins: [PrimeVue],
+        stubs: {
+          Dialog: {
+            template: '<div><slot name="header" /><slot /></div>',
+          },
+        },
+      },
+    });
+    await startRecruitment(wrapper);
+
+    await wrapper.get('.survey-form__example-trigger').trigger('click');
+    await flushPromises();
+
+    const example = wrapper.get('.survey-form__example-panel');
+    expect(example.html()).toContain('<ul>');
+    expect(example.html()).toContain('<li>');
+    expect(example.html()).not.toMatch(/<p>Family-based remote assessment\.<\/p>/);
   });
 });

@@ -221,31 +221,11 @@ function toPlainText(value?: string): string {
   return (value ?? '').replace(/<[^>]*>/g, '');
 }
 
-/** Display-only: turn example lists into paragraphs without changing seed HTML. */
-function formatExampleHtml(value?: string): string {
-  const sanitized = DOMPurify.sanitize(value ?? '');
-  const doc = new DOMParser().parseFromString(`<div>${sanitized}</div>`, 'text/html');
-  const root = doc.body.firstElementChild;
-  if (!root) return sanitized;
-
-  root.querySelectorAll('ul, ol').forEach((list) => {
-    const fragment = doc.createDocumentFragment();
-    list.querySelectorAll(':scope > li').forEach((item) => {
-      const paragraph = doc.createElement('p');
-      paragraph.innerHTML = item.innerHTML;
-      fragment.appendChild(paragraph);
-    });
-    list.replaceWith(fragment);
-  });
-
-  return DOMPurify.sanitize(root.innerHTML);
-}
-
 const isExampleVisible = ref(false);
 const exampleHtml = ref('');
 
 function openExample(field: InformationFormField) {
-  exampleHtml.value = formatExampleHtml(field.infoExample);
+  exampleHtml.value = renderHtml(field.infoExample);
   isExampleVisible.value = true;
 }
 
