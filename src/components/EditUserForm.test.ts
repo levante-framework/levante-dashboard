@@ -198,18 +198,18 @@ describe('EditUserForm', () => {
       expect(wrapper.emitted('change')).toBeUndefined();
     });
 
-    it('emits the edited payload when a toggle changes', async () => {
+    it('emits only the changed field when a toggle changes', async () => {
       const wrapper = mountForm();
       await setToggle(wrapper, 1, true);
-      expect(wrapper.emitted('change')?.at(-1)).toEqual([{ uid: 'user-1', archived: false, disabled: true }]);
+      expect(wrapper.emitted('change')?.at(-1)).toEqual([{ uid: 'user-1', disabled: true }]);
     });
 
-    it('keeps the parent in sync by emitting on every toggle, including back to the original', async () => {
+    it('keeps the parent in sync by emitting on every toggle, dropping fields back at the original', async () => {
       const wrapper = mountForm();
       await setToggle(wrapper, 0, true);
       await setToggle(wrapper, 0, false);
       expect(wrapper.emitted('change')).toHaveLength(2);
-      expect(wrapper.emitted('change')?.at(-1)).toEqual([{ uid: 'user-1', archived: false, disabled: false }]);
+      expect(wrapper.emitted('change')?.at(-1)).toEqual([{ uid: 'user-1' }]);
     });
   });
 
@@ -232,9 +232,7 @@ describe('EditUserForm', () => {
     it('emits birthMonth/birthYear in the change payload when the picker changes', async () => {
       const wrapper = mountForm();
       await setBirthDate(wrapper, new Date(2019, 2, 1));
-      expect(wrapper.emitted('change')?.at(-1)).toEqual([
-        { uid: 'user-1', archived: false, disabled: false, birthMonth: 3, birthYear: 2019 },
-      ]);
+      expect(wrapper.emitted('change')?.at(-1)).toEqual([{ uid: 'user-1', birthMonth: 3, birthYear: 2019 }]);
     });
 
     it('marks the form dirty when the birth date diverges from the original', async () => {

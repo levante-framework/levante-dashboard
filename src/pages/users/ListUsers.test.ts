@@ -82,8 +82,8 @@ interface ListUsersVm {
   showEditModal: boolean;
   pendingUserUpdate: {
     uid: string;
-    archived: boolean;
-    disabled: boolean;
+    archived?: boolean;
+    disabled?: boolean;
     birthMonth?: number;
     birthYear?: number;
   } | null;

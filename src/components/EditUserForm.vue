@@ -31,7 +31,7 @@
 
       <div v-if="user.userType === 'child'" class="row">
         <label class="font-bold text-xs text-color-secondary uppercase">
-          Birth date
+          Birth Date
         </label>
         <PvDatePicker
           v-model="userChildBirthDate"
@@ -156,10 +156,13 @@ export interface EditableUser {
   childLabel?: string;
 }
 
-export type EditableUserUpdate = Pick<EditableUser, 'uid' | 'archived' | 'disabled'> & {
+export interface EditableUserUpdate {
+  uid: string;
+  archived?: boolean;
+  disabled?: boolean;
   birthMonth?: number;
   birthYear?: number;
-};
+}
 export type UserOverviewOrg = GetUserOverviewResult['orgs'][number];
 export type UserOverviewAssignment = GetUserOverviewResult['assignments'][number];
 </script>
@@ -266,15 +269,15 @@ watch([() => props.birthMonth, () => props.birthYear], ([month, year]) => {
   userChildBirthDate.value = toBirthDate(month, year);
 });
 
-// Surface the edited values so the parent always holds the current update.
+// Surface only the fields that diverge from the original so the parent submits
+// a minimal update; uid is always included to identify the user.
 watch([archived, disabled, userChildBirthDate], () => {
-  emit("change", {
-    uid: props.user.uid,
-    archived: archived.value,
-    disabled: disabled.value,
-    birthMonth: childBirthMonth.value,
-    birthYear: childBirthYear.value,
-  });
+  const update: EditableUserUpdate = { uid: props.user.uid };
+  if (archived.value !== props.user.archived) update.archived = archived.value;
+  if (disabled.value !== props.user.disabled) update.disabled = disabled.value;
+  if (childBirthMonth.value !== props.birthMonth) update.birthMonth = childBirthMonth.value;
+  if (childBirthYear.value !== props.birthYear) update.birthYear = childBirthYear.value;
+  emit("change", update);
 });
 
 // Surface dirty state so the parent can enable/disable submit.
