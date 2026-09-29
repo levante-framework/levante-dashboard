@@ -80,7 +80,13 @@ interface ListUsersVm {
   displayOrgType: string;
   currentEditUser: Record<string, unknown> | null;
   showEditModal: boolean;
-  pendingUserUpdate: { uid: string; archived: boolean; disabled: boolean } | null;
+  pendingUserUpdate: {
+    uid: string;
+    archived: boolean;
+    disabled: boolean;
+    birthMonth?: number;
+    birthYear?: number;
+  } | null;
   isUserDirty: boolean;
   onEditButtonClick: (user: Record<string, unknown>) => void;
   onEditModalClosed: () => void;

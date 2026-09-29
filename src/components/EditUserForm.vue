@@ -35,9 +35,13 @@
         </label>
         <PvDatePicker
           v-model="userChildBirthDate"
+          view="month"
+          dateFormat="mm/yy"
+          :minDate="BIRTH_DATE_MIN"
+          :maxDate="BIRTH_DATE_MAX"
           fluid
           iconDisplay="input"
-          placeholder="Select birth date"
+          placeholder="Select birth month/year"
           showIcon
           size="small"
         />
@@ -152,7 +156,10 @@ export interface EditableUser {
   childLabel?: string;
 }
 
-export type EditableUserUpdate = Pick<EditableUser, 'uid' | 'archived' | 'disabled'>;
+export type EditableUserUpdate = Pick<EditableUser, 'uid' | 'archived' | 'disabled'> & {
+  birthMonth?: number;
+  birthYear?: number;
+};
 export type UserOverviewOrg = GetUserOverviewResult['orgs'][number];
 export type UserOverviewAssignment = GetUserOverviewResult['assignments'][number];
 </script>
@@ -167,6 +174,12 @@ import { type RouteLocationRaw, useRouter } from "vue-router";
 import PvDatePicker from "primevue/datepicker";
 import PvSelect from 'primevue/select';
 
+// +-----------+
+// | Constants |
+// +-----------+
+const BIRTH_DATE_MIN = new Date(new Date().getFullYear() - 18, 0, 1);
+const BIRTH_DATE_MAX = new Date(new Date().getFullYear() - 2, 11, 31);
+
 // +-------+
 // | Props |
 // +-------+
@@ -175,6 +188,8 @@ const props = withDefaults(
     user: EditableUser;
     orgs?: UserOverviewOrg[];
     assignments?: UserOverviewAssignment[];
+    birthMonth?: number;
+    birthYear?: number;
     isLoading?: boolean;
     isError?: boolean;
   }>(),
@@ -196,7 +211,7 @@ const router = useRouter();
 // +----------------+
 const archived = ref(props.user.archived);
 const disabled = ref(props.user.disabled);
-const userChildBirthDate = ref(new Date());
+const userChildBirthDate = ref<Date | null>(toBirthDate(props.birthMonth, props.birthYear));
 const assignmentStatusOptions = ref([
   { label: 'All', value: 'all', },
   { label: 'Closed', value: 'closed', },
@@ -214,12 +229,23 @@ const filteredAssignments = computed(() => {
 // +----------+
 // | Computed |
 // +----------+
+// The birth date is only ever a month/year (see the mm/yy picker), so surface
+// those parts for both the dirty check and the emitted update.
+const childBirthMonth = computed(() =>
+  userChildBirthDate.value ? userChildBirthDate.value.getMonth() + 1 : undefined,
+);
+const childBirthYear = computed(() =>
+  userChildBirthDate.value ? userChildBirthDate.value.getFullYear() : undefined,
+);
+
 // Dirty is derived here, next to the state it depends on; the parent just
 // consumes it to enable/disable submit.
 const isDirty = computed(
   () =>
     archived.value !== props.user.archived ||
-    disabled.value !== props.user.disabled,
+    disabled.value !== props.user.disabled ||
+    childBirthMonth.value !== props.birthMonth ||
+    childBirthYear.value !== props.birthYear,
 );
 
 // +----------+
@@ -234,12 +260,20 @@ watch(
   },
 );
 
+// Birth month/year arrive from the user overview, which loads after the modal
+// opens, so reseed the picker whenever they change.
+watch([() => props.birthMonth, () => props.birthYear], ([month, year]) => {
+  userChildBirthDate.value = toBirthDate(month, year);
+});
+
 // Surface the edited values so the parent always holds the current update.
-watch([archived, disabled], () => {
+watch([archived, disabled, userChildBirthDate], () => {
   emit("change", {
     uid: props.user.uid,
     archived: archived.value,
     disabled: disabled.value,
+    birthMonth: childBirthMonth.value,
+    birthYear: childBirthYear.value,
   });
 });
 
@@ -249,6 +283,12 @@ watch(isDirty, (value) => emit("dirty", value), { immediate: true });
 // +---------+
 // | Methods |
 // +---------+
+// Build a Date from a 1-indexed month and year, or null when either is missing.
+function toBirthDate(month?: number, year?: number): Date | null {
+  if (month === undefined || year === undefined) return null;
+  return new Date(year, month - 1, 1);
+}
+
 function assignmentRoute(assignment: UserOverviewAssignment): RouteLocationRaw {
   return {
     name: "AdministrationProgressReport",

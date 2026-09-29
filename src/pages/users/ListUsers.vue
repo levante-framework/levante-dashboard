@@ -168,6 +168,8 @@
               :user="currentEditUser"
               :orgs="userOverview?.orgs"
               :assignments="userOverview?.assignments"
+              :birth-month="userOverview?.birthMonth"
+              :birth-year="userOverview?.birthYear"
               :is-loading="isOverviewLoading"
               :is-error="isOverviewError"
               @change="pendingUserUpdate = $event"

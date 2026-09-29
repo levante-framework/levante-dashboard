@@ -1,5 +1,6 @@
 import { mount, RouterLinkStub } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
+import PvDatePicker from 'primevue/datepicker';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EditUserForm, { type EditableUser } from './EditUserForm.vue';
@@ -42,6 +43,11 @@ const setToggle = async (wrapper: ReturnType<typeof mountForm>, index: number, v
   const toggle = wrapper.findAllComponents(PvToggleSwitch)[index];
   if (!toggle) throw new Error(`No toggle at index ${index}`);
   toggle.vm.$emit('update:modelValue', value);
+  await wrapper.vm.$nextTick();
+};
+
+const setBirthDate = async (wrapper: ReturnType<typeof mountForm>, value: Date | null) => {
+  wrapper.findComponent(PvDatePicker).vm.$emit('update:modelValue', value);
   await wrapper.vm.$nextTick();
 };
 
@@ -204,6 +210,50 @@ describe('EditUserForm', () => {
       await setToggle(wrapper, 0, false);
       expect(wrapper.emitted('change')).toHaveLength(2);
       expect(wrapper.emitted('change')?.at(-1)).toEqual([{ uid: 'user-1', archived: false, disabled: false }]);
+    });
+  });
+
+  describe('birth date', () => {
+    it('seeds the picker from birthMonth/birthYear (1-indexed month)', () => {
+      const wrapper = mount(EditUserForm, {
+        props: { user: DEFAULT_USER, birthMonth: 6, birthYear: 2018 },
+        global: globalMountOptions,
+      });
+      const value = wrapper.findComponent(PvDatePicker).props('modelValue') as Date;
+      expect(value.getFullYear()).toBe(2018);
+      expect(value.getMonth()).toBe(5);
+    });
+
+    it('leaves the picker empty when birth data is absent', () => {
+      const wrapper = mountForm();
+      expect(wrapper.findComponent(PvDatePicker).props('modelValue')).toBeNull();
+    });
+
+    it('emits birthMonth/birthYear in the change payload when the picker changes', async () => {
+      const wrapper = mountForm();
+      await setBirthDate(wrapper, new Date(2019, 2, 1));
+      expect(wrapper.emitted('change')?.at(-1)).toEqual([
+        { uid: 'user-1', archived: false, disabled: false, birthMonth: 3, birthYear: 2019 },
+      ]);
+    });
+
+    it('marks the form dirty when the birth date diverges from the original', async () => {
+      const wrapper = mount(EditUserForm, {
+        props: { user: DEFAULT_USER, birthMonth: 6, birthYear: 2018 },
+        global: globalMountOptions,
+      });
+      expect(wrapper.emitted('dirty')?.at(-1)).toEqual([false]);
+      await setBirthDate(wrapper, new Date(2019, 5, 1));
+      expect(wrapper.emitted('dirty')?.at(-1)).toEqual([true]);
+    });
+
+    it('reseeds the picker when birth data arrives from the overview', async () => {
+      const wrapper = mountForm();
+      expect(wrapper.findComponent(PvDatePicker).props('modelValue')).toBeNull();
+      await wrapper.setProps({ birthMonth: 9, birthYear: 2016 });
+      const value = wrapper.findComponent(PvDatePicker).props('modelValue') as Date;
+      expect(value.getFullYear()).toBe(2016);
+      expect(value.getMonth()).toBe(8);
     });
   });
 
