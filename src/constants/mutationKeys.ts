@@ -9,6 +9,7 @@ export const VARIANT_PARAM_SPEC_UPSERT_MUTATION_KEY = ['variant-param-spec-upser
 export const TASK_VARIANT_CREATE_MUTATION_KEY = ['task-variant-create'] as const;
 export const TASK_VARIANT_REGISTER_MUTATION_KEY = ['task-variant-register'] as const;
 export const USER_UPDATE_MUTATION_KEY = ['user-update'] as const;
+export const USERS_INFO_UPDATE_MUTATION_KEY = ['users-info-update'] as const;
 export const COMPLETE_ASSESSMENT_MUTATION_KEY = ['assessment', 'complete'] as const;
 export const CREATE_UPDATE_SUPER_ADMIN_MUTATION_KEY = ['create-update-super-admin'] as const;
 export const CREATE_UPDATE_ADMINISTRATOR_MUTATION_KEY = ['create-update-administrator'] as const;

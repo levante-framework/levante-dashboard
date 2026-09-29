@@ -1,10 +1,14 @@
 import type {
   CreateUsersParams,
   CreateUsersResult,
+  GetUserOverviewParams,
+  GetUserOverviewResult,
   GetUsersByOrgParams,
   GetUsersByOrgResult,
   LinkUsersParams,
   LinkUsersResult,
+  UpdateUsersInfoParams,
+  UpdateUsersInfoResult,
 } from '@levante-framework/levante-zod';
 import {
   collection,
@@ -151,12 +155,20 @@ class UsersRepository extends Repository {
     return response.data;
   }
 
+  async getUserOverview(params: GetUserOverviewParams): Promise<GetUserOverviewResult> {
+    return this.call<GetUserOverviewParams, GetUserOverviewResult>('getUserOverview', params);
+  }
+
   async getUsersByOrg(params: GetUsersByOrgParams): Promise<GetUsersByOrgResult> {
     return this.call<GetUsersByOrgParams, GetUsersByOrgResult>('getUsersByOrg', params);
   }
 
   async linkUsers(params: LinkUsersParams): Promise<LinkUsersResult> {
     return this.call<LinkUsersParams, LinkUsersResult>('linkUsers', params);
+  }
+
+  async updateUsersInfo(params: UpdateUsersInfoParams): Promise<UpdateUsersInfoResult> {
+    return this.call<UpdateUsersInfoParams, UpdateUsersInfoResult>('updateUsersInfo', params);
   }
 }
 

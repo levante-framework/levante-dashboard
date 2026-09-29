@@ -301,12 +301,6 @@ const routes: Array<RouteRecordRaw> = [
       allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN, ROLES.ADMIN, ROLES.RESEARCH_ASSISTANT],
     },
   },
-  // {
-  //   path: '/edit-users',
-  //   name: 'Edit Users',
-  //   component: () => import('@/pages/users/EditUsers.vue'),
-  //   meta: { allowedRoles: [],  pageTitle: 'Edit Users', requireAdmin: true, project: 'LEVANTE' },
-  // },
   {
     path: '/survey',
     name: 'Survey',

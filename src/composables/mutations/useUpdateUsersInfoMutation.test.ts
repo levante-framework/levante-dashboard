@@ -1,25 +1,26 @@
-import type { LinkUsersParams, LinkUsersResult } from '@levante-framework/levante-zod';
+import type { UpdateUsersInfoParams, UpdateUsersInfoResult } from '@levante-framework/levante-zod';
 import * as VueQuery from '@tanstack/vue-query';
 import { FirebaseError } from 'firebase/app';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ORG_USERS_QUERY_KEY, USER_OVERVIEW_QUERY_KEY } from '@/constants/queryKeys';
 import { usersRepository } from '@/firebase/repositories/UsersRepository';
 import { withSetup } from '@/test-support/withSetup.js';
-import useLinkUsersMutation from './useLinkUsersMutation';
+import useUpdateUsersInfoMutation from './useUpdateUsersInfoMutation';
 
 vi.mock('@/firebase/repositories/UsersRepository', () => ({
-  usersRepository: { linkUsers: vi.fn() },
+  usersRepository: { updateUsersInfo: vi.fn() },
 }));
 
-describe('useLinkUsersMutation', () => {
+describe('useUpdateUsersInfoMutation', () => {
   let queryClient: VueQuery.QueryClient;
 
-  const mockParams: LinkUsersParams = {
-    siteId: 'site-1',
-    users: [{ userType: 'child', id: 'ext-1', uid: 'uid-1', caregiverId: ['c-1'], teacherId: ['t-1'] }],
+  const mockParams: UpdateUsersInfoParams = {
+    users: [{ uid: 'uid-1', archived: true, disabled: false }],
   };
 
-  const mockResult: LinkUsersResult = {};
+  const mockResult: UpdateUsersInfoResult = {
+    users: [{ uid: 'uid-1', archived: true, disabled: false }],
+  };
 
   beforeEach(() => {
     queryClient = new VueQuery.QueryClient({ defaultOptions: { mutations: { retry: false } } });
@@ -30,25 +31,25 @@ describe('useLinkUsersMutation', () => {
     queryClient.clear();
   });
 
-  it('calls usersRepository.linkUsers and returns its result on success', async () => {
-    vi.mocked(usersRepository.linkUsers).mockResolvedValue(mockResult);
+  it('calls usersRepository.updateUsersInfo and returns its result on success', async () => {
+    vi.mocked(usersRepository.updateUsersInfo).mockResolvedValue(mockResult);
 
-    const [result] = withSetup(() => useLinkUsersMutation(), {
+    const [result] = withSetup(() => useUpdateUsersInfoMutation(), {
       plugins: [[VueQuery.VueQueryPlugin, { queryClient }]],
     });
 
     const data = await result.mutateAsync(mockParams);
 
-    expect(usersRepository.linkUsers).toHaveBeenCalledWith(mockParams);
+    expect(usersRepository.updateUsersInfo).toHaveBeenCalledWith(mockParams);
     expect(data).toEqual(mockResult);
     expect(result.isSuccess.value).toBe(true);
   });
 
   it('invalidates the org users and user overview queries on success', async () => {
-    vi.mocked(usersRepository.linkUsers).mockResolvedValue(mockResult);
+    vi.mocked(usersRepository.updateUsersInfo).mockResolvedValue(mockResult);
     const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
-    const [result] = withSetup(() => useLinkUsersMutation(), {
+    const [result] = withSetup(() => useUpdateUsersInfoMutation(), {
       plugins: [[VueQuery.VueQueryPlugin, { queryClient }]],
     });
 
@@ -60,9 +61,9 @@ describe('useLinkUsersMutation', () => {
 
   it('wraps a non-Firebase error into a FirebaseFailure with code "error"', async () => {
     const rawError = new Error('boom');
-    vi.mocked(usersRepository.linkUsers).mockRejectedValue(rawError);
+    vi.mocked(usersRepository.updateUsersInfo).mockRejectedValue(rawError);
 
-    const [result] = withSetup(() => useLinkUsersMutation(), {
+    const [result] = withSetup(() => useUpdateUsersInfoMutation(), {
       plugins: [[VueQuery.VueQueryPlugin, { queryClient }]],
     });
 
@@ -76,9 +77,9 @@ describe('useLinkUsersMutation', () => {
   it('parses a matching FirebaseError into a FirebaseFailure with code "app-error"', async () => {
     const firebaseError = new FirebaseError('functions/not-found', 'Users not found');
     Object.assign(firebaseError, { details: { code: 'users', uids: ['uid-1'] } });
-    vi.mocked(usersRepository.linkUsers).mockRejectedValue(firebaseError);
+    vi.mocked(usersRepository.updateUsersInfo).mockRejectedValue(firebaseError);
 
-    const [result] = withSetup(() => useLinkUsersMutation(), {
+    const [result] = withSetup(() => useUpdateUsersInfoMutation(), {
       plugins: [[VueQuery.VueQueryPlugin, { queryClient }]],
     });
 
@@ -90,9 +91,9 @@ describe('useLinkUsersMutation', () => {
 
   it('falls back to code "firebase-error" for a FirebaseError not in the app schema', async () => {
     const firebaseError = new FirebaseError('auth/network-request-failed', 'Network');
-    vi.mocked(usersRepository.linkUsers).mockRejectedValue(firebaseError);
+    vi.mocked(usersRepository.updateUsersInfo).mockRejectedValue(firebaseError);
 
-    const [result] = withSetup(() => useLinkUsersMutation(), {
+    const [result] = withSetup(() => useUpdateUsersInfoMutation(), {
       plugins: [[VueQuery.VueQueryPlugin, { queryClient }]],
     });
 

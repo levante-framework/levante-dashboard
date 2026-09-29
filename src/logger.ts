@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/vue';
-import { sentryUserFromUsername } from '@/helpers/sentryPrivacy';
+import { omitSensitiveSentryFields, sentryUserFromUsername } from '@/helpers/sentryPrivacy';
 import posthogInstance from '@/plugins/posthog';
 // Get package info
 import packageJson from '../package.json';
@@ -76,13 +76,13 @@ function error(
   force = false,
 ) {
   const { tags, ...rest } = context ?? {};
-  const extra = {
+  const extra = omitSensitiveSentryFields({
     appVersion,
     coreTasksVersion,
     commitHash,
     ...rest,
     ...currentProperties,
-  };
+  });
 
   if (isProduction || force) {
     Sentry.captureException(exception, { extra, tags });

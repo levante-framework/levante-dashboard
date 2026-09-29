@@ -9,7 +9,7 @@ import PvDialog from 'primevue/dialog';
 import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { nextTick } from 'vue';
+import { nextTick, ref } from 'vue';
 import VariantCard from '@/components/VariantCard.vue';
 import { getAllLanguageOptions, getLanguageInfo } from '@/helpers/languageDiscovery';
 
@@ -31,6 +31,12 @@ vi.mock('@/store/auth', () => ({
   useAuthStore: vi.fn(() => ({
     isUserSuperAdmin: vi.fn(() => true),
   })),
+}));
+
+vi.mock('@/composables/usePermissions', () => ({
+  usePermissions: () => ({
+    userRole: ref('super_admin'),
+  }),
 }));
 
 const mockLanguages = [

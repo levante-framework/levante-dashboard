@@ -3,7 +3,6 @@ import { mount } from '@vue/test-utils';
 import * as Papa from 'papaparse';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
-import ToastService from 'primevue/toastservice';
 import Tooltip from 'primevue/tooltip';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
@@ -168,7 +167,6 @@ const mountAddUsers = () =>
     global: {
       plugins: [
         PrimeVue,
-        ToastService,
         [VueQueryPlugin, { queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }],
       ],
       directives: { tooltip: Tooltip },
