@@ -17,7 +17,7 @@
   <div v-if="isAuthStoreReady" class="app" :style="{ paddingBottom: `${footerHeight}px` }">
     <PvToast position="bottom-center" />
 
-    <NavBar v-if="typeof $route.name === 'string' && !NAVBAR_BLACKLIST.includes($route.name)" />
+    <NavBar v-if="typeof $route.name === 'string' && !NAVBAR_BLACKLIST.includes($route.name)" ref="navbarRef" />
 
     <router-view :key="$route.fullPath" />
 
@@ -36,7 +36,17 @@
 import { Head } from '@unhead/vue/components';
 import PvToast from 'primevue/toast';
 import { slk } from 'survey-core';
-import { computed, defineAsyncComponent, nextTick, onBeforeMount, onMounted, ref, watch } from 'vue';
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onBeforeMount,
+  onMounted,
+  provide,
+  ref,
+  watch,
+  watchEffect,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
@@ -55,8 +65,10 @@ const VueQueryDevtools = defineAsyncComponent(() =>
   import('@tanstack/vue-query-devtools').then((module) => module.VueQueryDevtools),
 );
 
-const footerHeight = ref(0);
 const footerRef = ref(null);
+const footerHeight = ref(0);
+const navbarRef = ref(null);
+const navbarHeight = ref(0);
 const isAuthStoreReady = ref(false);
 const showDevtools = ref(false);
 
@@ -125,6 +137,13 @@ watch(
   { immediate: true },
 );
 
+watchEffect(
+  () => {
+    navbarHeight.value = navbarRef.value?.getNavbarHeight() ?? 0;
+  },
+  { immediate: true },
+);
+
 onBeforeMount(async () => {
   await getLanguages();
   await getTranslations();
@@ -175,4 +194,7 @@ onMounted(() => {
     };
   }
 });
+
+provide('navbarHeight', navbarHeight);
+provide('footerHeight', footerHeight);
 </script>
