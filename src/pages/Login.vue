@@ -125,7 +125,7 @@
         {{ $t('pageSignIn.areYouAResearcher') }}
       </div>
 
-      <div v-else class="uppercase font-medium text-xs text-white opacity-70">Are you not a researcher?</div>
+      <div v-else class="uppercase font-medium text-xs text-white opacity-70">Not a researcher?</div>
 
       <PvButton v-if="isParticipantMode" :class="`change-mode-btn change-mode-btn--${mode}`" @click="changeMode">
         {{ $t('pageSignIn.researcherLoginBtn') }}
@@ -186,12 +186,14 @@ import PvInputText from 'primevue/inputtext';
 import PvMessage from 'primevue/message';
 import PvPassword from 'primevue/password';
 import { useConfirm } from 'primevue/useconfirm';
-import { computed, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useToast } from 'primevue/usetoast';
+import { computed, onMounted, reactive, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import AppSpinner from '@/components/AppSpinner.vue';
 import LanguageSelector from '@/components/LanguageSelector.vue';
 import RoarModal from '@/components/modals/RoarModal.vue';
 import { APP_ROUTES } from '@/constants/routes';
+import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { isEmailValid, isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { getUserAssignments } from '@/helpers/query/assignments';
@@ -216,7 +218,9 @@ type Message = {
 const assignmentsStore = useAssignmentsStore();
 const authStore = useAuthStore();
 const confirm = useConfirm();
+const route = useRoute();
 const router = useRouter();
+const toast = useToast();
 
 const { setUserAssignments } = assignmentsStore;
 const { roarfirekit, routeToProfile, spinner, ssoProvider, userClaims } = storeToRefs(authStore);
@@ -481,6 +485,21 @@ const signInWithEmailLink = () => {
       );
     });
 };
+
+onMounted(() => {
+  if (route.query.sessionExpired) {
+    toast.add({
+      severity: TOAST_SEVERITIES.WARN,
+      summary: 'Session expired',
+      detail: 'Your session expired. Please sign in again.',
+      life: TOAST_DEFAULT_LIFE_DURATION,
+    });
+
+    const { sessionExpired: _sessionExpired, ...query } = route.query;
+
+    router.replace({ query });
+  }
+});
 </script>
 
 <style scoped lang="scss">
