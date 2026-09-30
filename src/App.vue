@@ -87,7 +87,7 @@ async function recoverFromProfileFetchFailure(error) {
   }
   authStore.$reset();
   await authStore.initFirekit();
-  await router.replace({ name: 'SignIn' });
+  await router.replace({ name: 'Login' });
 }
 
 const loadSessionTimeoutHandler = computed(() => {

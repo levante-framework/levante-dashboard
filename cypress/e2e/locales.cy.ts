@@ -13,7 +13,7 @@ const useEnvFlag: boolean = (() => {
 })();
 
 // Defaults for local dev/emulator runs
-const defaultUrl = 'http://localhost:5173/signin';
+const defaultUrl = 'http://localhost:5173/login';
 const defaultEmail = 'student@levante.test';
 const defaultPassword = 'student123';
 
@@ -82,8 +82,8 @@ locales.forEach((locale) => {
         return;
       }
       login();
-      // assert route changes away from /signin within 30s
-      cy.location('pathname', { timeout: 30000 }).should((p) => expect(p).to.not.match(/\/signin$/));
+      // assert route changes away from /login within 30s
+      cy.location('pathname', { timeout: 30000 }).should((p) => expect(p).to.not.match(/\/login$/));
     });
   });
 });
