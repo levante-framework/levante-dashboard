@@ -12,8 +12,12 @@ const captured = vi.hoisted(() => ({
   googleRedirectCalls: 0,
   resetPasswordEmails: [],
   routerPushes: [],
+  routerReplaces: [],
   confirmRequests: [],
+  toasts: [],
 }));
+
+const routeState = vi.hoisted(() => ({ query: {} }));
 
 const mobileState = vi.hoisted(() => ({ isMobile: false }));
 
@@ -61,6 +65,14 @@ vi.mock('primevue/useconfirm', () => ({
   }),
 }));
 
+vi.mock('primevue/usetoast', () => ({
+  useToast: () => ({
+    add: (options) => {
+      captured.toasts.push(options);
+    },
+  }),
+}));
+
 vi.mock('@/store/auth', () => ({
   useAuthStore: () => ({
     $subscribe: vi.fn(),
@@ -96,9 +108,13 @@ vi.mock('@/store/assignments', () => ({
 }));
 
 vi.mock('vue-router', () => ({
+  useRoute: () => routeState,
   useRouter: () => ({
     push: (arg) => {
       captured.routerPushes.push(arg);
+    },
+    replace: (arg) => {
+      captured.routerReplaces.push(arg);
     },
   }),
 }));
@@ -221,7 +237,10 @@ describe('Login.vue', () => {
     captured.googleRedirectCalls = 0;
     captured.resetPasswordEmails.length = 0;
     captured.routerPushes.length = 0;
+    captured.routerReplaces.length = 0;
     captured.confirmRequests.length = 0;
+    captured.toasts.length = 0;
+    routeState.query = {};
     emailLinkState.rejectWith = null;
     loggerErrors.length = 0;
     authRefs.spinner.value = false;
@@ -440,5 +459,19 @@ describe('Login.vue', () => {
     await nextTick();
     expect(wrapper.find('.spinner-wrapper').exists()).toBe(true);
     expect(wrapper.find('.app-spinner-stub').exists()).toBe(true);
+  });
+
+  it('shows a session expired toast and strips the flag when sessionExpired is in the query', () => {
+    routeState.query = { sessionExpired: 'true', mode: 'researcher' };
+    wrapper = mountLogin();
+    expect(captured.toasts).toHaveLength(1);
+    expect(captured.toasts[0]).toMatchObject({ severity: 'warn', summary: 'Session expired' });
+    expect(captured.routerReplaces).toEqual([{ query: { mode: 'researcher' } }]);
+  });
+
+  it('does not show a session expired toast without the query flag', () => {
+    wrapper = mountLogin();
+    expect(captured.toasts).toHaveLength(0);
+    expect(captured.routerReplaces).toHaveLength(0);
   });
 });
