@@ -55,8 +55,8 @@ describe('test core tasks from dashboard', () => {
         cy.wrap(inputs[1]).clear().type(password);
       });
 
-    // click go button
-    cy.get('button').filter('[data-pc-name=button]').click();
+    // click go button (Login.vue also renders a mode-toggle button, so target the first)
+    cy.get('button').filter('[data-pc-name=button]').first().click();
 
     // ensure we navigated away from /login (fail fast if login didn't work)
     cy.location('pathname', { timeout: 30000 }).should((p) => expect(p).to.not.match(/\/login$/));
