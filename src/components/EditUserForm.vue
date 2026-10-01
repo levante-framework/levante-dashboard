@@ -33,7 +33,12 @@
         <label class="font-bold text-xs text-color-secondary uppercase">
           Birth Date
         </label>
+        <div v-if="isLoading" class="text-md text-gray-500">Loading…</div>
+        <div v-else-if="isError" class="text-md text-red-500">
+          Failed to load birth date.
+        </div>
         <PvDatePicker
+          v-else
           v-model="userChildBirthDate"
           view="month"
           dateFormat="mm/yy"
