@@ -69,7 +69,7 @@ const title = computed(() =>
 const { data, isLoading, isError, error } = useSurveyFormDefinitionQuery(formType, orgId);
 
 const savedResponse = computed(() => {
-  return data.value?.savedResponses[0] as
+  return data.value?.savedResponses?.[0] as
     | { responses?: Record<string, unknown>; status?: 'draft' | 'complete' }
     | undefined;
 });

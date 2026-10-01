@@ -43,7 +43,7 @@ const FIELD = {
   questionText: 'Recruitment notes',
 };
 
-function mockQuery(savedResponses: unknown[]) {
+function mockQuery(savedResponses?: unknown[]) {
   vi.mocked(useSurveyFormDefinitionQuery).mockReturnValue({
     data: ref({
       formId: 'siteInformation',
@@ -56,7 +56,7 @@ function mockQuery(savedResponses: unknown[]) {
       fullFields: [FIELD],
       orgType: 'site',
       orgId: 'district-1',
-      savedResponses,
+      ...(savedResponses === undefined ? {} : { savedResponses }),
     }),
     isLoading: ref(false),
     isError: ref(false),
@@ -107,6 +107,14 @@ describe('SurveyFormPreview', () => {
 
   it('does not prefill when there are no saved responses', () => {
     mockQuery([]);
+
+    const wrapper = mountPage().wrapper;
+
+    expect(wrapper.getComponent(FormRenderer).props('initialResponses')).toBeUndefined();
+  });
+
+  it('does not throw when savedResponses is missing', () => {
+    mockQuery();
 
     const wrapper = mountPage().wrapper;
 
