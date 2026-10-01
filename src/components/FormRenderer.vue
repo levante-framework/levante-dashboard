@@ -197,6 +197,7 @@ const props = defineProps<{
   sectionInfo?: FormSectionInfo[];
   isSaving?: boolean;
   isComplete?: boolean;
+  initialResponses?: Record<string, unknown>;
   saveDraft: (values: Record<string, unknown>, options?: { silent?: boolean }) => Promise<boolean>;
 }>();
 
@@ -266,12 +267,16 @@ function onNumberBlur(itemId: string) {
 const model = reactive<Record<string, unknown>>({});
 
 watch(
-  () => props.fields,
-  (fields) => {
+  () => [props.fields, props.initialResponses] as const,
+  ([fields, initialResponses]) => {
     for (const field of fields) {
-      if (!(field.variableName in model)) {
-        model[field.variableName] = field.kind === 'multi-select' ? [] : null;
+      if (field.variableName in model) continue;
+      const saved = initialResponses?.[field.variableName];
+      if (saved !== undefined) {
+        model[field.variableName] = saved;
+        continue;
       }
+      model[field.variableName] = field.kind === 'multi-select' ? [] : null;
     }
   },
   { immediate: true },
