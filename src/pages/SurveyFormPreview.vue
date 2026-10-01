@@ -14,7 +14,7 @@
       </h1>
     </header>
 
-    <PvMessage v-if="isError" severity="error" :closable="false">
+    <PvMessage v-if="isError && !data" severity="error" :closable="false">
       {{ (error as Error)?.message ?? 'Failed to load survey definition.' }}
     </PvMessage>
 

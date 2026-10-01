@@ -43,7 +43,7 @@ const FIELD = {
   questionText: 'Recruitment notes',
 };
 
-function mockQuery(savedResponses?: unknown[]) {
+function mockQuery(savedResponses?: unknown[], isError = false) {
   vi.mocked(useSurveyFormDefinitionQuery).mockReturnValue({
     data: ref({
       formId: 'siteInformation',
@@ -59,8 +59,8 @@ function mockQuery(savedResponses?: unknown[]) {
       ...(savedResponses === undefined ? {} : { savedResponses }),
     }),
     isLoading: ref(false),
-    isError: ref(false),
-    error: ref(null),
+    isError: ref(isError),
+    error: ref(isError ? new Error('Failed to load survey definition.') : null),
   } as unknown as ReturnType<typeof useSurveyFormDefinitionQuery>);
 }
 
@@ -119,6 +119,15 @@ describe('SurveyFormPreview', () => {
     const wrapper = mountPage().wrapper;
 
     expect(wrapper.getComponent(FormRenderer).props('initialResponses')).toBeUndefined();
+  });
+
+  it('keeps the form visible when a refetch errors and cached data remains', () => {
+    mockQuery([{ formVersion: 'v1', status: 'draft', responses: { siteRecruitment: 'email' } }], true);
+
+    const wrapper = mountPage().wrapper;
+
+    expect(wrapper.getComponent(FormRenderer).exists()).toBe(true);
+    expect(wrapper.text()).not.toContain('Failed to load survey definition.');
   });
 
   it('saves as complete when the stored form is already complete', async () => {
