@@ -139,6 +139,7 @@
       <PvDrawer
         v-model:visible="isOpenEditUserDrawer"
         :dismissable="false"
+        :closeOnEscape="!isSubmitting"
         class="edit-user-drawer"
         header="Drawer Title"
         position="right"
@@ -156,6 +157,7 @@
               class="p-0 py-2 text-color-secondary hover:text-primary"
               severity="secondary"
               variant="link"
+              :disabled="isSubmitting"
               @click="isOpenEditUserDrawer = false"
             >
               <i class="pi pi-times"></i>
@@ -184,6 +186,7 @@
               tabindex="0"
               class="text-color-secondary hover:text-primary"
               variant="link"
+              :disabled="isSubmitting"
               @click="onEditModalClosed"
             >
               <p class="m-0">
