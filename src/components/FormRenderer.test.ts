@@ -57,10 +57,14 @@ function buttonByLabel(wrapper: VueWrapper, label: string) {
   return match;
 }
 
-async function mountForm(saveDraft = vi.fn().mockResolvedValue(true), initialResponses?: Record<string, unknown>) {
+async function mountForm(
+  saveDraft = vi.fn().mockResolvedValue(true),
+  initialResponses?: Record<string, unknown>,
+  extraFields: InformationFormField[] = [],
+) {
   const wrapper = mount(FormRenderer, {
     props: {
-      fields: FIELDS,
+      fields: [...FIELDS, ...extraFields],
       generalPrompt: 'Please complete.',
       sectionInfo: SECTION_INFO,
       saveDraft,
@@ -196,6 +200,38 @@ describe('FormRenderer', () => {
       sampleApproach: ['convenience'],
       sampleApproachOther: null,
       siteRecruitment: 'email',
+    });
+  });
+
+  it('sends null when a saved optional answer is cleared', async () => {
+    const optionalNotes: InformationFormField = {
+      itemId: 'site_02b',
+      variableName: 'siteNotes',
+      kind: 'text',
+      required: false,
+      sectionId: 'recruitment',
+      questionText: 'Optional notes',
+    };
+    const { wrapper, saveDraft } = await mountForm(
+      undefined,
+      {
+        sampleApproach: ['convenience'],
+        siteRecruitment: 'email',
+        siteNotes: 'old note',
+      },
+      [optionalNotes],
+    );
+    await startRecruitment(wrapper);
+
+    await wrapper.get('#site_02b').setValue('');
+    await buttonByLabel(wrapper, 'Save').trigger('click');
+    await flushPromises();
+
+    expect(saveDraft.mock.calls.at(-1)?.[0]).toEqual({
+      sampleApproach: ['convenience'],
+      sampleApproachOther: null,
+      siteRecruitment: 'email',
+      siteNotes: null,
     });
   });
 

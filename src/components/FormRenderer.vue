@@ -395,11 +395,7 @@ function collectValues(fields: InformationFormField[]): Record<string, unknown> 
   const values: Record<string, unknown> = {};
   for (const field of fields) {
     const value = model[field.variableName];
-    if (isEmptyValue(value)) {
-      if (field.displayLogic) values[field.variableName] = null;
-      continue;
-    }
-    values[field.variableName] = value;
+    values[field.variableName] = isEmptyValue(value) ? null : value;
   }
   return values;
 }
