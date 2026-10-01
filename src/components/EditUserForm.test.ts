@@ -253,6 +253,16 @@ describe('EditUserForm', () => {
       expect(value.getFullYear()).toBe(2016);
       expect(value.getMonth()).toBe(8);
     });
+
+    it('keeps the user edit when birth data arrives from the overview afterwards', async () => {
+      const wrapper = mountForm();
+      await setBirthDate(wrapper, new Date(2019, 2, 1));
+      await wrapper.setProps({ birthMonth: 9, birthYear: 2016 });
+      const value = wrapper.findComponent(PvDatePicker).props('modelValue') as Date;
+      expect(value.getFullYear()).toBe(2019);
+      expect(value.getMonth()).toBe(2);
+      expect(wrapper.emitted('change')?.at(-1)).toEqual([{ uid: 'user-1', birthMonth: 3, birthYear: 2019 }]);
+    });
   });
 
   describe('user prop changes', () => {

@@ -45,6 +45,7 @@
           placeholder="Select birth month/year"
           showIcon
           size="small"
+          @update:model-value="birthDateTouched = true"
         />
       </div>
 
@@ -216,6 +217,9 @@ const router = useRouter();
 const archived = ref(props.user.archived);
 const disabled = ref(props.user.disabled);
 const userChildBirthDate = ref<Date | null>(toBirthDate(props.birthMonth, props.birthYear));
+// Birth data arrives asynchronously from the overview, so track whether the user
+// has edited the picker to avoid a late-arriving reseed clobbering their change.
+const birthDateTouched = ref(false);
 const assignmentStatusOptions = ref([
   { label: 'All', value: 'all', },
   { label: 'Closed', value: 'closed', },
@@ -265,8 +269,10 @@ watch(
 );
 
 // Birth month/year arrive from the user overview, which loads after the modal
-// opens, so reseed the picker whenever they change.
+// opens, so seed the picker whenever they change. Skip once the user has edited
+// the field so a late-arriving overview response can't overwrite their change.
 watch([() => props.birthMonth, () => props.birthYear], ([month, year]) => {
+  if (birthDateTouched.value) return;
   userChildBirthDate.value = toBirthDate(month, year);
 });
 
