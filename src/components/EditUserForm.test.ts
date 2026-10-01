@@ -254,6 +254,24 @@ describe('EditUserForm', () => {
       expect(value.getMonth()).toBe(8);
     });
 
+    it('emits only birthYear when the month is unchanged', async () => {
+      const wrapper = mount(EditUserForm, {
+        props: { user: DEFAULT_USER, birthMonth: 6, birthYear: 2018 },
+        global: globalMountOptions,
+      });
+      await setBirthDate(wrapper, new Date(2020, 5, 1)); // same month (June), new year
+      expect(wrapper.emitted('change')?.at(-1)).toEqual([{ uid: 'user-1', birthYear: 2020 }]);
+    });
+
+    it('emits only birthMonth when the year is unchanged', async () => {
+      const wrapper = mount(EditUserForm, {
+        props: { user: DEFAULT_USER, birthMonth: 6, birthYear: 2018 },
+        global: globalMountOptions,
+      });
+      await setBirthDate(wrapper, new Date(2018, 8, 1)); // same year, new month (September)
+      expect(wrapper.emitted('change')?.at(-1)).toEqual([{ uid: 'user-1', birthMonth: 9 }]);
+    });
+
     it('keeps the user edit when birth data arrives from the overview afterwards', async () => {
       const wrapper = mountForm();
       await setBirthDate(wrapper, new Date(2019, 2, 1));
