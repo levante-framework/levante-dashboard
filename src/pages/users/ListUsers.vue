@@ -195,7 +195,7 @@
             </PvButton>
             <PvButton
               tabindex="0"
-              :disabled="!isUserDirty"
+              :disabled="!isUserDirty || isSubmitting"
               :label="isSubmitting ? 'Saving...' : 'Save'"
               :loading="isSubmitting"
               @click="submitUpdateUsersInfo"
@@ -512,7 +512,9 @@ const onEditModalClosed = () => {
 };
 
 const submitUpdateUsersInfo = async () => {
-  if (!pendingUserUpdate.value) return;
+  // Guard against re-entrancy: a rapid double-click can fire a second call
+  // before the disabled binding re-renders, which would submit (and toast) twice.
+  if (isSubmitting.value || !pendingUserUpdate.value) return;
 
   const { uid } = pendingUserUpdate.value;
 
