@@ -57,13 +57,14 @@ function buttonByLabel(wrapper: VueWrapper, label: string) {
   return match;
 }
 
-async function mountForm(saveDraft = vi.fn().mockResolvedValue(true)) {
+async function mountForm(saveDraft = vi.fn().mockResolvedValue(true), initialResponses?: Record<string, unknown>) {
   const wrapper = mount(FormRenderer, {
     props: {
       fields: FIELDS,
       generalPrompt: 'Please complete.',
       sectionInfo: SECTION_INFO,
       saveDraft,
+      initialResponses,
     },
     global: {
       plugins: [PrimeVue],
@@ -224,5 +225,43 @@ describe('FormRenderer', () => {
     expect(example.html()).toContain('<ul>');
     expect(example.html()).toContain('<li>');
     expect(example.html()).not.toMatch(/<p>Family-based remote assessment\.<\/p>/);
+  });
+
+  it('fills saved answers and shows Other text when Other was saved', async () => {
+    const { wrapper } = await mountForm(undefined, {
+      sampleApproach: ['other'],
+      sampleApproachOther: 'word of mouth',
+      siteRecruitment: 'email',
+    });
+    await startRecruitment(wrapper);
+
+    expect(wrapper.findComponent({ name: 'MultiSelect' }).props('modelValue')).toEqual(['other']);
+    expect(wrapper.text()).toContain('Please specify');
+    expect((wrapper.get('#site_01b').element as HTMLTextAreaElement).value).toBe('word of mouth');
+    expect((wrapper.get('#site_02').element as HTMLTextAreaElement).value).toBe('email');
+  });
+
+  it('hides Other text when the saved approach is not Other', async () => {
+    const { wrapper } = await mountForm(undefined, {
+      sampleApproach: ['convenience'],
+      siteRecruitment: 'email',
+    });
+    await startRecruitment(wrapper);
+
+    expect(wrapper.text()).not.toContain('Please specify');
+  });
+
+  it('advances Next when required fields were saved', async () => {
+    const { wrapper } = await mountForm(undefined, {
+      sampleApproach: ['convenience'],
+      siteRecruitment: 'email',
+    });
+    await startRecruitment(wrapper);
+    await buttonByLabel(wrapper, 'Next').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Size');
+    expect(wrapper.text()).toContain('Section 2 of 2');
+    expect(wrapper.text()).not.toContain('This field is required');
   });
 });
