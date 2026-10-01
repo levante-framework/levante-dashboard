@@ -265,6 +265,10 @@ watch(
   (user) => {
     archived.value = user.archived;
     disabled.value = user.disabled;
+    // Clear the touched flag and reseed the picker so the birth state follows
+    // the new user instead of lingering from the previous one.
+    birthDateTouched.value = false;
+    userChildBirthDate.value = toBirthDate(props.birthMonth, props.birthYear);
   },
 );
 

@@ -276,5 +276,21 @@ describe('EditUserForm', () => {
       expect(wrapper.findAllComponents(PvToggleSwitch)[0]?.props('modelValue')).toBe(false);
       expect(wrapper.emitted('dirty')?.at(-1)).toEqual([false]);
     });
+
+    it('reseeds the birth picker and drops the touched edit when a different user loads', async () => {
+      const wrapper = mount(EditUserForm, {
+        props: { user: DEFAULT_USER, birthMonth: 6, birthYear: 2018 },
+        global: globalMountOptions,
+      });
+      await setBirthDate(wrapper, new Date(2019, 2, 1));
+      expect(wrapper.emitted('dirty')?.at(-1)).toEqual([true]);
+
+      await wrapper.setProps({ user: { ...DEFAULT_USER, uid: 'user-2' }, birthMonth: 9, birthYear: 2016 });
+
+      const value = wrapper.findComponent(PvDatePicker).props('modelValue') as Date;
+      expect(value.getFullYear()).toBe(2016);
+      expect(value.getMonth()).toBe(8);
+      expect(wrapper.emitted('dirty')?.at(-1)).toEqual([false]);
+    });
   });
 });
