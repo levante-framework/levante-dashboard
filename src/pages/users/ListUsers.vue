@@ -514,7 +514,13 @@ const submitUpdateUsersInfo = async () => {
   const { uid } = pendingUserUpdate.value;
 
   try {
-    await updateUsersInfo({ users: [pendingUserUpdate.value] });
+    const result = await updateUsersInfo({ users: [pendingUserUpdate.value] });
+
+    // updateUsersInfo signals per-uid failures by omitting them from the response.
+    // Until a dedicated failure field exists, treat a missing uid as a failed update.
+    const didUpdate = result.users.some((user) => user.uid === uid);
+    if (!didUpdate) throw new Error('updateUsersInfo returned no result for user');
+
     toast.add({
       severity: TOAST_SEVERITIES.SUCCESS,
       summary: 'User updated',

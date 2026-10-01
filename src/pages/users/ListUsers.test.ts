@@ -279,7 +279,7 @@ describe('ListUsers Page', () => {
     });
 
     it('sends the pending update, toasts success, and closes the modal', async () => {
-      mutateAsyncMock.mockResolvedValue({});
+      mutateAsyncMock.mockResolvedValue({ users: [{ uid: 'b' }] });
       const vm = mountListUsers();
       vm.currentEditUser = { uid: 'b', userType: 'child', archived: false, disabled: false, email: 'e' };
       vm.showEditModal = true;
@@ -292,6 +292,29 @@ describe('ListUsers Page', () => {
       expect(vm.showEditModal).toBe(false);
       expect(vm.currentEditUser).toBeNull();
       expect(vm.pendingUserUpdate).toBeNull();
+    });
+
+    it('treats a response missing the uid as a failure: logs, toasts error, keeps the modal open', async () => {
+      // updateUsersInfo signals per-uid failures by omitting them from the response.
+      mutateAsyncMock.mockResolvedValue({ users: [] });
+      const vm = mountListUsers();
+      vm.currentEditUser = { uid: 'b', userType: 'child', archived: false, disabled: false, email: 'e' };
+      vm.showEditModal = true;
+      vm.pendingUserUpdate = { uid: 'b', archived: true, disabled: false };
+
+      await vm.submitUpdateUsersInfo();
+
+      expect(logger.error).toHaveBeenCalledTimes(1);
+      const [error, context] = vi.mocked(logger.error).mock.calls[0] ?? [];
+      expect(context).toMatchObject({
+        uid: 'b',
+        tags: { component: 'ListUsers', function: 'submitUpdateUsersInfo' },
+      });
+      expect(error?.cause).toBeInstanceOf(Error);
+      expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
+      expect(toastAddMock).not.toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+      expect(vm.showEditModal).toBe(true);
+      expect(vm.pendingUserUpdate).not.toBeNull();
     });
 
     it('logs with the uid and toasts an error while keeping the modal open on failure', async () => {
