@@ -9,18 +9,13 @@ import { toRaw } from 'vue';
 import type { Router } from 'vue-router';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
+import { findSpecificSurveyResponse } from '@/helpers/surveyGameCards';
 import { logger } from '@/logger';
 import type { useAssignmentsStore } from '@/store/assignments';
 // @ts-expect-error - Will be resolved when store file is converted to TS
 import type { UseSurveyStore } from '@/store/survey';
 import { findBestMatchingLocale, i18n } from '@/translations/i18n';
-
-interface SurveyResponseDoc {
-  administrationId?: string;
-  general?: { responses: Record<string, any> };
-  specific?: { responses: Record<string, any> }[];
-  pageNo?: number;
-}
+import type { SurveyResponseDoc } from '@/types/surveyGameCards';
 
 interface RestoreSurveyDataParams {
   surveyInstance: SurveyModel;
@@ -122,16 +117,22 @@ export function restoreSurveyData({
     if (surveyResponse) {
       if (!surveyStore.isGeneralSurveyComplete && surveyResponse.general) {
         const formattedResponses = Object.fromEntries(
-          Object.entries(surveyResponse.general.responses).map(([key, value]) => [key, value.responseValue]),
+          Object.entries(surveyResponse.general.responses ?? {}).map(([key, value]) => [
+            key,
+            (value as { responseValue?: unknown })?.responseValue,
+          ]),
         );
 
         surveyInstance.data = formattedResponses;
       } else if (surveyResponse.specific) {
-        const specificIndex = surveyStore.specificSurveyRelationIndex;
+        const relationId = surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex]?.id;
+        const specificResponse = findSpecificSurveyResponse(surveyResponse, relationId);
+        if (!specificResponse) return { isRestored: false, pageNo: 0 };
+
         const formattedResponses = Object.fromEntries(
-          Object.entries(surveyResponse.specific[specificIndex].responses).map(([key, value]) => [
+          Object.entries(specificResponse.responses ?? {}).map(([key, value]) => [
             key,
-            value.responseValue,
+            (value as { responseValue?: unknown })?.responseValue,
           ]),
         );
         surveyInstance.data = formattedResponses;
