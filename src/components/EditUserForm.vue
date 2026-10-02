@@ -26,25 +26,31 @@
         <label class="font-bold text-xs text-color-secondary uppercase">
           Child Label
         </label>
-        <PvInputText
-          v-model="userChildLabel"
-          placeholder="Label"
-          size="small"
-          type="text"
-        />
+        <p class="m-0">{{ user.childLabel }}</p>
       </div>
 
       <div v-if="user.userType === 'child'" class="row">
         <label class="font-bold text-xs text-color-secondary uppercase">
-          Birth date
+          Birth Date
         </label>
+        <div v-if="isLoading" class="text-md text-gray-500">Loading…</div>
+        <div v-else-if="isError" class="text-md text-red-500">
+          Failed to load birth date.
+        </div>
         <PvDatePicker
+          v-else
           v-model="userChildBirthDate"
+          view="month"
+          dateFormat="mm/yy"
+          :minDate="BIRTH_DATE_MIN"
+          :maxDate="BIRTH_DATE_MAX"
+          :manual-input="false"
           fluid
           iconDisplay="input"
-          placeholder="Select birth date"
+          placeholder="Select birth month/year"
           showIcon
           size="small"
+          @update:model-value="birthDateTouched = true"
         />
       </div>
 
@@ -157,7 +163,13 @@ export interface EditableUser {
   childLabel?: string;
 }
 
-export type EditableUserUpdate = Pick<EditableUser, 'uid' | 'archived' | 'disabled'>;
+export interface EditableUserUpdate {
+  uid: string;
+  archived?: boolean;
+  disabled?: boolean;
+  birthMonth?: number;
+  birthYear?: number;
+}
 export type UserOverviewOrg = GetUserOverviewResult['orgs'][number];
 export type UserOverviewAssignment = GetUserOverviewResult['assignments'][number];
 </script>
@@ -169,9 +181,14 @@ import PvToggleSwitch from "primevue/toggleswitch";
 import { useConfirm } from "primevue/useconfirm";
 import { computed, ref, watch } from "vue";
 import { type RouteLocationRaw, useRouter } from "vue-router";
-import PvInputText from "primevue/inputtext";
 import PvDatePicker from "primevue/datepicker";
 import PvSelect from 'primevue/select';
+
+// +-----------+
+// | Constants |
+// +-----------+
+const BIRTH_DATE_MIN = new Date(new Date().getFullYear() - 18, 0, 1);
+const BIRTH_DATE_MAX = new Date(new Date().getFullYear() - 2, 11, 31);
 
 // +-------+
 // | Props |
@@ -181,6 +198,8 @@ const props = withDefaults(
     user: EditableUser;
     orgs?: UserOverviewOrg[];
     assignments?: UserOverviewAssignment[];
+    birthMonth?: number;
+    birthYear?: number;
     isLoading?: boolean;
     isError?: boolean;
   }>(),
@@ -202,8 +221,10 @@ const router = useRouter();
 // +----------------+
 const archived = ref(props.user.archived);
 const disabled = ref(props.user.disabled);
-const userChildLabel = ref(props.user?.childLabel);
-const userChildBirthDate = ref(new Date());
+const userChildBirthDate = ref<Date | null>(toBirthDate(props.birthMonth, props.birthYear));
+// Birth data arrives asynchronously from the overview, so track whether the user
+// has edited the picker to avoid a late-arriving reseed clobbering their change.
+const birthDateTouched = ref(false);
 const assignmentStatusOptions = ref([
   { label: 'All', value: 'all', },
   { label: 'Closed', value: 'closed', },
@@ -221,12 +242,23 @@ const filteredAssignments = computed(() => {
 // +----------+
 // | Computed |
 // +----------+
+// The birth date is only ever a month/year (see the mm/yy picker), so surface
+// those parts for both the dirty check and the emitted update.
+const childBirthMonth = computed(() =>
+  userChildBirthDate.value ? userChildBirthDate.value.getMonth() + 1 : undefined,
+);
+const childBirthYear = computed(() =>
+  userChildBirthDate.value ? userChildBirthDate.value.getFullYear() : undefined,
+);
+
 // Dirty is derived here, next to the state it depends on; the parent just
 // consumes it to enable/disable submit.
 const isDirty = computed(
   () =>
     archived.value !== props.user.archived ||
-    disabled.value !== props.user.disabled,
+    disabled.value !== props.user.disabled ||
+    childBirthMonth.value !== props.birthMonth ||
+    childBirthYear.value !== props.birthYear,
 );
 
 // +----------+
@@ -238,16 +270,30 @@ watch(
   (user) => {
     archived.value = user.archived;
     disabled.value = user.disabled;
+    // Clear the touched flag and reseed the picker so the birth state follows
+    // the new user instead of lingering from the previous one.
+    birthDateTouched.value = false;
+    userChildBirthDate.value = toBirthDate(props.birthMonth, props.birthYear);
   },
 );
 
-// Surface the edited values so the parent always holds the current update.
-watch([archived, disabled], () => {
-  emit("change", {
-    uid: props.user.uid,
-    archived: archived.value,
-    disabled: disabled.value,
-  });
+// Birth month/year arrive from the user overview, which loads after the modal
+// opens, so seed the picker whenever they change. Skip once the user has edited
+// the field so a late-arriving overview response can't overwrite their change.
+watch([() => props.birthMonth, () => props.birthYear], ([month, year]) => {
+  if (birthDateTouched.value) return;
+  userChildBirthDate.value = toBirthDate(month, year);
+});
+
+// Surface only the fields that diverge from the original so the parent submits
+// a minimal update; uid is always included to identify the user.
+watch([archived, disabled, userChildBirthDate], () => {
+  const update: EditableUserUpdate = { uid: props.user.uid };
+  if (archived.value !== props.user.archived) update.archived = archived.value;
+  if (disabled.value !== props.user.disabled) update.disabled = disabled.value;
+  if (childBirthMonth.value !== props.birthMonth) update.birthMonth = childBirthMonth.value;
+  if (childBirthYear.value !== props.birthYear) update.birthYear = childBirthYear.value;
+  emit("change", update);
 });
 
 // Surface dirty state so the parent can enable/disable submit.
@@ -256,6 +302,12 @@ watch(isDirty, (value) => emit("dirty", value), { immediate: true });
 // +---------+
 // | Methods |
 // +---------+
+// Build a Date from a 1-indexed month and year, or null when either is missing.
+function toBirthDate(month?: number, year?: number): Date | null {
+  if (month === undefined || year === undefined) return null;
+  return new Date(year, month - 1, 1);
+}
+
 function assignmentRoute(assignment: UserOverviewAssignment): RouteLocationRaw {
   return {
     name: "AdministrationProgressReport",

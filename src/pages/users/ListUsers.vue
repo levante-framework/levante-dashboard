@@ -139,6 +139,7 @@
       <PvDrawer
         v-model:visible="isOpenEditUserDrawer"
         :dismissable="false"
+        :closeOnEscape="!isSubmitting"
         class="edit-user-drawer"
         header="Drawer Title"
         position="right"
@@ -156,6 +157,7 @@
               class="p-0 py-2 text-color-secondary hover:text-primary"
               severity="secondary"
               variant="link"
+              :disabled="isSubmitting"
               @click="isOpenEditUserDrawer = false"
             >
               <i class="pi pi-times"></i>
@@ -168,6 +170,8 @@
               :user="currentEditUser"
               :orgs="userOverview?.orgs"
               :assignments="userOverview?.assignments"
+              :birth-month="userOverview?.birthMonth"
+              :birth-year="userOverview?.birthYear"
               :is-loading="isOverviewLoading"
               :is-error="isOverviewError"
               @change="pendingUserUpdate = $event"
@@ -182,6 +186,7 @@
               tabindex="0"
               class="text-color-secondary hover:text-primary"
               variant="link"
+              :disabled="isSubmitting"
               @click="onEditModalClosed"
             >
               <p class="m-0">
@@ -190,7 +195,7 @@
             </PvButton>
             <PvButton
               tabindex="0"
-              :disabled="!isUserDirty"
+              :disabled="!isUserDirty || isSubmitting"
               :label="isSubmitting ? 'Saving...' : 'Save'"
               :loading="isSubmitting"
               @click="submitUpdateUsersInfo"
@@ -507,12 +512,20 @@ const onEditModalClosed = () => {
 };
 
 const submitUpdateUsersInfo = async () => {
-  if (!pendingUserUpdate.value) return;
+  // Guard against re-entrancy: a rapid double-click can fire a second call
+  // before the disabled binding re-renders, which would submit (and toast) twice.
+  if (isSubmitting.value || !pendingUserUpdate.value) return;
 
   const { uid } = pendingUserUpdate.value;
 
   try {
-    await updateUsersInfo({ users: [pendingUserUpdate.value] });
+    const result = await updateUsersInfo({ users: [pendingUserUpdate.value] });
+
+    // updateUsersInfo signals per-uid failures by omitting them from the response.
+    // Until a dedicated failure field exists, treat a missing uid as a failed update.
+    const didUpdate = result.users.some((user) => user.uid === uid);
+    if (!didUpdate) throw new Error('updateUsersInfo returned no result for user');
+
     toast.add({
       severity: TOAST_SEVERITIES.SUCCESS,
       summary: 'User updated',
