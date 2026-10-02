@@ -1,6 +1,6 @@
 <template>
   <main class="container main">
-    <PvToast />
+    <PvToast group="manage-tasks" />
     <section class="main-body">
       <div class="flex flex-column mb-5">
         <div class="flex align-items-center flex-wrap gap-3 mb-2">

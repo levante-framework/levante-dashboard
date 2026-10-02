@@ -116,11 +116,10 @@
               <div class="flex flex-wrap align-items-center gap-3">
                 <div class="flex align-items-center gap-2">
                   <PvToggleSwitch
-                    :model-value="entry.variant.registered"
-                    :disabled="updatingVariantId === entry.variant.id"
+                    :model-value="isRegistered(entry.variant)"
                     @update:model-value="(value) => toggleRegistered(entry.variant, value)"
                   />
-                  <span class="text-sm">{{ entry.variant.registered ? 'Registered' : 'Unregistered' }}</span>
+                  <span class="text-sm">Registered</span>
                 </div>
                 <PvButton
                   v-if="entry.isLatest"
@@ -224,6 +223,7 @@ const createSourceVariant = ref<SerializedTaskVariant | null>(null);
 const historyDialogVisible = ref(false);
 const historyVariantId = ref<string | null>(null);
 const updatingVariantId = ref<string | null>(null);
+const optimisticRegistered = ref<Record<string, boolean>>({});
 const paramFilters = ref<VariantParamFilterClause[]>([]);
 const registeredFilter = ref<RegisteredFilter>('all');
 const registeredFilterOptions = [
@@ -263,7 +263,7 @@ interface TimelineEntry {
 const filteredVariants = computed(() => {
   const byParams = filterVariantsByParamQuery(variants.value ?? [], paramFilters.value);
   if (registeredFilter.value !== 'registered') return byParams;
-  return byParams.filter((variant) => variant.registered);
+  return byParams.filter((variant) => isRegistered(variant));
 });
 const hasActiveFilters = computed(
   () => hasCompleteParamFilters(paramFilters.value) || registeredFilter.value === 'registered',
@@ -292,7 +292,26 @@ const timelineEntries = computed((): TimelineEntry[] => {
 watch(selectedTaskId, () => {
   paramFilters.value = [];
   registeredFilter.value = 'all';
+  optimisticRegistered.value = {};
 });
+
+watch(variants, (list) => {
+  if (!list) return;
+  const next = { ...optimisticRegistered.value };
+  let changed = false;
+  for (const variant of list) {
+    if (next[variant.id] === variant.registered) {
+      delete next[variant.id];
+      changed = true;
+    }
+  }
+  if (changed) optimisticRegistered.value = next;
+});
+
+function isRegistered(variant: SerializedTaskVariant): boolean {
+  const override = optimisticRegistered.value[variant.id];
+  return override === undefined ? variant.registered : override;
+}
 
 function openCreate(source: SerializedTaskVariant | null = null): void {
   createSourceVariant.value = source;
@@ -305,7 +324,9 @@ function openHistory(variant: SerializedTaskVariant): void {
 }
 
 async function toggleRegistered(variant: SerializedTaskVariant, registered: boolean): Promise<void> {
-  if (registered === variant.registered) return;
+  if (registered === isRegistered(variant) || updatingVariantId.value === variant.id) return;
+  const previous = isRegistered(variant);
+  optimisticRegistered.value = { ...optimisticRegistered.value, [variant.id]: registered };
   updatingVariantId.value = variant.id;
   try {
     await updateVariant({
@@ -314,13 +335,16 @@ async function toggleRegistered(variant: SerializedTaskVariant, registered: bool
       registered,
     });
     toast.add({
+      group: 'manage-tasks',
       severity: 'success',
       summary: registered ? 'Variant registered' : 'Variant deregistered',
       detail: variant.id,
       life: 2500,
     });
   } catch (error) {
+    optimisticRegistered.value = { ...optimisticRegistered.value, [variant.id]: previous };
     toast.add({
+      group: 'manage-tasks',
       severity: 'error',
       summary: 'Update failed',
       detail: getCallableErrorMessage(error, 'Unable to update registration.'),

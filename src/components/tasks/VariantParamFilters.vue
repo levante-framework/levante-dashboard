@@ -9,7 +9,7 @@
         </p>
       </div>
       <div class="flex flex-wrap gap-2">
-        <PvButton label="Add condition" icon="pi pi-plus" size="small" severity="secondary" @click="addClause" />
+        <PvButton label="Add condition" icon="pi pi-plus" size="small" @click="addClause" />
         <PvButton
           label="Clear"
           icon="pi pi-times"
