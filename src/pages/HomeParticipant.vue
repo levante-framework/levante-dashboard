@@ -122,7 +122,9 @@ import {
   getSurveyTheme,
   setupSurveyMarkdownConverter,
 } from '@/helpers/survey';
+import { findSpecificSurveyResponse } from '@/helpers/surveyGameCards';
 import { bootstrapSurveyInstance, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
+import { GENERIC_TEACHER_CLASSROOM_ID, getTeacherClassroomSurveyIds } from '@/helpers/teacherSurveyRelations';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
@@ -505,9 +507,8 @@ watch(
     );
     let shouldInitializeSurvey = true;
 
-    // Calculate number of specific surveys for teachers/parents
-    const numOfSpecificSurveys =
-      userType.value === 'parent' ? userData.value?.childIds?.length : userData.value?.classes?.current?.length;
+    const relationIds =
+      userType.value === 'parent' ? (userData.value?.childIds ?? []) : getTeacherClassroomSurveyIds(userData.value);
 
     if (surveyResponseDoc) {
       if (userType.value === 'student') {
@@ -519,30 +520,15 @@ watch(
       } else {
         surveyStore.setIsGeneralSurveyComplete(surveyResponseDoc.general.isComplete);
 
-        if (surveyResponseDoc.specific && surveyResponseDoc.specific.length > 0) {
-          if (
-            surveyResponseDoc.specific.length === numOfSpecificSurveys &&
-            surveyResponseDoc.specific.every((relation) => relation.isComplete)
-          ) {
-            surveyStore.setIsSpecificSurveyComplete(true);
-            shouldInitializeSurvey = false;
-          } else {
-            const incompleteIndex = surveyResponseDoc.specific.findIndex((relation) => !relation.isComplete);
-            if (incompleteIndex > -1) {
-              surveyStore.setSpecificSurveyRelationIndex(incompleteIndex);
-            } else {
-              surveyStore.setSpecificSurveyRelationIndex(surveyResponseDoc.specific.length);
-            }
-          }
-        }
+        const incompleteIndex = relationIds.findIndex(
+          (relationId) => !findSpecificSurveyResponse(surveyResponseDoc, relationId)?.isComplete,
+        );
 
-        // Check if both general and specific surveys are complete
-        if (
-          surveyResponseDoc.general.isComplete &&
-          surveyResponseDoc.specific?.length === numOfSpecificSurveys &&
-          surveyResponseDoc.specific?.every((relation) => relation.isComplete)
-        ) {
-          shouldInitializeSurvey = false;
+        if (incompleteIndex === -1) {
+          if (relationIds.length > 0) surveyStore.setIsSpecificSurveyComplete(true);
+          if (surveyResponseDoc.general.isComplete) shouldInitializeSurvey = false;
+        } else {
+          surveyStore.setSpecificSurveyRelationIndex(incompleteIndex);
         }
       }
     }
@@ -560,12 +546,17 @@ watch(
             docId: childId,
             select: ['birthMonth', 'birthYear', 'childLabelIndex'],
           }));
-        } else if (userType.value === 'teacher' && userData.value.classes?.current) {
-          fetchConfig = userData.value.classes.current.map((classId) => ({
-            collection: 'classes',
-            docId: classId,
-            select: ['name'],
-          }));
+        } else if (userType.value === 'teacher') {
+          const classroomIds = getTeacherClassroomSurveyIds(userData.value);
+          if (classroomIds.length === 1 && classroomIds[0] === GENERIC_TEACHER_CLASSROOM_ID) {
+            surveyStore.setSpecificSurveyRelationData([{ id: GENERIC_TEACHER_CLASSROOM_ID }]);
+          } else {
+            fetchConfig = classroomIds.map((classId) => ({
+              collection: 'classes',
+              docId: classId,
+              select: ['name'],
+            }));
+          }
         }
 
         if (fetchConfig.length > 0) {
