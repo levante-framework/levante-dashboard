@@ -4,7 +4,7 @@
   </div>
 
   <div v-if="isParticipantMode" class="language-selector-wrapper">
-    <i class="pi pi-language text-white"></i>
+    <i aria-hidden="true" class="pi pi-language text-white"></i>
     <LanguageSelector />
   </div>
 

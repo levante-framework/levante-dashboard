@@ -12,7 +12,7 @@
   >
     <template #option="slotProps">
       <div class="flex gap-2 w-full">
-        <span :class="`text-sm fi fi-${slotProps.option.flag}`" />
+        <span aria-hidden="true" :class="`text-sm fi fi-${slotProps.option.flag}`" />
 
         <PvTag
           v-if="slotProps.option.testing"
@@ -27,7 +27,7 @@
 
     <template #value="slotProps">
       <div v-if="selectedLanguage(slotProps.value)" class="flex align-items-center gap-2">
-        <span :class="`text-sm fi fi-${selectedLanguage(slotProps.value)?.flag}`" />
+        <span aria-hidden="true" :class="`text-sm fi fi-${selectedLanguage(slotProps.value)?.flag}`" />
         <span class="text-sm">{{ selectedLanguage(slotProps.value)?.name }}</span>
       </div>
 
