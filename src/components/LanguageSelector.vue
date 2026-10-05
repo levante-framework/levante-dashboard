@@ -26,7 +26,7 @@
     </template>
 
     <template #value="slotProps">
-      <div v-if="slotProps.value" class="flex align-items-center gap-2">
+      <div v-if="selectedLanguage(slotProps.value)" class="flex align-items-center gap-2">
         <span :class="`text-sm fi fi-${selectedLanguage(slotProps.value)?.flag}`" />
         <span class="text-sm">{{ selectedLanguage(slotProps.value)?.name }}</span>
       </div>
@@ -43,7 +43,7 @@ import { computed } from 'vue';
 import { isLevante } from '@/constants';
 import { getParsedLocale } from '@/helpers/survey';
 import { useSurveyStore } from '@/store/survey';
-import { getTranslations, type LanguageOption, languageOptions } from '@/translations/i18n';
+import { findBestMatchingLocale, getTranslations, type LanguageOption, languageOptions } from '@/translations/i18n';
 import 'flag-icons/css/flag-icons.min.css';
 
 interface LanguageChangeEvent {
@@ -66,7 +66,8 @@ const languageDropdownOptions = computed(() => {
 });
 
 const selectedLanguage = (value: string) => {
-  return languageDropdownOptions.value.find((option) => option.value === value);
+  const matchedLocale = findBestMatchingLocale(value);
+  return languageDropdownOptions.value.find((option) => option.value === matchedLocale);
 };
 
 async function onChangeLanguage(event: LanguageChangeEvent): Promise<void> {
