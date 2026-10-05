@@ -57,6 +57,10 @@ const languageDropdownOptions = computed(() => {
     const [language, region] = key.split('-');
 
     return {
+      // flag-icons uses ISO 3166-1 alpha-2 country codes. Use the locale's region when present
+      // (e.g. en-US -> us); for language-only keys we fall back to the language code, which only
+      // renders a flag when it coincides with a country code (e.g. de, nl). Other language-only
+      // keys (e.g. en) won't match a flag and will render blank.
       flag: (region ?? language)?.toLowerCase(),
       name: options.languageMenu,
       testing: options.testing,
