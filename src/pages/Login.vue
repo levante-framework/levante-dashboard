@@ -4,6 +4,7 @@
   </div>
 
   <div v-if="isParticipantMode" class="language-selector-wrapper">
+    <i class="pi pi-language text-white"></i>
     <LanguageSelector />
   </div>
 
@@ -519,7 +520,9 @@ onMounted(() => {
 }
 
 .language-selector-wrapper {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   position: absolute;
   top: 1rem;
   right: 1rem;
