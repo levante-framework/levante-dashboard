@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { reactive, ref } from 'vue';
+import { logger } from '@/logger';
 import TaskSRE from '../tasks/TaskSRE.vue';
 
 const startAssessment = vi.fn().mockResolvedValue({
@@ -122,6 +123,10 @@ describe('TaskSRE.vue', () => {
       const wrapper = await mountTaskSRE();
 
       expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'sre', expect.any(String));
+      expect(logger.capture).toHaveBeenCalledWith('Task Launched', {
+        adminId: 'assignment-1',
+        taskId: 'sre',
+      });
       wrapper.unmount();
     });
 
@@ -136,6 +141,10 @@ describe('TaskSRE.vue', () => {
       await flushPromises();
 
       expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'sre', expect.any(String));
+      expect(logger.capture).toHaveBeenCalledWith('Task Launched', {
+        adminId: 'assignment-1',
+        taskId: 'sre',
+      });
       wrapper.unmount();
     });
   });
