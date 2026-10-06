@@ -115,7 +115,7 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
-    path: '/login',
+    path: APP_ROUTES.LOGIN,
     name: 'Login',
     component: () => import('@/pages/Login.vue'),
     meta: {
@@ -388,9 +388,9 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
     return next({ name: 'Home' });
   }
 
-  // Check if user is signed in. If not, go to signin
+  // Check if user is signed in. If not, go to login
   if (!to.path.includes('__/auth/handler') && !isAuthenticated() && !allowedUnauthenticatedRoutes.includes(to.name)) {
-    return next({ name: 'SignIn' });
+    return next({ name: 'Login' });
   }
 
   // @TODO

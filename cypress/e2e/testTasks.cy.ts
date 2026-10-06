@@ -1,7 +1,7 @@
 import 'cypress-real-events';
 
 // Force use of known working credentials for now
-const dashboardUrl: string = 'http://localhost:5173/signin';
+const dashboardUrl: string = 'http://localhost:5173/login';
 const username: string = 'quqa2y1jss@levante.com';
 const password: string = 'xbqamkqc7z';
 
@@ -55,11 +55,11 @@ describe('test core tasks from dashboard', () => {
         cy.wrap(inputs[1]).clear().type(password);
       });
 
-    // click go button
-    cy.get('button').filter('[data-pc-name=button]').click();
+    // click go button (Login.vue also renders a mode-toggle button, so target the first)
+    cy.get('button').filter('[data-pc-name=button]').first().click();
 
-    // ensure we navigated away from /signin (fail fast if login didn't work)
-    cy.location('pathname', { timeout: 30000 }).should((p) => expect(p).to.not.match(/\/signin$/));
+    // ensure we navigated away from /login (fail fast if login didn't work)
+    cy.location('pathname', { timeout: 30000 }).should((p) => expect(p).to.not.match(/\/login$/));
 
     // check that each task loads
     cy.get('[data-pc-section=tablist]', { timeout: 240000 })

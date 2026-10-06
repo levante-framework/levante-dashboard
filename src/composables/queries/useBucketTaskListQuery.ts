@@ -7,7 +7,7 @@ export const TASK_DISPLAY_NAMES: { [key: string]: string } = {
   'egma-math': 'Math',
   'hearts-and-flowers': 'Hearts and Flowers',
   'hostile-attribution': 'Hostile Attribution',
-  'location-selection': 'Location Selection',
+  'location-selection': 'Locate Me',
   'matrix-reasoning': 'Pattern Matching',
   'memory-game': 'Memory Game',
   'mental-rotation': 'Mental Rotation',

@@ -101,7 +101,7 @@ E2E tests simulate real user interactions and test complete workflows.
   - Navigation between tasks
 - **Environment Variables**:
   - `E2E_USE_ENV`: Flag to use environment credentials
-  - `E2E_BASE_URL`: Test URL (default: http://localhost:5173/signin)
+  - `E2E_BASE_URL`: Test URL (default: http://localhost:5173/login)
   - `E2E_TEST_EMAIL`: Test user email
   - `E2E_TEST_PASSWORD`: Test user password
 
@@ -170,7 +170,7 @@ The dashboard includes comprehensive translation testing:
   e2e: {
     excludeSpecPattern: ['**/locales*.cy.ts'], // Excluded by default
     env: {
-      E2E_BASE_URL: 'http://localhost:5173/signin',
+      E2E_BASE_URL: 'http://localhost:5173/login',
       E2E_TEST_EMAIL: process.env.E2E_TEST_EMAIL,
       E2E_TEST_PASSWORD: process.env.E2E_TEST_PASSWORD,
       E2E_SKIP_LOGIN: process.env.E2E_SKIP_LOGIN,
@@ -227,7 +227,7 @@ npx cypress run --spec "cypress/e2e/testTasks.cy.ts"
 
 ```bash
 # Locale testing with emulator environment
-E2E_USE_ENV=TRUE E2E_BASE_URL=http://localhost:5173/signin \
+E2E_USE_ENV=TRUE E2E_BASE_URL=http://localhost:5173/login \
 E2E_TEST_EMAIL=student@levante.test E2E_TEST_PASSWORD=student123 \
 npx cypress run --spec cypress/e2e/locales-emulator.cy.ts
 
@@ -269,7 +269,7 @@ describe('Component', () => {
 // Example: Cypress test
 describe('Feature Test', () => {
   beforeEach(() => {
-    cy.visit('/signin');
+    cy.visit('/login');
     // Setup steps
   });
 

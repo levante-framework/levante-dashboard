@@ -6,7 +6,6 @@ export const ASSIGNMENT_STATUSES = {
   UPCOMING: 'upcoming',
 };
 
-// @TODO: Remove Login after replacing the login page
 export const NAVBAR_BLACKLIST = [
   'Login',
   'Maintenance',

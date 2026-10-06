@@ -138,7 +138,7 @@
               animation: 100,
             }"
             :sort="true"
-            class="w-full h-full overflow-auto"
+            class="w-full h-full overflow-auto pt-3 pr-3"
             @add="handleCardAdd"
           >
             <transition-group>
