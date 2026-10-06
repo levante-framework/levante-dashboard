@@ -14,7 +14,7 @@
       </h1>
     </header>
 
-    <PvMessage v-if="isError" severity="error" :closable="false">
+    <PvMessage v-if="isError && !data" severity="error" :closable="false">
       {{ (error as Error)?.message ?? 'Failed to load survey definition.' }}
     </PvMessage>
 
@@ -27,6 +27,7 @@
         :section-info="data.sectionInfo"
         :is-saving="isSaving"
         :is-complete="isComplete"
+        :initial-responses="initialResponses"
         :save-draft="onSave"
         @submit="onSubmit"
         @close="onClose"
@@ -36,6 +37,7 @@
 </template>
 
 <script setup lang="ts">
+import { useQueryClient } from '@tanstack/vue-query';
 import PvMessage from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
@@ -43,11 +45,13 @@ import { useRoute, useRouter } from 'vue-router';
 import FormRenderer from '@/components/FormRenderer.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { type SurveyFormType, useSurveyFormDefinitionQuery } from '@/composables/queries/useSurveyFormDefinitionQuery';
+import { SURVEY_FORM_DEFINITION_QUERY_KEY } from '@/constants/queryKeys';
 import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsRepository';
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const queryClient = useQueryClient();
 
 const formType = computed<SurveyFormType>(() =>
   (route.params.formType as SurveyFormType) === 'site' ? 'site' : 'school',
@@ -64,6 +68,14 @@ const title = computed(() =>
 
 const { data, isLoading, isError, error } = useSurveyFormDefinitionQuery(formType, orgId);
 
+const savedResponse = computed(() => {
+  return data.value?.savedResponses?.[0] as
+    | { responses?: Record<string, unknown>; status?: 'draft' | 'complete' }
+    | undefined;
+});
+
+const initialResponses = computed(() => savedResponse.value?.responses);
+
 const versionTooltip = computed(() => {
   if (!data.value) return '';
   const { formId, versionNumber, versionId, fullFields } = data.value;
@@ -72,6 +84,7 @@ const versionTooltip = computed(() => {
 
 const isSaving = ref(false);
 const isComplete = ref(false);
+const persistedStatus = ref<'draft' | 'complete'>();
 
 async function persist(
   responses: Record<string, unknown>,
@@ -88,7 +101,11 @@ async function persist(
       responses,
       status,
     });
-    if (options?.silent || status === 'complete') return true;
+    persistedStatus.value = status;
+    await queryClient.invalidateQueries({
+      queryKey: [SURVEY_FORM_DEFINITION_QUERY_KEY, formType.value, orgId.value],
+    });
+    if (options?.silent) return true;
     toast.add({
       severity: 'success',
       summary: 'Saved',
@@ -110,11 +127,13 @@ async function persist(
 }
 
 function onSave(values: Record<string, unknown>, options?: { silent?: boolean }) {
-  return persist(values, 'draft', options);
+  const status =
+    persistedStatus.value === 'complete' || savedResponse.value?.status === 'complete' ? 'complete' : 'draft';
+  return persist(values, status, options);
 }
 
 async function onSubmit(values: Record<string, unknown>) {
-  isComplete.value = await persist(values, 'complete');
+  isComplete.value = await persist(values, 'complete', { silent: true });
 }
 
 function onClose() {
