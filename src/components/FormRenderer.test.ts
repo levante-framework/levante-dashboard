@@ -57,10 +57,10 @@ function buttonByLabel(wrapper: VueWrapper, label: string) {
   return match;
 }
 
-async function mountForm(saveDraft = vi.fn().mockResolvedValue(true)) {
+async function mountForm(saveDraft = vi.fn().mockResolvedValue(true), extraFields: InformationFormField[] = []) {
   const wrapper = mount(FormRenderer, {
     props: {
-      fields: FIELDS,
+      fields: [...FIELDS, ...extraFields],
       generalPrompt: 'Please complete.',
       sectionInfo: SECTION_INFO,
       saveDraft,
@@ -160,6 +160,33 @@ describe('FormRenderer', () => {
     expect(wrapper.text()).not.toContain('Numbers only');
   });
 
+  it('disables Previous while a save is in progress', async () => {
+    const { wrapper } = await mountForm();
+    await startRecruitment(wrapper);
+    await setApproach(wrapper, ['convenience']);
+    await wrapper.get('#site_02').setValue('email');
+    await buttonByLabel(wrapper, 'Next').trigger('click');
+    await flushPromises();
+
+    await wrapper.setProps({ isSaving: true });
+    await flushPromises();
+
+    expect(buttonByLabel(wrapper, 'Previous').attributes('disabled')).toBeDefined();
+  });
+
+  it('does not submit from a non-last page', async () => {
+    const { wrapper } = await mountForm();
+    await startRecruitment(wrapper);
+    await setApproach(wrapper, ['convenience']);
+    await wrapper.get('#site_02').setValue('email');
+
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.emitted('submit')).toBeUndefined();
+    expect(wrapper.text()).toContain('Section 1 of 2');
+  });
+
   it('advances Next only after a successful draft save', async () => {
     const saveDraft = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
     const { wrapper } = await mountForm(saveDraft);
@@ -195,6 +222,35 @@ describe('FormRenderer', () => {
       sampleApproach: ['convenience'],
       sampleApproachOther: null,
       siteRecruitment: 'email',
+    });
+  });
+
+  it('sends null when an optional answer is cleared', async () => {
+    const optionalNotes: InformationFormField = {
+      itemId: 'site_02b',
+      variableName: 'siteNotes',
+      kind: 'text',
+      required: false,
+      sectionId: 'recruitment',
+      questionText: 'Optional notes',
+    };
+    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [optionalNotes]);
+    await startRecruitment(wrapper);
+    await setApproach(wrapper, ['convenience']);
+    await wrapper.get('#site_02').setValue('email');
+    await wrapper.get('#site_02b').setValue('old note');
+    await buttonByLabel(wrapper, 'Save').trigger('click');
+    await flushPromises();
+
+    await wrapper.get('#site_02b').setValue('');
+    await buttonByLabel(wrapper, 'Save').trigger('click');
+    await flushPromises();
+
+    expect(saveDraft.mock.calls.at(-1)?.[0]).toEqual({
+      sampleApproach: ['convenience'],
+      sampleApproachOther: null,
+      siteRecruitment: 'email',
+      siteNotes: null,
     });
   });
 
