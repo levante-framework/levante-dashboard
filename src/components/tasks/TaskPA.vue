@@ -129,6 +129,11 @@ async function startTask(selectedAdmin) {
 
     const roarApp = new TaskLauncher(appKit, gameParams, userParams, 'jspsych-target');
 
+    logger.capture('Task Launched', {
+      adminId: selectedAdmin.value?.id,
+      taskId: props.taskId,
+    });
+
     await roarApp.run().then(async () => {
       // Handle any post-game actions.
       await completeAssessmentMutate({
