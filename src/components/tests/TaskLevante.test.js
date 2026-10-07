@@ -195,6 +195,30 @@ describe('TaskLevante.vue', () => {
       expect(mockAssignmentsStore.setHomeRefresh).not.toHaveBeenCalled();
     });
 
+    it('should not alert or log if the task rejects after unmount', async () => {
+      selectedAssignmentRef.value = { id: 'assignment-1' };
+      let rejectRun;
+      vi.mocked(TaskLauncher).mockImplementationOnce(() => ({
+        run: vi.fn().mockReturnValue(
+          new Promise((_resolve, reject) => {
+            rejectRun = reject;
+          }),
+        ),
+        abort: vi.fn(),
+      }));
+
+      const wrapper = await mountTaskLevante();
+      await flushPromises();
+      wrapper.unmount();
+
+      rejectRun(new Error('late boom'));
+      await flushPromises();
+
+      expect(window.alert).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
+      expect(routerPush).not.toHaveBeenCalled();
+    });
+
     it('should alert and log without navigating home when the task fails unexpectedly', async () => {
       selectedAssignmentRef.value = { id: 'assignment-1' };
       startAssessment.mockRejectedValueOnce(new Error('boom'));

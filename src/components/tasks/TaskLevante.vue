@@ -160,6 +160,8 @@ async function startTask(selectedAdmin) {
       goHome();
     });
   } catch (error) {
+    if (isUnmounted) return;
+
     if (error?.name === 'AbortError') {
       goHome();
     } else {
