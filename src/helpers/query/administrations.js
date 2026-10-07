@@ -58,8 +58,9 @@ export const administrationPageFetcher = async (selectedDistrictId, fetchTestDat
   let orgs = [];
 
   const administrationData = await administrationsRepository.getAdministrations({
-    testData: toValue(fetchTestData),
     idsOnly: false,
+    siteId,
+    testData: toValue(fetchTestData),
   });
 
   let administrations = await mapAdministrations(administrationData);

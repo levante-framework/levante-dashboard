@@ -1,29 +1,37 @@
-import { useQuery } from '@tanstack/vue-query';
+import {
+  type GetSiteOverviewError,
+  GetSiteOverviewErrorSchema,
+  GetSiteOverviewParamsSchema,
+  type GetSiteOverviewResult,
+} from '@levante-framework/levante-zod';
+import { type UseQueryReturnType, useQuery } from '@tanstack/vue-query';
 import { computed, type MaybeRefOrGetter, toValue } from 'vue';
 import { SITE_OVERVIEW_QUERY_KEY } from '@/constants/queryKeys';
-import { useAuthStore } from '@/store/auth';
+import { type FirebaseFailure, toFirebaseFailure } from '@/firebase/failure';
+import { groupsRepository } from '@/firebase/repositories/GroupsRepository';
 
 export const useGetSiteOverviewQuery = (
   siteId: MaybeRefOrGetter<string>,
   enabled: MaybeRefOrGetter<boolean> = true,
-) => {
-  const authStore = useAuthStore();
-
+): UseQueryReturnType<GetSiteOverviewResult, FirebaseFailure<GetSiteOverviewError>> => {
   return useQuery({
     queryKey: computed(() => [SITE_OVERVIEW_QUERY_KEY, toValue(siteId)]),
     queryFn: async () => {
-      const firekit = authStore.roarfirekit;
-      if (!firekit) throw new Error('Firekit not initialized');
-      const result = await firekit.getSiteOverview({ siteId: toValue(siteId) });
-      if (result.code !== 'success') throw result;
-      return result.data;
+      try {
+        const params = GetSiteOverviewParamsSchema.parse({ siteId: toValue(siteId) });
+        return await groupsRepository.getSiteOverview(params);
+      } catch (error) {
+        throw toFirebaseFailure(error, GetSiteOverviewErrorSchema);
+      }
     },
-    enabled: () => !!toValue(siteId) && authStore.isFirekitInit() && toValue(enabled),
+    enabled: () => !!toValue(siteId) && toValue(enabled),
     meta: {
       errorMessage: 'Failed to get site overview',
       errorContext: {
         tags: { composable: 'useGetSiteOverviewQuery' },
-        siteId: toValue(siteId),
+        get siteId() {
+          return toValue(siteId);
+        },
       },
     },
   });

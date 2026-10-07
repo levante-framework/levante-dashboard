@@ -273,10 +273,12 @@ const authStore = useAuthStore();
 const { currentSite, userData } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
 
+const authReady = computed(() => authStore.isFirekitInit());
 const isSiteSelected = computed(() => !!currentSite.value && currentSite.value !== 'any');
 const showSelectSitePrompt = computed(() => !!userData.value && !isSiteSelected.value);
-const { data: siteOverview, isLoading } = useGetSiteOverviewQuery(() =>
-  isSiteSelected.value ? (currentSite.value as string) : '',
+const { data: siteOverview, isLoading } = useGetSiteOverviewQuery(
+  () => (isSiteSelected.value ? (currentSite.value as string) : ''),
+  () => authReady.value,
 );
 
 const userName = computed(() => {
@@ -361,7 +363,7 @@ watch(
 }
 
 .docs-button-wrapper {
-  border: 4px solid var(--docs-btn-hover);
+  border: 4px solid var(--info-blue-hover);
   border-radius: 10px;
 }
 

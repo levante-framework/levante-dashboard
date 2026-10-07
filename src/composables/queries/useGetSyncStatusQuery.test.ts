@@ -1,24 +1,23 @@
-import type { RoarFirekit } from '@levante-framework/firekit';
-import { createTestingPinia, type TestingPinia } from '@pinia/testing';
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { type MaybeRefOrGetter, ref } from 'vue';
-import { useAuthStore } from '@/store/auth';
+import { groupsRepository } from '@/firebase/repositories/GroupsRepository';
 import { withSetup } from '@/test-support/withSetup.js';
 import { useGetSyncStatusQuery } from './useGetSyncStatusQuery';
+
+vi.mock('@/firebase/repositories/GroupsRepository', () => ({
+  groupsRepository: {
+    getSyncStatus: vi.fn(),
+  },
+}));
+
+const getSyncStatus = groupsRepository.getSyncStatus as unknown as Mock;
 
 const idleStatus = { assignments: { pending: 0 }, users: { pending: 0 } };
 
 describe('useGetSyncStatusQuery', () => {
-  let pinia: TestingPinia;
   let queryClient: QueryClient;
-  let getSyncStatus: Mock;
-
-  const setFirekit = (firekit: { getSyncStatus: Mock } | null) => {
-    const authStore = useAuthStore(pinia);
-    authStore.roarfirekit = (firekit ? { ...firekit, initialized: true } : null) as unknown as RoarFirekit;
-  };
 
   const mountQuery = (
     siteId: Parameters<typeof useGetSyncStatusQuery>[0],
@@ -31,10 +30,8 @@ describe('useGetSyncStatusQuery', () => {
   };
 
   beforeEach(() => {
-    pinia = createTestingPinia({ stubActions: false });
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    getSyncStatus = vi.fn().mockResolvedValue({ code: 'success', data: idleStatus });
-    setFirekit({ getSyncStatus });
+    getSyncStatus.mockResolvedValue(idleStatus);
   });
 
   afterEach(() => {
@@ -44,7 +41,7 @@ describe('useGetSyncStatusQuery', () => {
 
   it('fetches the sync status for the given siteId and exposes the result', async () => {
     const payload = { assignments: { pending: 3 }, users: { pending: 1 } };
-    getSyncStatus.mockResolvedValueOnce({ code: 'success', data: payload });
+    getSyncStatus.mockResolvedValueOnce(payload);
 
     const { data, isSuccess } = mountQuery('site-1');
     await flushPromises();
@@ -58,11 +55,8 @@ describe('useGetSyncStatusQuery', () => {
   it('refetches when siteId changes and serves the new payload (not stale cache)', async () => {
     const siteId = ref('site-1');
     getSyncStatus
-      .mockResolvedValueOnce({ code: 'success', data: { assignments: { pending: 0 }, users: { pending: 0 } } })
-      .mockResolvedValueOnce({
-        code: 'success',
-        data: { assignments: { pending: 0 }, users: { pending: 0 }, label: 'two' },
-      });
+      .mockResolvedValueOnce({ assignments: { pending: 0 }, users: { pending: 0 } })
+      .mockResolvedValueOnce({ assignments: { pending: 0 }, users: { pending: 0 }, label: 'two' });
 
     const { data } = mountQuery(siteId);
     await flushPromises();
@@ -91,22 +85,6 @@ describe('useGetSyncStatusQuery', () => {
     expect(getSyncStatus).toHaveBeenCalledWith({ siteId: 'site-late' });
   });
 
-  it('does not fetch while roarfirekit is unavailable, then fetches once it is set', async () => {
-    setFirekit(null);
-
-    const { data } = mountQuery('site-1');
-    await flushPromises();
-
-    expect(getSyncStatus).not.toHaveBeenCalled();
-    expect(data.value).toBeUndefined();
-
-    setFirekit({ getSyncStatus });
-    await flushPromises();
-
-    expect(getSyncStatus).toHaveBeenCalledTimes(1);
-    expect(getSyncStatus).toHaveBeenCalledWith({ siteId: 'site-1' });
-  });
-
   it('respects a reactive `enabled` argument', async () => {
     const enabled = ref(false);
     const { data } = mountQuery('site-1', enabled);
@@ -129,35 +107,23 @@ describe('useGetSyncStatusQuery', () => {
     expect(data.value).toBeUndefined();
   });
 
-  it('surfaces a rejected firekit call through the query state', async () => {
-    const error = new Error('firekit boom');
+  it('surfaces a rejected repository call as a FirebaseFailure', async () => {
+    const error = new Error('sync boom');
     getSyncStatus.mockRejectedValueOnce(error);
 
     const { isError, error: queryError } = mountQuery('site-1');
     await flushPromises();
 
     expect(isError.value).toBe(true);
-    expect(queryError.value).toBe(error);
-  });
-
-  it('treats a non-success response code as a query error and does not expose data', async () => {
-    const failure = { code: 'not-found', message: 'no such site' };
-    getSyncStatus.mockResolvedValueOnce(failure);
-
-    const { isError, error: queryError, data } = mountQuery('site-1');
-    await flushPromises();
-
-    expect(isError.value).toBe(true);
-    expect(queryError.value).toEqual(failure);
-    expect(data.value).toBeUndefined();
+    expect(queryError.value).toEqual({ code: 'error', error });
   });
 
   it('polls while a sync is pending and stops once everything is settled', async () => {
     vi.useFakeTimers();
     try {
       getSyncStatus
-        .mockResolvedValueOnce({ code: 'success', data: { assignments: { pending: 2 }, users: { pending: 0 } } })
-        .mockResolvedValue({ code: 'success', data: idleStatus });
+        .mockResolvedValueOnce({ assignments: { pending: 2 }, users: { pending: 0 } })
+        .mockResolvedValue(idleStatus);
 
       const { data } = mountQuery('site-1');
       await flushPromises();

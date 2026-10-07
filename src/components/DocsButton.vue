@@ -28,8 +28,8 @@ defineProps({
   font-weight: 600;
   text-decoration: none;
   background-color: white;
-  color: var(--docs-btn);
-  border: 1px solid var(--docs-btn-border);
+  color: var(--info-blue);
+  border: 1px solid var(--info-blue-border);
   transition:
     background-color 0.2s,
     border-color 0.2s,
@@ -37,13 +37,13 @@ defineProps({
 }
 
 .docs-button:hover {
-  background-color: var(--docs-btn-hover);
-  border-color: var(--docs-btn-border);
-  color: var(--docs-btn);
+  background-color: var(--info-blue-hover);
+  border-color: var(--info-blue-border);
+  color: var(--info-blue);
 }
 
 .docs-button:focus-visible {
-  outline: 1px solid var(--docs-btn-border);
+  outline: 1px solid var(--info-blue-border);
   outline-offset: 2px;
 }
 </style>

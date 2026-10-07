@@ -53,8 +53,8 @@ const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown>
       // sign-out in order to allow a new user to sign in.
       await authStore.initFirekit();
 
-      // Redirect to sign-in page.
-      router.push({ path: APP_ROUTES.SIGN_IN });
+      // Redirect to login page.
+      router.push({ path: APP_ROUTES.LOGIN });
     },
   });
 };

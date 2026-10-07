@@ -274,9 +274,11 @@ export const normalizeToLowercase = (str = ''): string =>
     .replace(/[\u0300-\u036f]/g, '');
 
 export const getTooltip = (value: string, options?: TooltipOptions): TooltipOptions => {
+  const canHover = window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
   const defaultOptions = {
     hideDelay: 0,
     showDelay: 1500,
+    disabled: !canHover,
   } as TooltipOptions;
 
   return { ...defaultOptions, ...options, value };

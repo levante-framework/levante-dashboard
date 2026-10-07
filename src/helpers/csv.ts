@@ -63,6 +63,21 @@ export function deriveNextCsvFilename(
 }
 
 /**
+ * Sanitize a raw string into a safe CSV filename base (without extension):
+ * trims, collapses any run of characters outside [A-Za-z0-9-_] into a single
+ * dash, and strips leading/trailing dashes.
+ * @param name The raw filename base
+ * @returns The sanitized filename base
+ */
+export function sanitizeCsvFilename(name: string): string {
+  return name
+    .trim()
+    .replace(/[^a-z0-9-_]+/gi, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
  * Trigger a browser download of a CSV string.
  * @param csv The CSV string to download
  * @param filename The filename to use for the downloaded file

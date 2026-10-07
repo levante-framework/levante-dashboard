@@ -3,7 +3,6 @@ import { mount } from '@vue/test-utils';
 import * as Papa from 'papaparse';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
-import ToastService from 'primevue/toastservice';
 import Tooltip from 'primevue/tooltip';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
@@ -34,9 +33,13 @@ vi.mock('@/helpers/query/orgs', () => ({
 // JSDOM. Stubbing the surface used by submitUsers' catch block keeps the
 // test environment quiet.
 
+const { loggerErrorMock } = vi.hoisted(() => ({
+  loggerErrorMock: vi.fn(),
+}));
+
 vi.mock('@/logger', () => ({
   logger: {
-    error: vi.fn(),
+    error: loggerErrorMock,
     info: vi.fn(),
     warn: vi.fn(),
     debug: vi.fn(),
@@ -50,9 +53,8 @@ vi.mock('@/logger', () => ({
 // storeToRefs returns an empty object and all destructured values are
 // undefined, causing a crash during component setup.
 //
-// Beyond the site refs, the component reads `roarfirekit` (used for
-// firekit.createUsers in submitUsers) and calls `isFirekitInit()` from the
-// sync-status query's `enabled` guard, so both must be present or setup throws.
+// Beyond the site refs, the component calls `isFirekitInit()` from the
+// sync-status query's `enabled` guard, so it must be present or setup throws.
 // createAuthStoreMock() supplies a sensible default; the beforeEach below wires
 // it up as the default return and individual tests override fields as needed.
 
@@ -74,8 +76,9 @@ vi.mock('@/store/levante', () => ({
 
 // ─── Sign-out mutation ────────────────────────────────────────────────────────
 //
-// The unauthenticated createUsers branch signs the user out. Hoisted so the spy
-// can be asserted from within individual tests.
+// AddUsers no longer signs the user out on failure; the spy is retained to
+// assert that no sign-out is triggered. Hoisted so it can be asserted from
+// within individual tests.
 
 const { signOutMock } = vi.hoisted(() => ({
   signOutMock: vi.fn(),
@@ -85,6 +88,20 @@ vi.mock('@/composables/mutations/useSignOutMutation', () => ({
   default: () => ({ mutate: signOutMock }),
 }));
 
+// ─── Create-users mutation ──────────────────────────────────────────────────
+//
+// submitUsers calls the createUsers mutation's `mutateAsync`, which resolves a
+// CreateUsersResult on success and rejects with a FirebaseFailure on error.
+// Hoisted so each test can drive the resolved/rejected value.
+
+const { createUsersMock } = vi.hoisted(() => ({
+  createUsersMock: vi.fn(),
+}));
+
+vi.mock('@/composables/mutations/useCreateUsersMutation', () => ({
+  default: () => ({ mutateAsync: createUsersMock }),
+}));
+
 vi.mock('@/composables/queries/useGetSyncStatusQuery', () => ({
   useGetSyncStatusQuery: vi.fn(),
 }));
@@ -92,14 +109,48 @@ vi.mock('@/composables/queries/useGetSyncStatusQuery', () => ({
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
 // Builds the auth-store shape the component expects. Pass overrides to vary the
-// selected site or to supply a roarfirekit whose createUsers is stubbed.
-const createAuthStoreMock = (overrides: Record<string, unknown> = {}) => ({
-  currentSite: ref('site-id-123'),
-  currentSiteName: ref('site-id-123'),
-  roarfirekit: ref(null),
-  isFirekitInit: () => false,
-  ...overrides,
-});
+// selected site.
+const createAuthStoreMock = (overrides: Record<string, unknown> = {}) =>
+  ({
+    currentSite: ref('site-id-123'),
+    currentSiteName: ref('site-id-123'),
+    isFirekitInit: () => false,
+    ...overrides,
+  }) as unknown as ReturnType<typeof useAuthStore>;
+
+// The component exposes these members on its instance for the tests to drive
+// and assert against. Typed here so tests avoid `any` on `wrapper.vm`.
+interface AddUsersVm {
+  onFileUpload: (event: unknown) => Promise<void>;
+  submitUsers: () => Promise<void>;
+  downloadErrors: () => void;
+  downloadRegisteredUsers: () => void;
+  createOrgIdResolver: () => (
+    orgType: string,
+    name: string,
+    parentDistrictId?: string,
+    parentSchoolId?: string,
+  ) => Promise<string>;
+  hasPendingSyncStatus: boolean;
+  isAllSitesSelected: boolean;
+  isSubmitting: boolean;
+  showSyncPendingModal: boolean;
+  status: { message: string; severity: string } | null;
+  registeredUsers: Array<Record<string, unknown>>;
+  unregisteredUsers: Array<Record<string, unknown>>;
+  unregisteredToValidated: number[];
+  uploadedFile: File | null;
+  validatedData: Array<Record<string, unknown>>;
+  validationErrors: {
+    headers: string[];
+    keys: string[];
+    rows: Array<{ message: string; rowNums: number[] }>;
+    showDownloadButton: boolean;
+  };
+}
+
+// fetchOrgByName is mocked module-wide; this typed handle drives it without `any`.
+const fetchOrgByNameMock = fetchOrgByName as unknown as Mock;
 
 const createMockFile = (content: string, filename = 'test.csv', type = 'text/csv') => {
   return new File([content], filename, { type });
@@ -116,7 +167,6 @@ const mountAddUsers = () =>
     global: {
       plugins: [
         PrimeVue,
-        ToastService,
         [VueQueryPlugin, { queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }],
       ],
       directives: { tooltip: Tooltip },
@@ -153,18 +203,20 @@ describe('AddUsers Page', () => {
     mockRouter.push.mockReset();
     setShouldUserConfirmMock.mockReset();
     signOutMock.mockReset();
+    createUsersMock.mockReset();
+    loggerErrorMock.mockReset();
     vi.mocked(useAuthStore).mockReset();
-    vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock() as any);
+    vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock());
     vi.mocked(useGetSyncStatusQuery).mockReturnValue({
       data: ref(undefined),
       isLoading: ref(false),
       isError: ref(false),
-    } as any);
+    } as unknown as ReturnType<typeof useGetSyncStatusQuery>);
   });
 
   describe('onFileUpload', () => {
     it('handles a valid CSV upload', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       await vm.onFileUpload(mockFileUploadEvent(VALID_CSV));
 
@@ -198,7 +250,7 @@ describe('AddUsers Page', () => {
     });
 
     it('resets component state at the start of each upload', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // Upload 1: valid CSV — sets validatedData, leaves validationErrors null.
       await vm.onFileUpload(mockFileUploadEvent(VALID_CSV));
@@ -227,7 +279,7 @@ describe('AddUsers Page', () => {
     });
 
     it('handles validation errors when no file is provided', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       await vm.onFileUpload({ files: [] });
 
@@ -239,7 +291,7 @@ describe('AddUsers Page', () => {
     });
 
     it('handles validation errors when the file is empty', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // A header-only CSV parses without errors but produces zero data rows,
       // hitting the _parsedData.length === 0 guard in onFileUpload.
@@ -255,7 +307,7 @@ describe('AddUsers Page', () => {
     });
 
     it('handles validation errors when required headers are missing', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // Only 'id', 'month', and 'year' are present.
       // Missing: 'userType', 'school', 'class', 'cohort'.
@@ -286,7 +338,7 @@ describe('AddUsers Page', () => {
     });
 
     it('handles validation errors for site', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // When the CSV includes a 'site' column, each non-empty value must match
       // the currently selected site ('site-id-123' per the auth store mock).
@@ -310,7 +362,7 @@ describe('AddUsers Page', () => {
     });
 
     it('groups site validation errors across multiple rows', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // Rows 1 and 3 (CSV rows 2 and 4) have a mismatched site.
       // Row 2 (CSV row 3) matches currentSite and must not appear in rowNums.
@@ -330,7 +382,7 @@ describe('AddUsers Page', () => {
     });
 
     it('accepts rows whose site column matches or is empty', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // row.site is only checked when truthy, so an empty cell is allowed.
       // A populated cell that matches currentSite ('site-id-123') passes too,
@@ -351,7 +403,7 @@ describe('AddUsers Page', () => {
     });
 
     it('skips site validation when the site column is absent', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // VALID_CSV has no 'site' header, so the site-column branch is skipped
       // entirely: no custom issues are appended regardless of currentSite.
@@ -366,7 +418,7 @@ describe('AddUsers Page', () => {
       // whitespace so the comparison can't pass via raw equality.
       // normalizeToLowercase (used on both sides) trims, lowercases, and
       // strips combining diacritics, so every row below should match.
-      vi.mocked(useAuthStore).mockReturnValueOnce(createAuthStoreMock({ currentSiteName: ref('  My Sïte  ') }) as any);
+      vi.mocked(useAuthStore).mockReturnValueOnce(createAuthStoreMock({ currentSiteName: ref('  My Sïte  ') }));
 
       const csv = [
         'id,userType,month,year,caregiverId,teacherId,school,class,cohort,site',
@@ -376,7 +428,7 @@ describe('AddUsers Page', () => {
         '4,child,8,2021,,,"Test School","Class A",,My Sïte',
       ].join('\n');
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       await vm.onFileUpload(mockFileUploadEvent(csv));
 
       expect(vm.validationErrors).toBeNull();
@@ -395,7 +447,7 @@ describe('AddUsers Page', () => {
     // validation error' and 'shows correct row numbers'.
 
     it('handles validation error', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // Empty id fails NonEmptyString() in UserCsvRowBase → Zod issue at
       // path [0, 'id']. combineUserCsvIssues formats this as 'id: Required'
@@ -422,7 +474,7 @@ describe('AddUsers Page', () => {
     });
 
     it('shows correct row numbers in validation errors', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // Rows 1 and 3 (CSV rows 2 and 4) both have an empty id.
       // Row 2 (CSV row 3) is valid and must not appear in rowNums.
@@ -443,7 +495,7 @@ describe('AddUsers Page', () => {
     });
 
     it('handles validation errors when the file is malformed', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // An unterminated quoted field makes Papa emit parse errors, so
       // parseCsvFile resolves to null and onFileUpload bails out via the
@@ -462,7 +514,7 @@ describe('AddUsers Page', () => {
     });
 
     it('strips errors column before validating', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // A downloaded errors file carries extra column that the schema
       // would otherwise reject. parseCsvFile is configured with
@@ -480,7 +532,7 @@ describe('AddUsers Page', () => {
     });
 
     it('normalizes header casing via NORMALIZED_USER_CSV_HEADERS', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // parseCsvFile lowercases each incoming header before looking it up
       // in NORMALIZED_USER_CSV_HEADERS, which maps every supported header
@@ -520,7 +572,7 @@ describe('AddUsers Page', () => {
       const wasCalledWithTrue = () => setShouldUserConfirmMock.mock.calls.some(([value]) => value === true);
 
       it('is called with true after a successful upload', async () => {
-        const vm = mountAddUsers().vm as any;
+        const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
         await vm.onFileUpload(mockFileUploadEvent(VALID_CSV));
 
@@ -529,7 +581,7 @@ describe('AddUsers Page', () => {
       });
 
       it('is not called with true when no file is provided', async () => {
-        const vm = mountAddUsers().vm as any;
+        const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
         await vm.onFileUpload({ files: [] });
 
@@ -537,7 +589,7 @@ describe('AddUsers Page', () => {
       });
 
       it('is not called with true when the file is malformed', async () => {
-        const vm = mountAddUsers().vm as any;
+        const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
         const MALFORMED_CSV = ['id,userType', '1,"child'].join('\n');
         await vm.onFileUpload(mockFileUploadEvent(MALFORMED_CSV));
@@ -546,7 +598,7 @@ describe('AddUsers Page', () => {
       });
 
       it('is not called with true when the file is header-only (no data rows)', async () => {
-        const vm = mountAddUsers().vm as any;
+        const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
         const HEADER_ONLY_CSV = 'id,userType,month,year,caregiverId,teacherId,school,class,cohort';
         await vm.onFileUpload(mockFileUploadEvent(HEADER_ONLY_CSV));
@@ -555,7 +607,7 @@ describe('AddUsers Page', () => {
       });
 
       it('is not called with true when required headers are missing', async () => {
-        const vm = mountAddUsers().vm as any;
+        const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
         await vm.onFileUpload(mockFileUploadEvent(MISSING_HEADERS_CSV));
 
@@ -563,7 +615,7 @@ describe('AddUsers Page', () => {
       });
 
       it('is not called with true when row-level zod validation fails', async () => {
-        const vm = mountAddUsers().vm as any;
+        const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
         const CSV_EMPTY_ID = [
           'id,userType,month,year,caregiverId,teacherId,school,class,cohort',
@@ -575,7 +627,7 @@ describe('AddUsers Page', () => {
       });
 
       it('is not called with true when site validation fails', async () => {
-        const vm = mountAddUsers().vm as any;
+        const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
         const CSV_WRONG_SITE = [
           'id,userType,month,year,caregiverId,teacherId,school,class,cohort,site',
@@ -593,7 +645,7 @@ describe('AddUsers Page', () => {
           '1,child,5,2018,,,"Test School","Class A",,existing-uid',
         ].join('\n');
 
-        const vm = mountAddUsers().vm as any;
+        const vm = mountAddUsers().vm as unknown as AddUsersVm;
         await vm.onFileUpload(mockFileUploadEvent(csv));
 
         expect(wasCalledWithTrue()).toBe(false);
@@ -605,7 +657,7 @@ describe('AddUsers Page', () => {
     it('does nothing when parsedData or validationErrors are absent', async () => {
       const createObjectURL = vi.spyOn(URL, 'createObjectURL');
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // Case 1: fresh mount — parsedData and validationErrors are both null.
       vm.downloadErrors();
@@ -623,7 +675,7 @@ describe('AddUsers Page', () => {
     });
 
     it('creates a CSV blob annotated with per-row errors and triggers download', async () => {
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // Three rows chosen to cover each annotation case in one file:
       //   CSV row 2 (idx 0): empty id + mismatched site  → two errors, joined by '; '
@@ -675,7 +727,7 @@ describe('AddUsers Page', () => {
 
       // Parse the blob back as CSV so we can assert the 'errors' column is
       // populated per row, rather than just probing for substrings.
-      const csvText = await blob!.text();
+      const csvText = await (blob as Blob).text();
       const parsed = Papa.parse<Record<string, string>>(csvText, {
         header: true,
         skipEmptyLines: 'greedy',
@@ -730,12 +782,12 @@ describe('AddUsers Page', () => {
       '1,child,5,2018,,,,,"Cohort A"',
     ].join('\n');
 
-    // Mounts AddUsers with an auth store whose roarfirekit.createUsers is the
-    // supplied stub, so submitUsers' firekit call is observable. Returns the
-    // component vm alongside the createUsers mock for assertions.
-    const mountWithFirekit = (createUsers: Mock = vi.fn()) => {
-      vi.mocked(useAuthStore).mockReturnValueOnce(createAuthStoreMock({ roarfirekit: ref({ createUsers }) }) as any);
-      return { vm: mountAddUsers().vm as any, createUsers };
+    // Mounts AddUsers, wiring the supplied stub as the createUsers mutation's
+    // mutateAsync so submitUsers' call is observable. Returns the component vm
+    // alongside the createUsers mock for assertions.
+    const mountWithCreateUsers = (createUsers: Mock = vi.fn()) => {
+      createUsersMock.mockImplementation((...args: unknown[]) => createUsers(...args));
+      return { vm: mountAddUsers().vm as unknown as AddUsersVm, createUsers };
     };
 
     // The success path calls downloadRegisteredUsers(), which touches DOM/URL
@@ -763,15 +815,15 @@ describe('AddUsers Page', () => {
     };
 
     beforeEach(() => {
-      vi.mocked(fetchOrgByName as any).mockReset();
+      fetchOrgByNameMock.mockReset();
     });
 
     it('returns early when there is no clean validated data to submit', async () => {
-      const { vm, createUsers } = mountWithFirekit();
+      const { vm, createUsers } = mountWithCreateUsers();
 
       // Fresh mount: validatedData is null. The `!validatedData.value`
       // half of the guard fires and submission is aborted before any
-      // org lookup or firekit call is attempted.
+      // org lookup or createUsers call is attempted.
       await vm.submitUsers();
 
       expect(vm.status).toEqual({
@@ -787,16 +839,14 @@ describe('AddUsers Page', () => {
       // Override the auth store so isAllSitesSelected is true. SUBMIT_CSV has
       // no 'site' column, so onFileUpload's site-mismatch check is skipped and
       // validatedData populates cleanly even though the all-sites view is active.
-      const createUsers = vi.fn();
       vi.mocked(useAuthStore).mockReturnValueOnce(
         createAuthStoreMock({
           currentSite: ref('any'),
           currentSiteName: ref('Test Site'),
-          roarfirekit: ref({ createUsers }),
-        }) as any,
+        }),
       );
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
       expect(vm.validatedData).not.toBeNull();
 
@@ -807,7 +857,7 @@ describe('AddUsers Page', () => {
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);
-      expect(createUsers).not.toHaveBeenCalled();
+      expect(createUsersMock).not.toHaveBeenCalled();
     });
 
     it('skips submission when every user already has a uid', async () => {
@@ -822,7 +872,7 @@ describe('AddUsers Page', () => {
         '1,child,5,2018,,,"Test School","Class A",,existing-uid',
       ].join('\n');
 
-      const { vm, createUsers } = mountWithFirekit();
+      const { vm, createUsers } = mountWithCreateUsers();
       await vm.onFileUpload(mockFileUploadEvent(csv));
 
       // The all-already-registered case is caught at upload time: onFileUpload
@@ -836,7 +886,7 @@ describe('AddUsers Page', () => {
       });
 
       // Calling submitUsers in this state hits the guard and bails out before
-      // any org lookup or firekit call.
+      // any org lookup or createUsers call.
       await vm.submitUsers();
 
       expect(vm.isSubmitting).toBe(false);
@@ -850,9 +900,9 @@ describe('AddUsers Page', () => {
       // false. The class loop is then skipped entirely so no spurious
       // 'class: Does not exist…' is appended for the unresolved school
       // — the user is told exactly one thing, the cause of the failure.
-      vi.mocked(fetchOrgByName as any).mockResolvedValue([]);
+      fetchOrgByNameMock.mockResolvedValue([]);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
 
       await vm.submitUsers();
@@ -875,7 +925,7 @@ describe('AddUsers Page', () => {
       // (allSchoolsFound is false on every iteration). Identical messages
       // are grouped into a single entry whose rowNums collects every
       // affected CSV row (header + 1-indexing applied).
-      vi.mocked(fetchOrgByName as any).mockResolvedValue([]);
+      fetchOrgByNameMock.mockResolvedValue([]);
 
       const csv = [
         'id,userType,month,year,caregiverId,teacherId,school,class,cohort',
@@ -884,7 +934,7 @@ describe('AddUsers Page', () => {
         '3,child,7,2020,,,"Other School","Class B",',
       ].join('\n');
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       await vm.onFileUpload(mockFileUploadEvent(csv));
 
       await vm.submitUsers();
@@ -900,11 +950,9 @@ describe('AddUsers Page', () => {
       // the class loop runs. The class lookup then misses against the
       // resolved school, producing the genuine 'class: Does not exist…'
       // error — no false 'school:' entry alongside it.
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([{ id: 'school-1' }])
-        .mockResolvedValueOnce([]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'school-1' }]).mockResolvedValueOnce([]);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
 
       await vm.submitUsers();
@@ -919,16 +967,14 @@ describe('AddUsers Page', () => {
       // class loop is skipped — the user sees only the genuine 'school:'
       // error rather than a misleading 'class:' error from looking the
       // class up against just the resolved subset of parent schools.
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([{ id: 'school-1' }])
-        .mockResolvedValueOnce([]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'school-1' }]).mockResolvedValueOnce([]);
 
       const csv = [
         'id,userType,month,year,caregiverId,teacherId,school,class,cohort',
         'teacher-1,teacher,,,,,"Test School,Other School","Class A",',
       ].join('\n');
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       await vm.onFileUpload(mockFileUploadEvent(csv));
 
       await vm.submitUsers();
@@ -937,19 +983,16 @@ describe('AddUsers Page', () => {
       expect(vm.validationErrors.rows).toEqual([{ message: 'school: Does not exist in selected site', rowNums: [2] }]);
     });
 
-    it('calls firekit with resolved orgIds (userType verbatim) and merges the returned credentials', async () => {
+    it('calls createUsers with resolved orgIds (userType verbatim) and merges the returned credentials', async () => {
       // Two sequential resolves: first the school, then the class scoped
       // to that school. createOrgIdResolver caches by (orgType, name +
       // parents) so each is called exactly once for our single user.
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([{ id: 'school-1' }])
-        .mockResolvedValueOnce([{ id: 'class-1' }]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'school-1' }]).mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
-        code: 'success',
-        data: { users: [{ id: '1', email: 'a@b.com', password: 'pw', uid: 'uid-1' }] },
-      });
-      const { vm } = mountWithFirekit(createUsers);
+      const createUsers = vi
+        .fn()
+        .mockResolvedValue({ users: [{ id: '1', email: 'a@b.com', password: 'pw', uid: 'uid-1' }] });
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await withDownloadStubs(async () => {
         await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
@@ -991,26 +1034,24 @@ describe('AddUsers Page', () => {
     });
 
     it('maps an already-exists app-error to per-row validation errors', async () => {
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([{ id: 'school-1' }])
-        .mockResolvedValueOnce([{ id: 'class-1' }]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'school-1' }]).mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
+      const createUsers = vi.fn().mockRejectedValue({
         code: 'app-error',
-        data: {
+        error: {
           name: 'FirebaseError',
           message: 'already exists',
           code: 'functions/already-exists',
           details: { users: [{ id: '1', email: 'existing@example.com', uid: 'uid-abc' }] },
         },
       });
-      const { vm } = mountWithFirekit(createUsers);
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
       await vm.submitUsers();
 
       expect(vm.status).toEqual({
-        message: 'One or more users already exist. Please try again with a different file.',
+        message: 'One or more users already exist. Please fix the errors in your CSV file and try again.',
         severity: 'error',
       });
 
@@ -1025,24 +1066,22 @@ describe('AddUsers Page', () => {
     });
 
     it('surfaces an unexpected createUsers failure and resets submission state', async () => {
-      // Org resolution succeeds; createUsers resolves with a generic 'error'
-      // result (an exception the firekit wrapper caught and normalized).
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([{ id: 'school-1' }])
-        .mockResolvedValueOnce([{ id: 'class-1' }]);
+      // Org resolution succeeds; createUsers rejects with a generic 'error'
+      // FirebaseFailure (a non-Firebase exception normalized by toFirebaseFailure).
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'school-1' }]).mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
+      const createUsers = vi.fn().mockRejectedValue({
         code: 'error',
-        data: new Error('boom'),
+        error: new Error('boom'),
       });
-      const { vm } = mountWithFirekit(createUsers);
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
       await vm.submitUsers();
 
       expect(createUsers).toHaveBeenCalledOnce();
       expect(vm.status).toEqual({
-        message: 'An unexpected error occurred. Please contact support.',
+        message: 'Failed to add users. Please try again. If the problem persists, contact support.',
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);
@@ -1050,47 +1089,74 @@ describe('AddUsers Page', () => {
       expect(vm.registeredUsers).toBeNull();
     });
 
-    it('signs the user out on an unauthenticated app-error', async () => {
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([{ id: 'school-1' }])
-        .mockResolvedValueOnce([{ id: 'class-1' }]);
+    it('surfaces an expired-session message on an unauthenticated app-error', async () => {
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'school-1' }]).mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
+      const createUsers = vi.fn().mockRejectedValue({
         code: 'app-error',
-        data: {
+        error: {
           name: 'FirebaseError',
           message: 'unauthenticated',
           code: 'functions/unauthenticated',
           details: { code: 'auth' },
         },
       });
-      const { vm } = mountWithFirekit(createUsers);
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
       await vm.submitUsers();
 
       expect(createUsers).toHaveBeenCalledOnce();
-      expect(signOutMock).toHaveBeenCalledOnce();
+      expect(signOutMock).not.toHaveBeenCalled();
+      expect(vm.status).toEqual({
+        message: 'Failed to add users due to an expired session. Please sign in again and retry.',
+        severity: 'error',
+      });
+      expect(vm.isSubmitting).toBe(false);
+      expect(vm.showSyncPendingModal).toBe(false);
+      expect(vm.registeredUsers).toBeNull();
+    });
+
+    it('surfaces an expired-session message on a transport-level unauthenticated functions-error', async () => {
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'school-1' }]).mockResolvedValueOnce([{ id: 'class-1' }]);
+
+      const createUsers = vi.fn().mockRejectedValue({
+        code: 'functions-error',
+        error: {
+          name: 'FirebaseError',
+          message: 'unauthenticated',
+          code: 'functions/unauthenticated',
+        },
+      });
+      const { vm } = mountWithCreateUsers(createUsers);
+
+      await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
+      await vm.submitUsers();
+
+      expect(createUsers).toHaveBeenCalledOnce();
+      expect(loggerErrorMock).not.toHaveBeenCalled();
+      expect(vm.status).toEqual({
+        message: 'Failed to add users due to an expired session. Please sign in again and retry.',
+        severity: 'error',
+      });
       expect(vm.isSubmitting).toBe(false);
       expect(vm.showSyncPendingModal).toBe(false);
       expect(vm.registeredUsers).toBeNull();
     });
 
     it('surfaces a failed-precondition app-error and resets submission state', async () => {
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([{ id: 'school-1' }])
-        .mockResolvedValueOnce([{ id: 'class-1' }]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'school-1' }]).mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
+      const createUsers = vi.fn().mockRejectedValue({
         code: 'app-error',
-        data: {
+        error: {
           name: 'FirebaseError',
           message: 'failed precondition',
           code: 'functions/failed-precondition',
           details: { code: 'sync-pending' },
         },
       });
-      const { vm } = mountWithFirekit(createUsers);
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
       await vm.submitUsers();
@@ -1106,27 +1172,25 @@ describe('AddUsers Page', () => {
     });
 
     it('surfaces a permission-denied app-error and resets submission state', async () => {
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([{ id: 'school-1' }])
-        .mockResolvedValueOnce([{ id: 'class-1' }]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'school-1' }]).mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
+      const createUsers = vi.fn().mockRejectedValue({
         code: 'app-error',
-        data: {
+        error: {
           name: 'FirebaseError',
           message: 'permission denied',
           code: 'functions/permission-denied',
           details: { code: 'auth' },
         },
       });
-      const { vm } = mountWithFirekit(createUsers);
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
       await vm.submitUsers();
 
       expect(createUsers).toHaveBeenCalledOnce();
       expect(vm.status).toEqual({
-        message: 'You do not have permission to add users to this site. Please contact support.',
+        message: 'Failed to add users due to insufficient permissions. Please contact support.',
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);
@@ -1134,15 +1198,14 @@ describe('AddUsers Page', () => {
       expect(vm.registeredUsers).toBeNull();
     });
 
-    it('resolves cohorts and includes them in the firekit payload', async () => {
+    it('resolves cohorts and includes them in the createUsers payload', async () => {
       // Cohort-only row: school/class are empty, so only the cohort loop runs.
-      vi.mocked(fetchOrgByName as any).mockResolvedValueOnce([{ id: 'cohort-1' }]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'cohort-1' }]);
 
-      const createUsers = vi.fn().mockResolvedValue({
-        code: 'success',
-        data: { users: [{ id: '1', email: 'a@b.com', password: 'pw', uid: 'uid-1' }] },
-      });
-      const { vm } = mountWithFirekit(createUsers);
+      const createUsers = vi
+        .fn()
+        .mockResolvedValue({ users: [{ id: '1', email: 'a@b.com', password: 'pw', uid: 'uid-1' }] });
+      const { vm } = mountWithCreateUsers(createUsers);
 
       await withDownloadStubs(async () => {
         await vm.onFileUpload(mockFileUploadEvent(COHORT_CSV));
@@ -1161,9 +1224,9 @@ describe('AddUsers Page', () => {
     });
 
     it('reports a cohort error when the cohort cannot be resolved', async () => {
-      vi.mocked(fetchOrgByName as any).mockResolvedValueOnce([]); // cohort not found
+      fetchOrgByNameMock.mockResolvedValueOnce([]); // cohort not found
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       await vm.onFileUpload(mockFileUploadEvent(COHORT_CSV));
       await vm.submitUsers();
 
@@ -1174,36 +1237,17 @@ describe('AddUsers Page', () => {
       expect(vm.validationErrors.rows).toEqual([{ message: 'cohort: Does not exist in selected site', rowNums: [2] }]);
       expect(vm.isSubmitting).toBe(false);
     });
-
-    it('shows error when roarfirekit is unavailable at submission time', async () => {
-      // Org resolution succeeds but the firekit ref is null (default auth store
-      // mock), so submitUsers hits the null-firekit guard after org resolution.
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([{ id: 'school-1' }])
-        .mockResolvedValueOnce([{ id: 'class-1' }]);
-
-      const vm = mountAddUsers().vm as any;
-      await vm.onFileUpload(mockFileUploadEvent(SUBMIT_CSV));
-      await vm.submitUsers();
-
-      expect(vm.status).toEqual({
-        message: 'Unable to create users. Please refresh the page and try again.',
-        severity: 'error',
-      });
-      expect(vm.isSubmitting).toBe(false);
-      expect(vm.showSyncPendingModal).toBe(false);
-    });
   });
 
   describe('createOrgIdResolver', () => {
     beforeEach(() => {
-      vi.mocked(fetchOrgByName as any).mockReset();
+      fetchOrgByNameMock.mockReset();
     });
 
     it('fetches an org by normalized name and returns the first result id', async () => {
-      vi.mocked(fetchOrgByName as any).mockResolvedValueOnce([{ id: 'district-1' }]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'district-1' }]);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       const getOrgId = vm.createOrgIdResolver();
 
       // Name includes surrounding whitespace and mixed casing. normalizeToLowercase
@@ -1216,9 +1260,9 @@ describe('AddUsers Page', () => {
     });
 
     it('passes parentDistrictId and parentSchoolId through to fetchOrgByName', async () => {
-      vi.mocked(fetchOrgByName as any).mockResolvedValueOnce([{ id: 'class-1' }]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       const getOrgId = vm.createOrgIdResolver();
 
       const id = await getOrgId('classes', 'Class A', 'district-1', 'school-1');
@@ -1228,9 +1272,9 @@ describe('AddUsers Page', () => {
     });
 
     it('caches results per orgType by normalized name when no parents are provided', async () => {
-      vi.mocked(fetchOrgByName as any).mockResolvedValueOnce([{ id: 'district-1' }]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'district-1' }]);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       const getOrgId = vm.createOrgIdResolver();
 
       const first = await getOrgId('districts', 'Test District');
@@ -1244,9 +1288,9 @@ describe('AddUsers Page', () => {
     });
 
     it('caches results per orgType by a compound key when parents are provided', async () => {
-      vi.mocked(fetchOrgByName as any).mockResolvedValueOnce([{ id: 'class-1' }]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'class-1' }]);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       const getOrgId = vm.createOrgIdResolver();
 
       const first = await getOrgId('classes', 'Class A', 'district-1', 'school-1');
@@ -1260,11 +1304,11 @@ describe('AddUsers Page', () => {
     it('treats different parent scopes as separate cache entries', async () => {
       // Same class name, different parent schools → must fetch twice and
       // store each result under its own compound cache key.
-      vi.mocked(fetchOrgByName as any)
+      fetchOrgByNameMock
         .mockResolvedValueOnce([{ id: 'class-school-1' }])
         .mockResolvedValueOnce([{ id: 'class-school-2' }]);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       const getOrgId = vm.createOrgIdResolver();
 
       const a = await getOrgId('classes', 'Class A', 'district-1', 'school-1');
@@ -1282,11 +1326,11 @@ describe('AddUsers Page', () => {
       //   ('schools', 'foo',              'district-1')        // org named "foo" scoped to district-1
       // as the same entry. Each call must trigger its own fetch and
       // round-trip its own resolved id.
-      vi.mocked(fetchOrgByName as any)
+      fetchOrgByNameMock
         .mockResolvedValueOnce([{ id: 'school-literal' }])
         .mockResolvedValueOnce([{ id: 'school-scoped' }]);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       const getOrgId = vm.createOrgIdResolver();
 
       const literal = await getOrgId('schools', 'foo__district-1');
@@ -1299,11 +1343,9 @@ describe('AddUsers Page', () => {
 
     it('maintains independent caches per orgType', async () => {
       // Same normalized name across different orgTypes must not collide.
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([{ id: 'district-acme' }])
-        .mockResolvedValueOnce([{ id: 'group-acme' }]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'district-acme' }]).mockResolvedValueOnce([{ id: 'group-acme' }]);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       const getOrgId = vm.createOrgIdResolver();
 
       const districtId = await getOrgId('districts', 'Acme');
@@ -1315,9 +1357,9 @@ describe('AddUsers Page', () => {
     });
 
     it('throws "Does not exist in selected site" when no orgs are returned', async () => {
-      vi.mocked(fetchOrgByName as any).mockResolvedValueOnce([]);
+      fetchOrgByNameMock.mockResolvedValueOnce([]);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       const getOrgId = vm.createOrgIdResolver();
 
       await expect(getOrgId('schools', 'Missing School', 'district-1')).rejects.toThrow(
@@ -1329,11 +1371,9 @@ describe('AddUsers Page', () => {
       // First call returns no matches and throws; second call for the same
       // name succeeds. Because failures are not cached, fetchOrgByName must
       // be invoked both times.
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([{ id: 'school-1' }]);
+      fetchOrgByNameMock.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: 'school-1' }]);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       const getOrgId = vm.createOrgIdResolver();
 
       await expect(getOrgId('schools', 'High School', 'district-1')).rejects.toThrow('Does not exist in selected site');
@@ -1346,11 +1386,9 @@ describe('AddUsers Page', () => {
     it('gives each resolver instance its own cache', async () => {
       // Two independent resolvers must not share state — the second resolver
       // should trigger its own fetch even for a name the first already cached.
-      vi.mocked(fetchOrgByName as any)
-        .mockResolvedValueOnce([{ id: 'district-1' }])
-        .mockResolvedValueOnce([{ id: 'district-1' }]);
+      fetchOrgByNameMock.mockResolvedValueOnce([{ id: 'district-1' }]).mockResolvedValueOnce([{ id: 'district-1' }]);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
       const resolverA = vm.createOrgIdResolver();
       const resolverB = vm.createOrgIdResolver();
 
@@ -1365,7 +1403,7 @@ describe('AddUsers Page', () => {
     it('does nothing when registeredUsers is null', () => {
       const createObjectURL = vi.spyOn(URL, 'createObjectURL');
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // Fresh mount: registeredUsers is null. The guard short-circuits
       // before any blob is created or download triggered.
@@ -1397,7 +1435,7 @@ describe('AddUsers Page', () => {
       global.document.body.removeChild = removeChildMock;
 
       try {
-        const vm = mountAddUsers().vm as any;
+        const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
         // Seed registeredUsers directly so this test isolates the download
         // path from the submitUsers integration. The payload mixes:
@@ -1447,7 +1485,7 @@ describe('AddUsers Page', () => {
         expect(link.getAttribute('href')).toBe('mock-blob-url');
         expect(link.getAttribute('download')).toMatch(/^test__registered-\d{8}-\d{4}\.csv$/);
 
-        const csvText = await blob!.text();
+        const csvText = await (blob as Blob).text();
         const lines = csvText.split('\n');
         expect(lines).toHaveLength(3);
 
@@ -1478,11 +1516,11 @@ describe('AddUsers Page', () => {
       // Override the default 'site-id-123' with 'any' for this one mount so
       // that isAllSitesSelected computes to true.
       vi.mocked(useAuthStore).mockReturnValueOnce(
-        createAuthStoreMock({ currentSite: ref('any'), currentSiteName: ref('') }) as any,
+        createAuthStoreMock({ currentSite: ref('any'), currentSiteName: ref('') }),
       );
 
       const wrapper = mountAddUsers();
-      const vm = wrapper.vm as any;
+      const vm = wrapper.vm as unknown as AddUsersVm;
 
       expect(vm.isAllSitesSelected).toBe(true);
 
@@ -1505,7 +1543,7 @@ describe('AddUsers Page', () => {
       ].join('\n');
 
       const wrapper = mountAddUsers();
-      const vm = wrapper.vm as any;
+      const vm = wrapper.vm as unknown as AddUsersVm;
 
       await vm.onFileUpload(mockFileUploadEvent(csv));
       await wrapper.vm.$nextTick();
@@ -1535,7 +1573,7 @@ describe('AddUsers Page', () => {
         data: ref(undefined),
         isLoading: ref(true),
         isError: ref(false),
-      } as any);
+      } as unknown as ReturnType<typeof useGetSyncStatusQuery>);
 
       const wrapper = mountAddUsers();
 
@@ -1549,7 +1587,7 @@ describe('AddUsers Page', () => {
         data: ref(undefined),
         isLoading: ref(false),
         isError: ref(true),
-      } as any);
+      } as unknown as ReturnType<typeof useGetSyncStatusQuery>);
 
       const wrapper = mountAddUsers();
 
@@ -1567,9 +1605,9 @@ describe('AddUsers Page', () => {
         data: ref({ assignments: { pending: 1 }, users: { pending: 0 } }),
         isLoading: ref(false),
         isError: ref(false),
-      } as any);
+      } as unknown as ReturnType<typeof useGetSyncStatusQuery>);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       expect(vm.showSyncPendingModal).toBe(false);
       expect(vm.hasPendingSyncStatus).toBe(true);
@@ -1582,9 +1620,9 @@ describe('AddUsers Page', () => {
         data: ref({ assignments: { pending: 0 }, users: { pending: 0 } }),
         isLoading: ref(false),
         isError: ref(false),
-      } as any);
+      } as unknown as ReturnType<typeof useGetSyncStatusQuery>);
 
-      const vm = mountAddUsers().vm as any;
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       expect(vm.showSyncPendingModal).toBe(false);
       expect(vm.hasPendingSyncStatus).toBe(false);
@@ -1604,7 +1642,7 @@ describe('AddUsers Page', () => {
       ].join('\n');
 
       const wrapper = mountAddUsers();
-      const vm = wrapper.vm as any;
+      const vm = wrapper.vm as unknown as AddUsersVm;
 
       await vm.onFileUpload(mockFileUploadEvent(csv));
       await wrapper.vm.$nextTick();
@@ -1634,10 +1672,10 @@ describe('AddUsers Page', () => {
 
     it('resets progress when the selected site changes', async () => {
       const currentSite = ref('site-id-123');
-      vi.mocked(useAuthStore).mockReturnValueOnce(createAuthStoreMock({ currentSite }) as any);
+      vi.mocked(useAuthStore).mockReturnValueOnce(createAuthStoreMock({ currentSite }));
 
       const wrapper = mountAddUsers();
-      const vm = wrapper.vm as any;
+      const vm = wrapper.vm as unknown as AddUsersVm;
 
       await vm.onFileUpload({ files: [new File([SUBMIT_CSV], 'test.csv', { type: 'text/csv' })] });
       expect(vm.validatedData).not.toBeNull();
@@ -1653,10 +1691,10 @@ describe('AddUsers Page', () => {
 
     it('does not reset progress when the site changes during submission', async () => {
       const currentSite = ref('site-id-123');
-      vi.mocked(useAuthStore).mockReturnValueOnce(createAuthStoreMock({ currentSite }) as any);
+      vi.mocked(useAuthStore).mockReturnValueOnce(createAuthStoreMock({ currentSite }));
 
       const wrapper = mountAddUsers();
-      const vm = wrapper.vm as any;
+      const vm = wrapper.vm as unknown as AddUsersVm;
 
       await vm.onFileUpload({ files: [new File([SUBMIT_CSV], 'test.csv', { type: 'text/csv' })] });
       expect(vm.validatedData).not.toBeNull();

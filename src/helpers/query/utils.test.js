@@ -180,7 +180,7 @@ describe('retryRequestWithFreshToken', () => {
     ).rejects.toThrow('Session expired');
 
     expect(authStore.signOut).toHaveBeenCalledOnce();
-    expect(assignSpy).toHaveBeenCalledWith('/signin?sessionExpired=true');
+    expect(assignSpy).toHaveBeenCalledWith('/login?sessionExpired=true');
     expect(axiosInstance).not.toHaveBeenCalled();
 
     assignSpy.mockRestore();

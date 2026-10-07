@@ -9,6 +9,7 @@
         <div class="page-title-row flex align-items-center justify-content-start gap-2 mb-2">
           <div class="admin-page-header m-0">{{ header }}</div>
           <DocsButton
+            class="ml-auto"
             href="https://researcher.levante-network.org/dashboard/create-an-assignment"
             label="Documentation"
           />

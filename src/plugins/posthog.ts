@@ -8,8 +8,11 @@ interface PostHogMock {
   // Add other PostHog methods you might use if needed
 }
 
-const posthogKey = 'phc_td8viDO0LP7PZsn7nZrV9bJBYgEMSHE9WeVTlW2CGh5';
-const posthogHost = 'https://us.i.posthog.com';
+export const POSTHOG_PROJECT_KEY = 'phc_vzBRhfMUdNALcdKyBFNwiMCDRyYjVtFnT9hrEZBKHFcJ';
+export const POSTHOG_API_HOST = 'https://eu.i.posthog.com';
+
+const posthogKey = POSTHOG_PROJECT_KEY;
+const posthogHost = POSTHOG_API_HOST;
 const isTestEnv = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
 
 let posthogInstance: typeof posthog | PostHogMock;

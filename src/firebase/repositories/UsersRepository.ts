@@ -1,8 +1,14 @@
 import type {
+  CreateUsersParams,
+  CreateUsersResult,
+  GetUserOverviewParams,
+  GetUserOverviewResult,
   GetUsersByOrgParams,
   GetUsersByOrgResult,
   LinkUsersParams,
   LinkUsersResult,
+  UpdateUsersInfoParams,
+  UpdateUsersInfoResult,
 } from '@levante-framework/levante-zod';
 import {
   collection,
@@ -53,11 +59,6 @@ export interface CreateUpdateAdministratorPayload {
 }
 
 const CREATE_USERS_CALLABLE_TIMEOUT_MS = 540_000;
-
-export interface CreateUsersPayload {
-  users: Record<string, unknown>[];
-  siteId?: string;
-}
 
 const ADMIN_ROLES = new Set<string>([ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN, ROLES.ADMIN, ROLES.RESEARCH_ASSISTANT]);
 
@@ -131,8 +132,12 @@ class UsersRepository extends Repository {
     return this.call<CreateUpdateAdministratorPayload, unknown>('createAdministrator', payload);
   }
 
-  async createUsers(payload: CreateUsersPayload): Promise<unknown> {
-    return this.callWithTimeout<CreateUsersPayload, unknown>('createUsers', payload, CREATE_USERS_CALLABLE_TIMEOUT_MS);
+  async createUsers(params: CreateUsersParams): Promise<CreateUsersResult> {
+    return this.callWithTimeout<CreateUsersParams, CreateUsersResult>(
+      'createUsers',
+      params,
+      CREATE_USERS_CALLABLE_TIMEOUT_MS,
+    );
   }
 
   async getAdministrationOrgProgress(
@@ -150,12 +155,20 @@ class UsersRepository extends Repository {
     return response.data;
   }
 
+  async getUserOverview(params: GetUserOverviewParams): Promise<GetUserOverviewResult> {
+    return this.call<GetUserOverviewParams, GetUserOverviewResult>('getUserOverview', params);
+  }
+
   async getUsersByOrg(params: GetUsersByOrgParams): Promise<GetUsersByOrgResult> {
     return this.call<GetUsersByOrgParams, GetUsersByOrgResult>('getUsersByOrg', params);
   }
 
   async linkUsers(params: LinkUsersParams): Promise<LinkUsersResult> {
     return this.call<LinkUsersParams, LinkUsersResult>('linkUsers', params);
+  }
+
+  async updateUsersInfo(params: UpdateUsersInfoParams): Promise<UpdateUsersInfoResult> {
+    return this.call<UpdateUsersInfoParams, UpdateUsersInfoResult>('updateUsersInfo', params);
   }
 }
 
