@@ -1019,6 +1019,11 @@ watch(
   },
   { immediate: true },
 );
+
+onUnmounted(() => {
+  setShouldUserConfirm(false);
+  setHasUserConfirmed(false);
+});
 </script>
 
 <style lang="scss" scoped>
