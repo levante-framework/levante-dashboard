@@ -213,6 +213,7 @@ describe('TaskLevante.vue', () => {
       selectedAssignmentRef.value = { id: 'assignment-1' };
       TaskLauncher.mockImplementationOnce(() => ({
         run: vi.fn().mockRejectedValue(new Error('mid-game boom')),
+        abort: vi.fn(),
       }));
 
       const wrapper = await mountTaskLevante();
