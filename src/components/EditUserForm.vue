@@ -57,7 +57,7 @@
             />
           </div>
           <p v-if="isBirthDateDirty" class="m-0 text-sm text-red-500 font-bold" data-testid="birth-date-warning">
-            Editing a user's birth date will make your CSV out-of-date. Please manually update this user's <code>month</code>/<code>year</code> values in your latest Registered Users file.
+            Editing a child's birth date here makes your CSV out-of-date. Please manually update this child's birth <code>month</code> and <code>year</code> in your latest registered users CSV file.
           </p>
         </div>
       </div>
@@ -80,7 +80,7 @@
             Disabled
           </span>
           <span class="text-xs font-normal text-gray-500">
-            Exclude user from new assignments and data release
+            Exclude user from new assignments and remove existing data from future releases
           </span>
         </label>
         <PvToggleSwitch v-model="disabled" input-id="disabled" class="flex-shrink-0" />
@@ -370,6 +370,7 @@ function formatDate(value: string): string {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
   width: 100%;
   height: auto;
   min-height: 36px;

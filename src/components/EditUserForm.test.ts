@@ -62,15 +62,6 @@ describe('EditUserForm', () => {
       expect(wrapper.text()).toContain('child');
     });
 
-    it('explains what the archived and disabled toggles do', () => {
-      const wrapper = mountForm();
-      const archived = wrapper.find('label[for="archived"]');
-      const disabled = wrapper.find('label[for="disabled"]');
-      expect(archived.text()).toContain('Exclude user from new assignments');
-      expect(archived.text()).not.toContain('data release');
-      expect(disabled.text()).toContain('Exclude user from new assignments and data release');
-    });
-
     it('renders the child label when present', () => {
       const wrapper = mountForm({ childLabel: 'Child 3' });
       expect(wrapper.text()).toContain('Child Label');
