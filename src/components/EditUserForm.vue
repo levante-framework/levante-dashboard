@@ -32,7 +32,7 @@
       <div v-if="user.userType === 'child'" class="row">
         <div class="flex flex-column gap-2 w-full">
           <div class="flex justify-content-between align-items-center gap-3 w-full">
-            <label class="font-bold text-xs text-color-secondary uppercase white-space-nowrap">
+            <label for="birth-date" class="font-bold text-xs text-color-secondary uppercase white-space-nowrap">
               Birth Date
             </label>
             <div v-if="isLoading" class="text-md text-gray-500">Loading…</div>
@@ -42,6 +42,7 @@
             <PvDatePicker
               v-else
               v-model="userChildBirthDate"
+              input-id="birth-date"
               view="month"
               dateFormat="mm/yy"
               :minDate="BIRTH_DATE_MIN"
