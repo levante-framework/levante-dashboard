@@ -30,42 +30,59 @@
       </div>
 
       <div v-if="user.userType === 'child'" class="row">
-        <label class="font-bold text-xs text-color-secondary uppercase">
-          Birth Date
-        </label>
-        <div v-if="isLoading" class="text-md text-gray-500">Loading…</div>
-        <div v-else-if="isError" class="text-md text-red-500">
-          Failed to load birth date.
+        <div class="flex flex-column gap-2 w-full">
+          <div class="flex justify-content-between align-items-center gap-3 w-full">
+            <label class="font-bold text-xs text-color-secondary uppercase white-space-nowrap">
+              Birth Date
+            </label>
+            <div v-if="isLoading" class="text-md text-gray-500">Loading…</div>
+            <div v-else-if="isError" class="text-md text-red-500">
+              Failed to load birth date.
+            </div>
+            <PvDatePicker
+              v-else
+              v-model="userChildBirthDate"
+              view="month"
+              dateFormat="mm/yy"
+              :minDate="BIRTH_DATE_MIN"
+              :maxDate="BIRTH_DATE_MAX"
+              :manual-input="false"
+              fluid
+              iconDisplay="input"
+              placeholder="Select birth month/year"
+              showIcon
+              size="small"
+              @update:model-value="birthDateTouched = true"
+            />
+          </div>
+          <p v-if="isBirthDateDirty" class="m-0 text-sm text-red-500 font-bold" data-testid="birth-date-warning">
+            Editing a user's birth date will make your CSV out-of-date. Please manually update this user's <code>month</code>/<code>year</code> values in your latest Registered Users file.
+          </p>
         </div>
-        <PvDatePicker
-          v-else
-          v-model="userChildBirthDate"
-          view="month"
-          dateFormat="mm/yy"
-          :minDate="BIRTH_DATE_MIN"
-          :maxDate="BIRTH_DATE_MAX"
-          :manual-input="false"
-          fluid
-          iconDisplay="input"
-          placeholder="Select birth month/year"
-          showIcon
-          size="small"
-          @update:model-value="birthDateTouched = true"
-        />
       </div>
 
       <div class="row">
-        <label class="font-bold text-xs text-color-secondary uppercase">
-          Archived
+        <label for="archived" class="flex align-items-baseline gap-2 m-0 min-w-0">
+          <span class="font-bold text-xs text-color-secondary uppercase white-space-nowrap">
+            Archived
+          </span>
+          <span class="text-xs font-normal text-gray-500">
+            Exclude user from new assignments
+          </span>
         </label>
-        <PvToggleSwitch v-model="archived" input-id="archived" />
+        <PvToggleSwitch v-model="archived" input-id="archived" class="flex-shrink-0" />
       </div>
 
       <div class="row">
-        <label class="font-bold text-xs text-color-secondary uppercase">
-          Disabled
+        <label for="disabled" class="flex align-items-baseline gap-2 m-0 min-w-0">
+          <span class="font-bold text-xs text-color-secondary uppercase white-space-nowrap">
+            Disabled
+          </span>
+          <span class="text-xs font-normal text-gray-500">
+            Exclude user from new assignments and data release
+          </span>
         </label>
-        <PvToggleSwitch v-model="disabled" input-id="disabled" />
+        <PvToggleSwitch v-model="disabled" input-id="disabled" class="flex-shrink-0" />
       </div>
 
       <div class="row">
@@ -251,14 +268,19 @@ const childBirthYear = computed(() =>
   userChildBirthDate.value ? userChildBirthDate.value.getFullYear() : undefined,
 );
 
+const isBirthDateDirty = computed(
+  () =>
+    childBirthMonth.value !== props.birthMonth ||
+    childBirthYear.value !== props.birthYear,
+);
+
 // Dirty is derived here, next to the state it depends on; the parent just
 // consumes it to enable/disable submit.
 const isDirty = computed(
   () =>
     archived.value !== props.user.archived ||
     disabled.value !== props.user.disabled ||
-    childBirthMonth.value !== props.birthMonth ||
-    childBirthYear.value !== props.birthYear,
+    isBirthDateDirty.value,
 );
 
 // +----------+
