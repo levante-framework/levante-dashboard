@@ -245,6 +245,31 @@ describe('EditUserForm', () => {
       expect(wrapper.emitted('dirty')?.at(-1)).toEqual([true]);
     });
 
+    it('shows a warning only while the birth date is dirty', async () => {
+      const wrapper = mount(EditUserForm, {
+        props: { user: DEFAULT_USER, birthMonth: 6, birthYear: 2018 },
+        global: globalMountOptions,
+      });
+      const warning = () => wrapper.find('[data-testid="birth-date-warning"]');
+      expect(warning().exists()).toBe(false);
+
+      await setBirthDate(wrapper, new Date(2019, 5, 1));
+      expect(warning().exists()).toBe(true);
+      expect(warning().text().trim()).not.toBe('');
+
+      await setBirthDate(wrapper, new Date(2018, 5, 1));
+      expect(warning().exists()).toBe(false);
+    });
+
+    it('keeps the birth-date warning hidden when only another field is dirty', async () => {
+      const wrapper = mount(EditUserForm, {
+        props: { user: DEFAULT_USER, birthMonth: 6, birthYear: 2018 },
+        global: globalMountOptions,
+      });
+      await setToggle(wrapper, 0, true);
+      expect(wrapper.find('[data-testid="birth-date-warning"]').exists()).toBe(false);
+    });
+
     it('reseeds the picker when birth data arrives from the overview', async () => {
       const wrapper = mountForm();
       expect(wrapper.findComponent(PvDatePicker).props('modelValue')).toBeNull();
