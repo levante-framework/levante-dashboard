@@ -104,10 +104,13 @@ import { getAssignmentStatus } from '@/helpers/assignments';
 import { getChildLetter } from '@/helpers/childLabels';
 import {
   expandGamesForDisplay,
+  findSpecificSurveyResponse,
+  getSpecificRelationId,
   getSurveyPartProgress,
   isSurveyPartComplete,
   isSurveyPartLocked,
 } from '@/helpers/surveyGameCards';
+import { getTeacherClassroomSurveyIds } from '@/helpers/teacherSurveyRelations';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
@@ -132,6 +135,9 @@ interface UserData {
   assessmentPid?: string;
   childIds?: string[];
   classes?: {
+    current: string[];
+  };
+  groups?: {
     current: string[];
   };
   schools?: {
@@ -185,7 +191,7 @@ const isLevanteTask = (taskId: string): boolean => normalizedLevanteTaskIds.has(
 const isRoarTask = (taskId: string): boolean => normalizedRoarTaskIds.has(toCamelCase(taskId));
 
 const relationIds = computed((): (string | number)[] => {
-  if (props.userData.userType === 'teacher') return props.userData.classes?.current ?? [];
+  if (props.userData.userType === 'teacher') return getTeacherClassroomSurveyIds(props.userData);
   return props.userData.childIds ?? [];
 });
 
@@ -329,12 +335,12 @@ const getSurveyInstance = (): SurveyInstance | null => surveyStore.survey as Sur
 
 const isSurveyPartGameCardComplete = (game: DisplayGame): boolean => {
   if (!game.surveyPart) return false;
-  return isSurveyPartComplete(game.surveyPart, surveyStore, surveyResponseDoc.value);
+  return isSurveyPartComplete(game.surveyPart, surveyStore, surveyResponseDoc.value, relationIds.value);
 };
 
 const isSurveyPartGameCardLocked = (game: DisplayGame): boolean => {
   if (!game.surveyPart) return false;
-  return isSurveyPartLocked(game.surveyPart, surveyStore, surveyResponseDoc.value);
+  return isSurveyPartLocked(game.surveyPart, surveyStore, surveyResponseDoc.value, relationIds.value);
 };
 
 const isTaskComplete = (game: DisplayGame): boolean => {
@@ -386,7 +392,8 @@ const launchSurveyPart = (game: DisplayGame): void => {
   } else {
     surveyStore.setIsGeneralSurveyComplete(true);
     surveyStore.setSpecificSurveyRelationIndex(part.index);
-    setSurveyResponses(surveyResponseDoc.value?.specific?.[part.index]?.responses);
+    const specificId = getSpecificRelationId(part.index, surveyStore, relationIds.value);
+    setSurveyResponses(findSpecificSurveyResponse(surveyResponseDoc.value, specificId)?.responses);
   }
 
   const progress = getSurveyPartProgressValue(game);

@@ -11,6 +11,7 @@ import {
   saveFinalSurveyData,
   saveSurveyData,
 } from '@/helpers/survey';
+import { getTeacherClassroomSurveyIds } from '@/helpers/teacherSurveyRelations';
 import { logger } from '@/logger';
 import type { useAssignmentsStore } from '@/store/assignments';
 
@@ -19,7 +20,8 @@ interface UserData {
   selectedAdminId: string | null;
   surveyResponsesData: any;
   childIds?: (string | number)[];
-  classes?: { current: (string | number)[] };
+  classes?: { current: string[] };
+  groups?: { current: string[] };
   isGeneralSurveyComplete: boolean;
   specificSurveyRelationIndex: number;
 }
@@ -107,7 +109,7 @@ export function setupSurveyEventHandlers({
   if (userType === 'parent') {
     specificIds = userData.childIds || [];
   } else if (userType === 'teacher') {
-    specificIds = userData.classes?.current || [];
+    specificIds = getTeacherClassroomSurveyIds(userData);
   }
 
   surveyInstance.onValueChanged.add((sender: SurveyModel, options: { name: string; question: Question; value: any }) =>
