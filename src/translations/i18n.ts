@@ -1,6 +1,7 @@
 import { createI18n } from 'vue-i18n';
 import { isLevante } from '@/constants';
 import { LEVANTE_TRANSLATION_LANGUAGES, LEVANTE_TRANSLATIONS } from '@/constants/bucket';
+import { retryTransient } from '@/helpers/retryTransient';
 import { logger } from '@/logger';
 
 export interface LanguageOption {
@@ -97,8 +98,8 @@ interface Translations {
   [key: string]: string | Translations;
 }
 
-export async function getLanguages(): Promise<void> {
-  const response = await fetch(LEVANTE_TRANSLATION_LANGUAGES);
+async function loadLanguages(): Promise<void> {
+  const response = await retryTransient(() => fetch(LEVANTE_TRANSLATION_LANGUAGES));
   const data: Record<string, LanguageOption> = await response.json();
 
   const sortedEntries = Object.entries(data).sort(([, a], [, b]) => {
@@ -115,6 +116,27 @@ export async function getLanguages(): Promise<void> {
 
   const finalObject = Object.fromEntries(filteredEntries);
   Object.assign(languageOptions, finalObject);
+}
+
+export async function getLanguages(): Promise<void> {
+  try {
+    await loadLanguages();
+  } catch (error) {
+    logger.error(new Error('Failed to fetch languages', { cause: error }), {
+      tags: { function: 'getLanguages' },
+    });
+    window.addEventListener(
+      'online',
+      () => {
+        void loadLanguages().catch((retryError: unknown) => {
+          logger.error(new Error('Failed to fetch languages', { cause: retryError }), {
+            tags: { function: 'getLanguages' },
+          });
+        });
+      },
+      { once: true },
+    );
+  }
 }
 
 export async function getTranslations(locale?: string): Promise<boolean> {
@@ -152,7 +174,7 @@ async function fetchTranslations(bucket: 'test' | 'live', locale: string): Promi
   const url = `${LEVANTE_TRANSLATIONS}/${bucket}/${parsedLocale}/dashboard_translations.json`;
 
   try {
-    const response = await fetch(url);
+    const response = await retryTransient(() => fetch(url));
     if (!response.ok) return null;
 
     const data = await response.json();

@@ -9,6 +9,7 @@ import { toRaw } from 'vue';
 import type { Router } from 'vue-router';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
+import { retryTransient } from '@/helpers/retryTransient';
 import { logger } from '@/logger';
 import type { useAssignmentsStore } from '@/store/assignments';
 // @ts-expect-error - Will be resolved when store file is converted to TS
@@ -277,10 +278,12 @@ export async function saveFinalSurveyData({
 
   // call cloud function to save the survey results
   try {
-    await roarfirekit.saveSurveyResponses({
-      surveyData: structuredResponses,
-      administrationId: selectedAdmin!,
-    });
+    await retryTransient(() =>
+      roarfirekit.saveSurveyResponses({
+        surveyData: structuredResponses,
+        administrationId: selectedAdmin!,
+      }),
+    );
 
     // Clear localStorage after successful submission
     window.localStorage.removeItem(`${LEVANTE_SURVEY_RESPONSES_KEY}-${uid}`);
