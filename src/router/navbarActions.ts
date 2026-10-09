@@ -66,7 +66,6 @@ const navbarActionOptions: Readonly<NavbarAction>[] = [
   },
   {
     title: 'Manage Tasks',
-    icon: 'pi pi-pencil',
     buttonLink: { name: 'ManageTasksVariants' },
     allowedRoles: [ROLES.SUPER_ADMIN],
     category: 'Tasks',
