@@ -8,6 +8,13 @@ describe('isRetryableStartAssessmentError', () => {
     expect(isRetryableStartAssessmentError({ code: 'deadline-exceeded' })).toBe(true);
   });
 
+  it('returns true for fetch and offline failures', () => {
+    expect(isRetryableStartAssessmentError(new TypeError('Failed to fetch'))).toBe(true);
+    expect(isRetryableStartAssessmentError(new Error('Failed to get document because the client is offline'))).toBe(
+      true,
+    );
+  });
+
   it('returns false for non-retryable errors', () => {
     expect(isRetryableStartAssessmentError({ code: 'permission-denied' })).toBe(false);
     expect(isRetryableStartAssessmentError(new Error('boom'))).toBe(false);
@@ -28,14 +35,11 @@ describe('startAssessmentWithRetry', () => {
     expect(startAssessment).toHaveBeenCalledTimes(2);
   });
 
-  it('rejects with the second error when both attempts fail', async () => {
-    const secondError = { code: 'functions/internal', attempt: 2 };
-    const startAssessment = vi
-      .fn()
-      .mockRejectedValueOnce({ code: 'functions/internal', attempt: 1 })
-      .mockRejectedValueOnce(secondError);
-    await expect(startAssessmentWithRetry(startAssessment, 0)).rejects.toBe(secondError);
-    expect(startAssessment).toHaveBeenCalledTimes(2);
+  it('rejects with the last error when every attempt fails', async () => {
+    const lastError = { code: 'functions/internal', attempt: 4 };
+    const startAssessment = vi.fn().mockRejectedValue(lastError);
+    await expect(startAssessmentWithRetry(startAssessment, 0)).rejects.toBe(lastError);
+    expect(startAssessment).toHaveBeenCalledTimes(4);
   });
 
   it('does not retry permission errors', async () => {

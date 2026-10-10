@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { saveFinalSurveyData } from './survey';
+import { enqueueSurveySave, saveFinalSurveyData } from './survey';
 
 vi.mock('@/logger', () => ({
   logger: {
@@ -125,5 +125,57 @@ describe('saveFinalSurveyData relation index', () => {
     expect(surveyStore.setIsSpecificSurveyComplete).toHaveBeenCalledWith(true);
     expect(surveyStore.setSpecificSurveyRelationIndex).not.toHaveBeenCalled();
     expect(surveyStore.specificSurveyRelationIndex).toBe(1);
+  });
+});
+
+describe('enqueueSurveySave', () => {
+  it('retries a save while it is still the latest', async () => {
+    vi.useFakeTimers();
+    const operation = vi.fn().mockRejectedValueOnce({ code: 'functions/internal' }).mockResolvedValueOnce(undefined);
+    const pending = enqueueSurveySave(operation);
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(pending).resolves.toBe('saved');
+    expect(operation).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it('does not retry a save after a newer one is queued', async () => {
+    let rejectPage: (error: unknown) => void = () => undefined;
+    const pageAttempt = new Promise((_, reject) => {
+      rejectPage = reject;
+    });
+    const pageSave = vi.fn(() => pageAttempt);
+    const pageQueued = enqueueSurveySave(pageSave);
+    await vi.waitFor(() => expect(pageSave).toHaveBeenCalledTimes(1));
+
+    const finalSave = vi.fn().mockResolvedValue(undefined);
+    const finalQueued = enqueueSurveySave(finalSave);
+    rejectPage({ code: 'functions/internal' });
+
+    await expect(pageQueued).resolves.toBe('superseded');
+    await expect(finalQueued).resolves.toBe('saved');
+    expect(pageSave).toHaveBeenCalledTimes(1);
+    expect(finalSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('finishes an in-flight save before the newer save writes', async () => {
+    const order: string[] = [];
+    let resolvePage: () => void = () => undefined;
+    const pageAttempt = new Promise<void>((resolve) => {
+      resolvePage = resolve;
+    });
+    const pageQueued = enqueueSurveySave(async () => {
+      order.push('page-start');
+      await pageAttempt;
+      order.push('page-done');
+    });
+    await vi.waitFor(() => expect(order).toEqual(['page-start']));
+    const finalQueued = enqueueSurveySave(async () => {
+      order.push('final');
+    });
+    resolvePage();
+    await pageQueued;
+    await finalQueued;
+    expect(order).toEqual(['page-start', 'page-done', 'final']);
   });
 });

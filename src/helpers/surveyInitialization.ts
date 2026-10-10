@@ -4,6 +4,7 @@ import type { CompleteEvent, PageModel, Question, SurveyModel } from 'survey-cor
 import type { Router } from 'vue-router';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 import {
+  enqueueSurveySave,
   getParsedLocale,
   type LocalStorageSurveyData,
   type RoarfirekitType,
@@ -159,16 +160,21 @@ export function setupSurveyEventHandlers({
             userType: userType,
           };
 
-          try {
+          void enqueueSurveySave(() =>
             roarfirekit.saveSurveyResponses({
               surveyData: dataToSave,
               administrationId: selectedAdminId,
-            });
-          } catch (error: unknown) {
-            logger.error(new Error('Failed to save previous page survey responses', { cause: error }), {
-              tags: { function: 'setupSurveyEventHandlers' },
-            });
-          }
+            }),
+          ).catch((error: unknown) => {
+            logger.error(
+              new Error('Failed to save previous page survey responses', {
+                cause: error,
+              }),
+              {
+                tags: { function: 'setupSurveyEventHandlers' },
+              },
+            );
+          });
         }
       }
     },
