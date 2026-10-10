@@ -3,8 +3,8 @@ import type { ToastServiceMethods } from 'primevue/toastservice';
 import type { CompleteEvent, PageModel, Question, SurveyModel } from 'survey-core';
 import type { Router } from 'vue-router';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
-import { retryTransient } from '@/helpers/retryTransient';
 import {
+  enqueueSurveySave,
   getParsedLocale,
   type LocalStorageSurveyData,
   type RoarfirekitType,
@@ -160,7 +160,7 @@ export function setupSurveyEventHandlers({
             userType: userType,
           };
 
-          void retryTransient(() =>
+          void enqueueSurveySave(() =>
             roarfirekit.saveSurveyResponses({
               surveyData: dataToSave,
               administrationId: selectedAdminId,
