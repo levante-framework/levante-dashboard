@@ -159,6 +159,7 @@ async function handleSubmit(): Promise<void> {
       archived: form.archived,
     });
     toast.add({
+      group: 'manage-tasks',
       severity: 'success',
       summary: isEdit.value ? 'Task updated' : 'Task created',
       detail: isEdit.value ? form.id : derivedId.value,

@@ -315,6 +315,7 @@ async function handleSubmit(): Promise<void> {
       registered: form.registered,
     });
     toast.add({
+      group: 'manage-tasks',
       severity: 'success',
       summary: 'Variant created',
       detail: result.variant.id,

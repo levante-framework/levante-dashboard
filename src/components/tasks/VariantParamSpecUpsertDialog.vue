@@ -162,6 +162,7 @@ async function handleSubmit(): Promise<void> {
       archived: form.archived,
     });
     toast.add({
+      group: 'manage-tasks',
       severity: 'success',
       summary: isEdit.value ? 'Param spec updated' : 'Param spec created',
       detail: form.id ?? name,
