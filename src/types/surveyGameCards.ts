@@ -22,10 +22,17 @@ export interface DisplayGame extends Game {
   surveyPart?: SurveyPartMeta;
 }
 
+export interface SpecificSurveyResponse {
+  classId?: string;
+  childId?: string | number;
+  isComplete?: boolean;
+  responses?: Record<string, unknown>;
+}
+
 export interface SurveyResponseDoc {
   administrationId?: string;
   general?: { isComplete?: boolean; responses?: Record<string, unknown> };
-  specific?: Array<{ isComplete?: boolean; responses?: Record<string, unknown> }>;
+  specific?: SpecificSurveyResponse[];
   pageNo?: number;
 }
 

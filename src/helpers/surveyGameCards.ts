@@ -1,14 +1,47 @@
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
-import type { DisplayGame, Game, SurveyPartMeta, SurveyResponseDoc, SurveyStoreSlice } from '@/types/surveyGameCards';
+import type {
+  DisplayGame,
+  Game,
+  SpecificSurveyResponse,
+  SurveyPartMeta,
+  SurveyResponseDoc,
+  SurveyStoreSlice,
+} from '@/types/surveyGameCards';
 
 export type {
   DisplayGame,
   Game,
   GameTaskData,
+  SpecificSurveyResponse,
   SurveyPartMeta,
   SurveyResponseDoc,
   SurveyStoreSlice,
 } from '@/types/surveyGameCards';
+
+export function findSpecificSurveyResponse(
+  surveyResponseDoc: SurveyResponseDoc | null | undefined,
+  relationId: string | number | undefined,
+): SpecificSurveyResponse | undefined {
+  if (relationId === undefined) return undefined;
+  return surveyResponseDoc?.specific?.find((entry) => String(entry.classId ?? entry.childId) === String(relationId));
+}
+
+export function getSpecificRelationId(
+  index: number,
+  surveyStore: Pick<SurveyStoreSlice, 'specificSurveyRelationData'>,
+  relationIds: (string | number)[],
+): string | number | undefined {
+  // Prefer the live relationIds (derived from current userData) as the source of identity.
+  // specificSurveyRelationData can go stale (e.g. a cohort-only teacher's `generic` entry lingers
+  // after they are later linked to a real class), so it is only a fallback for identity.
+  const liveId = relationIds[index];
+  if (typeof liveId === 'string' || typeof liveId === 'number') return liveId;
+
+  const relationDataId = surveyStore.specificSurveyRelationData[index]?.id;
+  if (typeof relationDataId === 'string' || typeof relationDataId === 'number') return relationDataId;
+
+  return undefined;
+}
 
 export function isAdultMultipartSurveyTask(taskId: string, userType: string): boolean {
   const normalizedTaskId = taskId.toLowerCase();
@@ -40,7 +73,7 @@ export function expandGamesForDisplay(
     const specificCount = Math.max(relationData.length, relationIds.length);
 
     for (let index = 0; index < specificCount; index++) {
-      const specificId = relationData[index]?.id ?? relationIds[index] ?? index;
+      const specificId = relationIds[index] ?? relationData[index]?.id ?? index;
       parts.push({
         ...game,
         gameCardId: `${game.taskId}:specific:${specificId}`,
@@ -91,10 +124,9 @@ export function getSurveyPartProgress(
     return progressFromPageNo(surveyStore.survey.currentPageNo || 0, surveyStore.numGeneralPages);
   }
 
-  const specificResponse = surveyResponseDoc?.specific?.[part.index];
-  if (specificResponse?.isComplete) return 100;
+  const specificId = getSpecificRelationId(part.index, surveyStore, relationIds) ?? part.index;
+  if (findSpecificSurveyResponse(surveyResponseDoc, specificId)?.isComplete) return 100;
 
-  const specificId = surveyStore.specificSurveyRelationData[part.index]?.id ?? relationIds[part.index] ?? part.index;
   const localProgress = getStoredSurveyProgress(userId, specificId, surveyStore, { isGeneral: false });
   if (localProgress !== null) return localProgress;
 
@@ -105,39 +137,48 @@ export function isSurveyPartComplete(
   part: SurveyPartMeta,
   surveyStore: SurveyStoreSlice,
   surveyResponseDoc: SurveyResponseDoc | null,
+  relationIds: (string | number)[],
 ): boolean {
   if (part.type === 'general') {
     return Boolean(surveyStore.isGeneralSurveyComplete || surveyResponseDoc?.general?.isComplete);
   }
 
-  return Boolean(surveyResponseDoc?.specific?.[part.index]?.isComplete);
+  const specificId = getSpecificRelationId(part.index, surveyStore, relationIds);
+  return Boolean(findSpecificSurveyResponse(surveyResponseDoc, specificId)?.isComplete);
 }
 
 export function isSurveyPartLocked(
   part: SurveyPartMeta,
   surveyStore: SurveyStoreSlice,
   surveyResponseDoc: SurveyResponseDoc | null,
+  relationIds: (string | number)[],
 ): boolean {
   if (part.type === 'general') return false;
 
-  if (!isSurveyPartComplete({ type: 'general', index: 0 }, surveyStore, surveyResponseDoc)) return true;
+  if (!isSurveyPartComplete({ type: 'general', index: 0 }, surveyStore, surveyResponseDoc, relationIds)) return true;
 
   if (part.index === 0) return false;
 
-  return !isSurveyPartComplete({ type: 'specific', index: part.index - 1 }, surveyStore, surveyResponseDoc);
+  return !isSurveyPartComplete(
+    { type: 'specific', index: part.index - 1 },
+    surveyStore,
+    surveyResponseDoc,
+    relationIds,
+  );
 }
 
 export function isAdultSurveyAssignmentComplete(
   surveyStore: SurveyStoreSlice,
   surveyResponseDoc: SurveyResponseDoc | null,
+  relationIds: (string | number)[],
 ): boolean {
-  if (!isSurveyPartComplete({ type: 'general', index: 0 }, surveyStore, surveyResponseDoc)) return false;
+  if (!isSurveyPartComplete({ type: 'general', index: 0 }, surveyStore, surveyResponseDoc, relationIds)) return false;
 
   if (surveyStore.specificSurveyRelationData.length === 0) {
     return surveyStore.isSpecificSurveyComplete;
   }
 
   return surveyStore.specificSurveyRelationData.every((_relation, index) =>
-    isSurveyPartComplete({ type: 'specific', index }, surveyStore, surveyResponseDoc),
+    isSurveyPartComplete({ type: 'specific', index }, surveyStore, surveyResponseDoc, relationIds),
   );
 }
