@@ -31,9 +31,16 @@ export function getSpecificRelationId(
   surveyStore: Pick<SurveyStoreSlice, 'specificSurveyRelationData'>,
   relationIds: (string | number)[],
 ): string | number | undefined {
+  // Prefer the live relationIds (derived from current userData) as the source of identity.
+  // specificSurveyRelationData can go stale (e.g. a cohort-only teacher's `generic` entry lingers
+  // after they are later linked to a real class), so it is only a fallback for identity.
+  const liveId = relationIds[index];
+  if (typeof liveId === 'string' || typeof liveId === 'number') return liveId;
+
   const relationDataId = surveyStore.specificSurveyRelationData[index]?.id;
   if (typeof relationDataId === 'string' || typeof relationDataId === 'number') return relationDataId;
-  return relationIds[index];
+
+  return undefined;
 }
 
 export function isAdultMultipartSurveyTask(taskId: string, userType: string): boolean {
@@ -66,7 +73,7 @@ export function expandGamesForDisplay(
     const specificCount = Math.max(relationData.length, relationIds.length);
 
     for (let index = 0; index < specificCount; index++) {
-      const specificId = relationData[index]?.id ?? relationIds[index] ?? index;
+      const specificId = relationIds[index] ?? relationData[index]?.id ?? index;
       parts.push({
         ...game,
         gameCardId: `${game.taskId}:specific:${specificId}`,
