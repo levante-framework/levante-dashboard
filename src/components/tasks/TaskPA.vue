@@ -100,14 +100,20 @@ watch(
 
 async function startTask(selectedAdmin) {
   let startAssessmentSucceeded = false;
+  let checkGameStarted;
 
   try {
-    let checkGameStarted = setInterval(() => {
+    checkGameStarted = setInterval(() => {
       // Poll for the preload trials progress bar to exist and then begin the game
       let gameLoading = document.querySelector('.jspsych-content-wrapper');
       if (gameLoading) {
         gameStarted.value = true;
         clearInterval(checkGameStarted);
+        // The game has rendered (init succeeded), so record the launch.
+        logger.capture('Task Launched', {
+          adminId: selectedAdmin.value?.id,
+          taskId: props.taskId,
+        });
       }
     }, 100);
 
@@ -128,11 +134,6 @@ async function startTask(selectedAdmin) {
     const gameParams = { ...appKit._taskInfo.variantParams };
 
     const roarApp = new TaskLauncher(appKit, gameParams, userParams, 'jspsych-target');
-
-    logger.capture('Task Launched', {
-      adminId: selectedAdmin.value?.id,
-      taskId: props.taskId,
-    });
 
     await roarApp.run().then(async () => {
       // Handle any post-game actions.
@@ -161,6 +162,8 @@ async function startTask(selectedAdmin) {
       taskId: props.taskId,
       userId: getUserId(),
     });
+  } finally {
+    clearInterval(checkGameStarted);
   }
 }
 </script>

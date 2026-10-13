@@ -85,6 +85,7 @@ async function mountTaskSRE(props = {}) {
 beforeEach(() => {
   setActivePinia(createPinia());
   vi.clearAllMocks();
+  document.body.innerHTML = '';
   selectedAssignmentRef.value = null;
   userDataRef.value = { birthMonth: 6, birthYear: 2015 };
   isLoadingUserDataRef.value = false;
@@ -123,10 +124,14 @@ describe('TaskSRE.vue', () => {
       const wrapper = await mountTaskSRE();
 
       expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'sre', expect.any(String));
-      expect(logger.capture).toHaveBeenCalledWith('Task Launched', {
-        adminId: 'assignment-1',
-        taskId: 'sre',
-      });
+      // The launch event fires only once the game has rendered.
+      document.body.innerHTML = '<div class="jspsych-content-wrapper"></div>';
+      await vi.waitFor(() =>
+        expect(logger.capture).toHaveBeenCalledWith('Task Launched', {
+          adminId: 'assignment-1',
+          taskId: 'sre',
+        }),
+      );
       wrapper.unmount();
     });
 
@@ -141,10 +146,29 @@ describe('TaskSRE.vue', () => {
       await flushPromises();
 
       expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'sre', expect.any(String));
-      expect(logger.capture).toHaveBeenCalledWith('Task Launched', {
-        adminId: 'assignment-1',
-        taskId: 'sre',
-      });
+      // The launch event fires only once the game has rendered.
+      document.body.innerHTML = '<div class="jspsych-content-wrapper"></div>';
+      await vi.waitFor(() =>
+        expect(logger.capture).toHaveBeenCalledWith('Task Launched', {
+          adminId: 'assignment-1',
+          taskId: 'sre',
+        }),
+      );
+      wrapper.unmount();
+    });
+
+    it('should not record a launch before the game renders', async () => {
+      selectedAssignmentRef.value = { id: 'assignment-1' };
+
+      const wrapper = await mountTaskSRE();
+
+      // startAssessment resolved, but the game has not rendered yet.
+      expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'sre', expect.any(String));
+      expect(logger.capture).not.toHaveBeenCalled();
+
+      // Let the game render so the poll clears its interval.
+      document.body.innerHTML = '<div class="jspsych-content-wrapper"></div>';
+      await vi.waitFor(() => expect(logger.capture).toHaveBeenCalled());
       wrapper.unmount();
     });
   });
