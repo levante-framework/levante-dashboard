@@ -21,6 +21,7 @@ const props = defineProps({
 });
 
 let TaskLauncher;
+let checkGameStarted;
 
 const { version } = packageLockJson.packages['node_modules/@bdelab/roar-pa'];
 const router = useRouter();
@@ -85,6 +86,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('popstate', handlePopState);
+  if (checkGameStarted) clearInterval(checkGameStarted);
 });
 
 watch(
@@ -100,7 +102,6 @@ watch(
 
 async function startTask(selectedAdmin) {
   let startAssessmentSucceeded = false;
-  let checkGameStarted;
 
   try {
     checkGameStarted = setInterval(() => {
