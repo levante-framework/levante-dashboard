@@ -12,6 +12,7 @@ const startAssessment = vi.fn().mockResolvedValue({
 
 const selectedAssignmentRef = ref(null);
 const userDataRef = ref({ birthMonth: 6, birthYear: 2015 });
+const authUserDataRef = ref({ userType: 'student' });
 const isLoadingUserDataRef = ref(false);
 
 const mockAssignmentsStore = {
@@ -27,6 +28,7 @@ const mockAuthStore = reactive({
   }),
   getUserId: vi.fn(() => 'user-1'),
   isFirekitInit: vi.fn(() => true),
+  userData: authUserDataRef,
 });
 
 const routerPush = vi.fn();
@@ -92,6 +94,7 @@ beforeEach(() => {
   vi.stubGlobal('alert', vi.fn());
   selectedAssignmentRef.value = null;
   userDataRef.value = { birthMonth: 6, birthYear: 2015 };
+  authUserDataRef.value = { userType: 'student' };
   isLoadingUserDataRef.value = false;
   mockAuthStore.isFirekitInit.mockReturnValue(true);
   startAssessment.mockResolvedValue({
@@ -126,6 +129,47 @@ describe('TaskLevante.vue', () => {
       selectedAssignmentRef.value = { id: 'assignment-1' };
 
       const wrapper = await mountTaskLevante();
+
+      expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'egma-math', expect.any(String), 'runs');
+      wrapper.unmount();
+    });
+
+    it('should not start a student task when birth month and year are missing', async () => {
+      selectedAssignmentRef.value = { id: 'assignment-1' };
+      userDataRef.value = {};
+      authUserDataRef.value = { userType: 'student' };
+
+      const wrapper = await mountTaskLevante({ taskId: 'adult-reasoning' });
+      await flushPromises();
+
+      expect(startAssessment).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it.each(['parent', 'teacher'])('should start a task for a %s without birth month and year', async (userType) => {
+      selectedAssignmentRef.value = { id: 'assignment-1' };
+      userDataRef.value = {};
+      authUserDataRef.value = { userType };
+
+      const wrapper = await mountTaskLevante({ taskId: 'adult-reasoning' });
+      await flushPromises();
+
+      expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'adult-reasoning', expect.any(String), 'runs');
+      wrapper.unmount();
+    });
+
+    it('should start after the signed-in adult user type arrives', async () => {
+      selectedAssignmentRef.value = { id: 'assignment-1' };
+      userDataRef.value = {};
+      authUserDataRef.value = null;
+
+      const wrapper = await mountTaskLevante();
+      await flushPromises();
+
+      expect(startAssessment).not.toHaveBeenCalled();
+
+      authUserDataRef.value = { userType: 'parent' };
+      await flushPromises();
 
       expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'egma-math', expect.any(String), 'runs');
       wrapper.unmount();
