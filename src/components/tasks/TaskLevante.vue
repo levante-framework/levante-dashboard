@@ -29,7 +29,7 @@ const router = useRouter();
 const taskStarted = ref(false);
 const gameStarted = ref(false);
 const authStore = useAuthStore();
-const { roarfirekit, userData: signedInUser } = storeToRefs(authStore);
+const { roarfirekit } = storeToRefs(authStore);
 const { getUserId } = authStore;
 const { isFirekitInit } = authStore;
 const assignmentsStore = useAssignmentsStore();
@@ -87,20 +87,21 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  [isFirekitInit, isCoreTasksReady, isLoadingUserData, selectedAssignment, userData, signedInUser],
+  [isFirekitInit, isCoreTasksReady, isLoadingUserData, selectedAssignment, userData],
   async ([newFirekitInitValue, newIsCoreTasksReady, newLoadingUserData, newSelectedAssignment, _newUserData]) => {
+    const userType = _get(userData.value, 'userType');
+    const isAdult = userType === 'parent' || userType === 'teacher';
+
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
-    // Parents and teachers do not store birth dates. Students, and any unrecognized user type, still need them.
-    const userType = String(signedInUser.value?.userType ?? '').toLowerCase();
-    const isAdultParticipant = userType === 'parent' || userType === 'teacher';
-    const hasAgeData = isAdultParticipant || (birthMonth !== undefined && birthYear !== undefined);
+    const hasAgeData = birthMonth !== undefined && birthYear !== undefined;
 
     if (
       !taskStarted.value &&
       newSelectedAssignment &&
       newIsCoreTasksReady &&
-      hasAgeData &&
+      // Adults don't have age data; children must for downex checks.
+      (isAdult || hasAgeData) &&
       !newLoadingUserData &&
       newFirekitInitValue
     ) {
