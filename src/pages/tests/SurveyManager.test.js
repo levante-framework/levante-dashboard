@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
+import { LEVANTE_ASSETS_BUCKET } from '@/constants/bucket';
 import SurveyManager from '@/pages/SurveyManager.vue';
 
 const state = {
@@ -215,6 +216,22 @@ describe('SurveyManager.vue', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.spyOn(console, 'error').mockImplementation(() => {});
     window.confirm = vi.fn().mockReturnValue(true);
+  });
+
+  it('loads the live assets bucket and ignores the other environment bucket', () => {
+    const otherBucket = LEVANTE_ASSETS_BUCKET === 'levante-assets-dev' ? 'levante-assets-prod' : 'levante-assets-dev';
+    const liveName = LEVANTE_ASSETS_BUCKET === 'levante-assets-dev' ? 'Development' : 'Production';
+    const otherName = otherBucket === 'levante-assets-dev' ? 'Development' : 'Production';
+    window.localStorage.setItem('levanteBucketId', otherBucket);
+    state.route.query = { bucketId: otherBucket };
+
+    const wrapper = mountSurveyManager();
+
+    expect(state.surveyListQueryArgs[0].value).toBe(LEVANTE_ASSETS_BUCKET);
+    expect(state.surveyQueryArgs[0].bucketId.value).toBe(LEVANTE_ASSETS_BUCKET);
+    expect(wrapper.text()).toContain(liveName);
+    expect(wrapper.text()).toContain('Draft');
+    expect(wrapper.text()).not.toContain(otherName);
   });
 
   it('renders bucket controls and dashboard link for super admins', () => {

@@ -1,23 +1,18 @@
+/** Live assets bucket for this dashboard build. Dev reads dev; every other build reads prod. */
+export const LEVANTE_ASSETS_BUCKET =
+  import.meta.env.VITE_FIREBASE_PROJECT === 'DEV' ? 'levante-assets-dev' : 'levante-assets-prod';
+
 // For surveys and audio files (new bucket structure)
-export const LEVANTE_BUCKET_URL =
-  import.meta.env.VITE_FIREBASE_PROJECT === 'DEV'
-    ? 'https://storage.googleapis.com/levante-assets-dev'
-    : 'https://storage.googleapis.com/levante-assets-prod';
+export const LEVANTE_BUCKET_URL = `https://storage.googleapis.com/${LEVANTE_ASSETS_BUCKET}`;
 
 // For dashboard UI static images (PNG files) hosted in the assets bucket.
 // Path convention: `gs://levante-assets-*/visual/dashboard/...`
-export const LEVANTE_STATIC_ASSETS_URL =
-  import.meta.env.VITE_FIREBASE_PROJECT === 'DEV'
-    ? 'https://storage.googleapis.com/levante-assets-dev/visual/dashboard'
-    : 'https://storage.googleapis.com/levante-assets-prod/visual/dashboard';
+export const LEVANTE_STATIC_ASSETS_URL = `${LEVANTE_BUCKET_URL}/visual/dashboard`;
 
 export const LEVANTE_SURVEY_RESPONSES_KEY = 'levante-survey-responses';
 
 /** GCS JSON API: list objects in the active assets bucket (use `?prefix=` to scope). */
-export const LEVANTE_BUCKET_STORAGE_LIST_API =
-  import.meta.env.VITE_FIREBASE_PROJECT === 'DEV'
-    ? 'https://storage.googleapis.com/storage/v1/b/levante-assets-dev/o'
-    : 'https://storage.googleapis.com/storage/v1/b/levante-assets-prod/o';
+export const LEVANTE_BUCKET_STORAGE_LIST_API = `https://storage.googleapis.com/storage/v1/b/${LEVANTE_ASSETS_BUCKET}/o`;
 
 export const LEVANTE_TRANSLATIONS = `${LEVANTE_BUCKET_URL}/translations/dashboard-consolidated-flat`;
 

@@ -91,6 +91,7 @@ import { Model } from 'survey-core';
 import LanguageSelector from '@/components/LanguageSelector.vue';
 import { useSurveyListQuery } from '@/composables/queries/useSurveyListQuery';
 import { useSurveyQuery } from '@/composables/queries/useSurveyQuery';
+import { LEVANTE_ASSETS_BUCKET } from '@/constants/bucket';
 import {
   getParsedLocale,
   getPlainSurveyData,
@@ -111,11 +112,16 @@ import { computed, inject, markRaw, nextTick, Ref, ref, watch, watchEffect } fro
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
-const BUCKETS = [
-  { id: 'levante-assets-dev', name: 'Development' },
-  { id: 'levante-assets-draft', name: 'Draft' },
-];
-const DEFAULT_BUCKET_ID = BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.id ?? '';
+const LIVE_BUCKET = {
+  id: LEVANTE_ASSETS_BUCKET,
+  name: LEVANTE_ASSETS_BUCKET === 'levante-assets-dev' ? 'Development' : 'Production',
+};
+const BUCKETS = [LIVE_BUCKET, { id: 'levante-assets-draft', name: 'Draft' }];
+const DEFAULT_BUCKET_ID = LIVE_BUCKET.id;
+const BUCKET_IDS = new Set(BUCKETS.map((bucket) => bucket.id));
+
+const resolveBucketId = (bucketId: string | null | undefined): string =>
+  bucketId && BUCKET_IDS.has(bucketId) ? bucketId : DEFAULT_BUCKET_ID;
 const STORAGE_KEYS = {
   BUCKET_ID: 'levanteBucketId',
   SURVEY_ID: 'levanteSurveyId',
@@ -159,7 +165,7 @@ const routeSurveyId = computed(() => getRouteValue(route.params.surveyId));
 const routeSurveyLanguage = computed(() => getRouteValue(route.params.surveyLanguage));
 const routeSurveyPreview = computed(() => getRouteValue(route.params.surveyPreview));
 const selectedBucketId = ref<string>(
-  routeBucketId.value || window.localStorage.getItem(STORAGE_KEYS.BUCKET_ID) || DEFAULT_BUCKET_ID,
+  resolveBucketId(routeBucketId.value || window.localStorage.getItem(STORAGE_KEYS.BUCKET_ID)),
 );
 const surveyId = ref<string | null>(routeSurveyId.value || window.localStorage.getItem(STORAGE_KEYS.SURVEY_ID));
 const previousBucketId = ref(selectedBucketId.value);
@@ -330,7 +336,7 @@ watch(
 );
 
 watch(routeBucketId, (newBucketId) => {
-  if (!newBucketId) return;
+  if (!BUCKET_IDS.has(newBucketId)) return;
   selectedBucketId.value = newBucketId;
   previousBucketId.value = newBucketId;
 });
