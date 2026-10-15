@@ -21,6 +21,7 @@ const props = defineProps({
 });
 
 let TaskLauncher;
+let checkGameStarted;
 
 const { version } = packageLockJson.packages['node_modules/@bdelab/roar-pa'];
 const router = useRouter();
@@ -85,6 +86,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('popstate', handlePopState);
+  if (checkGameStarted) clearInterval(checkGameStarted);
 });
 
 watch(
@@ -102,12 +104,17 @@ async function startTask(selectedAdmin) {
   let startAssessmentSucceeded = false;
 
   try {
-    let checkGameStarted = setInterval(() => {
+    checkGameStarted = setInterval(() => {
       // Poll for the preload trials progress bar to exist and then begin the game
       let gameLoading = document.querySelector('.jspsych-content-wrapper');
       if (gameLoading) {
         gameStarted.value = true;
         clearInterval(checkGameStarted);
+        // The game has rendered (init succeeded), so record the launch.
+        logger.capture('Task Launched', {
+          adminId: selectedAdmin.value?.id,
+          taskId: props.taskId,
+        });
       }
     }, 100);
 
@@ -156,6 +163,8 @@ async function startTask(selectedAdmin) {
       taskId: props.taskId,
       userId: getUserId(),
     });
+  } finally {
+    clearInterval(checkGameStarted);
   }
 }
 </script>
