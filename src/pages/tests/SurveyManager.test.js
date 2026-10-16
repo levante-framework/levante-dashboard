@@ -176,8 +176,8 @@ const RouterLinkStub = {
   template: '<a data-testid="router-link"><slot /></a>',
 };
 
-const mountSurveyManager = () =>
-  mount(SurveyManager, {
+const mountSurveyManager = (component = SurveyManager) =>
+  mount(component, {
     global: {
       components: {
         RouterLink: RouterLinkStub,
@@ -248,13 +248,13 @@ describe('SurveyManager.vue', () => {
   });
 
   it('uses route values to request surveys and build a full preview URL', () => {
-    state.route.query = { bucketId: 'levante-assets-draft' };
+    state.route.query = { bucketId: 'levante-assets-prod' };
     state.route.params = { surveyId: 'intake', surveyLanguage: 'es-CO' };
 
     const wrapper = mountSurveyManager();
 
-    expect(state.surveyListQueryArgs[0].value).toBe('levante-assets-draft');
-    expect(state.surveyQueryArgs[0].bucketId.value).toBe('levante-assets-draft');
+    expect(state.surveyListQueryArgs[0].value).toBe('levante-assets-prod');
+    expect(state.surveyQueryArgs[0].bucketId.value).toBe('levante-assets-prod');
     expect(state.surveyQueryArgs[0].surveyId.value).toBe('intake');
     expect(wrapper.find('a[href="/surveys/intake/es-CO/preview"]').exists()).toBe(true);
     expect(state.resolvedRoutes).toContainEqual({
@@ -264,8 +264,38 @@ describe('SurveyManager.vue', () => {
         surveyId: 'intake',
         surveyLanguage: 'es-CO',
       },
-      query: { bucketId: 'levante-assets-draft' },
+      query: { bucketId: 'levante-assets-prod' },
     });
+  });
+
+  it('uses the dev bucket when the dev environment is mocked', async () => {
+    vi.resetModules();
+    vi.stubEnv('VITE_FIREBASE_PROJECT', 'DEV');
+
+    try {
+      const { default: DevSurveyManager } = await import('@/pages/SurveyManager.vue');
+      state.route.query = { bucketId: 'levante-assets-dev' };
+      state.route.params = { surveyId: 'intake', surveyLanguage: 'es-CO' };
+
+      const wrapper = mountSurveyManager(DevSurveyManager);
+
+      expect(wrapper.text()).toContain('Development');
+      expect(wrapper.text()).toContain('Draft');
+      expect(state.surveyListQueryArgs[0].value).toBe('levante-assets-dev');
+      expect(state.surveyQueryArgs[0].bucketId.value).toBe('levante-assets-dev');
+      expect(state.resolvedRoutes).toContainEqual({
+        name: 'SurveyManager',
+        params: {
+          surveyPreview: 'preview',
+          surveyId: 'intake',
+          surveyLanguage: 'es-CO',
+        },
+        query: { bucketId: 'levante-assets-dev' },
+      });
+      wrapper.unmount();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('loads survey data into the creator with the selected locale', async () => {
@@ -313,7 +343,7 @@ describe('SurveyManager.vue', () => {
   });
 
   it('persists the active survey draft when the creator saves', () => {
-    state.route.query = { bucketId: 'levante-assets-draft' };
+    state.route.query = { bucketId: 'levante-assets-prod' };
     state.route.params = { surveyId: 'intake' };
     const wrapper = mountSurveyManager();
     const callback = vi.fn();
@@ -321,7 +351,7 @@ describe('SurveyManager.vue', () => {
     state.creators[0].text = '{"title":"Draft"}';
     state.creators[0].saveSurveyFunc(7, callback);
 
-    expect(window.localStorage.getItem('levanteBucketId')).toBe('levante-assets-draft');
+    expect(window.localStorage.getItem('levanteBucketId')).toBe('levante-assets-prod');
     expect(window.localStorage.getItem('levanteSurveyId')).toBe('intake');
     expect(window.localStorage.getItem('levanteSurvey')).toBe('{"title":"Draft"}');
     expect(callback).toHaveBeenCalledWith(7, true);
