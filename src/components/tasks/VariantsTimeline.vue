@@ -1,8 +1,8 @@
 <template>
-  <div class="flex flex-column gap-4 p-4">
+  <div class="flex flex-column gap-4 pt-3">
     <div class="flex flex-column gap-1">
       <h2 class="text-xl font-bold m-0">Variants</h2>
-      <p class="text-md text-gray-500 m-0">
+      <p class="text-md m-0 text-gray-500">
         Timeline of variants for a task, ordered by createdAt. Editing params creates a new variant; register status can
         be flipped on any existing variant.
       </p>
@@ -10,7 +10,7 @@
 
     <div class="flex flex-wrap align-items-end gap-3">
       <div class="flex flex-column gap-1" style="min-width: 16rem">
-        <label for="task-filter" class="text-sm text-gray-500 font-medium">Task</label>
+        <label for="task-filter" class="text-sm font-medium">Task</label>
         <PvSelect
           id="task-filter"
           v-model="selectedTaskId"
@@ -25,7 +25,7 @@
         />
       </div>
       <div v-if="selectedTaskId" class="flex flex-column gap-1" style="min-width: 12rem">
-        <label for="registered-filter" class="text-sm text-gray-500 font-medium">Status</label>
+        <label for="registered-filter" class="text-sm font-medium">Status</label>
         <PvSelect
           id="registered-filter"
           v-model="registeredFilter"
@@ -35,27 +35,27 @@
           class="w-full"
         />
       </div>
-      <span v-if="selectedTaskId && variants?.length" class="text-sm text-gray-500">
-        <template v-if="hasActiveFilters">
-          Showing {{ filteredVariants.length }} of {{ variants.length }} variant{{ variants.length === 1 ? '' : 's' }}
-        </template>
-        <template v-else>{{ variants.length }} variant{{ variants.length === 1 ? '' : 's' }}</template>
-      </span>
-      <PvButton
-        v-if="selectedTaskId"
-        label="New variant"
-        icon="pi pi-plus"
-        :disabled="isFetching"
-        @click="openCreate()"
-      />
+      <div v-if="selectedTaskId && variants?.length" class="flex align-items-center gap-3 ml-auto">
+        <span class="text-sm">
+          <template v-if="hasActiveFilters">
+            Showing {{ filteredVariants.length }} of {{ variants.length }} variant{{ variants.length === 1 ? '' : 's' }}
+          </template>
+          <template v-else>{{ variants.length }} variant{{ variants.length === 1 ? '' : 's' }}</template>
+        </span>
+        <PvButton
+          label="New variant"
+          icon="pi pi-plus"
+          @click="openCreate()"
+        />
+      </div>
     </div>
 
-    <div v-if="!selectedTaskId" class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-200">
-      <i class="pi pi-info-circle text-gray-500" />
-      <span>Select a task to view its variant timeline.</span>
+    <div v-if="!selectedTaskId" class="flex align-items-center gap-3 p-3 surface-100 border-round">
+      <i class="pi pi-info-circle" />
+      Select a task to view its variant timeline.
     </div>
 
-    <div v-else-if="isFetching" class="flex align-items-center gap-2 text-gray-500">
+    <div v-else-if="isFetching" class="flex align-items-center gap-2">
       <i class="pi pi-spin pi-spinner" />
       <span>Loading variants...</span>
     </div>
@@ -72,7 +72,7 @@
       v-else-if="!variants?.length"
       class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-200"
     >
-      <i class="pi pi-info-circle text-gray-500" />
+      <i class="pi pi-info-circle" />
       <span>No variants found for this task.</span>
     </div>
 
@@ -87,7 +87,7 @@
       v-if="selectedTaskId && !isFetching && !isError && variants?.length && !filteredVariants.length"
       class="flex align-items-center gap-2 p-3 surface-100 border-round border-1 border-200"
     >
-      <i class="pi pi-info-circle text-gray-500" />
+      <i class="pi pi-info-circle" />
       <span>No variants match the current filters.</span>
     </div>
 
@@ -100,17 +100,13 @@
 
         <div class="flex flex-column gap-3 flex-grow-1 pb-5">
           <article class="surface-50 border-1 border-200 border-round p-4 flex flex-column gap-3">
-            <div class="flex flex-wrap align-items-start justify-content-between gap-2">
+            <div class="flex flex-wrap align-items-center justify-content-between gap-2">
               <div class="flex flex-column gap-1">
                 <div class="flex flex-wrap align-items-center gap-2">
                   <div class="font-semibold text-lg">
                     {{ entry.variant.displayName || entry.variant.name || entry.variant.id }}
                   </div>
-                  <PvTag v-if="entry.isLatest" value="Latest" severity="info" rounded />
-                </div>
-                <div class="text-sm text-gray-500">
-                  Variant ID: {{ entry.variant.id }}
-                  <span v-if="entry.variant.name"> · Internal: {{ entry.variant.name }}</span>
+                  <StatusBadge v-if="entry.isLatest" label="Latest" status="info" />
                 </div>
               </div>
               <div class="flex flex-wrap align-items-center gap-3">
@@ -127,7 +123,7 @@
                   icon="pi pi-pencil"
                   size="small"
                   severity="secondary"
-                  text
+                  variant="outlined"
                   @click="openCreate(entry.variant)"
                 />
                 <PvButton
@@ -135,25 +131,43 @@
                   icon="pi pi-history"
                   size="small"
                   severity="secondary"
-                  text
+                  variant="outlined"
                   @click="openHistory(entry.variant)"
                 />
               </div>
             </div>
 
-            <div class="flex flex-wrap gap-4 text-sm text-gray-500">
-              <span>Created: {{ formatTimestamp(entry.variant.createdAt) }}</span>
-              <span v-if="entry.variant.createdBy">Created by: {{ entry.variant.createdBy }}</span>
-              <span>Updated: {{ formatTimestamp(entry.variant.updatedAt) }}</span>
-              <span v-if="entry.variant.updatedBy">Updated by: {{ entry.variant.updatedBy }}</span>
+            <div class="flex flex-wrap gap-4 text-sm">
+              <div class="text-sm">
+                <span class="font-bold">Variant ID:</span> {{ entry.variant.id }}
+                <span v-if="entry.variant.name"> &bull; <span class="font-bold">Internal:</span> {{ entry.variant.name }}</span>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-4 text-sm">
+              <span>
+                <span class="font-bold">Created: </span>
+                {{ formatTimestamp(entry.variant.createdAt) }}
+              </span>
+              <span v-if="entry.variant.createdBy">
+                <span class="font-bold">Created by: </span>
+                {{ entry.variant.createdBy }}
+              </span>
+              <span>
+                <span class="font-bold">Updated: </span>
+                {{ formatTimestamp(entry.variant.updatedAt) }}
+              </span>
+              <span v-if="entry.variant.updatedBy">
+                <span class="font-bold">Updated by: </span>
+                {{ entry.variant.updatedBy }}
+              </span>
             </div>
 
             <div class="flex flex-column gap-1">
-              <div class="text-sm text-gray-500 font-medium">Parameters</div>
-              <pre
-                class="m-0 p-3 surface-0 border-round border-1 border-200 text-sm overflow-auto white-space-pre-wrap"
-                >{{ formatParams(entry.variant.params) }}</pre
-              >
+              <div class="text-sm font-bold">Parameters</div>
+              <pre class="m-0 p-3 surface-0 border-round border-1 border-200 text-sm overflow-auto white-space-pre-wrap">
+                {{ formatParams(entry.variant.params) }}
+              </pre>
             </div>
           </article>
 
@@ -215,6 +229,7 @@ import {
 } from '@/helpers/filterVariantsByParamQuery';
 import { getCallableErrorMessage } from '@/helpers/taskCatalog';
 import type { SerializedTaskVariant, VariantParamDiff, VariantParamValue } from '@/types/taskCatalog';
+import StatusBadge from '../StatusBadge.vue';
 
 const toast = useToast();
 const selectedTaskId = ref<string | undefined>(undefined);

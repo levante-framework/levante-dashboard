@@ -1,87 +1,87 @@
 <template>
-  <div class="flex flex-column gap-3 p-3 surface-50 border-1 border-200 border-round">
-    <div class="flex flex-wrap align-items-center justify-content-between gap-2">
+  <div class="p-3 surface-50 border-1 border-200 border-round">
+    <div class="flex flex-column flex-wrap gap-3">
       <div class="flex flex-column gap-1">
-        <div class="text-sm font-medium">Param filters</div>
+        <div class="text-sm font-bold">Param filters</div>
         <p class="text-sm text-gray-500 m-0">
           Filter this task's variants by param values. AND binds tighter than OR, like
           <code>language=en AND corpus=alpha OR language=es</code>.
         </p>
       </div>
-      <div class="flex flex-wrap gap-2">
+
+      <div v-if="modelValue.length > 0" class="flex flex-column gap-2">
+        <div v-for="(clause, index) in modelValue" :key="clause.id" class="flex flex-wrap align-items-end gap-2">
+          <div class="flex flex-column gap-1" style="min-width: 6.5rem">
+            <label :for="`filter-join-${clause.id}`" class="text-sm font-bold">
+              {{ index === 0 ? 'Where' : 'Join' }}
+            </label>
+            <PvSelect
+              v-if="index > 0"
+              :id="`filter-join-${clause.id}`"
+              :model-value="clause.join"
+              :options="joinOptions"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+              @update:model-value="(join) => updateClause(index, { join })"
+            />
+            <span v-else class="text-sm text-gray-600 py-2">Where</span>
+          </div>
+
+          <div class="flex flex-column gap-1" style="min-width: 12rem">
+            <label :for="`filter-key-${clause.id}`" class="text-sm font-bold">Param</label>
+            <PvSelect
+              :id="`filter-key-${clause.id}`"
+              :model-value="clause.key"
+              :options="keyOptions"
+              placeholder="Select param"
+              filter
+              show-clear
+              class="w-full"
+              @update:model-value="(key) => updateClause(index, { key, valueToken: null })"
+            />
+          </div>
+
+          <div class="flex flex-column gap-1" style="min-width: 12rem">
+            <label :for="`filter-value-${clause.id}`" class="text-sm font-bold">Value</label>
+            <PvSelect
+              :id="`filter-value-${clause.id}`"
+              :model-value="clause.valueToken"
+              :options="valueOptionsFor(clause.key)"
+              option-label="label"
+              option-value="token"
+              placeholder="Select value"
+              filter
+              show-clear
+              :disabled="!clause.key"
+              class="w-full"
+              @update:model-value="(valueToken) => updateClause(index, { valueToken })"
+            />
+          </div>
+
+          <PvButton
+            icon="pi pi-trash"
+            severity="secondary"
+            text
+            rounded
+            aria-label="Remove condition"
+            @click="removeClause(index)"
+          />
+        </div>
+      </div>
+
+      <div class="flex align-items-center flex-wrap gap-2">
         <PvButton label="Add condition" icon="pi pi-plus" size="small" @click="addClause" />
         <PvButton
+          v-if="modelValue.length > 0"
           label="Clear"
           icon="pi pi-times"
           size="small"
           severity="secondary"
-          text
-          :disabled="modelValue.length === 0"
+          variant="outlined"
           @click="clearClauses"
         />
-      </div>
-    </div>
-
-    <div v-if="modelValue.length === 0" class="text-sm text-gray-500">No conditions. Showing all variants.</div>
-
-    <div v-else class="flex flex-column gap-2">
-      <div v-for="(clause, index) in modelValue" :key="clause.id" class="flex flex-wrap align-items-end gap-2">
-        <div class="flex flex-column gap-1" style="min-width: 6.5rem">
-          <label :for="`filter-join-${clause.id}`" class="text-sm text-gray-500 font-medium">
-            {{ index === 0 ? 'Where' : 'Join' }}
-          </label>
-          <PvSelect
-            v-if="index > 0"
-            :id="`filter-join-${clause.id}`"
-            :model-value="clause.join"
-            :options="joinOptions"
-            option-label="label"
-            option-value="value"
-            class="w-full"
-            @update:model-value="(join) => updateClause(index, { join })"
-          />
-          <span v-else class="text-sm text-gray-600 py-2">Where</span>
-        </div>
-
-        <div class="flex flex-column gap-1" style="min-width: 12rem">
-          <label :for="`filter-key-${clause.id}`" class="text-sm text-gray-500 font-medium">Param</label>
-          <PvSelect
-            :id="`filter-key-${clause.id}`"
-            :model-value="clause.key"
-            :options="keyOptions"
-            placeholder="Select param"
-            filter
-            show-clear
-            class="w-full"
-            @update:model-value="(key) => updateClause(index, { key, valueToken: null })"
-          />
-        </div>
-
-        <div class="flex flex-column gap-1" style="min-width: 12rem">
-          <label :for="`filter-value-${clause.id}`" class="text-sm text-gray-500 font-medium">Value</label>
-          <PvSelect
-            :id="`filter-value-${clause.id}`"
-            :model-value="clause.valueToken"
-            :options="valueOptionsFor(clause.key)"
-            option-label="label"
-            option-value="token"
-            placeholder="Select value"
-            filter
-            show-clear
-            :disabled="!clause.key"
-            class="w-full"
-            @update:model-value="(valueToken) => updateClause(index, { valueToken })"
-          />
-        </div>
-
-        <PvButton
-          icon="pi pi-trash"
-          severity="secondary"
-          text
-          rounded
-          aria-label="Remove condition"
-          @click="removeClause(index)"
-        />
+        <div v-if="modelValue.length === 0" class="text-sm text-gray-500">No conditions. Showing all variants.</div>
       </div>
     </div>
   </div>
