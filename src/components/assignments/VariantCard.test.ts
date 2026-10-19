@@ -10,8 +10,8 @@ import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
-import VariantCard from '@/components/assignments/VariantCard.vue';
-import { getAllLanguageOptions, getLanguageInfo } from '@/helpers/languageDiscovery';
+import VariantCard, { type VariantObject } from '@/components/assignments/VariantCard.vue';
+import { getAllLanguageOptions, getLanguageInfo, type VariantLanguageMapping } from '@/helpers/languageDiscovery';
 
 // Mock the language discovery functions
 vi.mock('@/helpers/languageDiscovery', () => ({
@@ -39,7 +39,22 @@ vi.mock('@/composables/usePermissions', () => ({
   }),
 }));
 
-const mockLanguages = [
+interface TestResult {
+  language: string;
+  code: string;
+  status: 'SUCCESS' | 'FAILURE';
+  isLegacy: boolean;
+  error?: string;
+}
+
+// VariantCard exposes these via its `<script setup>` bindings but not `defineExpose`,
+// so they aren't on the public instance type; narrow for test-only access.
+interface VariantCardVm {
+  displayParamList: (params: Record<string, unknown>) => Array<{ key: string; value: unknown }>;
+  formattedAssignedConditions: string;
+}
+
+const mockLanguages: VariantLanguageMapping[] = [
   // Primary (full locales)
   {
     variantCode: 'en-US',
@@ -78,7 +93,13 @@ const mockLanguages = [
   { variantCode: 'es', displayName: 'Spanish (legacy)', flagCode: 'co', isLegacy: true, dashboardLocale: 'es-CO' },
 ];
 
-const createMockVariant = (language) => ({
+const findLanguage = (variantCode: string): VariantLanguageMapping => {
+  const language = mockLanguages.find((lang) => lang.variantCode === variantCode);
+  if (!language) throw new Error(`Mock language not found: ${variantCode}`);
+  return language;
+};
+
+const createMockVariant = (language: VariantLanguageMapping): VariantObject => ({
   id: `test-variant-${language.variantCode}`,
   variant: {
     name: `internal-${language.variantCode}`,
@@ -134,13 +155,15 @@ beforeEach(() => {
   setActivePinia(createPinia());
 
   // Setup mocks
-  getAllLanguageOptions.mockReturnValue(mockLanguages);
-  getLanguageInfo.mockImplementation((code) => mockLanguages.find((lang) => lang.variantCode === code) || null);
+  vi.mocked(getAllLanguageOptions).mockReturnValue(mockLanguages);
+  vi.mocked(getLanguageInfo).mockImplementation(
+    (code: string) => mockLanguages.find((lang) => lang.variantCode === code) || null,
+  );
 });
 
 describe('VariantCard.vue - Language Variant Testing', () => {
   describe('Variant Card Rendering for All Languages', () => {
-    const testResults = [];
+    const testResults: TestResult[] = [];
 
     mockLanguages.forEach((language) => {
       it(`should render variant card successfully for ${language.displayName} (${language.variantCode})`, async () => {
@@ -190,7 +213,7 @@ describe('VariantCard.vue - Language Variant Testing', () => {
 
           wrapper.unmount();
         } catch (error) {
-          errorMessage = error.message;
+          errorMessage = (error as Error).message;
           testResults.push({
             language: language.displayName,
             code: language.variantCode,
@@ -245,7 +268,7 @@ describe('VariantCard.vue - Language Variant Testing', () => {
 
   describe('Variant Card with Controls', () => {
     it('should render variant card with management controls for English (US)', async () => {
-      const englishLanguage = mockLanguages.find((lang) => lang.variantCode === 'en-US');
+      const englishLanguage = findLanguage('en-US');
       const mockVariant = createMockVariant(englishLanguage);
 
       const wrapper = mount(VariantCard, {
@@ -279,7 +302,7 @@ describe('VariantCard.vue - Language Variant Testing', () => {
       if (removeBtn) {
         await removeBtn.trigger('click');
         expect(wrapper.emitted().remove).toBeTruthy();
-        expect(wrapper.emitted().remove[0]).toEqual([mockVariant]);
+        expect(wrapper.emitted().remove?.[0]).toEqual([mockVariant]);
       }
 
       // Find the move up button (has pi-sort-up icon)
@@ -289,7 +312,7 @@ describe('VariantCard.vue - Language Variant Testing', () => {
       if (moveUpBtn) {
         await moveUpBtn.trigger('click');
         expect(wrapper.emitted().moveUp).toBeTruthy();
-        expect(wrapper.emitted().moveUp[0]).toEqual([mockVariant]);
+        expect(wrapper.emitted().moveUp?.[0]).toEqual([mockVariant]);
       }
 
       // Find the move down button (has pi-sort-down icon)
@@ -299,7 +322,7 @@ describe('VariantCard.vue - Language Variant Testing', () => {
       if (moveDownBtn) {
         await moveDownBtn.trigger('click');
         expect(wrapper.emitted().moveDown).toBeTruthy();
-        expect(wrapper.emitted().moveDown[0]).toEqual([mockVariant]);
+        expect(wrapper.emitted().moveDown?.[0]).toEqual([mockVariant]);
       }
 
       wrapper.unmount();
@@ -312,18 +335,18 @@ describe('VariantCard.vue - Language Variant Testing', () => {
         const languageInfo = getLanguageInfo(language.variantCode);
 
         expect(languageInfo).not.toBeNull();
-        expect(languageInfo.variantCode).toBe(language.variantCode);
-        expect(languageInfo.displayName).toBe(language.displayName);
-        expect(languageInfo.flagCode).toBe(language.flagCode);
-        expect(languageInfo.isLegacy).toBe(language.isLegacy);
-        expect(languageInfo.dashboardLocale).toBe(language.dashboardLocale);
+        expect(languageInfo?.variantCode).toBe(language.variantCode);
+        expect(languageInfo?.displayName).toBe(language.displayName);
+        expect(languageInfo?.flagCode).toBe(language.flagCode);
+        expect(languageInfo?.isLegacy).toBe(language.isLegacy);
+        expect(languageInfo?.dashboardLocale).toBe(language.dashboardLocale);
       });
     });
   });
 
   describe('Variant Parameters Display', () => {
     it('should correctly display all variant parameters in the data table', async () => {
-      const testLanguage = mockLanguages[0]; // Use first language for testing
+      const testLanguage = findLanguage('en-US'); // Use first language for testing
       const mockVariant = createMockVariant(testLanguage);
 
       // Add more parameters for comprehensive testing
@@ -347,7 +370,7 @@ describe('VariantCard.vue - Language Variant Testing', () => {
       await nextTick();
 
       // Check that displayParamList correctly formats parameters
-      const paramList = wrapper.vm.displayParamList(mockVariant.variant.params);
+      const paramList = (wrapper.vm as unknown as VariantCardVm).displayParamList(mockVariant.variant.params);
 
       expect(paramList).toHaveLength(Object.keys(mockVariant.variant.params).length);
       expect(paramList).toEqual(
@@ -368,7 +391,7 @@ describe('VariantCard.vue - Language Variant Testing', () => {
 
   describe('Conditional Rendering', () => {
     it('should show assigned conditions when present', async () => {
-      const testLanguage = mockLanguages.find((lang) => lang.variantCode === 'es-CO');
+      const testLanguage = findLanguage('es-CO');
       const mockVariant = createMockVariant(testLanguage);
 
       const wrapper = mount(VariantCard, {
@@ -383,14 +406,14 @@ describe('VariantCard.vue - Language Variant Testing', () => {
       await nextTick();
 
       // Check if assigned conditions are formatted correctly
-      const formattedConditions = wrapper.vm.formattedAssignedConditions;
+      const formattedConditions = (wrapper.vm as unknown as VariantCardVm).formattedAssignedConditions;
       expect(formattedConditions).toBe('Children');
 
       wrapper.unmount();
     });
 
     it('should handle variants without conditions gracefully', async () => {
-      const testLanguage = mockLanguages.find((lang) => lang.variantCode === 'de');
+      const testLanguage = findLanguage('de');
       const mockVariant = createMockVariant(testLanguage);
       delete mockVariant.variant.conditions;
 
@@ -406,7 +429,7 @@ describe('VariantCard.vue - Language Variant Testing', () => {
       await nextTick();
 
       expect(wrapper.exists()).toBe(true);
-      expect(wrapper.vm.formattedAssignedConditions).toBe('');
+      expect((wrapper.vm as unknown as VariantCardVm).formattedAssignedConditions).toBe('');
 
       wrapper.unmount();
     });

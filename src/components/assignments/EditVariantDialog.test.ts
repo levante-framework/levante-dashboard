@@ -1,15 +1,26 @@
-import { mount } from '@vue/test-utils';
+import { mount, type VueWrapper } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
 import PvSelect from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import EditVariantDialog from '@/components/assignments/EditVariantDialog.vue';
 
+interface Condition {
+  field: string;
+  op: string;
+  value: string;
+}
+
+interface ConditionsStructure {
+  assigned?: { op: string; conditions: Condition[] };
+  optional?: boolean | { op: string; conditions: Condition[] };
+}
+
 // Force the non-LEVANTE path so onMounted does not inject a default userType
 // condition, keeping assertions focused on the stored conditions under test.
 vi.mock('@/constants', () => ({ isLevante: false }));
 
-const createAssessment = (conditions) => ({
+const createAssessment = (conditions: ConditionsStructure) => ({
   id: 'test-variant-1',
   task: { id: 'test-task', name: 'Test Task', image: '/test-image.jpg' },
   variant: { name: 'Test Variant', conditions },
@@ -26,12 +37,12 @@ const mountOptions = {
   },
 };
 
-const openDialog = async (wrapper) => {
+const openDialog = async (wrapper: VueWrapper) => {
   await wrapper.find('[data-cy="button-edit-variant"]').trigger('click');
   await nextTick();
 };
 
-const selectLabels = (wrapper) => wrapper.findAll('.p-select-label').map((el) => el.text());
+const selectLabels = (wrapper: VueWrapper) => wrapper.findAll('.p-select-label').map((el) => el.text());
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -107,7 +118,7 @@ describe('EditVariantDialog.vue - stored condition rendering (regression #1013)'
 
     // For a single assigned condition the selects render as [field, op, value].
     const [fieldSelect] = wrapper.findAllComponents(PvSelect);
-    fieldSelect.vm.$emit('update:modelValue', 'age');
+    fieldSelect?.vm.$emit('update:modelValue', 'age');
     await nextTick();
 
     const labels = selectLabels(wrapper);
