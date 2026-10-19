@@ -388,7 +388,7 @@ const variantsByLanguage = (variants: VariantObject[] = []): VariantObject[] => 
   const selectedLang = selectedLanguage.value.value.toLowerCase();
 
   return variants.filter((variant) => {
-    const variantLanguage = variant.variant?.params?.language?.toLowerCase();
+    const variantLanguage = String(variant.variant?.params?.language ?? '').toLowerCase();
     if (!variantLanguage) return false;
     if (variantLanguage === 'all languages') return true;
 
