@@ -188,10 +188,10 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, nextTick, ref, watch } from 'vue';
 import { VueDraggableNext } from 'vue-draggable-next';
+import VariantCard, { type VariantObject } from '@/components/assignments/VariantCard.vue';
 import { resolveVariantDisplayName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 import { languageOptions } from '@/translations/i18n';
-import VariantCard, { type VariantObject } from '@/components/assignments/VariantCard.vue';
 
 interface PreExistingAssessmentRecord {
   variantId: string;
