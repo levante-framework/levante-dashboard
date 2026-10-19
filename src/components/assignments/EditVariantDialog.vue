@@ -287,24 +287,24 @@ interface ConditionOption {
 export interface Condition {
   field: string;
   op: string;
-  value: string;
+  value: string | number;
 }
 
 export interface ConditionsStructure {
   assigned?: {
-    op: string;
+    op?: string;
     conditions: Condition[];
   };
   optional?:
     | boolean
     | {
-        op: string;
+        op?: string;
         conditions: Condition[];
       };
 }
 
 interface Task {
-  id: string;
+  id?: string;
   name: string;
   image?: string;
 }
@@ -507,7 +507,7 @@ const handleReset = (): void => {
   assignedConditions.value = [];
   optionalConditions.value = [];
 
-  getAllConditions(props.assessment.task.id);
+  getAllConditions(props.assessment.task.id ?? '');
 };
 
 function hasDuplicateUserTypeConditions(conditions: Condition[]): boolean {
@@ -596,10 +596,11 @@ const handleSave = (): void => {
 // | Lifecycle hooks |
 // +-----------------+
 onMounted((): void => {
-  getAllConditions(props.assessment.task.id);
+  const taskId = props.assessment.task.id ?? '';
+  getAllConditions(taskId);
   // LEVANTE assigns surveys as assessments, so we add a defualt for child only so researchers
   // do not accidently assign tasks to parents and teachers
-  if (isLevante && !props.assessment.task.id.toLowerCase().includes('survey')) {
+  if (isLevante && !taskId.toLowerCase().includes('survey')) {
     const defaultCondition = { field: 'userType', op: 'EQUAL', value: 'student' };
     const hasIdenticalCondition = assignedConditions.value.some(
       (condition) =>
