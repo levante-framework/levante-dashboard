@@ -64,7 +64,7 @@
             <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
               <PvSelect
                 :model-value="condition.field"
-                :options="fieldOptions"
+                :options="FIELD_OPTIONS"
                 optionLabel="label"
                 optionValue="value"
                 class="w-full"
@@ -155,7 +155,7 @@
                 <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
                   <PvSelect
                     :model-value="condition.field"
-                    :options="fieldOptions"
+                    :options="FIELD_OPTIONS"
                     optionLabel="label"
                     optionValue="value"
                     class="w-full"
@@ -261,7 +261,6 @@
 import _cloneDeep from 'lodash/cloneDeep';
 import _isEmpty from 'lodash/isEmpty';
 import PvButton from 'primevue/button';
-import PvColumn from 'primevue/column';
 import PvDialog from 'primevue/dialog';
 import PvDivider from 'primevue/divider';
 import PvSelect from 'primevue/select';
@@ -271,6 +270,9 @@ import { computed, onMounted, ref, toRaw } from 'vue';
 import { isLevante } from '@/constants';
 import { resolveVariantDisplayName } from '@/helpers';
 
+// +-------+
+// | Types |
+// +-------+
 interface FieldOption {
   label: string;
   value: string;
@@ -330,37 +332,50 @@ interface Props {
   preExistingAssessmentInfo?: PreExistingAssessmentInfo[];
 }
 
+// +-----------+
+// | Constants |
+// +-----------+
+const FIELD_OPTIONS: FieldOption[] = [
+  { label: 'User Type', value: 'userType', project: 'LEVANTE' },
+  { label: 'Age', value: 'age', project: 'LEVANTE' },
+];
+
+// +-------+
+// | Props |
+// +-------+
 const props = withDefaults(defineProps<Props>(), {
   preExistingAssessmentInfo: () => [],
 });
 
-const variantDisplayName = computed(() => resolveVariantDisplayName(props.assessment.variant ?? {}));
-
-onMounted((): void => {
-  getAllConditions(props.assessment.task.id);
-  // LEVANTE assigns surveys as assessments, so we add a defualt for child only so researchers
-  // do not accidently assign tasks to parents and teachers
-  if (isLevante && !props.assessment.task.id.toLowerCase().includes('survey')) {
-    const defaultCondition = { field: 'userType', op: 'EQUAL', value: 'student' };
-    const hasIdenticalCondition = assignedConditions.value.some(
-      (condition) =>
-        condition.field === defaultCondition.field &&
-        condition.op === defaultCondition.op &&
-        condition.value === defaultCondition.value,
-    );
-
-    if (!hasIdenticalCondition) {
-      assignedConditions.value.push({ ...defaultCondition });
-    }
-  }
-});
-
+// +----------------+
+// | Reactive state |
+// +----------------+
 const isVisible = ref<boolean>(false);
 const assignedConditions = ref<Condition[]>([]);
 const optionalConditions = ref<Condition[]>([]);
 // Store optional conditions in case the isOptionalForAll is toggled on and off again (prevents the form from resetting to the original state)
 const previousOptionalConditions = ref<Condition[]>([]);
+const isOptionalForAll = ref<boolean>(false);
+const errorSubmitText = ref<string>('');
 
+// +----------+
+// | Computed |
+// +----------+
+const variantDisplayName = computed(() => resolveVariantDisplayName(props.assessment.variant ?? {}));
+
+const isOptionalForAllAndOptionalConditionsPresent = computed((): boolean => {
+  return isOptionalForAll.value && toRaw(previousOptionalConditions.value)?.length > 0;
+});
+
+const selectedGroup = computed((): string => {
+  // This would need to be implemented based on your actual group selection logic
+  return 'selected group';
+});
+
+// +---------+
+// | Methods |
+// +---------+
+// Condition option builders
 const computedValueOptions = (field: string): ConditionOption[] | undefined => {
   if (!field) return;
 
@@ -406,6 +421,7 @@ const computedConditionOptions = (field: string): ConditionOption[] | undefined 
   }
 };
 
+// Condition row editing
 function handleFieldChange(conditions: Condition[], index: number, field: string): void {
   conditions[index] = { field, op: '', value: '' };
 }
@@ -414,6 +430,15 @@ const removeCondition = (conditions: Condition[], index: number): void => {
   conditions.splice(index, 1);
 };
 
+const addOptionalCondition = (): void => {
+  optionalConditions.value.push({ field: '', op: '', value: '' });
+};
+
+const addAssignedCondition = (): void => {
+  assignedConditions.value.push({ field: '', op: '', value: '' });
+};
+
+// Loading existing conditions
 function getAllConditions(taskId: string): void {
   const existingAssignedConditions = getAssignedConditions(taskId);
   const existingOptionalConditions = getOptionalConditions(taskId);
@@ -465,17 +490,7 @@ function setOptionalConditions(existingOptionalConditions: Condition[]): void {
   optionalConditions.value = _cloneDeep(existingOptionalConditions);
 }
 
-const addOptionalCondition = (): void => {
-  optionalConditions.value.push({ field: '', op: '', value: '' });
-};
-
-const addAssignedCondition = (): void => {
-  assignedConditions.value.push({ field: '', op: '', value: '' });
-};
-
-const isOptionalForAll = ref<boolean>(false);
-const errorSubmitText = ref<string>('');
-
+// Optional-for-all toggle
 const handleOptionalForAllSwitch = (): void => {
   if (isOptionalForAll.value === true) {
     // Store the optional conditions in case the isOptionalForAll is toggled on and off again
@@ -486,10 +501,7 @@ const handleOptionalForAllSwitch = (): void => {
   }
 };
 
-const isOptionalForAllAndOptionalConditionsPresent = computed((): boolean => {
-  return isOptionalForAll.value && toRaw(previousOptionalConditions.value)?.length > 0;
-});
-
+// Reset & save
 const handleReset = (): void => {
   errorSubmitText.value = '';
   assignedConditions.value = [];
@@ -510,6 +522,25 @@ function hasDuplicateUserTypeConditions(conditions: Condition[]): boolean {
 
   return false;
 }
+
+// Conditions are stored as string values; clone for the save payload.
+function conditionsToValues(): [Condition[], Condition[]] {
+  return [_cloneDeep(assignedConditions.value), _cloneDeep(optionalConditions.value)];
+}
+
+const computedConditions = (assignedConditions: Condition[], optionalConditions: Condition[]): ConditionsStructure => {
+  const conditions: ConditionsStructure = {};
+
+  if (!_isEmpty(optionalConditions)) {
+    conditions.optional = { op: 'AND', conditions: optionalConditions };
+  }
+
+  if (!_isEmpty(assignedConditions)) {
+    conditions.assigned = { op: 'AND', conditions: assignedConditions };
+  }
+
+  return conditions;
+};
 
 const handleSave = (): void => {
   let error = false;
@@ -561,32 +592,25 @@ const handleSave = (): void => {
   return;
 };
 
-// Conditions are stored as string values; clone for the save payload.
-function conditionsToValues(): [Condition[], Condition[]] {
-  return [_cloneDeep(assignedConditions.value), _cloneDeep(optionalConditions.value)];
-}
+// +-----------------+
+// | Lifecycle hooks |
+// +-----------------+
+onMounted((): void => {
+  getAllConditions(props.assessment.task.id);
+  // LEVANTE assigns surveys as assessments, so we add a defualt for child only so researchers
+  // do not accidently assign tasks to parents and teachers
+  if (isLevante && !props.assessment.task.id.toLowerCase().includes('survey')) {
+    const defaultCondition = { field: 'userType', op: 'EQUAL', value: 'student' };
+    const hasIdenticalCondition = assignedConditions.value.some(
+      (condition) =>
+        condition.field === defaultCondition.field &&
+        condition.op === defaultCondition.op &&
+        condition.value === defaultCondition.value,
+    );
 
-const computedConditions = (assignedConditions: Condition[], optionalConditions: Condition[]): ConditionsStructure => {
-  const conditions: ConditionsStructure = {};
-
-  if (!_isEmpty(optionalConditions)) {
-    conditions.optional = { op: 'AND', conditions: optionalConditions };
+    if (!hasIdenticalCondition) {
+      assignedConditions.value.push({ ...defaultCondition });
+    }
   }
-
-  if (!_isEmpty(assignedConditions)) {
-    conditions.assigned = { op: 'AND', conditions: assignedConditions };
-  }
-
-  return conditions;
-};
-
-const fieldOptions: FieldOption[] = [
-  { label: 'User Type', value: 'userType', project: 'LEVANTE' },
-  { label: 'Age', value: 'age', project: 'LEVANTE' },
-];
-
-const selectedGroup = computed((): string => {
-  // This would need to be implemented based on your actual group selection logic
-  return 'selected group';
 });
 </script>
