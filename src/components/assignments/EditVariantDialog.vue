@@ -323,6 +323,7 @@ interface Assessment {
 
 export interface PreExistingAssessmentInfo {
   taskId?: string;
+  variantId?: string;
   conditions?: ConditionsStructure;
 }
 
