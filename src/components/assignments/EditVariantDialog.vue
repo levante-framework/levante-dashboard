@@ -321,7 +321,7 @@ interface Assessment {
   variant?: Variant;
 }
 
-interface PreExistingAssessmentInfo {
+export interface PreExistingAssessmentInfo {
   taskId: string;
   conditions?: ConditionsStructure;
 }

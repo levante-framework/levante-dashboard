@@ -155,14 +155,14 @@ import PvDialog from 'primevue/dialog';
 import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { computed, h, ref } from 'vue';
-import EditVariantDialog from '@/components/assignments/EditVariantDialog.vue';
+import EditVariantDialog, { type PreExistingAssessmentInfo } from '@/components/assignments/EditVariantDialog.vue';
 import { getTooltip, resolveVariantDisplayName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 
 export interface Condition {
   field: string;
   op: string;
-  value: any;
+  value: string | number;
 }
 
 interface ConditionGroup {
@@ -178,7 +178,7 @@ interface VariantConditions {
 interface VariantData {
   displayName?: string;
   name: string;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   conditions?: VariantConditions;
   registered?: boolean;
 }
@@ -198,7 +198,7 @@ interface Props {
   variant: VariantObject;
   hasControls?: boolean;
   updateVariant: (variant: VariantObject) => void;
-  preExistingAssessmentInfo?: any[];
+  preExistingAssessmentInfo?: PreExistingAssessmentInfo[];
 }
 
 interface Emits {
@@ -221,7 +221,7 @@ const { isUserSuperAdmin } = authStore;
 
 const backupImage = '/src/assets/roar-logo.png';
 const showContent = ref<boolean>(false);
-const op = ref<any>(null);
+const op = ref<InstanceType<typeof PvPopover> | null>(null);
 const visible = ref<boolean>(false);
 
 const formattedAssignedConditions = computed((): string => {
@@ -284,8 +284,8 @@ function iconClass(): string {
     : 'pi pi-chevron-down text-primary hover:text-white-alpha-90 p-2';
 }
 
-const parseConditions = (variant: any): Condition[] | undefined => {
-  return variant?.conditions;
+const parseConditions = (group: ConditionGroup | undefined): Condition[] | undefined => {
+  return group?.conditions;
 };
 
 const conditionTables = computed(() => {
@@ -306,7 +306,7 @@ const conditionTables = computed(() => {
   return sections;
 });
 
-const displayParamList = (inputObj: Record<string, any>): Array<{ key: string; value: any }> => {
+const displayParamList = (inputObj: Record<string, unknown>): Array<{ key: string; value: unknown }> => {
   return _toPairs(inputObj).map(([key, value]) => ({ key, value }));
 };
 
@@ -327,7 +327,7 @@ const VariantParamsTable = (tableProps: { params: Record<string, unknown>; table
   );
 
 const toggle = (event: Event): void => {
-  op.value.toggle(event);
+  op.value?.toggle(event);
 };
 </script>
 
