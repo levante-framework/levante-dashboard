@@ -284,13 +284,13 @@ interface ConditionOption {
   value: string;
 }
 
-interface Condition {
+export interface Condition {
   field: string;
   op: string;
   value: string;
 }
 
-interface ConditionsStructure {
+export interface ConditionsStructure {
   assigned?: {
     op: string;
     conditions: Condition[];

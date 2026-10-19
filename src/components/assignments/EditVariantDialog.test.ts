@@ -4,18 +4,7 @@ import PvSelect from 'primevue/select';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
-import EditVariantDialog from '@/components/assignments/EditVariantDialog.vue';
-
-interface Condition {
-  field: string;
-  op: string;
-  value: string;
-}
-
-interface ConditionsStructure {
-  assigned?: { op: string; conditions: Condition[] };
-  optional?: boolean | { op: string; conditions: Condition[] };
-}
+import EditVariantDialog, { type ConditionsStructure } from '@/components/assignments/EditVariantDialog.vue';
 
 // isLevante is mutated per test. It defaults to false so onMounted does not inject
 // a default userType condition, keeping most assertions focused on stored conditions.

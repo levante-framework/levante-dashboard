@@ -10,7 +10,7 @@ import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
-import VariantCard, { type VariantObject } from '@/components/assignments/VariantCard.vue';
+import VariantCard, { type Condition, type VariantObject } from '@/components/assignments/VariantCard.vue';
 import type { VariantLanguageMapping } from '@/helpers/languageDiscovery';
 
 // Mock EditVariantDialog component
@@ -305,7 +305,7 @@ describe('VariantCard.vue', () => {
 
   describe('Conditional Rendering', () => {
     // Mount with the given assigned conditions and return the computed, human-readable label.
-    const formatAssignedConditions = (conditions: Array<{ field: string; op: string; value: unknown }>): string => {
+    const formatAssignedConditions = (conditions: Condition[]): string => {
       const mockVariant = createMockVariant(findLanguage('en-US'));
       mockVariant.variant.conditions = { assigned: { conditions } };
 

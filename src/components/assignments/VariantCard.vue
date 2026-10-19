@@ -159,7 +159,7 @@ import EditVariantDialog from '@/components/assignments/EditVariantDialog.vue';
 import { getTooltip, resolveVariantDisplayName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 
-interface Condition {
+export interface Condition {
   field: string;
   op: string;
   value: any;
