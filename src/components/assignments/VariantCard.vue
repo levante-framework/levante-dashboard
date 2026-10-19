@@ -33,7 +33,7 @@
       <img
         class="w-4rem shadow-2 border-round"
         :class="{ 'ml-2': !hasControls }"
-        :src="variant.task.image || backupImage"
+        :src="variant.task.image || BACKUP_IMAGE"
         :alt="variant.task.name"
       />
       <div :class="hasControls ? 'pl-2' : 'h-auto m-0 p-0 pl-2'">
@@ -162,6 +162,9 @@ import EditVariantDialog, {
 import { getTooltip, resolveVariantDisplayName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 
+// +-------+
+// | Types |
+// +-------+
 export interface Condition {
   field: string;
   op: string;
@@ -211,22 +214,38 @@ interface Emits {
   moveDown: [variant: VariantObject];
 }
 
+// +-----------+
+// | Constants |
+// +-----------+
 const PARAM_COL_STYLE = 'width: 50%; text-align: left; padding-left: 1vh; padding-top: 0.15vh; padding-bottom: 0.1vh';
+const BACKUP_IMAGE = '/src/assets/roar-logo.png';
 
+// +-----------------+
+// | Props and emits |
+// +-----------------+
 const props = withDefaults(defineProps<Props>(), {
   hasControls: false,
   preExistingAssessmentInfo: () => [],
 });
 
 const emit = defineEmits<Emits>();
+
+// +------------------------+
+// | Composables and stores |
+// +------------------------+
 const authStore = useAuthStore();
 const { isUserSuperAdmin } = authStore;
 
-const backupImage = '/src/assets/roar-logo.png';
+// +----------------+
+// | Reactive state |
+// +----------------+
 const showContent = ref<boolean>(false);
 const op = ref<InstanceType<typeof PvPopover> | null>(null);
 const visible = ref<boolean>(false);
 
+// +----------+
+// | Computed |
+// +----------+
 const formattedAssignedConditions = computed((): string => {
   const conditions = props.variant.variant?.conditions?.assigned?.conditions;
   if (!conditions || !Array.isArray(conditions) || conditions.length === 0) {
@@ -261,6 +280,32 @@ const formattedAssignedConditions = computed((): string => {
   return processedStrings.length > 0 ? processedStrings.join(', ') : '';
 });
 
+// Declared before conditionTables, which depends on it.
+const parseConditions = (group: ConditionGroup | undefined): Condition[] | undefined => {
+  return group?.conditions;
+};
+
+const conditionTables = computed(() => {
+  const sections: Array<{ key: string; label: string; rows: Condition[] }> = [];
+  const assigned = parseConditions(props.variant.variant?.conditions?.assigned);
+  if (assigned && assigned.length > 0) {
+    sections.push({ key: 'assigned', label: 'Assigned Conditions:', rows: assigned });
+  }
+
+  const optional = props.variant.variant?.conditions?.optional;
+  if (optional && optional !== true) {
+    const rows = parseConditions(optional);
+    if (rows && rows.length > 0) {
+      sections.push({ key: 'optional', label: 'Optional Conditions:', rows });
+    }
+  }
+
+  return sections;
+});
+
+// +---------+
+// | Methods |
+// +---------+
 const handleRemove = (): void => {
   emit('remove', props.variant);
 };
@@ -286,28 +331,6 @@ function iconClass(): string {
     ? 'pi pi-chevron-up text-primary hover:text-white-alpha-90 p-2'
     : 'pi pi-chevron-down text-primary hover:text-white-alpha-90 p-2';
 }
-
-const parseConditions = (group: ConditionGroup | undefined): Condition[] | undefined => {
-  return group?.conditions;
-};
-
-const conditionTables = computed(() => {
-  const sections: Array<{ key: string; label: string; rows: Condition[] }> = [];
-  const assigned = parseConditions(props.variant.variant?.conditions?.assigned);
-  if (assigned && assigned.length > 0) {
-    sections.push({ key: 'assigned', label: 'Assigned Conditions:', rows: assigned });
-  }
-
-  const optional = props.variant.variant?.conditions?.optional;
-  if (optional && optional !== true) {
-    const rows = parseConditions(optional);
-    if (rows && rows.length > 0) {
-      sections.push({ key: 'optional', label: 'Optional Conditions:', rows });
-    }
-  }
-
-  return sections;
-});
 
 const displayParamList = (inputObj: Record<string, unknown>): Array<{ key: string; value: unknown }> => {
   return _toPairs(inputObj).map(([key, value]) => ({ key, value }));
