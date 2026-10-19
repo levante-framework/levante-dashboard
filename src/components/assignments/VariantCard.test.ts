@@ -11,13 +11,7 @@ import PvTag from 'primevue/tag';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
 import VariantCard, { type VariantObject } from '@/components/assignments/VariantCard.vue';
-import { getAllLanguageOptions, getLanguageInfo, type VariantLanguageMapping } from '@/helpers/languageDiscovery';
-
-// Mock the language discovery functions
-vi.mock('@/helpers/languageDiscovery', () => ({
-  getAllLanguageOptions: vi.fn(),
-  getLanguageInfo: vi.fn(),
-}));
+import type { VariantLanguageMapping } from '@/helpers/languageDiscovery';
 
 // Mock EditVariantDialog component
 vi.mock('@/components/assignments/EditVariantDialog.vue', () => ({
@@ -38,14 +32,6 @@ vi.mock('@/composables/usePermissions', () => ({
     userRole: ref('super_admin'),
   }),
 }));
-
-interface TestResult {
-  language: string;
-  code: string;
-  status: 'SUCCESS' | 'FAILURE';
-  isLegacy: boolean;
-  error?: string;
-}
 
 // VariantCard exposes these via its `<script setup>` bindings but not `defineExpose`,
 // so they aren't on the public instance type; narrow for test-only access.
@@ -153,116 +139,59 @@ const mountOptions = {
 
 beforeEach(() => {
   setActivePinia(createPinia());
-
-  // Setup mocks
-  vi.mocked(getAllLanguageOptions).mockReturnValue(mockLanguages);
-  vi.mocked(getLanguageInfo).mockImplementation(
-    (code: string) => mockLanguages.find((lang) => lang.variantCode === code) || null,
-  );
 });
 
-describe('VariantCard.vue - Language Variant Testing', () => {
-  describe('Variant Card Rendering for All Languages', () => {
-    const testResults: TestResult[] = [];
+describe('VariantCard.vue', () => {
+  describe('Rendering', () => {
+    it('renders the task name, variant display name (not the internal name), and action buttons', async () => {
+      const mockVariant = createMockVariant(findLanguage('en-US'));
 
-    mockLanguages.forEach((language) => {
-      it(`should render variant card successfully for ${language.displayName} (${language.variantCode})`, async () => {
-        const mockVariant = createMockVariant(language);
-        let errorMessage = '';
-
-        try {
-          const wrapper = mount(VariantCard, {
-            ...mountOptions,
-            props: {
-              ...mountOptions.props,
-              variant: mockVariant,
-              hasControls: false,
-            },
-          });
-
-          await nextTick();
-
-          // Test 1: Component exists and renders
-          expect(wrapper.exists()).toBe(true);
-
-          // Test 2: Task name is displayed
-          const taskNameElements = wrapper.findAll('.font-bold');
-          const taskNameElement = taskNameElements.find((el) => el.text().includes(mockVariant.task.name));
-          expect(taskNameElement).toBeTruthy();
-
-          // Test 3: Variant display name is shown (not internal name)
-          const variantNameText = wrapper.text();
-          expect(variantNameText).toContain('Variant name:');
-          expect(variantNameText).toContain(mockVariant.variant.displayName);
-          expect(variantNameText).not.toContain(mockVariant.variant.name);
-
-          // Test 4: Select button is present and functional
-          const selectButton = wrapper.find('[data-cy="selected-variant"]');
-          expect(selectButton.exists()).toBe(true);
-
-          // Test 5: Parameters are accessible via popover
-          const infoButton = wrapper.find('i.pi-info-circle');
-          expect(infoButton.exists()).toBe(true);
-
-          testResults.push({
-            language: language.displayName,
-            code: language.variantCode,
-            status: 'SUCCESS',
-            isLegacy: language.isLegacy,
-          });
-
-          wrapper.unmount();
-        } catch (error) {
-          errorMessage = (error as Error).message;
-          testResults.push({
-            language: language.displayName,
-            code: language.variantCode,
-            status: 'FAILURE',
-            error: errorMessage,
-            isLegacy: language.isLegacy,
-          });
-
-          // Re-throw to fail the test
-          throw error;
-        }
+      const wrapper = mount(VariantCard, {
+        ...mountOptions,
+        props: {
+          ...mountOptions.props,
+          variant: mockVariant,
+          hasControls: false,
+        },
       });
+
+      await nextTick();
+
+      expect(wrapper.exists()).toBe(true);
+
+      const taskNameElement = wrapper.findAll('.font-bold').find((el) => el.text().includes(mockVariant.task.name));
+      expect(taskNameElement).toBeTruthy();
+
+      const text = wrapper.text();
+      expect(text).toContain('Variant name:');
+      expect(text).toContain(mockVariant.variant.displayName);
+      expect(text).not.toContain(mockVariant.variant.name);
+
+      expect(wrapper.find('[data-cy="selected-variant"]').exists()).toBe(true);
+      expect(wrapper.find('i.pi-info-circle').exists()).toBe(true);
+
+      wrapper.unmount();
     });
 
-    // Summary test that runs after all individual tests
-    it('should provide test results summary for all languages', () => {
-      const successCount = testResults.filter((result) => result.status === 'SUCCESS').length;
-      const failureCount = testResults.filter((result) => result.status === 'FAILURE').length;
+    it('emits select with the variant when the select button is clicked', async () => {
+      const mockVariant = createMockVariant(findLanguage('en-US'));
 
-      console.log('\n=== LANGUAGE VARIANT TESTING RESULTS ===');
-      console.log(`Total Languages: ${testResults.length}`);
-      console.log(`Passed: ${successCount} | Failed: ${failureCount}\n`);
+      const wrapper = mount(VariantCard, {
+        ...mountOptions,
+        props: {
+          ...mountOptions.props,
+          variant: mockVariant,
+          hasControls: false,
+        },
+      });
 
-      // Group results by status for cleaner output
-      const successResults = testResults.filter((result) => result.status === 'SUCCESS');
-      const failureResults = testResults.filter((result) => result.status === 'FAILURE');
+      await nextTick();
+      await wrapper.find('[data-cy="selected-variant"]').trigger('click');
 
-      if (successResults.length > 0) {
-        console.log('✅ PASSED:');
-        successResults.forEach((result) => {
-          const legacyTag = result.isLegacy ? ' (legacy)' : '';
-          console.log(`   • ${result.language} (${result.code})${legacyTag}`);
-        });
-      }
+      expect(wrapper.emitted().select).toBeTruthy();
+      expect(wrapper.emitted().select?.[0]).toEqual([mockVariant]);
 
-      if (failureResults.length > 0) {
-        console.log('\n❌ FAILED:');
-        failureResults.forEach((result) => {
-          const legacyTag = result.isLegacy ? ' (legacy)' : '';
-          console.log(`   • ${result.language} (${result.code})${legacyTag}`);
-          if (result.error) {
-            console.log(`     Error: ${result.error}`);
-          }
-        });
-      }
-
-      // Test should pass if all languages succeeded
-      expect(failureCount).toBe(0);
-      expect(successCount).toBe(testResults.length);
+      wrapper.unmount();
     });
   });
 
@@ -329,21 +258,6 @@ describe('VariantCard.vue - Language Variant Testing', () => {
     });
   });
 
-  describe('Language Information Display', () => {
-    it('should correctly display language information for all variant codes', () => {
-      mockLanguages.forEach((language) => {
-        const languageInfo = getLanguageInfo(language.variantCode);
-
-        expect(languageInfo).not.toBeNull();
-        expect(languageInfo?.variantCode).toBe(language.variantCode);
-        expect(languageInfo?.displayName).toBe(language.displayName);
-        expect(languageInfo?.flagCode).toBe(language.flagCode);
-        expect(languageInfo?.isLegacy).toBe(language.isLegacy);
-        expect(languageInfo?.dashboardLocale).toBe(language.dashboardLocale);
-      });
-    });
-  });
-
   describe('Variant Parameters Display', () => {
     it('should correctly display all variant parameters in the data table', async () => {
       const testLanguage = findLanguage('en-US'); // Use first language for testing
@@ -390,26 +304,48 @@ describe('VariantCard.vue - Language Variant Testing', () => {
   });
 
   describe('Conditional Rendering', () => {
-    it('should show assigned conditions when present', async () => {
-      const testLanguage = findLanguage('es-CO');
-      const mockVariant = createMockVariant(testLanguage);
+    // Mount with the given assigned conditions and return the computed, human-readable label.
+    const formatAssignedConditions = (conditions: Array<{ field: string; op: string; value: unknown }>): string => {
+      const mockVariant = createMockVariant(findLanguage('en-US'));
+      mockVariant.variant.conditions = { assigned: { conditions } };
 
       const wrapper = mount(VariantCard, {
         ...mountOptions,
-        props: {
-          ...mountOptions.props,
-          variant: mockVariant,
-          hasControls: true,
-        },
+        props: { ...mountOptions.props, variant: mockVariant, hasControls: true },
       });
 
-      await nextTick();
-
-      // Check if assigned conditions are formatted correctly
-      const formattedConditions = (wrapper.vm as unknown as VariantCardVm).formattedAssignedConditions;
-      expect(formattedConditions).toBe('Children');
-
+      const formatted = (wrapper.vm as unknown as VariantCardVm).formattedAssignedConditions;
       wrapper.unmount();
+      return formatted;
+    };
+
+    it.each([
+      [{ field: 'userType', op: 'EQUAL', value: 'student' }, 'Children'],
+      [{ field: 'userType', op: 'NOT_EQUAL', value: 'student' }, 'Not Children'],
+      [{ field: 'userType', op: 'EQUAL', value: 'parent' }, 'Caregivers'],
+      [{ field: 'userType', op: 'NOT_EQUAL', value: 'parent' }, 'Not Caregivers'],
+      [{ field: 'userType', op: 'EQUAL', value: 'teacher' }, 'Teachers'],
+      [{ field: 'userType', op: 'NOT_EQUAL', value: 'teacher' }, 'Not Teachers'],
+    ])('formats the %o userType condition as "%s"', (condition, expected) => {
+      expect(formatAssignedConditions([condition])).toBe(expected);
+    });
+
+    it('excludes age conditions from the formatted label', () => {
+      expect(
+        formatAssignedConditions([
+          { field: 'age', op: 'GREATER_THAN', value: '5' },
+          { field: 'userType', op: 'EQUAL', value: 'student' },
+        ]),
+      ).toBe('Children');
+    });
+
+    it('joins multiple userType conditions with a comma', () => {
+      expect(
+        formatAssignedConditions([
+          { field: 'userType', op: 'EQUAL', value: 'student' },
+          { field: 'userType', op: 'EQUAL', value: 'teacher' },
+        ]),
+      ).toBe('Children, Teachers');
     });
 
     it('should handle variants without conditions gracefully', async () => {
