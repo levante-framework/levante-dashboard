@@ -165,15 +165,14 @@ interface Condition {
   value: any;
 }
 
+interface ConditionGroup {
+  op?: string;
+  conditions: Condition[];
+}
+
 interface VariantConditions {
-  assigned?: {
-    conditions: Condition[];
-  };
-  optional?:
-    | boolean
-    | {
-        conditions: Condition[];
-      };
+  assigned?: ConditionGroup;
+  optional?: boolean | ConditionGroup;
 }
 
 interface VariantData {
