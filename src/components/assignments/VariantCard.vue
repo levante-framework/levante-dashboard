@@ -155,7 +155,7 @@ import PvDialog from 'primevue/dialog';
 import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { computed, h, ref } from 'vue';
-import EditVariantDialog from '@/components/EditVariantDialog.vue';
+import EditVariantDialog from '@/components/assignments/EditVariantDialog.vue';
 import { getTooltip, resolveVariantDisplayName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 

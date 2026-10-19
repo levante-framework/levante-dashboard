@@ -3,7 +3,7 @@ import PrimeVue from 'primevue/config';
 import PvSelect from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
-import EditVariantDialog from '@/components/EditVariantDialog.vue';
+import EditVariantDialog from '@/components/assignments/EditVariantDialog.vue';
 
 // Force the non-LEVANTE path so onMounted does not inject a default userType
 // condition, keeping assertions focused on the stored conditions under test.

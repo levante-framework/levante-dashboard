@@ -201,7 +201,7 @@ import ConsentPicker from '@/components/ConsentPicker.vue';
 import DocsButton from '@/components/DocsButton.vue';
 import GroupPicker from '@/components/GroupPicker.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import TaskPicker from '@/components/TaskPicker.vue';
+import TaskPicker from '@/components/assignments/TaskPicker.vue';
 import useUpsertAdministrationMutation from '@/composables/mutations/useUpsertAdministrationMutation';
 import useAdministrationsQuery from '@/composables/queries/useAdministrationsQuery';
 import useAssignmentExistsQuery from '@/composables/queries/useAssignmentExistsQuery';

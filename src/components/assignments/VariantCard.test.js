@@ -10,7 +10,7 @@ import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
-import VariantCard from '@/components/VariantCard.vue';
+import VariantCard from '@/components/assignments/VariantCard.vue';
 import { getAllLanguageOptions, getLanguageInfo } from '@/helpers/languageDiscovery';
 
 // Mock the language discovery functions
@@ -20,7 +20,7 @@ vi.mock('@/helpers/languageDiscovery', () => ({
 }));
 
 // Mock EditVariantDialog component
-vi.mock('@/components/EditVariantDialog.vue', () => ({
+vi.mock('@/components/assignments/EditVariantDialog.vue', () => ({
   default: {
     name: 'EditVariantDialog',
     template: '<div data-testid="edit-variant-dialog"></div>',
