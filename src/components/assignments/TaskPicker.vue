@@ -63,7 +63,7 @@
                     :data-task-id="getTaskId(element.task)"
                     class="cursor-grab"
                   >
-                    <VariantCard :variant="element" :update-variant="bindUpdateVariant" @select="selectCard" />
+                    <VariantCard :variant="element" :update-variant="updateVariant" @select="selectCard" />
                   </div>
                 </transition-group>
               </VueDraggableNext>
@@ -105,7 +105,7 @@
                             >
                               <VariantCard
                                 :variant="element"
-                                :update-variant="bindUpdateVariant"
+                                :update-variant="updateVariant"
                                 @select="selectCard"
                               />
                             </div>
@@ -152,7 +152,7 @@
                 <VariantCard
                   :variant="element"
                   has-controls
-                  :update-variant="bindUpdateVariant"
+                  :update-variant="updateVariant"
                   :pre-existing-assessment-info="preExistingAssessmentInfo"
                   @remove="removeCard"
                   @move-up="moveCardUp"
@@ -475,9 +475,6 @@ const updateVariant = (variantId: string, conditions: VariantObject['variant']['
     variant.id === variantId ? { ...variant, variant: { ...variant.variant, conditions } } : variant,
   );
 };
-
-const bindUpdateVariant = updateVariant as unknown as (variant: VariantObject) => void;
-
 const handleCardMove = (card: DragEvent): boolean => {
   const cardVariantId = card.dragged.id;
   const index = selectedVariants.value.findIndex((element) => element.id === cardVariantId);

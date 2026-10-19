@@ -155,7 +155,10 @@ import PvDialog from 'primevue/dialog';
 import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { computed, h, ref } from 'vue';
-import EditVariantDialog, { type PreExistingAssessmentInfo } from '@/components/assignments/EditVariantDialog.vue';
+import EditVariantDialog, {
+  type ConditionsStructure,
+  type PreExistingAssessmentInfo,
+} from '@/components/assignments/EditVariantDialog.vue';
 import { getTooltip, resolveVariantDisplayName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 
@@ -197,7 +200,7 @@ export interface VariantObject {
 interface Props {
   variant: VariantObject;
   hasControls?: boolean;
-  updateVariant: (variant: VariantObject) => void;
+  updateVariant: (id: string, conditions: ConditionsStructure) => void;
   preExistingAssessmentInfo?: PreExistingAssessmentInfo[];
 }
 
