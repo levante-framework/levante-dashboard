@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { LEVANTE_SENTRY_DSN, LEVANTE_SENTRY_ORG, LEVANTE_SENTRY_PROJECT, LEVANTE_SENTRY_URL } from './sentryConfig';
+import {
+  LEVANTE_QA_SENTRY_DSN,
+  LEVANTE_SENTRY_DSN,
+  LEVANTE_SENTRY_ORG,
+  LEVANTE_SENTRY_PROJECT,
+  LEVANTE_SENTRY_URL,
+  resolveLevanteSentryDsn,
+} from './sentryConfig';
 
 const FORMER_US_LEVANTE_DSN =
   'https://458fd3b1207c12df79f554b94f22833f@o4507250485035008.ingest.us.sentry.io/4508480347832320';
@@ -14,5 +21,13 @@ describe('Sentry EU Cloud', () => {
     expect(LEVANTE_SENTRY_ORG).toBe('levante-framework-eu');
     expect(LEVANTE_SENTRY_PROJECT).toBe('dashboard');
     expect(LEVANTE_SENTRY_URL).toBe('https://de.sentry.io');
+  });
+
+  it('sends support-script sessions to the QA project', () => {
+    expect(resolveLevanteSentryDsn('qa')).toBe(LEVANTE_QA_SENTRY_DSN);
+    expect(resolveLevanteSentryDsn('qa')).toContain('/4512285094117456');
+    expect(resolveLevanteSentryDsn(null)).toBe(LEVANTE_SENTRY_DSN);
+    expect(resolveLevanteSentryDsn(undefined)).toBe(LEVANTE_SENTRY_DSN);
+    expect(resolveLevanteSentryDsn('')).toBe(LEVANTE_SENTRY_DSN);
   });
 });
