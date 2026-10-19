@@ -193,6 +193,9 @@ import { resolveVariantDisplayName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
 import { languageOptions } from '@/translations/i18n';
 
+// +-------+
+// | Types |
+// +-------+
 interface PreExistingAssessmentRecord {
   variantId: string;
   conditions: VariantObject['variant']['conditions'];
@@ -227,15 +230,12 @@ interface TaskSection {
   tasks: TaskWithVariants[];
 }
 
-const getTaskId = (task: VariantObject['task']): string => (task as unknown as { id: string }).id;
-
+// +-----------+
+// | Constants |
+// +-----------+
 const LANGUAGE_PREFIX_MATCH_TASK_IDS = new Set(['swr', 'sre', 'pa']);
 
-function getLanguagePrefix(locale: string): string {
-  return locale.split('-')[0] ?? locale.slice(0, 2);
-}
-
-const groupedTasks: Record<string, string[]> = {
+const GROUPED_TASKS: Record<string, string[]> = {
   Introduction: ['Instructions'],
   'Language and Literacy': [
     'Vocabulary',
@@ -252,25 +252,27 @@ const groupedTasks: Record<string, string[]> = {
   Surveys: ['Child Survey', 'Caregiver Survey', 'Teacher Survey'],
 };
 
+// +-----------------+
+// | Props and emits |
+// +-----------------+
 const props = withDefaults(defineProps<Props>(), {
   inputVariants: () => [],
   preExistingAssessmentInfo: () => [],
 });
 
 const emit = defineEmits<Emits>();
+
+// +------------------------+
+// | Composables and stores |
+// +------------------------+
 const toast = useToast();
+const confirm = useConfirm();
 const authStore = useAuthStore();
 const { isUserSuperAdmin } = authStore;
 
-const confirm = useConfirm();
-
-const languages = computed(() =>
-  Object.entries(languageOptions).map(([key, options]) => ({
-    name: options.languageTaskPicker,
-    value: key,
-  })),
-);
-
+// +----------------+
+// | Reactive state |
+// +----------------+
 const availableSearchResults = ref<VariantObject[]>([]);
 const isSearching = ref(false);
 const searchMatchesAll = ref<VariantObject[]>([]);
@@ -279,13 +281,95 @@ const selectedLanguage = ref<{ name: string; value: string } | null>(null);
 const selectedTasksScrollPanelRef = ref<HTMLElement | null>(null);
 const selectedVariants = ref<VariantObject[]>([]);
 
+// +----------+
+// | Computed |
+// +----------+
+const languages = computed(() =>
+  Object.entries(languageOptions).map(([key, options]) => ({
+    name: options.languageTaskPicker,
+    value: key,
+  })),
+);
+
 const selectedVariantIdSet = computed(() => new Set(selectedVariants.value.map((v) => v.id)));
 
-const rebuildAvailableSearchResults = (): void => {
-  availableSearchResults.value = searchMatchesAll.value.filter(
-    (variant) => !selectedVariantIdSet.value.has(variant.id),
-  );
-};
+const groupedTaskSections = computed((): TaskSection[] => {
+  const sectionMap = new Map<string, TaskWithVariants[]>();
+
+  const resolveSectionLabel = (taskLabel: string, taskKey: string): string => {
+    const entryByLabel = Object.entries(GROUPED_TASKS).find(([, tasks]) => tasks.includes(taskLabel));
+    if (entryByLabel) return entryByLabel[0];
+    const entryByKey = Object.entries(GROUPED_TASKS).find(([, tasks]) => tasks.includes(taskKey));
+    return entryByKey ? entryByKey[0] : 'Other';
+  };
+
+  Object.entries(props.allVariants).forEach(([taskKey, variants]) => {
+    const allVariants = variants ?? [];
+    const namedVariants = allVariants.filter((variant) =>
+      resolveVariantDisplayName(variant.variant),
+    ) as VariantObject[];
+    const filteredVariants = variantsByLanguage(namedVariants);
+    const orderedVariants = filteredVariants.slice().sort((variantA, variantB) => {
+      const variantNameA = resolveVariantDisplayName(variantA?.variant ?? {});
+      const variantNameB = resolveVariantDisplayName(variantB?.variant ?? {});
+      return variantNameA.localeCompare(variantNameB, undefined, { sensitivity: 'base' });
+    });
+    const visibleVariants = orderedVariants.filter((variant) => !selectedVariantIdSet.value.has(variant.id));
+    const taskLabel = allVariants?.[0]?.task?.name || filteredVariants?.[0]?.task?.name || taskKey;
+    const sectionLabel = resolveSectionLabel(taskLabel, taskKey);
+
+    if (!sectionMap.has(sectionLabel)) {
+      sectionMap.set(sectionLabel, []);
+    }
+
+    sectionMap.get(sectionLabel)?.push({
+      key: taskKey,
+      label: taskLabel,
+      variants: visibleVariants,
+      totalVariantCount: allVariants.length,
+    });
+  });
+
+  const sections: TaskSection[] = [];
+
+  Object.keys(GROUPED_TASKS).forEach((label) => {
+    const tasks = sectionMap.get(label);
+    if (!tasks?.length) return;
+
+    const orderedTasks = tasks.sort((taskA, taskB) => {
+      const desiredOrder = GROUPED_TASKS[label as keyof typeof GROUPED_TASKS] ?? [];
+      const indexA = desiredOrder.indexOf(taskA.label);
+      const indexB = desiredOrder.indexOf(taskB.label);
+      if (indexA !== indexB) {
+        const safeIndexA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
+        const safeIndexB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
+        return safeIndexA - safeIndexB;
+      }
+      return taskA.label.localeCompare(taskB.label);
+    });
+
+    sections.push({ label, tasks: orderedTasks });
+    sectionMap.delete(label);
+  });
+
+  const remainingSections = Array.from(sectionMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  remainingSections.forEach(([label, tasks]) => {
+    const sortedTasks = tasks.sort((a, b) => a.label.localeCompare(b.label));
+    sections.push({ label, tasks: sortedTasks });
+  });
+
+  return sections;
+});
+
+// +---------+
+// | Methods |
+// +---------+
+// Task id and language helpers
+const getTaskId = (task: VariantObject['task']): string => (task as unknown as { id: string }).id;
+
+function getLanguagePrefix(locale: string): string {
+  return locale.split('-')[0] ?? locale.slice(0, 2);
+}
 
 // @TODO: Remove the following function after normalizing the variant docs
 const formatVariantLanguage = (variantLanguage: string): string => {
@@ -322,78 +406,17 @@ const variantsByLanguage = (variants: VariantObject[] = []): VariantObject[] => 
   });
 };
 
-const groupedTaskSections = computed((): TaskSection[] => {
-  const sectionMap = new Map<string, TaskWithVariants[]>();
-
-  const resolveSectionLabel = (taskLabel: string, taskKey: string): string => {
-    const entryByLabel = Object.entries(groupedTasks).find(([, tasks]) => tasks.includes(taskLabel));
-    if (entryByLabel) return entryByLabel[0];
-    const entryByKey = Object.entries(groupedTasks).find(([, tasks]) => tasks.includes(taskKey));
-    return entryByKey ? entryByKey[0] : 'Other';
-  };
-
-  Object.entries(props.allVariants).forEach(([taskKey, variants]) => {
-    const allVariants = variants ?? [];
-    const namedVariants = allVariants.filter((variant) =>
-      resolveVariantDisplayName(variant.variant),
-    ) as VariantObject[];
-    const filteredVariants = variantsByLanguage(namedVariants);
-    const orderedVariants = filteredVariants.slice().sort((variantA, variantB) => {
-      const variantNameA = resolveVariantDisplayName(variantA?.variant ?? {});
-      const variantNameB = resolveVariantDisplayName(variantB?.variant ?? {});
-      return variantNameA.localeCompare(variantNameB, undefined, { sensitivity: 'base' });
-    });
-    const visibleVariants = orderedVariants.filter((variant) => !selectedVariantIdSet.value.has(variant.id));
-    const taskLabel = allVariants?.[0]?.task?.name || filteredVariants?.[0]?.task?.name || taskKey;
-    const sectionLabel = resolveSectionLabel(taskLabel, taskKey);
-
-    if (!sectionMap.has(sectionLabel)) {
-      sectionMap.set(sectionLabel, []);
-    }
-
-    sectionMap.get(sectionLabel)?.push({
-      key: taskKey,
-      label: taskLabel,
-      variants: visibleVariants,
-      totalVariantCount: allVariants.length,
-    });
-  });
-
-  const sections: TaskSection[] = [];
-
-  Object.keys(groupedTasks).forEach((label) => {
-    const tasks = sectionMap.get(label);
-    if (!tasks?.length) return;
-
-    const orderedTasks = tasks.sort((taskA, taskB) => {
-      const desiredOrder = groupedTasks[label as keyof typeof groupedTasks] ?? [];
-      const indexA = desiredOrder.indexOf(taskA.label);
-      const indexB = desiredOrder.indexOf(taskB.label);
-      if (indexA !== indexB) {
-        const safeIndexA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
-        const safeIndexB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
-        return safeIndexA - safeIndexB;
-      }
-      return taskA.label.localeCompare(taskB.label);
-    });
-
-    sections.push({ label, tasks: orderedTasks });
-    sectionMap.delete(label);
-  });
-
-  const remainingSections = Array.from(sectionMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  remainingSections.forEach(([label, tasks]) => {
-    const sortedTasks = tasks.sort((a, b) => a.label.localeCompare(b.label));
-    sections.push({ label, tasks: sortedTasks });
-  });
-
-  return sections;
-});
-
 const compareVariantNames = (variantA: VariantObject, variantB: VariantObject): number => {
   const variantNameA = resolveVariantDisplayName(variantA?.variant ?? {});
   const variantNameB = resolveVariantDisplayName(variantB?.variant ?? {});
   return variantNameA.localeCompare(variantNameB, undefined, { sensitivity: 'base' });
+};
+
+// Search
+const rebuildAvailableSearchResults = (): void => {
+  availableSearchResults.value = searchMatchesAll.value.filter(
+    (variant) => !selectedVariantIdSet.value.has(variant.id),
+  );
 };
 
 const searchCards = (term: string): void => {
@@ -432,6 +455,7 @@ const clearSearch = (): void => {
 
 const debounceSearch = _debounce(searchCards, 250);
 
+// Toast
 const debounceToast = _debounce(
   () => {
     toast.add({
@@ -445,6 +469,7 @@ const debounceToast = _debounce(
   { leading: true },
 );
 
+// Variant selection and mutation
 const updateVariant = (variantId: string, conditions: VariantObject['variant']['conditions']): void => {
   selectedVariants.value = selectedVariants.value.map((variant) =>
     variant.id === variantId ? { ...variant, variant: { ...variant.variant, conditions } } : variant,
@@ -610,6 +635,9 @@ const moveCardDown = (variant: VariantObject): void => {
   selectedVariants.value.splice(index + 1, 0, item);
 };
 
+// +----------+
+// | Watchers |
+// +----------+
 watch(
   () => props.inputVariants,
   (newVariants) => {
