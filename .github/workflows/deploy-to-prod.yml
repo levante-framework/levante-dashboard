@@ -106,6 +106,7 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         with:
           environment: production
+          projects: ${{ secrets.SENTRY_PROJECT }} qa
           sourcemaps: ./dist/assets
           version: ${{ steps.version.outputs.tag_name }}
           finalize: false
