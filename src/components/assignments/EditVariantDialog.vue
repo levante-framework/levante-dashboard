@@ -54,8 +54,7 @@
           <div class="text-sm uppercase text-gray-700">
             Assignment will be
             <PvTag severity="warning" class="mx-1">ASSIGNED</PvTag>
-            to all users in the
-            {{ selectedGroup }}
+            to all users in the selected group
           </div>
         </div>
         <!-- ASSIGNED CONDITIONS  -->
@@ -143,14 +142,12 @@
               <div v-if="isOptionalForAll" class="text-sm uppercase text-gray-700">
                 Assignment will be
                 <PvTag severity="success" class="mx-1">OPTIONAL</PvTag>
-                for all users in the
-                {{ selectedGroup }}
+                for all users in the selected group
               </div>
               <div v-else class="text-sm uppercase text-gray-700">
                 Assignment will
                 <PvTag severity="danger" class="mx-1">NOT BE OPTIONAL</PvTag>
-                for any users in the
-                {{ selectedGroup }}
+                for any users in the selected group
               </div>
             </div>
 
@@ -356,11 +353,6 @@ const variantDisplayName = computed(() => resolveVariantDisplayName(props.assess
 
 const isOptionalForAllAndOptionalConditionsPresent = computed((): boolean => {
   return isOptionalForAll.value && toRaw(previousOptionalConditions.value)?.length > 0;
-});
-
-const selectedGroup = computed((): string => {
-  // This would need to be implemented based on your actual group selection logic
-  return 'selected group';
 });
 
 // A variant with exactly one valid user type fixes that user type, so its userType
