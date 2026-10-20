@@ -504,6 +504,25 @@ describe('read-only userType conditions', () => {
     wrapper.unmount();
   });
 
+  it('locks the userType row when validUserTypes repeats a single type', async () => {
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({}, 'test-task', ['student', 'student']),
+        updateVariant: vi.fn(),
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    const selects = wrapper.findAllComponents(PvSelect);
+    expect(selects.length).toBeGreaterThan(0);
+    expect(selects.every((select) => select.props('disabled') === true)).toBe(true);
+
+    wrapper.unmount();
+  });
+
   it('keeps userType condition rows editable when the variant has multiple valid user types', async () => {
     const wrapper = mount(EditVariantDialog, {
       ...mountOptions,

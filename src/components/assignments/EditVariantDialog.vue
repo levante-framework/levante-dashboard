@@ -356,8 +356,12 @@ const isOptionalForAllAndOptionalConditionsPresent = computed((): boolean => {
 });
 
 // A variant with exactly one valid user type fixes that user type, so its userType
-// condition rows are read-only.
-const hasSingleValidUserType = computed((): boolean => (props.assessment.variant?.validUserTypes?.length ?? 0) === 1);
+// condition rows are read-only. De-duplicate first so malformed data like
+// ['student', 'student'] (which seeds a single row) still locks, matching TaskPicker.
+const hasSingleValidUserType = computed((): boolean => {
+  const validUserTypes = props.assessment.variant?.validUserTypes;
+  return !!validUserTypes && new Set(validUserTypes).size === 1;
+});
 
 // +---------+
 // | Methods |
