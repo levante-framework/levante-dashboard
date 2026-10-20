@@ -27,7 +27,7 @@ jobs:
           projectId: '${{ secrets.FIREBASE_PROJECT }}'
           target: production
       - name: Create Sentry release and upload source maps
-        uses: getsentry/action-release@v1.7.0
+        uses: getsentry/action-release@v1
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: levante-framework-eu
