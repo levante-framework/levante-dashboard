@@ -61,7 +61,7 @@
         >
           <div class="text-xl uppercase font-bold">No Conditions Added</div>
           <div class="text-sm uppercase text-gray-700">
-            Assignment will be
+            Task will be
             <PvTag severity="warning" class="mx-1">ASSIGNED</PvTag>
             to all users in the selected group
           </div>
@@ -149,12 +149,12 @@
             >
               <div class="text-xl uppercase font-bold">No Conditions Added</div>
               <div v-if="isOptionalForAll" class="text-sm uppercase text-gray-700">
-                Assignment will be
+                Task will be
                 <PvTag severity="success" class="mx-1">OPTIONAL</PvTag>
                 for all assigned users in the selected group
               </div>
               <div v-else class="text-sm uppercase text-gray-700">
-                Assignment will
+                Task will
                 <PvTag severity="danger" class="mx-1">NOT BE OPTIONAL</PvTag>
                 for all assigned users in the selected group
               </div>
@@ -214,7 +214,7 @@
             <div class="flex flex-row justify-content-between align-items-center">
               <div class="flex flex-row justify-content-end align-items-center gap-2 mr-2">
                 <div class="uppercase text-md font-bold text-gray-600">
-                  Make Assignment Optional For All Assigned Users
+                  Make Task Optional For All Assigned Users
                 </div>
                 <PvToggleSwitch
                   v-model="isOptionalForAll"
@@ -240,7 +240,7 @@
       <div class="flex flex-column align-items-center gap-1 mx-2">
         <div v-if="isOptionalForAllAndOptionalConditionsPresent" class="text-sm">
           <PvTag icon="pi pi-info-circle" severity="info">
-            Making the assignment optional for all will override any optional conditions you have added.
+            Making the task optional for all will override any optional conditions you have added.
           </PvTag>
         </div>
         <div v-if="errorSubmitText.length > 0" class="text-sm">
