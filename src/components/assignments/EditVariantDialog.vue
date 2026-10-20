@@ -64,7 +64,7 @@
             <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
               <PvSelect
                 :model-value="condition.field"
-                :options="FIELD_OPTIONS"
+                :options="fieldOptionsForCondition(condition)"
                 optionLabel="label"
                 optionValue="value"
                 class="w-full"
@@ -159,7 +159,7 @@
                 <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
                   <PvSelect
                     :model-value="condition.field"
-                    :options="FIELD_OPTIONS"
+                    :options="fieldOptionsForCondition(condition)"
                     optionLabel="label"
                     optionValue="value"
                     class="w-full"
@@ -372,6 +372,14 @@ const hasSingleValidUserType = computed((): boolean => (props.assessment.variant
 // +---------+
 const isUserTypeConditionLocked = (condition: Condition): boolean =>
   hasSingleValidUserType.value && condition.field === 'userType';
+
+// When a variant has a single valid user type, that type is already seeded and
+// locked, so `userType` must not be selectable for additional rows. The existing
+// locked row keeps the full options so its label still renders.
+const fieldOptionsForCondition = (condition: Condition): FieldOption[] =>
+  hasSingleValidUserType.value && condition.field !== 'userType'
+    ? FIELD_OPTIONS.filter((option) => option.value !== 'userType')
+    : FIELD_OPTIONS;
 
 // Condition option builders
 const computedValueOptions = (field: string): ConditionOption[] | undefined => {

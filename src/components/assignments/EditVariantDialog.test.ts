@@ -517,6 +517,64 @@ describe('read-only userType conditions', () => {
 
     wrapper.unmount();
   });
+
+  it('omits userType from the field options of newly added rows for a single valid user type', async () => {
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({}, 'test-task', ['student']),
+        updateVariant: vi.fn(),
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    const fieldSelects = () =>
+      wrapper.findAllComponents(PvSelect).filter((select) => select.props('inputId') === 'Field');
+    const fieldValues = (select: (typeof fieldSelects)[number]) =>
+      (select.props('options') as Array<{ value: string }>).map((option) => option.value);
+
+    // The seeded, locked userType row keeps userType so its label still renders.
+    expect(fieldValues(fieldSelects()[0])).toContain('userType');
+
+    // Add a new assigned condition row.
+    const addButton = wrapper.findAll('button').find((button) => button.text().includes('Add Condition'));
+    expect(addButton).toBeTruthy();
+    await addButton?.trigger('click');
+    await nextTick();
+
+    const newRowSelect = fieldSelects()[fieldSelects().length - 1];
+    expect(fieldValues(newRowSelect)).not.toContain('userType');
+    expect(fieldValues(newRowSelect)).toContain('age');
+
+    wrapper.unmount();
+  });
+
+  it('keeps userType selectable for new rows when the variant has multiple valid user types', async () => {
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({}, 'test-task', ['student', 'parent']),
+        updateVariant: vi.fn(),
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    const addButton = wrapper.findAll('button').find((button) => button.text().includes('Add Condition'));
+    await addButton?.trigger('click');
+    await nextTick();
+
+    const fieldSelects = wrapper.findAllComponents(PvSelect).filter((select) => select.props('inputId') === 'Field');
+    const newRowValues = (fieldSelects[fieldSelects.length - 1].props('options') as Array<{ value: string }>).map(
+      (option) => option.value,
+    );
+    expect(newRowValues).toContain('userType');
+
+    wrapper.unmount();
+  });
 });
 
 describe('empty field validation', () => {
