@@ -22,6 +22,16 @@ config.global.mocks = {
   },
 };
 
+// Stub PrimeVue's TabList globally: its mounted() schedules an uncleared setTimeout
+// (updateInkBar) that fires after a test's DOM teardown, throwing "HTMLElement is not
+// defined". Tests don't assert on the tab strip's rendered DOM, so a stub is safe.
+// Spread the existing stubs so VTU's default transition / transition-group stubs (which
+// make transitions resolve synchronously in tests) are preserved rather than clobbered.
+config.global.stubs = {
+  ...config.global.stubs,
+  PvTabList: true,
+};
+
 // Suppress unhandled promise rejections in tests
 // These are often caused by async operations that continue after test completion
 if (typeof process !== 'undefined') {
