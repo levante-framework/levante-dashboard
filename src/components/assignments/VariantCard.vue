@@ -170,12 +170,12 @@ interface VariantData {
   params: Record<string, unknown>;
   conditions?: ConditionsStructure;
   registered?: boolean;
-  validUserTypes?: RoarUserType[];
 }
 
 interface TaskData {
   name: string;
   image?: string;
+  validUserTypes?: RoarUserType[];
 }
 
 export interface VariantObject {

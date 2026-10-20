@@ -76,13 +76,14 @@ function createVariant(options: {
   language?: string;
   registered?: boolean;
   conditions?: VariantObject['variant']['conditions'];
-  validUserTypes?: VariantObject['variant']['validUserTypes'];
+  validUserTypes?: VariantObject['task']['validUserTypes'];
 }): CatalogVariant {
   return {
     id: options.id,
     task: {
       id: options.taskId,
       name: options.taskName,
+      ...(options.validUserTypes ? { validUserTypes: options.validUserTypes } : {}),
       image: '/task.png',
     },
     variant: {
@@ -91,7 +92,6 @@ function createVariant(options: {
       registered: options.registered ?? true,
       params: { language: options.language ?? 'en-US' },
       ...(options.conditions ? { conditions: options.conditions } : {}),
-      ...(options.validUserTypes ? { validUserTypes: options.validUserTypes } : {}),
     },
   };
 }
@@ -847,7 +847,7 @@ describe('TaskPicker', () => {
         taskName: 'Teacher Survey',
         displayName: 'Teacher survey',
       });
-      survey.variant.validUserTypes = ['teacher'];
+      survey.task.validUserTypes = ['teacher'];
       const wrapper = mountPicker({ allVariants: catalog([english, survey]), inputVariants: [english] });
 
       await dropOntoSelected(wrapper, [english, survey], survey);

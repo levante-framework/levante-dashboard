@@ -10,8 +10,8 @@ import type { RoarUserType } from '@/types/userType';
 
 const createAssessment = (conditions: ConditionsStructure, taskId = 'test-task', validUserTypes?: RoarUserType[]) => ({
   id: 'test-variant-1',
-  task: { id: taskId, name: 'Test Task', image: '/test-image.jpg' },
-  variant: { name: 'Test Variant', conditions, ...(validUserTypes ? { validUserTypes } : {}) },
+  task: { id: taskId, name: 'Test Task', image: '/test-image.jpg', ...(validUserTypes ? { validUserTypes } : {}) },
+  variant: { name: 'Test Variant', conditions },
 });
 
 const mountOptions = {

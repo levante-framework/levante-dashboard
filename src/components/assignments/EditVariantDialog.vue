@@ -293,13 +293,13 @@ interface Task {
   id?: string;
   name: string;
   image?: string;
+  validUserTypes?: RoarUserType[];
 }
 
 interface Variant {
   displayName?: string;
   name?: string;
   conditions?: ConditionsStructure;
-  validUserTypes?: RoarUserType[];
 }
 
 interface Assessment {
@@ -355,11 +355,11 @@ const isOptionalForAllAndOptionalConditionsPresent = computed((): boolean => {
   return isOptionalForAll.value && toRaw(previousOptionalConditions.value)?.length > 0;
 });
 
-// A variant with exactly one valid user type fixes that user type, so its userType
+// A task with exactly one valid user type fixes that user type, so its userType
 // condition rows are read-only. De-duplicate first so malformed data like
 // ['student', 'student'] (which seeds a single row) still locks, matching TaskPicker.
 const hasSingleValidUserType = computed((): boolean => {
-  const validUserTypes = props.assessment.variant?.validUserTypes;
+  const validUserTypes = props.assessment.task?.validUserTypes;
   return !!validUserTypes && new Set(validUserTypes).size === 1;
 });
 
@@ -503,7 +503,7 @@ const handleOptionalForAllSwitch = (): void => {
   }
 };
 
-// Seeds the default assigned userType condition(s). Prefers the variant's
+// Seeds the default assigned userType condition(s). Prefers the task's
 // validUserTypes (already backend user types; each becomes its own condition,
 // OR'd together on save), falling back to the task-id default so researchers do
 // not accidentally assign tasks to the wrong user type. Applied on open and on
@@ -521,7 +521,7 @@ const seedDefaultUserTypeConditions = (): void => {
     if (!hasIdenticalCondition) assignedConditions.value.push({ ...defaultCondition });
   };
 
-  const validUserTypes = props.assessment.variant?.validUserTypes;
+  const validUserTypes = props.assessment.task?.validUserTypes;
   if (validUserTypes?.length) {
     validUserTypes.forEach(pushConditionIfMissing);
     return;

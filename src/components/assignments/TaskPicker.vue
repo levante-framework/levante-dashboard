@@ -511,10 +511,10 @@ const addUserDefaultCondition = (variant: VariantObject): VariantObject => {
   const defaultedVariant = _cloneDeep(variant);
   const conditions: Record<string, unknown> = {};
 
-  // Prefer the variant's validUserTypes field when present (values are already
+  // Prefer the task's validUserTypes field when present (values are already
   // backend user types). De-duplicate defensively against malformed data, then
   // OR multiple valid user types together.
-  const validUserTypes = variant.variant.validUserTypes;
+  const validUserTypes = variant.task.validUserTypes;
   if (validUserTypes?.length) {
     const uniqueUserTypes = [...new Set(validUserTypes)];
     conditions.assigned = {
@@ -525,7 +525,7 @@ const addUserDefaultCondition = (variant: VariantObject): VariantObject => {
     return defaultedVariant;
   }
 
-  // Fallback for variants that have not been backfilled with validUserTypes.
+  // Fallback for tasks that have not been backfilled with validUserTypes.
   conditions.assigned = {
     op: 'AND',
     conditions: [{ field: 'userType', op: 'EQUAL', value: getDefaultUserTypeForTask(getTaskId(variant.task)) }],

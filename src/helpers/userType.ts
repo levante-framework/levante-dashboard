@@ -14,7 +14,7 @@ export function normalizeUserTypeForBackend(userType = ''): string {
 
 /**
  * Default backend user type for a task, used to seed assigned conditions when a
- * variant has not been backfilled with `validUserTypes`.
+ * task has not been backfilled with `validUserTypes`.
  */
 export function getDefaultUserTypeForTask(taskId = ''): RoarUserType {
   const id = taskId.toLowerCase();
