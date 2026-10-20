@@ -89,15 +89,22 @@ onBeforeUnmount(() => {
 watch(
   [isFirekitInit, isCoreTasksReady, isLoadingUserData, selectedAssignment, userData],
   async ([newFirekitInitValue, newIsCoreTasksReady, newLoadingUserData, newSelectedAssignment, _newUserData]) => {
+    // Wait for the user data to load, then gate on age for children only: the task's age-based
+    // difficulty needs it, while other user types (caregivers, teachers) launch without it.
+    const userType = _get(userData.value, 'userType');
+    const isChild = userType === 'student';
+
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
     const hasAgeData = birthMonth !== undefined && birthYear !== undefined;
+
+    const hasRequiredUserData = !!userType && (!isChild || hasAgeData);
 
     if (
       !taskStarted.value &&
       newSelectedAssignment &&
       newIsCoreTasksReady &&
-      hasAgeData &&
+      hasRequiredUserData &&
       !newLoadingUserData &&
       newFirekitInitValue
     ) {

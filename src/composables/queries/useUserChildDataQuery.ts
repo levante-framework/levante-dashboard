@@ -23,7 +23,8 @@ const useUserChildDataQuery = (queryOptions?: UseQueryOptions): UseQueryReturnTy
 
   return useQuery({
     queryKey: [USER_CHILD_DATA_QUERY_KEY, getUserId()],
-    queryFn: () => fetchDocById(FIRESTORE_COLLECTIONS.USERS, getUserId(), ['studentData', 'birthMonth', 'birthYear']),
+    queryFn: () =>
+      fetchDocById(FIRESTORE_COLLECTIONS.USERS, getUserId(), ['studentData', 'birthMonth', 'birthYear', 'userType']),
     enabled: isQueryEnabled,
     ...options,
   });
