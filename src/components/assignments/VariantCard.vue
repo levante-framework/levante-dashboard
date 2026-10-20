@@ -130,7 +130,7 @@
       </PvDataTable>
     </div>
     <div v-if="variant.variant?.conditions?.optional === true" class="flex mt-3 flex-column w-full ml-3 pr-5">
-      <PvTag severity="success"> Assignment optional for all participants </PvTag>
+      <PvTag severity="success"> Assignment optional for all assigned users </PvTag>
     </div>
     <div
       v-if="!variant.variant?.conditions?.assigned && !variant.variant?.conditions?.optional"

@@ -46,6 +46,15 @@
           <p>Condition</p>
           <p>Value</p>
         </div>
+        <!--
+          TODO: Today every task is backfilled w/ exactly one valid user type, so its seeded
+          userType condition is locked and non-removable (see isUserTypeConditionLocked) and
+          this empty state can't actually render. We keep it because tasks with multiple valid
+          user types are coming, and those rows aren't locked today, so the assigned group
+          could be emptied. The eventual goal is to support multiple valid user types while
+          still guaranteeing at least one userType condition on an assigned task; enforcing
+          that invariant is out of scope for PR 1113.
+        -->
         <div
           v-if="assignedConditions.length == 0"
           class="flex flex-column align-items-center justify-content-center py-2 gap-2"
@@ -142,12 +151,12 @@
               <div v-if="isOptionalForAll" class="text-sm uppercase text-gray-700">
                 Assignment will be
                 <PvTag severity="success" class="mx-1">OPTIONAL</PvTag>
-                for all users in the selected group
+                for all assigned users in the selected group
               </div>
               <div v-else class="text-sm uppercase text-gray-700">
                 Assignment will
                 <PvTag severity="danger" class="mx-1">NOT BE OPTIONAL</PvTag>
-                for any users in the selected group
+                for any assigned users in the selected group
               </div>
             </div>
 
@@ -205,7 +214,7 @@
             <div class="flex flex-row justify-content-between align-items-center">
               <div class="flex flex-row justify-content-end align-items-center gap-2 mr-2">
                 <div class="uppercase text-md font-bold text-gray-600">
-                  Make Assessment Optional For All Users
+                  Make Assignment Optional For All Assigned Users
                 </div>
                 <PvToggleSwitch
                   v-model="isOptionalForAll"
@@ -231,7 +240,7 @@
       <div class="flex flex-column align-items-center gap-1 mx-2">
         <div v-if="isOptionalForAllAndOptionalConditionsPresent" class="text-sm">
           <PvTag icon="pi pi-info-circle" severity="info">
-            Making the assessment optional for all will override any optional conditions you have added.
+            Making the assignment optional for all will override any optional conditions you have added.
           </PvTag>
         </div>
         <div v-if="errorSubmitText.length > 0" class="text-sm">
