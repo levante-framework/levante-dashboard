@@ -165,9 +165,9 @@
 
             <div class="flex flex-column gap-1">
               <div class="text-sm font-bold">Parameters</div>
-              <pre class="m-0 p-3 surface-0 border-round border-1 border-200 text-sm overflow-auto white-space-pre-wrap">
-                {{ formatParams(entry.variant.params) }}
-              </pre>
+              <div class="m-0 px-3 surface-0 border-round border-1 border-200 text-sm">
+                <pre>{{ formatParams(entry.variant.params) }}</pre>
+              </div>
             </div>
           </article>
 
