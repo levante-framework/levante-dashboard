@@ -22,6 +22,24 @@ config.global.mocks = {
   },
 };
 
+// PrimeVue's TabList schedules an uncleared setTimeout (updateInkBar) in its mounted() hook
+// that fires after a test's DOM teardown, throwing "HTMLElement is not defined". A VTU
+// stub-by-name is order-dependent and proved unreliable across the full suite, so replace the
+// module with a minimal component that still renders its tab triggers (the default slot) and
+// provides $pcTabList (which child Tab components inject), but has none of the ink-bar/timer
+// logic. Child Tab elements (.p-tab / .p-tab-active) and click behavior are unaffected.
+vi.mock('primevue/tablist', () => ({
+  default: {
+    name: 'TabList',
+    provide() {
+      return { $pcTabList: this };
+    },
+    render() {
+      return this.$slots.default?.();
+    },
+  },
+}));
+
 // Suppress unhandled promise rejections in tests
 // These are often caused by async operations that continue after test completion
 if (typeof process !== 'undefined') {
