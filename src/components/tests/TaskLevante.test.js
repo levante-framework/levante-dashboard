@@ -30,6 +30,7 @@ const mockAuthStore = reactive({
 });
 
 const routerPush = vi.fn();
+const completeAssessmentMutate = vi.fn();
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
@@ -55,7 +56,7 @@ vi.mock('@/composables/queries/useUserChildDataQuery', () => ({
 
 vi.mock('@/composables/mutations/useCompleteAssessmentMutation', () => ({
   default: vi.fn(() => ({
-    mutateAsync: vi.fn(),
+    mutateAsync: completeAssessmentMutate,
   })),
 }));
 
@@ -230,6 +231,28 @@ describe('TaskLevante.vue', () => {
       expect(logger.error).toHaveBeenCalled();
       expect(routerPush).not.toHaveBeenCalled();
       expect(mockAssignmentsStore.setHomeRefresh).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it.each([
+      ['earlyCompletion', true],
+      ['errorOut', false],
+    ])('completes the assessment for %s: %s', async (effectiveStoppingRule, shouldComplete) => {
+      selectedAssignmentRef.value = { id: 'assignment-1' };
+      vi.mocked(TaskLauncher).mockImplementationOnce(() => ({
+        run: vi.fn().mockResolvedValue({ effectiveStoppingRule, taskAborted: false }),
+        abort: vi.fn(),
+      }));
+
+      const wrapper = await mountTaskLevante();
+      await flushPromises();
+
+      if (shouldComplete) {
+        expect(completeAssessmentMutate).toHaveBeenCalledWith({ adminId: 'assignment-1', taskId: 'egma-math' });
+      } else {
+        expect(completeAssessmentMutate).not.toHaveBeenCalled();
+      }
+      expect(routerPush).toHaveBeenCalledWith({ name: 'Home' });
       wrapper.unmount();
     });
 

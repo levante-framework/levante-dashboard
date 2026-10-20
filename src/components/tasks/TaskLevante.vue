@@ -19,6 +19,8 @@ const props = defineProps({
   taskId: { type: String, default: 'egma-math' },
 });
 
+const NORMAL_FINISH_REASONS = ['earlyCompletion', 'sufficientTrials'];
+
 let levanteTaskLauncher;
 let levanteTask;
 let checkGameStarted;
@@ -149,13 +151,15 @@ async function startTask(selectedAdmin) {
 
     levanteTask = new levanteTaskLauncher(appKit, gameParams, userParams, logger);
 
-    await levanteTask.run().then(async () => {
+    await levanteTask.run().then(async (result) => {
       if (isUnmounted) return;
 
-      await completeAssessmentMutate({
-        adminId: selectedAdmin.value?.id,
-        taskId: props.taskId,
-      });
+      if (result && !result.taskAborted && NORMAL_FINISH_REASONS.includes(result.effectiveStoppingRule)) {
+        await completeAssessmentMutate({
+          adminId: selectedAdmin.value?.id,
+          taskId: props.taskId,
+        });
+      }
 
       goHome();
     });
