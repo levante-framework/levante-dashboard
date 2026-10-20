@@ -156,7 +156,7 @@
               <div v-else class="text-sm uppercase text-gray-700">
                 Assignment will
                 <PvTag severity="danger" class="mx-1">NOT BE OPTIONAL</PvTag>
-                for any assigned users in the selected group
+                for all assigned users in the selected group
               </div>
             </div>
 
