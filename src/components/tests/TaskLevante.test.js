@@ -235,12 +235,25 @@ describe('TaskLevante.vue', () => {
     });
 
     it.each([
-      ['earlyCompletion', true],
-      ['errorOut', false],
-    ])('completes the assessment for %s: %s', async (effectiveStoppingRule, shouldComplete) => {
+      ['earlyCompletion', true, true],
+      ['sufficientTrials', true, true],
+      ['errorOut', true, false],
+      ['timeOut', true, false],
+      ['experimenterExit', true, false],
+      ['earlyCompletion', false, false],
+    ])('completes the assessment for %s when the run is completed (%s): %s', async (reason, runCompleted, shouldComplete) => {
       selectedAssignmentRef.value = { id: 'assignment-1' };
+      const appKit = {
+        _taskInfo: { variantParams: {} },
+        run: { completed: runCompleted },
+        updateStopReason: vi.fn(),
+      };
+      startAssessment.mockResolvedValueOnce(appKit);
       vi.mocked(TaskLauncher).mockImplementationOnce(() => ({
-        run: vi.fn().mockResolvedValue({ effectiveStoppingRule, taskAborted: false }),
+        run: vi.fn(async () => {
+          await appKit.updateStopReason('taskAbort');
+          await appKit.updateStopReason(reason);
+        }),
         abort: vi.fn(),
       }));
 
@@ -252,6 +265,26 @@ describe('TaskLevante.vue', () => {
       } else {
         expect(completeAssessmentMutate).not.toHaveBeenCalled();
       }
+      expect(routerPush).toHaveBeenCalledWith({ name: 'Home' });
+      wrapper.unmount();
+    });
+
+    it('does not complete the assessment when the task reports no stop reason', async () => {
+      selectedAssignmentRef.value = { id: 'assignment-1' };
+      startAssessment.mockResolvedValueOnce({
+        _taskInfo: { variantParams: {} },
+        run: { completed: true },
+        updateStopReason: vi.fn(),
+      });
+      vi.mocked(TaskLauncher).mockImplementationOnce(() => ({
+        run: vi.fn().mockResolvedValue(undefined),
+        abort: vi.fn(),
+      }));
+
+      const wrapper = await mountTaskLevante();
+      await flushPromises();
+
+      expect(completeAssessmentMutate).not.toHaveBeenCalled();
       expect(routerPush).toHaveBeenCalledWith({ name: 'Home' });
       wrapper.unmount();
     });
