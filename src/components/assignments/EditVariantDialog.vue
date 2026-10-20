@@ -272,7 +272,7 @@ import PvTag from 'primevue/tag';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { computed, onMounted, ref, toRaw } from 'vue';
 import { resolveVariantDisplayName } from '@/helpers';
-import { getDefaultUserTypeForTask } from '@/helpers/userType';
+import { getFallbackUserTypeForTask } from '@/helpers/userType';
 import type { Condition, ConditionsStructure } from '@/types/assignmentConditions';
 import type { RoarUserType } from '@/types/userType';
 
@@ -527,7 +527,7 @@ const seedDefaultUserTypeConditions = (): void => {
     return;
   }
 
-  pushConditionIfMissing(getDefaultUserTypeForTask(props.assessment.task.id ?? ''));
+  pushConditionIfMissing(getFallbackUserTypeForTask(props.assessment.task.id ?? ''));
 };
 
 // Reset & save

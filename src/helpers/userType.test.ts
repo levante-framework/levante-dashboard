@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getDefaultUserTypeForTask, normalizeUserTypeForBackend, normalizeUserTypeForDisplay } from './userType';
+import { getFallbackUserTypeForTask, normalizeUserTypeForBackend, normalizeUserTypeForDisplay } from './userType';
 
 describe('normalizeUserTypeForDisplay', () => {
   it('maps backend values to their display equivalents', () => {
@@ -25,28 +25,28 @@ describe('normalizeUserTypeForBackend', () => {
   });
 });
 
-describe('getDefaultUserTypeForTask', () => {
+describe('getFallbackUserTypeForTask', () => {
   it('returns teacher for the teacher survey', () => {
-    expect(getDefaultUserTypeForTask('teacher-survey')).toBe('teacher');
+    expect(getFallbackUserTypeForTask('teacher-survey')).toBe('teacher');
   });
 
   it('returns parent for the caregiver survey and adult reasoning', () => {
-    expect(getDefaultUserTypeForTask('caregiver-survey')).toBe('parent');
-    expect(getDefaultUserTypeForTask('adult-reasoning')).toBe('parent');
+    expect(getFallbackUserTypeForTask('caregiver-survey')).toBe('parent');
+    expect(getFallbackUserTypeForTask('adult-reasoning')).toBe('parent');
   });
 
   it('defaults to student for any other task', () => {
-    expect(getDefaultUserTypeForTask('vocab')).toBe('student');
-    expect(getDefaultUserTypeForTask('intro-survey')).toBe('student');
+    expect(getFallbackUserTypeForTask('vocab')).toBe('student');
+    expect(getFallbackUserTypeForTask('intro-survey')).toBe('student');
   });
 
   it('is case-insensitive on the task id', () => {
-    expect(getDefaultUserTypeForTask('TEACHER-SURVEY')).toBe('teacher');
-    expect(getDefaultUserTypeForTask('Adult-Reasoning')).toBe('parent');
+    expect(getFallbackUserTypeForTask('TEACHER-SURVEY')).toBe('teacher');
+    expect(getFallbackUserTypeForTask('Adult-Reasoning')).toBe('parent');
   });
 
   it('defaults to student when the task id is missing', () => {
-    expect(getDefaultUserTypeForTask()).toBe('student');
-    expect(getDefaultUserTypeForTask('')).toBe('student');
+    expect(getFallbackUserTypeForTask()).toBe('student');
+    expect(getFallbackUserTypeForTask('')).toBe('student');
   });
 });

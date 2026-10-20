@@ -191,7 +191,7 @@ import { VueDraggableNext } from 'vue-draggable-next';
 import { type PreExistingAssessmentInfo } from '@/components/assignments/EditVariantDialog.vue';
 import VariantCard, { type VariantObject } from '@/components/assignments/VariantCard.vue';
 import { resolveVariantDisplayName } from '@/helpers';
-import { getDefaultUserTypeForTask } from '@/helpers/userType';
+import { getFallbackUserTypeForTask } from '@/helpers/userType';
 import { useAuthStore } from '@/store/auth';
 import { languageOptions } from '@/translations/i18n';
 
@@ -528,7 +528,7 @@ const addUserDefaultCondition = (variant: VariantObject): VariantObject => {
   // Fallback for tasks that have not been backfilled with validUserTypes.
   conditions.assigned = {
     op: 'AND',
-    conditions: [{ field: 'userType', op: 'EQUAL', value: getDefaultUserTypeForTask(getTaskId(variant.task)) }],
+    conditions: [{ field: 'userType', op: 'EQUAL', value: getFallbackUserTypeForTask(getTaskId(variant.task)) }],
   };
 
   defaultedVariant.variant.conditions = conditions as VariantObject['variant']['conditions'];
