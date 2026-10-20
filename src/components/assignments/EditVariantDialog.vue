@@ -148,15 +148,16 @@
               class="flex flex-column align-items-center justify-content-center py-2 gap-2"
             >
               <div class="text-xl uppercase font-bold">No Conditions Added</div>
-              <div v-if="isOptionalForAll" class="text-sm uppercase text-gray-700">
-                Task will be
-                <PvTag severity="success" class="mx-1">OPTIONAL</PvTag>
-                for all assigned users in the selected group
+              <div v-if="isOptionalForAll" class="text-sm text-gray-700 text-center">
+                If this assignment is sequential, users will be able to move past this task without completing it.
+                <br />
+                To require users to complete this task before moving on, make the task required.
               </div>
-              <div v-else class="text-sm uppercase text-gray-700">
-                Task will
-                <PvTag severity="danger" class="mx-1">NOT BE OPTIONAL</PvTag>
-                for all assigned users in the selected group
+              <div v-else class="text-sm text-gray-700 text-center">
+                If this assignment is sequential, users will be required to complete this task before moving on to other
+                tasks by default.
+                <br />
+                To allow users to move past this task without completing it, make the task optional.
               </div>
             </div>
 
