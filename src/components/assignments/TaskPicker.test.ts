@@ -818,6 +818,44 @@ describe('TaskPicker', () => {
       expect(confirmRequire).not.toHaveBeenCalled();
     });
 
+    it('seeds default userType conditions on a dropped variant', async () => {
+      const english = createVariant({
+        id: 'vocab-en',
+        taskId: 'vocab',
+        taskName: 'Vocabulary',
+        displayName: 'English vocab',
+      });
+      const math = createVariant({ id: 'math-en', taskId: 'math', taskName: 'Math', displayName: 'Math basics' });
+      const wrapper = mountPicker({ allVariants: catalog([english, math]), inputVariants: [english] });
+
+      await dropOntoSelected(wrapper, [english, math], math);
+
+      const dropped = emittedVariants(wrapper).find((variant) => variant.id === 'math-en');
+      expect(dropped?.variant.conditions).toEqual(assignedTo('student'));
+    });
+
+    it('seeds a dropped variant from its validUserTypes', async () => {
+      const english = createVariant({
+        id: 'vocab-en',
+        taskId: 'vocab',
+        taskName: 'Vocabulary',
+        displayName: 'English vocab',
+      });
+      const survey = createVariant({
+        id: 'teacher-survey-1',
+        taskId: 'teacher-survey',
+        taskName: 'Teacher Survey',
+        displayName: 'Teacher survey',
+      });
+      survey.variant.validUserTypes = ['teacher'];
+      const wrapper = mountPicker({ allVariants: catalog([english, survey]), inputVariants: [english] });
+
+      await dropOntoSelected(wrapper, [english, survey], survey);
+
+      const dropped = emittedVariants(wrapper).find((variant) => variant.id === 'teacher-survey-1');
+      expect(dropped?.variant.conditions).toEqual(assignedTo('teacher'));
+    });
+
     it('removes a dropped duplicate and warns', async () => {
       const english = createVariant({
         id: 'vocab-en',

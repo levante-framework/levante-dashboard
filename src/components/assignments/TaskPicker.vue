@@ -581,7 +581,15 @@ const handleCardAdd = (card: DragEvent): void => {
   const existingIndex = selectedVariants.value.findIndex(
     (variant, index) => index !== droppedIndex && getTaskId(variant.task) === droppedTaskId,
   );
-  if (existingIndex === -1) return;
+  if (existingIndex === -1) {
+    // The drag library inserts the raw variant as-is. Seed its default userType
+    // conditions like selectCard does, otherwise a drop-then-submit (without opening
+    // the edit dialog) persists the assessment with no assigned userType and the task
+    // is given to every user in the group.
+    const newVariant = selectedVariants.value[droppedIndex];
+    if (newVariant) selectedVariants.value.splice(droppedIndex, 1, addUserDefaultCondition(newVariant));
+    return;
+  }
 
   const droppedVariant = selectedVariants.value[droppedIndex];
   selectedVariants.value.splice(droppedIndex, 1);
