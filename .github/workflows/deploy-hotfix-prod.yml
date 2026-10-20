@@ -74,6 +74,7 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         with:
           environment: production
+          projects: ${{ secrets.SENTRY_PROJECT }} qa
           sourcemaps: ./dist/assets
           version: hotfix-${{ steps.version.outputs.app_version }}-${{ github.sha }}
           finalize: false
