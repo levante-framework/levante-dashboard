@@ -53,8 +53,8 @@
           <div class="text-xl uppercase font-bold">No Conditions Added</div>
           <div class="text-sm uppercase text-gray-700">
             Assignment will be
-            <PvTag severity="warning" class="mx-1">ASSIGNED</PvTag> to all {{ isLevante ? 'users' : 'participants' }} in
-            the
+            <PvTag severity="warning" class="mx-1">ASSIGNED</PvTag>
+            to all users in the
             {{ selectedGroup }}
           </div>
         </div>
@@ -138,14 +138,14 @@
               <div class="text-xl uppercase font-bold">No Conditions Added</div>
               <div v-if="isOptionalForAll" class="text-sm uppercase text-gray-700">
                 Assignment will be
-                <PvTag severity="success" class="mx-1">OPTIONAL</PvTag> for all
-                {{ isLevante ? 'users' : 'participants' }} in the
+                <PvTag severity="success" class="mx-1">OPTIONAL</PvTag>
+                for all users in the
                 {{ selectedGroup }}
               </div>
               <div v-else class="text-sm uppercase text-gray-700">
                 Assignment will
                 <PvTag severity="danger" class="mx-1">NOT BE OPTIONAL</PvTag>
-                for any {{ isLevante ? 'users' : 'participants' }} in the
+                for any users in the
                 {{ selectedGroup }}
               </div>
             </div>
@@ -200,8 +200,7 @@
             <div class="flex flex-row justify-content-between align-items-center">
               <div class="flex flex-row justify-content-end align-items-center gap-2 mr-2">
                 <div class="uppercase text-md font-bold text-gray-600">
-                  Make Assessment Optional For All
-                  {{ isLevante ? 'Users' : 'Participants' }}
+                  Make Assessment Optional For All Users
                 </div>
                 <PvToggleSwitch
                   v-model="isOptionalForAll"
@@ -267,8 +266,10 @@ import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { computed, onMounted, ref, toRaw } from 'vue';
-import { isLevante } from '@/constants';
 import { resolveVariantDisplayName } from '@/helpers';
+import { getDefaultUserTypeForTask } from '@/helpers/userType';
+import type { Condition, ConditionsStructure } from '@/types/assignmentConditions';
+import type { RoarUserType } from '@/types/userType';
 
 // +-------+
 // | Types |
@@ -276,31 +277,11 @@ import { resolveVariantDisplayName } from '@/helpers';
 interface FieldOption {
   label: string;
   value: string;
-  project: string;
 }
 
 interface ConditionOption {
   label: string;
   value: string;
-}
-
-export interface Condition {
-  field: string;
-  op: string;
-  value: string | number;
-}
-
-export interface ConditionsStructure {
-  assigned?: {
-    op?: string;
-    conditions: Condition[];
-  };
-  optional?:
-    | boolean
-    | {
-        op?: string;
-        conditions: Condition[];
-      };
 }
 
 interface Task {
@@ -313,6 +294,7 @@ interface Variant {
   displayName?: string;
   name?: string;
   conditions?: ConditionsStructure;
+  validUserTypes?: RoarUserType[];
 }
 
 interface Assessment {
@@ -337,8 +319,8 @@ interface Props {
 // | Constants |
 // +-----------+
 const FIELD_OPTIONS: FieldOption[] = [
-  { label: 'User Type', value: 'userType', project: 'LEVANTE' },
-  { label: 'Age', value: 'age', project: 'LEVANTE' },
+  { label: 'User Type', value: 'userType' },
+  { label: 'Age', value: 'age' },
 ];
 
 // +-------+
@@ -529,15 +511,22 @@ function conditionsToValues(): [Condition[], Condition[]] {
   return [_cloneDeep(assignedConditions.value), _cloneDeep(optionalConditions.value)];
 }
 
+// Multiple user-type conditions represent "any of these user types", so they are
+// OR'd together. Other combinations keep the existing AND semantics.
+function resolveGroupOp(conditions: Condition[]): string {
+  const isMultipleUserTypes = conditions.length > 1 && conditions.every((condition) => condition.field === 'userType');
+  return isMultipleUserTypes ? 'OR' : 'AND';
+}
+
 const computedConditions = (assignedConditions: Condition[], optionalConditions: Condition[]): ConditionsStructure => {
   const conditions: ConditionsStructure = {};
 
   if (!_isEmpty(optionalConditions)) {
-    conditions.optional = { op: 'AND', conditions: optionalConditions };
+    conditions.optional = { op: resolveGroupOp(optionalConditions), conditions: optionalConditions };
   }
 
   if (!_isEmpty(assignedConditions)) {
-    conditions.assigned = { op: 'AND', conditions: assignedConditions };
+    conditions.assigned = { op: resolveGroupOp(assignedConditions), conditions: assignedConditions };
   }
 
   return conditions;
@@ -599,20 +588,41 @@ const handleSave = (): void => {
 onMounted((): void => {
   const taskId = props.assessment.task.id ?? '';
   getAllConditions(taskId);
-  // LEVANTE assigns surveys as assessments, so we add a defualt for child only so researchers
-  // do not accidently assign tasks to parents and teachers
-  if (isLevante && !taskId.toLowerCase().includes('survey')) {
-    const defaultCondition = { field: 'userType', op: 'EQUAL', value: 'student' };
-    const hasIdenticalCondition = assignedConditions.value.some(
-      (condition) =>
-        condition.field === defaultCondition.field &&
-        condition.op === defaultCondition.op &&
-        condition.value === defaultCondition.value,
-    );
 
-    if (!hasIdenticalCondition) {
-      assignedConditions.value.push({ ...defaultCondition });
-    }
+  // Prefer the variant's validUserTypes field when present (values are already
+  // backend user types). Each valid user type is seeded as its own condition;
+  // multiple of them are OR'd together on save.
+  const validUserTypes = props.assessment.variant?.validUserTypes;
+  if (validUserTypes?.length) {
+    validUserTypes.forEach((userType) => {
+      const defaultCondition = { field: 'userType', op: 'EQUAL', value: userType };
+      const hasIdenticalCondition = assignedConditions.value.some(
+        (condition) =>
+          condition.field === defaultCondition.field &&
+          condition.op === defaultCondition.op &&
+          condition.value === defaultCondition.value,
+      );
+
+      if (!hasIdenticalCondition) {
+        assignedConditions.value.push({ ...defaultCondition });
+      }
+    });
+    return;
+  }
+
+  // Fallback for variants that have not been backfilled with validUserTypes.
+  // Mirrors TaskPicker's default so researchers do not accidentally assign tasks
+  // to the wrong user type.
+  const defaultCondition = { field: 'userType', op: 'EQUAL', value: getDefaultUserTypeForTask(taskId) };
+  const hasIdenticalCondition = assignedConditions.value.some(
+    (condition) =>
+      condition.field === defaultCondition.field &&
+      condition.op === defaultCondition.op &&
+      condition.value === defaultCondition.value,
+  );
+
+  if (!hasIdenticalCondition) {
+    assignedConditions.value.push({ ...defaultCondition });
   }
 });
 </script>

@@ -4,17 +4,14 @@ import PvSelect from 'primevue/select';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
-import EditVariantDialog, { type ConditionsStructure } from '@/components/assignments/EditVariantDialog.vue';
+import EditVariantDialog from '@/components/assignments/EditVariantDialog.vue';
+import type { ConditionsStructure } from '@/types/assignmentConditions';
+import type { RoarUserType } from '@/types/userType';
 
-// isLevante is mutated per test. It defaults to false so onMounted does not inject
-// a default userType condition, keeping most assertions focused on stored conditions.
-const constantsMock = vi.hoisted(() => ({ isLevante: false }));
-vi.mock('@/constants', () => constantsMock);
-
-const createAssessment = (conditions: ConditionsStructure, taskId = 'test-task') => ({
+const createAssessment = (conditions: ConditionsStructure, taskId = 'test-task', validUserTypes?: RoarUserType[]) => ({
   id: 'test-variant-1',
   task: { id: taskId, name: 'Test Task', image: '/test-image.jpg' },
-  variant: { name: 'Test Variant', conditions },
+  variant: { name: 'Test Variant', conditions, ...(validUserTypes ? { validUserTypes } : {}) },
 });
 
 const mountOptions = {
@@ -37,7 +34,6 @@ const selectLabels = (wrapper: VueWrapper) => wrapper.findAll('.p-select-label')
 
 beforeEach(() => {
   vi.clearAllMocks();
-  constantsMock.isLevante = false;
 });
 
 describe('stored condition rendering (regression #1013)', () => {
@@ -180,7 +176,6 @@ describe('stored condition rendering (regression #1013)', () => {
 
 describe('LEVANTE default userType condition', () => {
   it('injects a default child condition for non-survey tasks with no stored conditions', async () => {
-    constantsMock.isLevante = true;
     const wrapper = mount(EditVariantDialog, {
       ...mountOptions,
       props: {
@@ -200,27 +195,84 @@ describe('LEVANTE default userType condition', () => {
     wrapper.unmount();
   });
 
-  it('does not inject a default condition for survey tasks', async () => {
-    constantsMock.isLevante = true;
+  it('injects a default caregiver condition for the adult-reasoning task', async () => {
+    const updateVariant = vi.fn();
     const wrapper = mount(EditVariantDialog, {
       ...mountOptions,
       props: {
-        assessment: createAssessment({}, 'intro-survey'),
-        updateVariant: vi.fn(),
+        assessment: createAssessment({}, 'adult-reasoning'),
+        updateVariant,
         preExistingAssessmentInfo: [],
       },
     });
 
     await openDialog(wrapper);
 
-    expect(selectLabels(wrapper)).not.toContain('Child');
-    expect(wrapper.text()).toContain('No Conditions Added');
+    const labels = selectLabels(wrapper);
+    expect(labels).toContain('Caregiver');
+    expect(labels).not.toContain('Child');
+
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'parent' }] },
+    });
+
+    wrapper.unmount();
+  });
+
+  it('injects a default teacher condition for the teacher-survey task', async () => {
+    const updateVariant = vi.fn();
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({}, 'teacher-survey'),
+        updateVariant,
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    expect(selectLabels(wrapper)).toContain('Teacher');
+
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'teacher' }] },
+    });
+
+    wrapper.unmount();
+  });
+
+  it('injects a default caregiver condition for the caregiver-survey task', async () => {
+    const updateVariant = vi.fn();
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({}, 'caregiver-survey'),
+        updateVariant,
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    expect(selectLabels(wrapper)).toContain('Caregiver');
+
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'parent' }] },
+    });
 
     wrapper.unmount();
   });
 
   it('does not duplicate the default when an identical condition is already stored', async () => {
-    constantsMock.isLevante = true;
     const updateVariant = vi.fn();
     const wrapper = mount(EditVariantDialog, {
       ...mountOptions,
@@ -239,6 +291,162 @@ describe('LEVANTE default userType condition', () => {
 
     expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
       assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }] },
+    });
+
+    wrapper.unmount();
+  });
+});
+
+describe('validUserTypes default conditions', () => {
+  it('seeds a single validUserType condition and saves it with op AND', async () => {
+    const updateVariant = vi.fn();
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({}, 'test-task', ['teacher']),
+        updateVariant,
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    expect(selectLabels(wrapper)).toContain('Teacher');
+
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'teacher' }] },
+    });
+
+    wrapper.unmount();
+  });
+
+  it('seeds multiple validUserTypes and saves them OR-ed together', async () => {
+    const updateVariant = vi.fn();
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({}, 'test-task', ['student', 'parent']),
+        updateVariant,
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    const labels = selectLabels(wrapper);
+    expect(labels).toContain('Child');
+    expect(labels).toContain('Caregiver');
+
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      assigned: {
+        op: 'OR',
+        conditions: [
+          { field: 'userType', op: 'EQUAL', value: 'student' },
+          { field: 'userType', op: 'EQUAL', value: 'parent' },
+        ],
+      },
+    });
+
+    wrapper.unmount();
+  });
+
+  it('de-duplicates repeated validUserTypes into a single AND condition', async () => {
+    const updateVariant = vi.fn();
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({}, 'test-task', ['student', 'student']),
+        updateVariant,
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }] },
+    });
+
+    wrapper.unmount();
+  });
+
+  it('round-trips multiple stored userType conditions back out with op OR', async () => {
+    const updateVariant = vi.fn();
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({
+          assigned: {
+            op: 'OR',
+            conditions: [
+              { field: 'userType', op: 'EQUAL', value: 'student' },
+              { field: 'userType', op: 'EQUAL', value: 'teacher' },
+            ],
+          },
+        }),
+        updateVariant,
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      assigned: {
+        op: 'OR',
+        conditions: [
+          { field: 'userType', op: 'EQUAL', value: 'student' },
+          { field: 'userType', op: 'EQUAL', value: 'teacher' },
+        ],
+      },
+    });
+
+    wrapper.unmount();
+  });
+
+  it('ORs multiple userType conditions in the optional group too', async () => {
+    const updateVariant = vi.fn();
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({
+          optional: {
+            op: 'OR',
+            conditions: [
+              { field: 'userType', op: 'EQUAL', value: 'student' },
+              { field: 'userType', op: 'EQUAL', value: 'parent' },
+            ],
+          },
+        }),
+        updateVariant,
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      // The dialog always seeds the assigned default (student for a generic task).
+      assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }] },
+      optional: {
+        op: 'OR',
+        conditions: [
+          { field: 'userType', op: 'EQUAL', value: 'student' },
+          { field: 'userType', op: 'EQUAL', value: 'parent' },
+        ],
+      },
     });
 
     wrapper.unmount();
@@ -314,7 +522,11 @@ describe('optional-for-all toggle', () => {
     await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
     await nextTick();
 
-    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', { optional: true });
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      // The dialog always seeds the assigned default (student for a generic task).
+      assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }] },
+      optional: true,
+    });
 
     wrapper.unmount();
   });
@@ -342,6 +554,8 @@ describe('optional-for-all toggle', () => {
     await nextTick();
 
     expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      // The dialog always seeds the assigned default (student for a generic task).
+      assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }] },
       optional: { op: 'AND', conditions: [{ field: 'age', op: 'EQUAL', value: '5' }] },
     });
 

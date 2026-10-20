@@ -76,6 +76,7 @@ function createVariant(options: {
   language?: string;
   registered?: boolean;
   conditions?: VariantObject['variant']['conditions'];
+  validUserTypes?: VariantObject['variant']['validUserTypes'];
 }): CatalogVariant {
   return {
     id: options.id,
@@ -90,6 +91,7 @@ function createVariant(options: {
       registered: options.registered ?? true,
       params: { language: options.language ?? 'en-US' },
       ...(options.conditions ? { conditions: options.conditions } : {}),
+      ...(options.validUserTypes ? { validUserTypes: options.validUserTypes } : {}),
     },
   };
 }
@@ -503,6 +505,60 @@ describe('TaskPicker', () => {
         assignedTo('parent'),
         assignedTo('parent'),
       ]);
+    });
+
+    it('derives the default condition from a single validUserType, overriding the task-id fallback', async () => {
+      // caregiver-survey would default to parent via the fallback; validUserTypes wins.
+      const survey = createVariant({
+        id: 'caregiver',
+        taskId: 'caregiver-survey',
+        taskName: 'Caregiver Survey',
+        displayName: 'Caregiver check-in',
+        validUserTypes: ['teacher'],
+      });
+      const wrapper = mountPicker({ allVariants: catalog([survey]) });
+
+      await addVariant(wrapper, 'Caregiver check-in');
+
+      expect(emittedVariants(wrapper)[0]?.variant.conditions).toEqual(assignedTo('teacher'));
+    });
+
+    it('ORs multiple validUserTypes into the default assigned conditions', async () => {
+      const vocabulary = createVariant({
+        id: 'vocab-en',
+        taskId: 'vocab',
+        taskName: 'Vocabulary',
+        displayName: 'English vocab',
+        validUserTypes: ['student', 'parent'],
+      });
+      const wrapper = mountPicker({ allVariants: catalog([vocabulary]) });
+
+      await addVariant(wrapper, 'English vocab');
+
+      expect(emittedVariants(wrapper)[0]?.variant.conditions).toEqual({
+        assigned: {
+          op: 'OR',
+          conditions: [
+            { field: 'userType', op: 'EQUAL', value: 'student' },
+            { field: 'userType', op: 'EQUAL', value: 'parent' },
+          ],
+        },
+      });
+    });
+
+    it('de-duplicates repeated validUserTypes into a single AND condition', async () => {
+      const vocabulary = createVariant({
+        id: 'vocab-en',
+        taskId: 'vocab',
+        taskName: 'Vocabulary',
+        displayName: 'English vocab',
+        validUserTypes: ['student', 'student'],
+      });
+      const wrapper = mountPicker({ allVariants: catalog([vocabulary]) });
+
+      await addVariant(wrapper, 'English vocab');
+
+      expect(emittedVariants(wrapper)[0]?.variant.conditions).toEqual(assignedTo('student'));
     });
 
     it('applies stored conditions to tasks already on the assignment', () => {

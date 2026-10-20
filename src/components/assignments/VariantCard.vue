@@ -155,38 +155,22 @@ import PvDialog from 'primevue/dialog';
 import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { computed, h, ref } from 'vue';
-import EditVariantDialog, {
-  type ConditionsStructure,
-  type PreExistingAssessmentInfo,
-} from '@/components/assignments/EditVariantDialog.vue';
+import EditVariantDialog, { type PreExistingAssessmentInfo } from '@/components/assignments/EditVariantDialog.vue';
 import { getTooltip, resolveVariantDisplayName } from '@/helpers';
 import { useAuthStore } from '@/store/auth';
+import type { Condition, ConditionGroup, ConditionsStructure } from '@/types/assignmentConditions';
+import type { RoarUserType } from '@/types/userType';
 
 // +-------+
 // | Types |
 // +-------+
-export interface Condition {
-  field: string;
-  op: string;
-  value: string | number;
-}
-
-interface ConditionGroup {
-  op?: string;
-  conditions: Condition[];
-}
-
-interface VariantConditions {
-  assigned?: ConditionGroup;
-  optional?: boolean | ConditionGroup;
-}
-
 interface VariantData {
   displayName?: string;
   name: string;
   params: Record<string, unknown>;
-  conditions?: VariantConditions;
+  conditions?: ConditionsStructure;
   registered?: boolean;
+  validUserTypes?: RoarUserType[];
 }
 
 interface TaskData {

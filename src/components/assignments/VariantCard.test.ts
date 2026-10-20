@@ -10,8 +10,9 @@ import PvPopover from 'primevue/popover';
 import PvTag from 'primevue/tag';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
-import VariantCard, { type Condition, type VariantObject } from '@/components/assignments/VariantCard.vue';
+import VariantCard, { type VariantObject } from '@/components/assignments/VariantCard.vue';
 import type { VariantLanguageMapping } from '@/helpers/languageDiscovery';
+import type { Condition } from '@/types/assignmentConditions';
 
 // Mock EditVariantDialog component
 vi.mock('@/components/assignments/EditVariantDialog.vue', () => ({

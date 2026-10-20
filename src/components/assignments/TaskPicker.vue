@@ -191,6 +191,7 @@ import { VueDraggableNext } from 'vue-draggable-next';
 import { type PreExistingAssessmentInfo } from '@/components/assignments/EditVariantDialog.vue';
 import VariantCard, { type VariantObject } from '@/components/assignments/VariantCard.vue';
 import { resolveVariantDisplayName } from '@/helpers';
+import { getDefaultUserTypeForTask } from '@/helpers/userType';
 import { useAuthStore } from '@/store/auth';
 import { languageOptions } from '@/translations/i18n';
 
@@ -508,25 +509,27 @@ const removeCard = (variant: VariantObject): void => {
 
 const addUserDefaultCondition = (variant: VariantObject): VariantObject => {
   const defaultedVariant = _cloneDeep(variant);
-  const id = getTaskId(variant.task);
   const conditions: Record<string, unknown> = {};
 
-  if (id === 'teacher-survey') {
+  // Prefer the variant's validUserTypes field when present (values are already
+  // backend user types). De-duplicate defensively against malformed data, then
+  // OR multiple valid user types together.
+  const validUserTypes = variant.variant.validUserTypes;
+  if (validUserTypes?.length) {
+    const uniqueUserTypes = [...new Set(validUserTypes)];
     conditions.assigned = {
-      op: 'AND',
-      conditions: [{ field: 'userType', op: 'EQUAL', value: 'teacher' }],
+      op: uniqueUserTypes.length > 1 ? 'OR' : 'AND',
+      conditions: uniqueUserTypes.map((userType) => ({ field: 'userType', op: 'EQUAL', value: userType })),
     };
-  } else if (id === 'caregiver-survey' || id === 'adult-reasoning') {
-    conditions.assigned = {
-      op: 'AND',
-      conditions: [{ field: 'userType', op: 'EQUAL', value: 'parent' }],
-    };
-  } else {
-    conditions.assigned = {
-      op: 'AND',
-      conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }],
-    };
+    defaultedVariant.variant.conditions = conditions as VariantObject['variant']['conditions'];
+    return defaultedVariant;
   }
+
+  // Fallback for variants that have not been backfilled with validUserTypes.
+  conditions.assigned = {
+    op: 'AND',
+    conditions: [{ field: 'userType', op: 'EQUAL', value: getDefaultUserTypeForTask(getTaskId(variant.task)) }],
+  };
 
   defaultedVariant.variant.conditions = conditions as VariantObject['variant']['conditions'];
   return defaultedVariant;
