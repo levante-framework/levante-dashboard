@@ -323,6 +323,37 @@ describe('validUserTypes default conditions', () => {
     wrapper.unmount();
   });
 
+  it('re-seeds the default userType condition after reset', async () => {
+    const updateVariant = vi.fn();
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({}, 'test-task', ['teacher']),
+        updateVariant,
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    const resetButton = wrapper.findAll('button').find((button) => button.text().includes('Reset'));
+    expect(resetButton).toBeTruthy();
+    await resetButton?.trigger('click');
+    await nextTick();
+
+    // Reset must restore the seeded condition rather than clearing it.
+    expect(selectLabels(wrapper)).toContain('Teacher');
+
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'teacher' }] },
+    });
+
+    wrapper.unmount();
+  });
+
   it('seeds multiple validUserTypes and saves them OR-ed together', async () => {
     const updateVariant = vi.fn();
     const wrapper = mount(EditVariantDialog, {

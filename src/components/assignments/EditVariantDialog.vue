@@ -499,6 +499,33 @@ const handleOptionalForAllSwitch = (): void => {
   }
 };
 
+// Seeds the default assigned userType condition(s). Prefers the variant's
+// validUserTypes (already backend user types; each becomes its own condition,
+// OR'd together on save), falling back to the task-id default so researchers do
+// not accidentally assign tasks to the wrong user type. Applied on open and on
+// reset so a reset can't drop the seeded (and possibly locked) userType rows.
+const seedDefaultUserTypeConditions = (): void => {
+  const pushConditionIfMissing = (value: RoarUserType): void => {
+    const defaultCondition = { field: 'userType', op: 'EQUAL', value };
+    const hasIdenticalCondition = assignedConditions.value.some(
+      (condition) =>
+        condition.field === defaultCondition.field &&
+        condition.op === defaultCondition.op &&
+        condition.value === defaultCondition.value,
+    );
+
+    if (!hasIdenticalCondition) assignedConditions.value.push({ ...defaultCondition });
+  };
+
+  const validUserTypes = props.assessment.variant?.validUserTypes;
+  if (validUserTypes?.length) {
+    validUserTypes.forEach(pushConditionIfMissing);
+    return;
+  }
+
+  pushConditionIfMissing(getDefaultUserTypeForTask(props.assessment.task.id ?? ''));
+};
+
 // Reset & save
 const handleReset = (): void => {
   errorSubmitText.value = '';
@@ -506,6 +533,7 @@ const handleReset = (): void => {
   optionalConditions.value = [];
 
   getAllConditions(props.assessment.task.id ?? '');
+  seedDefaultUserTypeConditions();
 };
 
 function hasDuplicateUserTypeConditions(conditions: Condition[]): boolean {
@@ -601,43 +629,7 @@ const handleSave = (): void => {
 // | Lifecycle hooks |
 // +-----------------+
 onMounted((): void => {
-  const taskId = props.assessment.task.id ?? '';
-  getAllConditions(taskId);
-
-  // Prefer the variant's validUserTypes field when present (values are already
-  // backend user types). Each valid user type is seeded as its own condition;
-  // multiple of them are OR'd together on save.
-  const validUserTypes = props.assessment.variant?.validUserTypes;
-  if (validUserTypes?.length) {
-    validUserTypes.forEach((userType) => {
-      const defaultCondition = { field: 'userType', op: 'EQUAL', value: userType };
-      const hasIdenticalCondition = assignedConditions.value.some(
-        (condition) =>
-          condition.field === defaultCondition.field &&
-          condition.op === defaultCondition.op &&
-          condition.value === defaultCondition.value,
-      );
-
-      if (!hasIdenticalCondition) {
-        assignedConditions.value.push({ ...defaultCondition });
-      }
-    });
-    return;
-  }
-
-  // Fallback for variants that have not been backfilled with validUserTypes.
-  // Mirrors TaskPicker's default so researchers do not accidentally assign tasks
-  // to the wrong user type.
-  const defaultCondition = { field: 'userType', op: 'EQUAL', value: getDefaultUserTypeForTask(taskId) };
-  const hasIdenticalCondition = assignedConditions.value.some(
-    (condition) =>
-      condition.field === defaultCondition.field &&
-      condition.op === defaultCondition.op &&
-      condition.value === defaultCondition.value,
-  );
-
-  if (!hasIdenticalCondition) {
-    assignedConditions.value.push({ ...defaultCondition });
-  }
+  getAllConditions(props.assessment.task.id ?? '');
+  seedDefaultUserTypeConditions();
 });
 </script>
