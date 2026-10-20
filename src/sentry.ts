@@ -7,7 +7,7 @@ import {
   sentryUserFromUsername,
   usernameFromIdentity,
 } from '@/helpers/sentryPrivacy';
-import { LEVANTE_SENTRY_DSN } from '@/sentryConfig';
+import { LEVANTE_SENTRY_PROJECT_FLAG, resolveLevanteSentryDsn } from '@/sentryConfig';
 import { useAuthStore } from '@/store/auth';
 import { formattedLocale, languageOptions } from './translations/i18n';
 
@@ -31,13 +31,21 @@ function isCrossOriginVueRefSecurityError(event: SentryEventLike): boolean {
   return eventTextHaystacks(event).some((text) => text.includes('__v_isRef') && text.includes('cross-origin frame'));
 }
 
+function readSentryProjectFlag(): string | null {
+  try {
+    return window.localStorage.getItem(LEVANTE_SENTRY_PROJECT_FLAG);
+  } catch {
+    return null;
+  }
+}
+
 export function initSentry(app: App) {
   // skip if levante instance
   let dsn: string;
   let regex: RegExp;
   let tracePropagationTargets: (string | RegExp)[];
   if (isLevante) {
-    dsn = LEVANTE_SENTRY_DSN;
+    dsn = resolveLevanteSentryDsn(readSentryProjectFlag());
     regex = /https:\/\/hs-levante-admin-dev(--pr\d+-\w+)?\.web\.app/;
     tracePropagationTargets = [
       'https://hs-levante-admin-prod.web.app/**/*',
@@ -124,6 +132,7 @@ export function initSentry(app: App) {
   });
 
   Sentry.setTag('commitSHA', import.meta.env.VITE_APP_VERSION);
+  if (isLevante) Sentry.setTag('app', 'dashboard');
 
   // Set the user's language as a tag
   Sentry.setTag('user.language', language);
