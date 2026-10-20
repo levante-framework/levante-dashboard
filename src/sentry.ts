@@ -132,6 +132,7 @@ export function initSentry(app: App) {
   });
 
   Sentry.setTag('commitSHA', import.meta.env.VITE_APP_VERSION);
+  if (isLevante) Sentry.setTag('app', 'dashboard');
 
   // Set the user's language as a tag
   Sentry.setTag('user.language', language);
