@@ -30,10 +30,11 @@ jobs:
         uses: getsentry/action-release@v1.7.0
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_URL: https://de.sentry.io
+          SENTRY_ORG: levante-framework-eu
+          SENTRY_PROJECT: dashboard
         with:
           environment: production
-          projects: ${{ secrets.SENTRY_PROJECT }} qa
+          projects: dashboard qa
           sourcemaps: ./dist/assets/*.js.map
           version: ${{ github.ref_name }}-${{ github.sha }}
