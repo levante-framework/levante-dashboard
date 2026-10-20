@@ -453,6 +453,72 @@ describe('validUserTypes default conditions', () => {
   });
 });
 
+describe('read-only userType conditions', () => {
+  it('disables the userType condition row when the variant has a single valid user type', async () => {
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({}, 'test-task', ['student']),
+        updateVariant: vi.fn(),
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    const selects = wrapper.findAllComponents(PvSelect);
+    expect(selects.length).toBeGreaterThan(0);
+    expect(selects.every((select) => select.props('disabled') === true)).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it('keeps userType condition rows editable when the variant has multiple valid user types', async () => {
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({}, 'test-task', ['student', 'parent']),
+        updateVariant: vi.fn(),
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    const selects = wrapper.findAllComponents(PvSelect);
+    expect(selects.length).toBeGreaterThan(0);
+    expect(selects.every((select) => select.props('disabled') !== true)).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it('does not lock non-userType rows for a single valid user type variant', async () => {
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment(
+          { assigned: { op: 'AND', conditions: [{ field: 'age', op: 'GREATER_THAN', value: '5' }] } },
+          'test-task',
+          ['student'],
+        ),
+        updateVariant: vi.fn(),
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    // The seeded userType row is disabled; the stored age row remains editable.
+    const selects = wrapper.findAllComponents(PvSelect);
+    const disabledCount = selects.filter((select) => select.props('disabled') === true).length;
+    const enabledCount = selects.filter((select) => select.props('disabled') !== true).length;
+    expect(disabledCount).toBe(3);
+    expect(enabledCount).toBe(3);
+
+    wrapper.unmount();
+  });
+});
+
 describe('empty field validation', () => {
   it('blocks saving and reports when an assigned condition has empty fields', async () => {
     const updateVariant = vi.fn();

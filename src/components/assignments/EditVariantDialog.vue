@@ -70,6 +70,7 @@
                 class="w-full"
                 placeholder="Select a Field"
                 inputId="Field"
+                :disabled="isUserTypeConditionLocked(condition)"
                 @update:model-value="(field) => handleFieldChange(assignedConditions, index, field)"
               />
             </div>
@@ -83,6 +84,7 @@
                 class="w-full"
                 placeholder="Condition"
                 inputId="Condition"
+                :disabled="isUserTypeConditionLocked(condition)"
               />
             </div>
 
@@ -94,6 +96,7 @@
                 optionValue="value"
                 class="w-full"
                 placeholder="Value"
+                :disabled="isUserTypeConditionLocked(condition)"
               />
             </div>
 
@@ -101,6 +104,7 @@
               icon="pi pi-trash"
               text
               class="bg-primary text-white w-2 border-round border-none hover:bg-red-900"
+              :disabled="isUserTypeConditionLocked(condition)"
               @click="removeCondition(assignedConditions, index)"
             />
           </div>
@@ -161,6 +165,7 @@
                     class="w-full"
                     placeholder="Select a Field"
                     inputId="Field"
+                    :disabled="isUserTypeConditionLocked(condition)"
                     @update:model-value="(field) => handleFieldChange(optionalConditions, index, field)"
                   />
                 </div>
@@ -174,6 +179,7 @@
                     class="w-full"
                     placeholder="Condition"
                     inputId="Condition"
+                    :disabled="isUserTypeConditionLocked(condition)"
                   />
                 </div>
 
@@ -185,6 +191,7 @@
                     optionValue="value"
                     class="w-full"
                     placeholder="Value"
+                    :disabled="isUserTypeConditionLocked(condition)"
                   />
                 </div>
 
@@ -192,6 +199,7 @@
                   icon="pi pi-trash"
                   text
                   class="bg-primary text-white w-2 border-round border-none hover:bg-red-900"
+                  :disabled="isUserTypeConditionLocked(condition)"
                   @click="removeCondition(optionalConditions, index)"
                 />
               </div>
@@ -355,9 +363,16 @@ const selectedGroup = computed((): string => {
   return 'selected group';
 });
 
+// A variant with exactly one valid user type fixes that user type, so its userType
+// condition rows are read-only.
+const hasSingleValidUserType = computed((): boolean => (props.assessment.variant?.validUserTypes?.length ?? 0) === 1);
+
 // +---------+
 // | Methods |
 // +---------+
+const isUserTypeConditionLocked = (condition: Condition): boolean =>
+  hasSingleValidUserType.value && condition.field === 'userType';
+
 // Condition option builders
 const computedValueOptions = (field: string): ConditionOption[] | undefined => {
   if (!field) return;
