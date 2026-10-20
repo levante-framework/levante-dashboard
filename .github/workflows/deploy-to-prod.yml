@@ -102,7 +102,6 @@ jobs:
         uses: getsentry/action-release@v1
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_URL: https://de.sentry.io
           SENTRY_ORG: levante-framework-eu
           SENTRY_PROJECT: dashboard
         with:
@@ -125,7 +124,6 @@ jobs:
         uses: getsentry/action-release@v1
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_URL: https://de.sentry.io
           SENTRY_ORG: levante-framework-eu
           SENTRY_PROJECT: dashboard
         with:
