@@ -202,7 +202,7 @@ interface Emits {
 // | Constants |
 // +-----------+
 const PARAM_COL_STYLE = 'width: 50%; text-align: left; padding-left: 1vh; padding-top: 0.15vh; padding-bottom: 0.1vh';
-const BACKUP_IMAGE = '/src/assets/roar-logo.png';
+const BACKUP_IMAGE = '/LEVANTE/Levante_Logo.png';
 
 // +-----------------+
 // | Props and emits |
