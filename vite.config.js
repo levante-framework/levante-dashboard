@@ -1,4 +1,5 @@
 import * as child from 'node:child_process';
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
@@ -13,6 +14,35 @@ const require = createRequire(import.meta.url);
 const commitHash = child.execSync('git rev-parse --short HEAD').toString();
 const primeiconsDir = path.dirname(require.resolve('primeicons/primeicons.css'));
 
+// Feed the published sourcemaps of the `include`d dependencies into the bundle
+// so each emitted (minified) chunk's map chains back to that dep's original
+// source files rather than stopping at its published bundle.
+function chainSourcemaps(include = ['@levante-framework/core-tasks']) {
+  return {
+    name: 'chain-sourcemaps',
+    load(id) {
+      if (!id.endsWith('.js') || !include.some((dep) => id.includes(dep))) return null;
+
+      const code = fs.readFileSync(id, 'utf8');
+      const match = code.match(/\/\/# sourceMappingURL=(\S+)\s*$/);
+      if (!match) return null;
+
+      // Inline maps are already consumed by Vite; only handle external .map files.
+      if (match[1].startsWith('data:')) return null;
+
+      // A map is referenced but can't be loaded: fail loudly so an upstream format
+      // change surfaces in CI instead of silently degrading stack traces.
+      const mapPath = path.resolve(path.dirname(id), match[1]);
+      if (!fs.existsSync(mapPath)) {
+        this.error(`${id} referenced a sourcemap that does not exist: ${mapPath}`);
+      }
+
+      const map = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+      return { code: code.replace(match[0], ''), map };
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   define: {
@@ -23,6 +53,7 @@ export default defineConfig({
     Vue({
       include: [/\.vue$/, /\.md$/],
     }),
+    chainSourcemaps(),
     nodePolyfills({
       globals: {
         process: true,
