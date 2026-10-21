@@ -104,6 +104,35 @@
           @update:model-value="clearFieldError(field.itemId)"
         />
 
+        <!-- language-selection -->
+        <PvMultiSelect
+          v-else-if="field.kind === 'language-selection'"
+          :id="field.itemId"
+          :model-value="languageCodes(field.variableName)"
+          class="w-full"
+          :invalid="Boolean(fieldErrors[field.itemId])"
+          display="chip"
+          option-label="label"
+          option-value="value"
+          placeholder="Select all that apply"
+          :show-toggle-all="false"
+          filter
+          filter-placeholder="Search"
+          reset-filter-on-hide
+          :options="languageSelectionOptions"
+          @update:model-value="(codes) => onLanguageCodes(field.itemId, field.variableName, codes)"
+        />
+        <PvTextarea
+          v-if="field.kind === 'language-selection' && languageHasOther(field.variableName)"
+          :id="`${field.itemId}-other`"
+          aria-label="Other (Describe)"
+          :model-value="languageOtherDescription(field.variableName)"
+          class="w-full survey-form__textarea"
+          :class="{ 'p-invalid': fieldErrors[field.itemId] }"
+          rows="3"
+          @update:model-value="(text) => onLanguageOther(field.itemId, field.variableName, text)"
+        />
+
         <small v-if="fieldErrors[field.itemId]" class="survey-form__field-error">
           {{ fieldErrors[field.itemId] }}
         </small>
@@ -168,6 +197,7 @@
 </template>
 
 <script setup lang="ts">
+import { LANGUAGE_OTHER, type LanguageSelection } from '@levante-framework/levante-zod';
 import DOMPurify from 'dompurify';
 import PvButton from 'primevue/button';
 import PvDialog from 'primevue/dialog';
@@ -177,6 +207,7 @@ import PvSelect from 'primevue/select';
 import PvTextarea from 'primevue/textarea';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import type { FormSectionInfo, InformationFormField } from '@/firebase/repositories/SurveyFormsRepository';
+import { languageSelectionOptions } from '@/helpers/languageSelectionOptions';
 
 interface RenderedSection {
   id: string;
@@ -263,6 +294,37 @@ function onNumberBlur(itemId: string) {
   if (fieldErrors[itemId] === MESSAGES.numbersOnly) clearFieldError(itemId);
 }
 
+function languageCodes(variableName: string): string[] {
+  return (model[variableName] as LanguageSelection).codes;
+}
+
+function languageHasOther(variableName: string): boolean {
+  return languageCodes(variableName).includes(LANGUAGE_OTHER);
+}
+
+function languageOtherDescription(variableName: string): string {
+  return (model[variableName] as LanguageSelection).otherDescription ?? '';
+}
+
+function onLanguageCodes(itemId: string, variableName: string, codes: string[] | null | undefined) {
+  const nextCodes = codes ?? [];
+  const current = model[variableName] as LanguageSelection;
+  model[variableName] = {
+    codes: nextCodes,
+    otherDescription: nextCodes.includes(LANGUAGE_OTHER) ? current.otherDescription : null,
+  };
+  clearFieldError(itemId);
+}
+
+function onLanguageOther(itemId: string, variableName: string, text: string | undefined) {
+  const current = model[variableName] as LanguageSelection;
+  model[variableName] = {
+    codes: current.codes,
+    otherDescription: text ?? '',
+  };
+  clearFieldError(itemId);
+}
+
 // One reactive value per field, keyed by variableName.
 const model = reactive<Record<string, unknown>>({});
 
@@ -271,7 +333,12 @@ watch(
   (fields) => {
     for (const field of fields) {
       if (!(field.variableName in model)) {
-        model[field.variableName] = field.kind === 'multi-select' ? [] : null;
+        model[field.variableName] =
+          field.kind === 'multi-select'
+            ? []
+            : field.kind === 'language-selection'
+              ? { codes: [], otherDescription: null }
+              : null;
       }
     }
   },
@@ -362,6 +429,16 @@ function isEmptyValue(value: unknown): boolean {
   return false;
 }
 
+function isEmptyLanguageSelection(value: unknown): boolean {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) return true;
+
+  const { codes, otherDescription } = value as LanguageSelection;
+  if (!Array.isArray(codes) || codes.length === 0) return true;
+  if (!codes.includes(LANGUAGE_OTHER)) return false;
+  if (typeof otherDescription !== 'string') return true;
+  return otherDescription.trim().length === 0;
+}
+
 function clearFieldError(itemId: string) {
   delete fieldErrors[itemId];
 }
@@ -380,18 +457,32 @@ function validateCurrentSection(): boolean {
   let isValid = true;
   for (const field of currentSection.value.fields) {
     if (!field.required) continue;
-    if (!isEmptyValue(model[field.variableName])) continue;
+    const value = model[field.variableName];
+    const isEmpty = field.kind === 'language-selection' ? isEmptyLanguageSelection(value) : isEmptyValue(value);
+    if (!isEmpty) continue;
     fieldErrors[field.itemId] = MESSAGES.required;
     isValid = false;
   }
   return isValid;
 }
 
+function collectLanguageSelection(value: unknown): LanguageSelection | null {
+  if (isEmptyLanguageSelection(value)) return null;
+
+  const { codes, otherDescription } = value as LanguageSelection;
+  return {
+    codes,
+    otherDescription:
+      codes.includes(LANGUAGE_OTHER) && typeof otherDescription === 'string' ? otherDescription.trim() : null,
+  };
+}
+
 function collectValues(fields: InformationFormField[]): Record<string, unknown> {
   const values: Record<string, unknown> = {};
   for (const field of fields) {
     const value = model[field.variableName];
-    values[field.variableName] = isEmptyValue(value) ? null : value;
+    values[field.variableName] =
+      field.kind === 'language-selection' ? collectLanguageSelection(value) : isEmptyValue(value) ? null : value;
   }
   return values;
 }
