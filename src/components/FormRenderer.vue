@@ -467,13 +467,22 @@ function validateCurrentSection(): boolean {
 }
 
 function collectLanguageSelection(value: unknown): LanguageSelection | null {
-  if (isEmptyLanguageSelection(value)) return null;
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) return null;
 
   const { codes, otherDescription } = value as LanguageSelection;
+  if (!Array.isArray(codes) || codes.length === 0) return null;
+
+  const hasOther = codes.includes(LANGUAGE_OTHER);
+  const trimmedDescription = typeof otherDescription === 'string' ? otherDescription.trim() : '';
+
+  if (hasOther && trimmedDescription.length === 0) {
+    const isoCodes = codes.filter((code) => code !== LANGUAGE_OTHER);
+    return isoCodes.length === 0 ? null : { codes: isoCodes, otherDescription: null };
+  }
+
   return {
     codes,
-    otherDescription:
-      codes.includes(LANGUAGE_OTHER) && typeof otherDescription === 'string' ? otherDescription.trim() : null,
+    otherDescription: hasOther ? trimmedDescription : null,
   };
 }
 

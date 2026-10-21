@@ -263,6 +263,42 @@ describe('FormRenderer', () => {
     });
   });
 
+  it('keeps ISO codes when optional Other has no description', async () => {
+    const optionalLanguage: InformationFormField = { ...LANGUAGE_FIELD, required: false };
+    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [optionalLanguage]);
+    await startRecruitment(wrapper);
+    await setApproach(wrapper, ['convenience']);
+    await wrapper.get('#site_02').setValue('email');
+    await setLanguages(wrapper, ['en', 'other']);
+    await buttonByLabel(wrapper, 'Save').trigger('click');
+    await flushPromises();
+
+    expect(saveDraft.mock.calls.at(-1)?.[0]).toEqual({
+      sampleApproach: ['convenience'],
+      sampleApproachOther: null,
+      siteRecruitment: 'email',
+      siteLanguages: { codes: ['en'], otherDescription: null },
+    });
+  });
+
+  it('sends null when optional Other has no description and no ISO codes', async () => {
+    const optionalLanguage: InformationFormField = { ...LANGUAGE_FIELD, required: false };
+    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [optionalLanguage]);
+    await startRecruitment(wrapper);
+    await setApproach(wrapper, ['convenience']);
+    await wrapper.get('#site_02').setValue('email');
+    await setLanguages(wrapper, ['other']);
+    await buttonByLabel(wrapper, 'Save').trigger('click');
+    await flushPromises();
+
+    expect(saveDraft.mock.calls.at(-1)?.[0]).toEqual({
+      sampleApproach: ['convenience'],
+      sampleApproachOther: null,
+      siteRecruitment: 'email',
+      siteLanguages: null,
+    });
+  });
+
   it('sends null when an optional language selection is cleared', async () => {
     const optionalLanguage: InformationFormField = { ...LANGUAGE_FIELD, required: false };
     const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [optionalLanguage]);
