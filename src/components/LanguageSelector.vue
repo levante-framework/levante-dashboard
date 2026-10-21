@@ -12,8 +12,6 @@
   >
     <template #option="slotProps">
       <div class="flex gap-2 w-full">
-        <span aria-hidden="true" :class="`text-sm fi fi-${slotProps.option.flag}`" />
-
         <PvTag
           v-if="slotProps.option.testing"
           severity="warn"
@@ -23,15 +21,6 @@
 
         <span class="text-sm">{{ slotProps.option.name }}</span>
       </div>
-    </template>
-
-    <template #value="slotProps">
-      <div v-if="selectedLanguage(slotProps.value)" class="flex align-items-center gap-2">
-        <span aria-hidden="true" :class="`text-sm fi fi-${selectedLanguage(slotProps.value)?.flag}`" />
-        <span class="text-sm">{{ selectedLanguage(slotProps.value)?.name }}</span>
-      </div>
-
-      <span v-else>{{ slotProps.placeholder }}</span>
     </template>
   </PvSelect>
 </template>
@@ -43,8 +32,7 @@ import { computed } from 'vue';
 import { isLevante } from '@/constants';
 import { getParsedLocale } from '@/helpers/survey';
 import { useSurveyStore } from '@/store/survey';
-import { findBestMatchingLocale, getTranslations, type LanguageOption, languageOptions } from '@/translations/i18n';
-import 'flag-icons/css/flag-icons.min.css';
+import { getTranslations, type LanguageOption, languageOptions } from '@/translations/i18n';
 
 interface LanguageChangeEvent {
   value: string;
@@ -53,26 +41,12 @@ interface LanguageChangeEvent {
 const surveyStore = useSurveyStore();
 
 const languageDropdownOptions = computed(() => {
-  return Object.entries(languageOptions).map(([key, options]: [string, LanguageOption]) => {
-    const [language, region] = key.split('-');
-
-    return {
-      // flag-icons uses ISO 3166-1 alpha-2 country codes. Use the locale's region when present
-      // (e.g. en-US -> us); for language-only keys we fall back to the language code, which only
-      // renders a flag when it coincides with a country code (e.g. de, nl). Other language-only
-      // keys (e.g. en) won't match a flag and will render blank.
-      flag: (region ?? language)?.toLowerCase(),
-      name: options.languageMenu,
-      testing: options.testing,
-      value: key,
-    };
-  });
+  return Object.entries(languageOptions).map(([key, options]: [string, LanguageOption]) => ({
+    name: options.languageMenu,
+    testing: options.testing,
+    value: key,
+  }));
 });
-
-const selectedLanguage = (value: string) => {
-  const matchedLocale = findBestMatchingLocale(value);
-  return languageDropdownOptions.value.find((option) => option.value === matchedLocale);
-};
 
 async function onChangeLanguage(event: LanguageChangeEvent): Promise<void> {
   sessionStorage.setItem(`${isLevante ? 'levante' : 'roar'}PlatformLocale`, event.value);
