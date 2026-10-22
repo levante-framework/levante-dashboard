@@ -29,7 +29,7 @@
         :options="helpOptions"
         :optionValue="(o) => o.value"
         :optionLabel="(o) => o.label"
-        class="options-help --djs-options-help"
+        class="options-help"
         data-wizard="help-menu"
         @change="handleHelpChange"
       >
@@ -62,7 +62,7 @@
         v-if="shouldDisplayWizardBtn"
         severity="info"
         variant="outlined"
-        class="--djs-wizard-link wizard-link"
+        class="wizard-link"
         data-wizard="wizard-button"
         @click="() => runWizard({ force: true })"
       >
@@ -157,7 +157,7 @@ const wizardLinkHint = hints({
   overlay: true,
   hints: [
     {
-      element: '.--djs-wizard-link',
+      element: '[data-wizard="wizard-button"]',
       popover: {
         popoverClass: 'djs-levante-theme',
         title: 'Page walkthroughs',
