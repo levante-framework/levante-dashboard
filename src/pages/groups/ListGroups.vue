@@ -16,9 +16,7 @@
               href="https://researcher.levante-network.org/dashboard/create-a-group"
               target="_blank"
               rel="noopener noreferrer"
-            >
-              documentation on creating groups
-            </a>
+            >documentation on creating groups</a>
             for guidance on creating and naming groups.
           </div>
         </div>
