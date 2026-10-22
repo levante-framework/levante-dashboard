@@ -30,6 +30,7 @@
                 class="bg-primary text-white border-none p-2 ml-auto"
                 data-testid="add-group-btn"
                 data-cy="add-group-btn"
+                data-wizard="create-group"
                 :disabled="currentSite === 'any' && activeIndex != 0"
                 @click="isAddGroupModalVisible = true"
               >
@@ -47,7 +48,7 @@
         </div>
       </div>
       <PvTabs v-if="claimsLoaded" v-model:value="activeOrgType" lazy data-cy="groups-page-ready">
-        <PvTabList>
+        <PvTabList data-wizard="groups-tabs">
           <PvTab v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">{{ orgType.header }}</PvTab>
         </PvTabList>
         <PvTabPanels>
@@ -506,6 +507,7 @@ const tableColumns = computed(() => {
   }
 
   columns.push({
+    dataWizard: 'group-users',
     header: 'Users',
     link: true,
     routeName: 'ListUsers',
@@ -517,6 +519,7 @@ const tableColumns = computed(() => {
 
   // Add Assignments column for all org types
   columns.push({
+    dataWizard: 'group-assignments',
     header: 'Assignments',
     button: true,
     eventName: 'assignments-button',

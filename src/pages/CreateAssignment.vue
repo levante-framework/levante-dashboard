@@ -138,13 +138,16 @@
               <span class="flex gap-2">
                 <PvRadioButton v-model="state.sequential" input-id="Yes" :value="true" />
                 <label for="Yes">Yes</label>
-                <PvRadioButton
-                  v-model="state.sequential"
-                  data-cy="radio-button-not-sequential"
-                  input-id="No"
-                  :value="false"
-                />
-                <label for="No">No</label>
+
+                <div class="flex gap-2" data-wizard="assignment-not-sequential">
+                  <PvRadioButton
+                    v-model="state.sequential"
+                    data-cy="radio-button-not-sequential"
+                    input-id="No"
+                    :value="false"
+                  />
+                  <label for="No">No</label>
+                </div>
               </span>
             </div>
             <small v-if="v$.sequential.$invalid && submitted" class="p-error mt-2"
@@ -163,6 +166,7 @@
               :label="submitLabel"
               class="text-white bg-primary border-none border-round h-3rem p-3 hover:bg-red-900"
               data-cy="button-create-administration"
+              data-wizard="create-assignment"
               style="margin: 0"
               :disabled="!state.administrationName || isSubmitting"
               @click="submit"

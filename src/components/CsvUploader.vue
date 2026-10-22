@@ -1,5 +1,5 @@
 <template>
-  <div class="flex align-items-center gap-3 mb-3">
+  <div class="flex align-items-center gap-3 mb-3" data-wizard="upload-add-users">
     <PvFileUpload
       :choose-label="!uploadedFile ? 'Choose CSV File' : 'Choose Another CSV File'"
       :show-cancel-button="false"
