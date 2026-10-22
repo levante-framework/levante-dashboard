@@ -14,7 +14,11 @@
       </h1>
     </header>
 
-    <PvMessage v-if="isError" severity="error" :closable="false">
+    <PvMessage v-if="isSiteForm && !isSiteSelected" severity="info" :closable="false">
+      Select a site
+    </PvMessage>
+
+    <PvMessage v-else-if="isError" severity="error" :closable="false">
       {{ (error as Error)?.message ?? 'Failed to load survey definition.' }}
     </PvMessage>
 
@@ -22,6 +26,7 @@
 
     <div v-else-if="data" class="survey-preview__body">
       <FormRenderer
+        :key="orgId"
         :fields="data.fullFields"
         :general-prompt="data.generalPrompt"
         :section-info="data.sectionInfo"
@@ -36,33 +41,45 @@
 </template>
 
 <script setup lang="ts">
+import { storeToRefs } from 'pinia';
 import PvMessage from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import FormRenderer from '@/components/FormRenderer.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { type SurveyFormType, useSurveyFormDefinitionQuery } from '@/composables/queries/useSurveyFormDefinitionQuery';
 import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsRepository';
+import { useAuthStore } from '@/store/auth';
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const authStore = useAuthStore();
+const { currentSite, currentSiteName } = storeToRefs(authStore);
 
 const formType = computed<SurveyFormType>(() =>
   (route.params.formType as SurveyFormType) === 'site' ? 'site' : 'school',
 );
 
+const isSiteForm = computed(() => formType.value === 'site');
+const isSiteSelected = computed(() => !!currentSite.value && currentSite.value !== 'any');
+const canLoad = computed(() => !isSiteForm.value || isSiteSelected.value);
+
 const orgId = computed(() => {
+  if (isSiteForm.value) return isSiteSelected.value ? (currentSite.value as string) : '';
+
   const value = route.query.orgId;
   return typeof value === 'string' && value.trim() ? value.trim() : 'preview';
 });
 
-const title = computed(() =>
-  formType.value === 'site' ? 'Additional Site Information' : 'Additional School Information',
-);
+const title = computed(() => {
+  if (!isSiteForm.value) return 'Additional School Information';
+  if (!isSiteSelected.value) return 'Site Information';
+  return `Site Information: ${currentSiteName.value ?? ''}`;
+});
 
-const { data, isLoading, isError, error } = useSurveyFormDefinitionQuery(formType, orgId);
+const { data, isLoading, isError, error } = useSurveyFormDefinitionQuery(formType, orgId, canLoad);
 
 const versionTooltip = computed(() => {
   if (!data.value) return '';
@@ -72,6 +89,11 @@ const versionTooltip = computed(() => {
 
 const isSaving = ref(false);
 const isComplete = ref(false);
+
+watch(orgId, () => {
+  isComplete.value = false;
+  isSaving.value = false;
+});
 
 async function persist(
   responses: Record<string, unknown>,
@@ -114,7 +136,11 @@ function onSave(values: Record<string, unknown>, options?: { silent?: boolean })
 }
 
 async function onSubmit(values: Record<string, unknown>) {
-  isComplete.value = await persist(values, 'complete');
+  const submittedOrgId = orgId.value;
+  const ok = await persist(values, 'complete');
+  if (ok && orgId.value === submittedOrgId) {
+    isComplete.value = true;
+  }
 }
 
 function onClose() {
