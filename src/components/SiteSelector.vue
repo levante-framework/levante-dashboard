@@ -1,5 +1,5 @@
 <template>
-  <div class="flex align-items-center gap-2 --djs-site-selector">
+  <div class="flex align-items-center gap-2 --djs-site-selector" data-wizard="site-selector">
     <label for="site-selector" class="font-semibold">Site:</label>
     <PvSelect
       v-model="pendingSelectedSite"

@@ -21,6 +21,7 @@
             :options="orgTypes"
             class="w-full"
             data-cy="dropdown-org-type"
+            data-wizard="group-type"
             input-id="orgType"
             option-label="label"
           />
@@ -40,6 +41,7 @@
                   :options="schools ?? []"
                   class="w-full"
                   data-cy="dropdown-parent-school"
+                  data-wizard="create-group-parent-school"
                   input-id="parentSchool"
                   option-label="name"
                 />
@@ -52,7 +54,7 @@
       </div>
 
       <div class="flex flex-column gap-1 w-full">
-        <PvFloatLabel>
+        <PvFloatLabel data-wizard="group-name">
           <PvInputText id="orgName" v-model="orgName" class="w-full" data-cy="input-org-name" />
           <label for="orgName">{{ orgTypeLabel }} Name<span class="required-asterisk">*</span></label>
         </PvFloatLabel>

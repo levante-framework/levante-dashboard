@@ -1,5 +1,5 @@
 <template>
-  <PvPanel>
+  <PvPanel data-wizard="task-picker">
     <template #header>
       <div class="flex align-items-center font-bold">
         Select Tasks <span class="required-asterisk text-red-500 ml-1">*</span>
@@ -14,6 +14,7 @@
           placeholder="Select language"
           showClear
           class="languages-dropdown"
+          data-wizard="task-language"
         />
 
         <div class="flex flex-row gap-2 my-2">
@@ -122,7 +123,7 @@
         <small v-else>Select a language to display the task list</small>
       </div>
       <div class="divider"></div>
-      <div class="w-full lg:w-6" data-cy="panel-droppable-zone">
+      <div class="w-full lg:w-6" data-cy="panel-droppable-zone" data-wizard="selected-tasks">
         <div class="panel-title mb-2 text-base">
           Selected Tasks<span class="required-asterisk text-red-500 ml-1">*</span>
         </div>

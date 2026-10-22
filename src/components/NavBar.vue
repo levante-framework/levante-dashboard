@@ -5,7 +5,7 @@
         <div class="flex align-items-center justify-content-center w-full">
           <PvMenubar ref="menubarRef" :model="computedItems" class="w-full">
             <template #start>
-              <router-link :to="{ path: APP_ROUTES.HOME }">
+              <router-link :to="{ path: APP_ROUTES.HOME }" data-wizard="nav-logo">
                 <img src="/LEVANTE/Levante_Logo.png" alt="LEVANTE" class="levante-logo" />
               </router-link>
             </template>
@@ -24,6 +24,7 @@
                 :class="{ 'p-menubar-item-link--disabled': item.isDisabled }"
                 :aria-disabled="item.isDisabled || undefined"
                 v-bind="props.action"
+                :data-wizard="item.dataWizard"
               >
                 <i v-if="item.icon" :class="['mr-2', item.icon]"></i>
                 <span>{{ item.label }}</span>
@@ -78,6 +79,7 @@ interface MenuItem {
   badgeClass?: string;
   class?: string;
   command?: () => void;
+  dataWizard?: string;
   icon?: string;
   items?: MenuItem[];
   isDisabled?: boolean;
@@ -132,6 +134,7 @@ const computedItems = computed((): MenuItem[] => {
   if (groupsAction) {
     items.push({
       class: '--djs-groups-link',
+      dataWizard: 'nav-groups',
       label: groupsAction.title,
       icon: groupsAction.icon,
       command: () => {
@@ -162,6 +165,7 @@ const computedItems = computed((): MenuItem[] => {
 
     if (headerItems.length > 0) {
       items.push({
+        dataWizard: `nav-${header.toLowerCase()}`,
         label: header,
         items: headerItems,
       });

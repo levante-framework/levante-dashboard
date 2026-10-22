@@ -33,7 +33,7 @@
           </div>
           <div class="flex flex-column align-items-end gap-1">
             <PermissionGuard :required-role="ROLES.ADMIN">
-              <PvButton :disabled="isAddResearcherButtonDisabled" @click="isAdministratorModalVisible = true">
+              <PvButton :disabled="isAddResearcherButtonDisabled" data-wizard="add-researcher" @click="isAdministratorModalVisible = true">
                 <i class="pi pi-plus"></i>Add Researcher
               </PvButton>
             </PermissionGuard>
@@ -75,6 +75,7 @@
           </div>
           <RoarDataTable
             v-else
+            data-wizard="researchers-table"
             key="administrators-researchers"
             sortable
             :allow-filtering="false"

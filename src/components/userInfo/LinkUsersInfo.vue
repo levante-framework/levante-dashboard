@@ -28,6 +28,7 @@
         :src="LEVANTE_STATIC_ASSETS_URL + '/link_users_example_with_permissions.png'"
         alt="Link Users CSV example"
         class="csv-example-image"
+        data-wizard="link-users-example"
       />
     </div>
 
