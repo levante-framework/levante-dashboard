@@ -117,6 +117,7 @@ describe('SurveyFormPreview', () => {
     const { wrapper } = mountPage({ id: 'any', name: 'All Sites' });
     await flushPromises();
 
+    expect(wrapper.get('.survey-preview__title').text()).toBe('Site Information');
     expect(wrapper.text()).toContain('Select a site');
     expect(wrapper.find('.p-message-info').exists()).toBe(true);
     expect(wrapper.find('.form-renderer-stub').exists()).toBe(false);
@@ -127,10 +128,26 @@ describe('SurveyFormPreview', () => {
     const { wrapper } = mountPage({ id: null, name: null });
     await flushPromises();
 
+    expect(wrapper.get('.survey-preview__title').text()).toBe('Site Information');
     expect(wrapper.text()).toContain('Select a site');
     expect(wrapper.find('.p-message-info').exists()).toBe(true);
     expect(wrapper.find('.form-renderer-stub').exists()).toBe(false);
     expect(loadFormDefinitions).not.toHaveBeenCalled();
+  });
+
+  it('loads the form after switching from All Sites to a real site', async () => {
+    const { wrapper, authStore } = mountPage({ id: 'any', name: 'All Sites' });
+    await flushPromises();
+    expect(loadFormDefinitions).not.toHaveBeenCalled();
+
+    authStore.currentSite = 'site-a';
+    authStore.currentSiteName = 'Alpha Site';
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Site Information: Alpha Site');
+    expect(wrapper.find('.p-message-info').exists()).toBe(false);
+    expect(wrapper.find('.form-renderer-stub').exists()).toBe(true);
+    expect(loadFormDefinitions).toHaveBeenCalledWith('site', 'site-a');
   });
 
   it('loads the navbar site and titles the page with its name', async () => {
@@ -185,6 +202,23 @@ describe('SurveyFormPreview', () => {
         orgId: 'site-b',
       }),
     );
+  });
+
+  it('shows Select a site and unloads the form when the navbar goes back to All Sites', async () => {
+    const { wrapper, authStore } = mountPage({ id: 'site-a', name: 'Alpha Site' });
+    await flushPromises();
+    expect(wrapper.find('.form-renderer-stub').exists()).toBe(true);
+    loadFormDefinitions.mockClear();
+
+    authStore.currentSite = 'any';
+    authStore.currentSiteName = 'All Sites';
+    await flushPromises();
+
+    expect(wrapper.get('.survey-preview__title').text()).toBe('Site Information');
+    expect(wrapper.text()).toContain('Select a site');
+    expect(wrapper.find('.p-message-info').exists()).toBe(true);
+    expect(wrapper.find('.form-renderer-stub').exists()).toBe(false);
+    expect(loadFormDefinitions).not.toHaveBeenCalled();
   });
 
   it('does not mark the new site complete if submit finishes after a navbar change', async () => {
