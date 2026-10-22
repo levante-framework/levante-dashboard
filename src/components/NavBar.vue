@@ -133,7 +133,6 @@ const computedItems = computed((): MenuItem[] => {
   const groupsAction = rawActions.value.find((action) => action.category === 'Groups');
   if (groupsAction) {
     items.push({
-      class: '--djs-groups-link',
       dataWizard: 'nav-groups',
       label: groupsAction.title,
       icon: groupsAction.icon,

@@ -1,14 +1,14 @@
 <template>
   <LevanteSpinner v-if="isLoading" fullscreen />
 
-  <div v-else class="text-color --djs-welcome" data-wizard="home-admin">
+  <div v-else class="text-color" data-wizard="home-admin">
     <div class="w-full px-5 my-5">
       <div class="text-2xl">{{ userName ? 'Welcome,' : 'Welcome!' }}</div>
       <div v-if="userName" class="font-bold text-3xl">{{ userName }}</div>
     </div>
 
     <div class="w-full px-5 mb-5">
-      <div class="info --djs-info">
+      <div class="info">
         <i class="pi pi-exclamation-circle" />
 
         <div class="mr-auto">
