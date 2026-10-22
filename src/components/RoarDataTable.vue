@@ -70,6 +70,7 @@
             v-tooltip.bottom="'Export all rows to a CSV file.'"
             label="Export Whole Table"
             class="m-1 h-3rem bg-primary text-white border-none border-round text-sm hover:bg-red-900"
+            data-wizard="progress-export"
             @click="exportCSV(false)"
           />
         </span>

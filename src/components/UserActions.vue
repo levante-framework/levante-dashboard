@@ -30,6 +30,7 @@
         :optionValue="(o) => o.value"
         :optionLabel="(o) => o.label"
         class="options-help --djs-options-help"
+        data-wizard="help-menu"
         @change="handleHelpChange"
       >
         <template #value>
@@ -62,6 +63,7 @@
         severity="info"
         variant="outlined"
         class="--djs-wizard-link wizard-link"
+        data-wizard="wizard-button"
         @click="() => runWizard({ force: true })"
       >
         <i class="pi pi-sparkles"></i>

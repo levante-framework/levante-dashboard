@@ -1,6 +1,6 @@
 <template>
   <div class="flex gap-3 w-full">
-    <PvPanel class="w-full">
+    <PvPanel class="w-full" data-wizard="select-groups">
       <template #header>
         <div class="flex align-items-center font-bold">
           Select Group(s)
@@ -59,7 +59,7 @@
       </PvTabs>
     </PvPanel>
 
-    <PvPanel class="w-full">
+    <PvPanel class="w-full" data-wizard="selected-groups">
       <template #header>
         <div class="flex align-items-center font-bold">
           Selected Group(s)
