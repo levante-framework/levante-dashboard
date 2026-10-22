@@ -3,7 +3,7 @@
     :href="href"
     target="_blank"
     rel="noopener noreferrer"
-    class="docs-button --djs-docs-button"
+    class="docs-button"
     data-cy="docs-button"
     data-wizard="docs-button"
   >
