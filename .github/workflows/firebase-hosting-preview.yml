@@ -111,6 +111,13 @@ jobs:
         if: ${{ contains(github.repository, 'levante') && steps.preview-label.outputs.has_preview_assessment == 'true' }}
         run: npm ci && npm run build:dev:assessment
 
+      - name: Show deploy service account (debug)
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV_ADMIN }}' > "$RUNNER_TEMP/sa.json"
+          echo "client_email: $(jq -r .client_email "$RUNNER_TEMP/sa.json")"
+          echo "project_id:   $(jq -r .project_id   "$RUNNER_TEMP/sa.json")"
+          rm -f "$RUNNER_TEMP/sa.json"
+
       - name: Deploy to Firebase Hosting Channel
         id: firebase-deploy
         uses: FirebaseExtended/action-hosting-deploy@v0
