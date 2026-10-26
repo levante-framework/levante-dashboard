@@ -278,13 +278,23 @@ describe('FormRenderer', () => {
   });
 
   it('hides Other text when the saved approach is not Other', async () => {
-    const { wrapper } = await mountForm(undefined, {
+    const { wrapper, saveDraft } = await mountForm(undefined, {
       sampleApproach: ['convenience'],
+      sampleApproachOther: 'word of mouth',
       siteRecruitment: 'email',
     });
     await startRecruitment(wrapper);
 
     expect(wrapper.text()).not.toContain('Please specify');
+
+    await buttonByLabel(wrapper, 'Save').trigger('click');
+    await flushPromises();
+
+    expect(saveDraft.mock.calls.at(-1)?.[0]).toEqual({
+      sampleApproach: ['convenience'],
+      sampleApproachOther: null,
+      siteRecruitment: 'email',
+    });
   });
 
   it('advances Next when required fields were saved', async () => {

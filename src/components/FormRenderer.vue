@@ -297,18 +297,22 @@ const visibleFields = computed(() => {
   });
 });
 
-// When a conditional field is hidden again (e.g. the controlling answer no longer
-// includes "other"), drop any value it had collected so it isn't submitted.
-watch(visibleFields, (visible) => {
-  const visibleVars = new Set(visible.map((field) => field.variableName));
-  for (const field of props.fields) {
-    if (!field.displayLogic || visibleVars.has(field.variableName)) continue;
-    const emptyValue = field.kind === 'multi-select' ? [] : null;
-    const current = model[field.variableName];
-    const isEmpty = Array.isArray(current) ? current.length === 0 : current === null;
-    if (!isEmpty) model[field.variableName] = emptyValue;
-  }
-});
+// When a conditional field is hidden (including on load, e.g. the controlling
+// answer no longer includes "other"), drop any value so it isn't submitted.
+watch(
+  visibleFields,
+  (visible) => {
+    const visibleVars = new Set(visible.map((field) => field.variableName));
+    for (const field of props.fields) {
+      if (!field.displayLogic || visibleVars.has(field.variableName)) continue;
+      const emptyValue = field.kind === 'multi-select' ? [] : null;
+      const current = model[field.variableName];
+      const isEmpty = Array.isArray(current) ? current.length === 0 : current === null;
+      if (!isEmpty) model[field.variableName] = emptyValue;
+    }
+  },
+  { immediate: true },
+);
 
 /**
  * Groups visible fields into ordered sections (by first appearance), attaching
