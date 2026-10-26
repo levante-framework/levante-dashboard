@@ -149,6 +149,7 @@
             label="Previous"
             severity="secondary"
             outlined
+            :disabled="isSaving"
             @click="goBack"
           />
           <PvButton
@@ -416,10 +417,12 @@ function currentPageValues(): Record<string, unknown> {
 
 async function goNext() {
   if (!validateCurrentSection()) return;
+  const pageIndex = currentPageIndex.value;
   if (!isIntroPage.value) {
     const didSave = await props.saveDraft(currentPageValues(), { silent: true });
     if (!didSave) return;
   }
+  if (currentPageIndex.value !== pageIndex) return;
   if (!isLastPage.value) currentPageIndex.value += 1;
 }
 
@@ -434,6 +437,7 @@ function goBack() {
 }
 
 function onSubmit() {
+  if (!isLastPage.value) return;
   if (!validateCurrentSection()) return;
   emit('submit', collectValues(props.fields));
 }

@@ -165,6 +165,61 @@ describe('FormRenderer', () => {
     expect(wrapper.text()).not.toContain('Numbers only');
   });
 
+  it('disables Previous while a save is in progress', async () => {
+    const { wrapper } = await mountForm();
+    await startRecruitment(wrapper);
+    await setApproach(wrapper, ['convenience']);
+    await wrapper.get('#site_02').setValue('email');
+    await buttonByLabel(wrapper, 'Next').trigger('click');
+    await flushPromises();
+
+    await wrapper.setProps({ isSaving: true });
+    await flushPromises();
+
+    expect(buttonByLabel(wrapper, 'Previous').attributes('disabled')).toBeDefined();
+  });
+
+  it('does not advance after Next if the user went back during save', async () => {
+    let finishSave: (ok: boolean) => void = () => {};
+    const saveDraft = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finishSave = resolve;
+        }),
+    );
+    const { wrapper } = await mountForm(saveDraft);
+    await startRecruitment(wrapper);
+    await setApproach(wrapper, ['convenience']);
+    await wrapper.get('#site_02').setValue('email');
+
+    const nextClick = buttonByLabel(wrapper, 'Next').trigger('click');
+    await flushPromises();
+
+    await buttonByLabel(wrapper, 'Previous').trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain('Please complete.');
+
+    finishSave(true);
+    await nextClick;
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Please complete.');
+    expect(wrapper.text()).not.toContain('Section 2 of 2');
+  });
+
+  it('does not submit from a non-last page', async () => {
+    const { wrapper } = await mountForm();
+    await startRecruitment(wrapper);
+    await setApproach(wrapper, ['convenience']);
+    await wrapper.get('#site_02').setValue('email');
+
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.emitted('submit')).toBeUndefined();
+    expect(wrapper.text()).toContain('Section 1 of 2');
+  });
+
   it('advances Next only after a successful draft save', async () => {
     const saveDraft = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
     const { wrapper } = await mountForm(saveDraft);
