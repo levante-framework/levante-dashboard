@@ -70,10 +70,11 @@ jobs:
         uses: getsentry/action-release@v1
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_ORG: levante-framework-eu
+          SENTRY_PROJECT: dashboard
         with:
           environment: production
+          projects: dashboard qa
           sourcemaps: ./dist/assets
           version: hotfix-${{ steps.version.outputs.app_version }}-${{ github.sha }}
           finalize: false
@@ -91,8 +92,8 @@ jobs:
         uses: getsentry/action-release@v1
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_ORG: levante-framework-eu
+          SENTRY_PROJECT: dashboard
         with:
           environment: production
           version: hotfix-${{ steps.version.outputs.app_version }}-${{ github.sha }}

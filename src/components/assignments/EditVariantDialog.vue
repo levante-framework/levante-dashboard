@@ -46,16 +46,24 @@
           <p>Condition</p>
           <p>Value</p>
         </div>
+        <!--
+          TODO: Today every task is backfilled w/ exactly one valid user type, so its seeded
+          userType condition is locked and non-removable (see isUserTypeConditionLocked) and
+          this empty state can't actually render. We keep it because tasks with multiple valid
+          user types are coming, and those rows aren't locked today, so the assigned group
+          could be emptied. The eventual goal is to support multiple valid user types while
+          still guaranteeing at least one userType condition on an assigned task; enforcing
+          that invariant is out of scope for PR 1113.
+        -->
         <div
           v-if="assignedConditions.length == 0"
           class="flex flex-column align-items-center justify-content-center py-2 gap-2"
         >
           <div class="text-xl uppercase font-bold">No Conditions Added</div>
           <div class="text-sm uppercase text-gray-700">
-            Assignment will be
-            <PvTag severity="warning" class="mx-1">ASSIGNED</PvTag> to all {{ isLevante ? 'users' : 'participants' }} in
-            the
-            {{ selectedGroup }}
+            Task will be
+            <PvTag severity="warning" class="mx-1">ASSIGNED</PvTag>
+            to all users in the selected group
           </div>
         </div>
         <!-- ASSIGNED CONDITIONS  -->
@@ -64,12 +72,13 @@
             <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
               <PvSelect
                 :model-value="condition.field"
-                :options="fieldOptions"
+                :options="fieldOptionsForCondition(condition)"
                 optionLabel="label"
                 optionValue="value"
                 class="w-full"
                 placeholder="Select a Field"
                 inputId="Field"
+                :disabled="isUserTypeConditionLocked(condition)"
                 @update:model-value="(field) => handleFieldChange(assignedConditions, index, field)"
               />
             </div>
@@ -83,6 +92,7 @@
                 class="w-full"
                 placeholder="Condition"
                 inputId="Condition"
+                :disabled="isUserTypeConditionLocked(condition)"
               />
             </div>
 
@@ -94,6 +104,7 @@
                 optionValue="value"
                 class="w-full"
                 placeholder="Value"
+                :disabled="isUserTypeConditionLocked(condition)"
               />
             </div>
 
@@ -101,6 +112,7 @@
               icon="pi pi-trash"
               text
               class="bg-primary text-white w-2 border-round border-none hover:bg-red-900"
+              :disabled="isUserTypeConditionLocked(condition)"
               @click="removeCondition(assignedConditions, index)"
             />
           </div>
@@ -136,17 +148,16 @@
               class="flex flex-column align-items-center justify-content-center py-2 gap-2"
             >
               <div class="text-xl uppercase font-bold">No Conditions Added</div>
-              <div v-if="isOptionalForAll" class="text-sm uppercase text-gray-700">
-                Assignment will be
-                <PvTag severity="success" class="mx-1">OPTIONAL</PvTag> for all
-                {{ isLevante ? 'users' : 'participants' }} in the
-                {{ selectedGroup }}
+              <div v-if="isOptionalForAll" class="text-sm text-gray-700 text-center">
+                If this assignment is sequential, users will be able to move past this task without completing it.
+                <br />
+                To require users to complete this task before moving on, make the task required.
               </div>
-              <div v-else class="text-sm uppercase text-gray-700">
-                Assignment will
-                <PvTag severity="danger" class="mx-1">NOT BE OPTIONAL</PvTag>
-                for any {{ isLevante ? 'users' : 'participants' }} in the
-                {{ selectedGroup }}
+              <div v-else class="text-sm text-gray-700 text-center">
+                If this assignment is sequential, users will be required to complete this task before moving on to other
+                tasks by default.
+                <br />
+                To allow users to move past this task without completing it, make the task optional.
               </div>
             </div>
 
@@ -155,12 +166,13 @@
                 <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
                   <PvSelect
                     :model-value="condition.field"
-                    :options="fieldOptions"
+                    :options="fieldOptionsForCondition(condition)"
                     optionLabel="label"
                     optionValue="value"
                     class="w-full"
                     placeholder="Select a Field"
                     inputId="Field"
+                    :disabled="isUserTypeConditionLocked(condition)"
                     @update:model-value="(field) => handleFieldChange(optionalConditions, index, field)"
                   />
                 </div>
@@ -174,6 +186,7 @@
                     class="w-full"
                     placeholder="Condition"
                     inputId="Condition"
+                    :disabled="isUserTypeConditionLocked(condition)"
                   />
                 </div>
 
@@ -185,6 +198,7 @@
                     optionValue="value"
                     class="w-full"
                     placeholder="Value"
+                    :disabled="isUserTypeConditionLocked(condition)"
                   />
                 </div>
 
@@ -192,6 +206,7 @@
                   icon="pi pi-trash"
                   text
                   class="bg-primary text-white w-2 border-round border-none hover:bg-red-900"
+                  :disabled="isUserTypeConditionLocked(condition)"
                   @click="removeCondition(optionalConditions, index)"
                 />
               </div>
@@ -200,8 +215,7 @@
             <div class="flex flex-row justify-content-between align-items-center">
               <div class="flex flex-row justify-content-end align-items-center gap-2 mr-2">
                 <div class="uppercase text-md font-bold text-gray-600">
-                  Make Assessment Optional For All
-                  {{ isLevante ? 'Users' : 'Participants' }}
+                  Make Task Optional For All Assigned Users
                 </div>
                 <PvToggleSwitch
                   v-model="isOptionalForAll"
@@ -227,7 +241,7 @@
       <div class="flex flex-column align-items-center gap-1 mx-2">
         <div v-if="isOptionalForAllAndOptionalConditionsPresent" class="text-sm">
           <PvTag icon="pi pi-info-circle" severity="info">
-            Making the assessment optional for all will override any optional conditions you have added.
+            Making the task optional for all will override any optional conditions you have added.
           </PvTag>
         </div>
         <div v-if="errorSubmitText.length > 0" class="text-sm">
@@ -261,20 +275,23 @@
 import _cloneDeep from 'lodash/cloneDeep';
 import _isEmpty from 'lodash/isEmpty';
 import PvButton from 'primevue/button';
-import PvColumn from 'primevue/column';
 import PvDialog from 'primevue/dialog';
 import PvDivider from 'primevue/divider';
 import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { computed, onMounted, ref, toRaw } from 'vue';
-import { isLevante } from '@/constants';
 import { resolveVariantDisplayName } from '@/helpers';
+import { getFallbackUserTypeForTask } from '@/helpers/userType';
+import type { Condition, ConditionsStructure } from '@/types/assignmentConditions';
+import type { RoarUserType } from '@/types/userType';
 
+// +-------+
+// | Types |
+// +-------+
 interface FieldOption {
   label: string;
   value: string;
-  project: string;
 }
 
 interface ConditionOption {
@@ -282,29 +299,11 @@ interface ConditionOption {
   value: string;
 }
 
-interface Condition {
-  field: string;
-  op: string;
-  value: string;
-}
-
-interface ConditionsStructure {
-  assigned?: {
-    op: string;
-    conditions: Condition[];
-  };
-  optional?:
-    | boolean
-    | {
-        op: string;
-        conditions: Condition[];
-      };
-}
-
 interface Task {
-  id: string;
+  id?: string;
   name: string;
   image?: string;
+  validUserTypes?: RoarUserType[];
 }
 
 interface Variant {
@@ -319,8 +318,9 @@ interface Assessment {
   variant?: Variant;
 }
 
-interface PreExistingAssessmentInfo {
-  taskId: string;
+export interface PreExistingAssessmentInfo {
+  taskId?: string;
+  variantId?: string;
   conditions?: ConditionsStructure;
 }
 
@@ -330,37 +330,64 @@ interface Props {
   preExistingAssessmentInfo?: PreExistingAssessmentInfo[];
 }
 
+// +-----------+
+// | Constants |
+// +-----------+
+const FIELD_OPTIONS: FieldOption[] = [
+  { label: 'User Type', value: 'userType' },
+  { label: 'Age', value: 'age' },
+];
+
+// +-------+
+// | Props |
+// +-------+
 const props = withDefaults(defineProps<Props>(), {
   preExistingAssessmentInfo: () => [],
 });
 
-const variantDisplayName = computed(() => resolveVariantDisplayName(props.assessment.variant ?? {}));
-
-onMounted((): void => {
-  getAllConditions(props.assessment.task.id);
-  // LEVANTE assigns surveys as assessments, so we add a defualt for child only so researchers
-  // do not accidently assign tasks to parents and teachers
-  if (isLevante && !props.assessment.task.id.toLowerCase().includes('survey')) {
-    const defaultCondition = { field: 'userType', op: 'EQUAL', value: 'student' };
-    const hasIdenticalCondition = assignedConditions.value.some(
-      (condition) =>
-        condition.field === defaultCondition.field &&
-        condition.op === defaultCondition.op &&
-        condition.value === defaultCondition.value,
-    );
-
-    if (!hasIdenticalCondition) {
-      assignedConditions.value.push({ ...defaultCondition });
-    }
-  }
-});
-
+// +----------------+
+// | Reactive state |
+// +----------------+
 const isVisible = ref<boolean>(false);
 const assignedConditions = ref<Condition[]>([]);
 const optionalConditions = ref<Condition[]>([]);
 // Store optional conditions in case the isOptionalForAll is toggled on and off again (prevents the form from resetting to the original state)
 const previousOptionalConditions = ref<Condition[]>([]);
+const isOptionalForAll = ref<boolean>(false);
+const errorSubmitText = ref<string>('');
 
+// +----------+
+// | Computed |
+// +----------+
+const variantDisplayName = computed(() => resolveVariantDisplayName(props.assessment.variant ?? {}));
+
+const isOptionalForAllAndOptionalConditionsPresent = computed((): boolean => {
+  return isOptionalForAll.value && toRaw(previousOptionalConditions.value)?.length > 0;
+});
+
+// A task with exactly one valid user type fixes that user type, so its userType
+// condition rows are read-only. De-duplicate first so malformed data like
+// ['student', 'student'] (which seeds a single row) still locks, matching TaskPicker.
+const hasSingleValidUserType = computed((): boolean => {
+  const validUserTypes = props.assessment.task?.validUserTypes;
+  return !!validUserTypes && new Set(validUserTypes).size === 1;
+});
+
+// +---------+
+// | Methods |
+// +---------+
+const isUserTypeConditionLocked = (condition: Condition): boolean =>
+  hasSingleValidUserType.value && condition.field === 'userType';
+
+// When a variant has a single valid user type, that type is already seeded and
+// locked, so `userType` must not be selectable for additional rows. The existing
+// locked row keeps the full options so its label still renders.
+const fieldOptionsForCondition = (condition: Condition): FieldOption[] =>
+  hasSingleValidUserType.value && condition.field !== 'userType'
+    ? FIELD_OPTIONS.filter((option) => option.value !== 'userType')
+    : FIELD_OPTIONS;
+
+// Condition option builders
 const computedValueOptions = (field: string): ConditionOption[] | undefined => {
   if (!field) return;
 
@@ -406,6 +433,7 @@ const computedConditionOptions = (field: string): ConditionOption[] | undefined 
   }
 };
 
+// Condition row editing
 function handleFieldChange(conditions: Condition[], index: number, field: string): void {
   conditions[index] = { field, op: '', value: '' };
 }
@@ -414,6 +442,15 @@ const removeCondition = (conditions: Condition[], index: number): void => {
   conditions.splice(index, 1);
 };
 
+const addOptionalCondition = (): void => {
+  optionalConditions.value.push({ field: '', op: '', value: '' });
+};
+
+const addAssignedCondition = (): void => {
+  assignedConditions.value.push({ field: '', op: '', value: '' });
+};
+
+// Loading existing conditions
 function getAllConditions(taskId: string): void {
   const existingAssignedConditions = getAssignedConditions(taskId);
   const existingOptionalConditions = getOptionalConditions(taskId);
@@ -465,17 +502,7 @@ function setOptionalConditions(existingOptionalConditions: Condition[]): void {
   optionalConditions.value = _cloneDeep(existingOptionalConditions);
 }
 
-const addOptionalCondition = (): void => {
-  optionalConditions.value.push({ field: '', op: '', value: '' });
-};
-
-const addAssignedCondition = (): void => {
-  assignedConditions.value.push({ field: '', op: '', value: '' });
-};
-
-const isOptionalForAll = ref<boolean>(false);
-const errorSubmitText = ref<string>('');
-
+// Optional-for-all toggle
 const handleOptionalForAllSwitch = (): void => {
   if (isOptionalForAll.value === true) {
     // Store the optional conditions in case the isOptionalForAll is toggled on and off again
@@ -486,16 +513,41 @@ const handleOptionalForAllSwitch = (): void => {
   }
 };
 
-const isOptionalForAllAndOptionalConditionsPresent = computed((): boolean => {
-  return isOptionalForAll.value && toRaw(previousOptionalConditions.value)?.length > 0;
-});
+// Seeds the default assigned userType condition(s). Prefers the task's
+// validUserTypes (already backend user types; each becomes its own condition,
+// OR'd together on save), falling back to the task-id default so researchers do
+// not accidentally assign tasks to the wrong user type. Applied on open and on
+// reset so a reset can't drop the seeded (and possibly locked) userType rows.
+const seedDefaultUserTypeConditions = (): void => {
+  const pushConditionIfMissing = (value: RoarUserType): void => {
+    const defaultCondition = { field: 'userType', op: 'EQUAL', value };
+    const hasIdenticalCondition = assignedConditions.value.some(
+      (condition) =>
+        condition.field === defaultCondition.field &&
+        condition.op === defaultCondition.op &&
+        condition.value === defaultCondition.value,
+    );
 
+    if (!hasIdenticalCondition) assignedConditions.value.push({ ...defaultCondition });
+  };
+
+  const validUserTypes = props.assessment.task?.validUserTypes;
+  if (validUserTypes?.length) {
+    validUserTypes.forEach(pushConditionIfMissing);
+    return;
+  }
+
+  pushConditionIfMissing(getFallbackUserTypeForTask(props.assessment.task.id ?? ''));
+};
+
+// Reset & save
 const handleReset = (): void => {
   errorSubmitText.value = '';
   assignedConditions.value = [];
   optionalConditions.value = [];
 
-  getAllConditions(props.assessment.task.id);
+  getAllConditions(props.assessment.task.id ?? '');
+  seedDefaultUserTypeConditions();
 };
 
 function hasDuplicateUserTypeConditions(conditions: Condition[]): boolean {
@@ -510,6 +562,32 @@ function hasDuplicateUserTypeConditions(conditions: Condition[]): boolean {
 
   return false;
 }
+
+// Conditions are stored as string values; clone for the save payload.
+function conditionsToValues(): [Condition[], Condition[]] {
+  return [_cloneDeep(assignedConditions.value), _cloneDeep(optionalConditions.value)];
+}
+
+// Multiple user-type conditions represent "any of these user types", so they are
+// OR'd together. Other combinations keep the existing AND semantics.
+function resolveGroupOp(conditions: Condition[]): string {
+  const isMultipleUserTypes = conditions.length > 1 && conditions.every((condition) => condition.field === 'userType');
+  return isMultipleUserTypes ? 'OR' : 'AND';
+}
+
+const computedConditions = (assignedConditions: Condition[], optionalConditions: Condition[]): ConditionsStructure => {
+  const conditions: ConditionsStructure = {};
+
+  if (!_isEmpty(optionalConditions)) {
+    conditions.optional = { op: resolveGroupOp(optionalConditions), conditions: optionalConditions };
+  }
+
+  if (!_isEmpty(assignedConditions)) {
+    conditions.assigned = { op: resolveGroupOp(assignedConditions), conditions: assignedConditions };
+  }
+
+  return conditions;
+};
 
 const handleSave = (): void => {
   let error = false;
@@ -561,32 +639,11 @@ const handleSave = (): void => {
   return;
 };
 
-// Conditions are stored as string values; clone for the save payload.
-function conditionsToValues(): [Condition[], Condition[]] {
-  return [_cloneDeep(assignedConditions.value), _cloneDeep(optionalConditions.value)];
-}
-
-const computedConditions = (assignedConditions: Condition[], optionalConditions: Condition[]): ConditionsStructure => {
-  const conditions: ConditionsStructure = {};
-
-  if (!_isEmpty(optionalConditions)) {
-    conditions.optional = { op: 'AND', conditions: optionalConditions };
-  }
-
-  if (!_isEmpty(assignedConditions)) {
-    conditions.assigned = { op: 'AND', conditions: assignedConditions };
-  }
-
-  return conditions;
-};
-
-const fieldOptions: FieldOption[] = [
-  { label: 'User Type', value: 'userType', project: 'LEVANTE' },
-  { label: 'Age', value: 'age', project: 'LEVANTE' },
-];
-
-const selectedGroup = computed((): string => {
-  // This would need to be implemented based on your actual group selection logic
-  return 'selected group';
+// +-----------------+
+// | Lifecycle hooks |
+// +-----------------+
+onMounted((): void => {
+  getAllConditions(props.assessment.task.id ?? '');
+  seedDefaultUserTypeConditions();
 });
 </script>

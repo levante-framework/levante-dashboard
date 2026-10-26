@@ -1,6 +1,6 @@
 <template>
   <main class="container main">
-    <PvToast />
+    <PvToast group="manage-tasks" />
     <section class="main-body">
       <div class="flex flex-column mb-5">
         <div class="flex align-items-center flex-wrap gap-3 mb-2">
@@ -12,21 +12,21 @@
         </div>
       </div>
       <div class="flex flex-column mb-5">
-        <PvTabs value="tasks">
+        <PvTabs value="variants">
           <PvTabList>
-            <PvTab value="tasks">Tasks</PvTab>
             <PvTab value="variants">Variants</PvTab>
             <PvTab value="param-specs">Param Specs</PvTab>
+            <PvTab value="tasks">Tasks</PvTab>
           </PvTabList>
           <PvTabPanels>
-            <PvTabPanel value="tasks">
-              <TasksCatalogList />
-            </PvTabPanel>
             <PvTabPanel value="variants">
               <VariantsTimeline />
             </PvTabPanel>
             <PvTabPanel value="param-specs">
               <VariantParamSpecsList />
+            </PvTabPanel>
+            <PvTabPanel value="tasks">
+              <TasksCatalogList />
             </PvTabPanel>
           </PvTabPanels>
         </PvTabs>

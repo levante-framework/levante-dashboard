@@ -98,9 +98,9 @@ const router = createRouter({
     { path: '/add-users', name: 'Add Users', component: { template: '<div>add-users</div>' } },
     { path: '/link-users', name: 'Link Users', component: { template: '<div>link-users</div>' } },
     {
-      path: '/create-administrator',
-      name: 'ManageAdministrators', // Corrected name to match navbarActions
-      component: { template: '<div>manage-administrators</div>' },
+      path: '/manage-researchers',
+      name: 'ManageResearchers', // Matches navbarActions buttonLink
+      component: { template: '<div>manage-researchers</div>' },
     },
     { path: '/create-assignment', name: 'CreateAssignment', component: { template: '<div>create-assignment</div>' } },
     {

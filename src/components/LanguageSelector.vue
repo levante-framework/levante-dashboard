@@ -18,7 +18,8 @@
           value="Testing"
           class="text-xs font-semibold uppercase"
         />
-        <div class="text-sm">{{ slotProps.option.name }}</div>
+
+        <span class="text-sm">{{ slotProps.option.name }}</span>
       </div>
     </template>
   </PvSelect>
@@ -40,13 +41,11 @@ interface LanguageChangeEvent {
 const surveyStore = useSurveyStore();
 
 const languageDropdownOptions = computed(() => {
-  return Object.entries(languageOptions).map(([key, options]: [string, LanguageOption]) => {
-    return {
-      name: options.languageMenu,
-      testing: options.testing,
-      value: key,
-    };
-  });
+  return Object.entries(languageOptions).map(([key, options]: [string, LanguageOption]) => ({
+    name: options.languageMenu,
+    testing: options.testing,
+    value: key,
+  }));
 });
 
 async function onChangeLanguage(event: LanguageChangeEvent): Promise<void> {

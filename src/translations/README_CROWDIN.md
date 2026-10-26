@@ -167,12 +167,12 @@ Two specs:
   - Participant dashboard flow (requires a participant account)
 - [`cypress/e2e/locales.cy.ts`](../../cypress/e2e/locales.cy.ts)
   - Iterates through locales: `en, en-US, es, es-CO, de, fr-CA, nl, en-GH, de-CH, es-AR`
-  - Sets the locale pre-load, logs in, and asserts navigation away from `/signin`
+  - Sets the locale pre-load, logs in, and asserts navigation away from `/login`
 
 Env for tests (via shell or `cypress.env.json`):
 
 - `E2E_USE_ENV=TRUE` to enable env overrides
-- `E2E_BASE_URL="https://localhost:5173/signin"`
+- `E2E_BASE_URL="https://localhost:5173/login"`
 - `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`
 - Optional: `E2E_LOCALES="en,es,de"` to subset
 
@@ -181,7 +181,7 @@ Example `cypress.env.json`:
 ```json
 {
   "E2E_USE_ENV": "TRUE",
-  "E2E_BASE_URL": "https://localhost:5173/signin",
+  "E2E_BASE_URL": "https://localhost:5173/login",
   "E2E_TEST_EMAIL": "oscar@cardinalfamily.com",
   "E2E_TEST_PASSWORD": "admin123"
 }
@@ -196,7 +196,7 @@ export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/serviceAccount.json
 npm run dev
 
 E2E_USE_ENV=TRUE \
-E2E_BASE_URL="https://localhost:5173/signin" \
+E2E_BASE_URL="https://localhost:5173/login" \
 E2E_TEST_EMAIL="oscar@cardinalfamily.com" \
 E2E_TEST_PASSWORD="admin123" \
 npm run cypress:run-seeded

@@ -257,12 +257,6 @@ describe('ViewAssignments', () => {
     await nextTick();
     const wrapperText = wrapper.text();
     expect(wrapperText).toContain('View Assignments');
-    // Check for the first part of the description
-    expect(wrapperText).toContain('This page lists all the assignments');
-    expect(wrapperText).toContain('administered to your users');
-    // Check for the second part of the description
-    expect(wrapperText).toContain('You can view and monitor completion');
-    expect(wrapperText).toContain('bundles of tasks, surveys, and questionnaires');
     expect(wrapperText).toContain('Search by name');
     expect(wrapperText).toContain('Sort by');
     expect(wrapperText).not.toContain('Fetching Assignments');

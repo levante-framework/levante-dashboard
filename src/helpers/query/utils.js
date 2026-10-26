@@ -115,7 +115,7 @@ export const handleExpiredSession = async (authStore) => {
 
   sessionStorage.removeItem('authStore');
   sessionStorage.removeItem('assignmentsStore');
-  window.location.assign(`${APP_ROUTES.SIGN_IN}?sessionExpired=true`);
+  window.location.assign(`${APP_ROUTES.LOGIN}?sessionExpired=true`);
 };
 
 /**

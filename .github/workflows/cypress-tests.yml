@@ -42,7 +42,7 @@ jobs:
 
         env:
           E2E_USE_ENV: 'TRUE'
-          E2E_BASE_URL: 'http://localhost:5173/signin'
+          E2E_BASE_URL: 'http://localhost:5173/login'
           VITE_HTTPS: 'FALSE'
           E2E_TEST_EMAIL: ${{ secrets.PARTICIPANT_EMAIL }}
           E2E_TEST_PASSWORD: ${{ secrets.PARTICIPANT_PASSWORD }}

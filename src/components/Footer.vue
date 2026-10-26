@@ -59,9 +59,10 @@ defineExpose({ getFooterHeight });
   z-index: 1000;
 
   &.footer--secondary {
-    background-color: var(--secondary-color);
+    padding: 2rem;
+    background-color: transparent;
     border-top: none;
-    color: rgba(white, 0.75);
+    color: rgba(white, 0.5);
 
     .footer__link {
       color: white;

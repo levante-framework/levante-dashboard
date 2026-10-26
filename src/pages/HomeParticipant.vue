@@ -116,8 +116,15 @@ import { LEVANTE_BUCKET_URL } from '@/constants/bucket';
 import { formatDateWithLocale } from '@/helpers';
 import { getAssignmentStatus, isCurrent, sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { fetchDocsById } from '@/helpers/query/utils';
-import { setupSurveyMarkdownConverter } from '@/helpers/survey';
+import {
+  getPlainSurveyData,
+  getSurveyDataWithDefaults,
+  getSurveyTheme,
+  setupSurveyMarkdownConverter,
+} from '@/helpers/survey';
+import { findSpecificSurveyResponse } from '@/helpers/surveyGameCards';
 import { bootstrapSurveyInstance, setupSurveyEventHandlers } from '@/helpers/surveyInitialization';
+import { GENERIC_TEACHER_CLASSROOM_ID, getTeacherClassroomSurveyIds } from '@/helpers/teacherSurveyRelations';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
@@ -462,15 +469,22 @@ const specificSurveyData = computed(() => {
   return userType.value === 'student' ? null : surveyData.value.specific;
 });
 
-function createSurveyInstance(surveyDataToStartAt) {
+function getParticipantSurveyId(participantUserType, isGeneral) {
+  if (participantUserType === 'student') return 'child_survey';
+  if (participantUserType === 'teacher') {
+    return isGeneral ? 'teacher_survey_general' : 'teacher_survey_classroom';
+  }
+  return isGeneral ? 'parent_survey_family' : 'parent_survey_child';
+}
+
+function createSurveyInstance(surveyDataToStartAt, surveyId) {
   settings.lazyRender = true;
   // SurveyJS mutates the input JSON (e.g., deleting internal keys like `pos`). Vue Query/Vue may wrap fetched JSON in
   // readonly/reactive proxies, which triggers warnings like "Delete operation on key 'pos' failed: target is readonly".
   // Clone to a plain mutable object before passing it to SurveyJS.
-  const surveyJson = toRaw(surveyDataToStartAt);
-  const surveyInstance = new Model(
-    typeof structuredClone === 'function' ? structuredClone(surveyJson) : JSON.parse(JSON.stringify(surveyJson)),
-  );
+  const surveyJson = getSurveyDataWithDefaults(surveyId, getPlainSurveyData(surveyDataToStartAt));
+  const surveyInstance = new Model(surveyJson);
+  surveyInstance.applyTheme(getSurveyTheme());
   return surveyInstance;
 }
 
@@ -493,9 +507,8 @@ watch(
     );
     let shouldInitializeSurvey = true;
 
-    // Calculate number of specific surveys for teachers/parents
-    const numOfSpecificSurveys =
-      userType.value === 'parent' ? userData.value?.childIds?.length : userData.value?.classes?.current?.length;
+    const relationIds =
+      userType.value === 'parent' ? (userData.value?.childIds ?? []) : getTeacherClassroomSurveyIds(userData.value);
 
     if (surveyResponseDoc) {
       if (userType.value === 'student') {
@@ -507,30 +520,15 @@ watch(
       } else {
         surveyStore.setIsGeneralSurveyComplete(surveyResponseDoc.general.isComplete);
 
-        if (surveyResponseDoc.specific && surveyResponseDoc.specific.length > 0) {
-          if (
-            surveyResponseDoc.specific.length === numOfSpecificSurveys &&
-            surveyResponseDoc.specific.every((relation) => relation.isComplete)
-          ) {
-            surveyStore.setIsSpecificSurveyComplete(true);
-            shouldInitializeSurvey = false;
-          } else {
-            const incompleteIndex = surveyResponseDoc.specific.findIndex((relation) => !relation.isComplete);
-            if (incompleteIndex > -1) {
-              surveyStore.setSpecificSurveyRelationIndex(incompleteIndex);
-            } else {
-              surveyStore.setSpecificSurveyRelationIndex(surveyResponseDoc.specific.length);
-            }
-          }
-        }
+        const incompleteIndex = relationIds.findIndex(
+          (relationId) => !findSpecificSurveyResponse(surveyResponseDoc, relationId)?.isComplete,
+        );
 
-        // Check if both general and specific surveys are complete
-        if (
-          surveyResponseDoc.general.isComplete &&
-          surveyResponseDoc.specific?.length === numOfSpecificSurveys &&
-          surveyResponseDoc.specific?.every((relation) => relation.isComplete)
-        ) {
-          shouldInitializeSurvey = false;
+        if (incompleteIndex === -1) {
+          if (relationIds.length > 0) surveyStore.setIsSpecificSurveyComplete(true);
+          if (surveyResponseDoc.general.isComplete) shouldInitializeSurvey = false;
+        } else {
+          surveyStore.setSpecificSurveyRelationIndex(incompleteIndex);
         }
       }
     }
@@ -548,12 +546,17 @@ watch(
             docId: childId,
             select: ['birthMonth', 'birthYear', 'childLabelIndex'],
           }));
-        } else if (userType.value === 'teacher' && userData.value.classes?.current) {
-          fetchConfig = userData.value.classes.current.map((classId) => ({
-            collection: 'classes',
-            docId: classId,
-            select: ['name'],
-          }));
+        } else if (userType.value === 'teacher') {
+          const classroomIds = getTeacherClassroomSurveyIds(userData.value);
+          if (classroomIds.length === 1 && classroomIds[0] === GENERIC_TEACHER_CLASSROOM_ID) {
+            surveyStore.setSpecificSurveyRelationData([{ id: GENERIC_TEACHER_CLASSROOM_ID }]);
+          } else {
+            fetchConfig = classroomIds.map((classId) => ({
+              collection: 'classes',
+              docId: classId,
+              select: ['name'],
+            }));
+          }
         }
 
         if (fetchConfig.length > 0) {
@@ -567,12 +570,11 @@ watch(
       }
     }
 
-    const surveyDataToStartAt =
-      userType.value === 'student' || !surveyStore.isGeneralSurveyComplete
-        ? surveyData.value.general
-        : surveyData.value.specific;
+    const isGeneralSurvey = userType.value === 'student' || !surveyStore.isGeneralSurveyComplete;
+    const surveyDataToStartAt = isGeneralSurvey ? surveyData.value.general : surveyData.value.specific;
+    const surveyId = getParticipantSurveyId(userType.value, isGeneralSurvey);
 
-    const surveyInstance = createSurveyInstance(surveyDataToStartAt);
+    const surveyInstance = createSurveyInstance(surveyDataToStartAt, surveyId);
     setupSurveyMarkdownConverter(surveyInstance);
 
     bootstrapSurveyInstance({

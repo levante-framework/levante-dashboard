@@ -7,13 +7,18 @@
         <div class="flex flex-column mb-5">
           <div class="flex justify-content-between">
             <div class="flex align-items-center gap-3">
-              <i class="pi pi-users text-gray-400 rounded" style="font-size: 1.6rem"></i>
+              <i
+                class="pi pi-users text-gray-400 rounded"
+                style="font-size: 1.6rem"
+              ></i>
               <div class="admin-page-header">User List</div>
             </div>
             <!-- Org summary card with expandable user counts -->
             <div class="bg-gray-100 px-5 py-2 rounded flex flex-column gap-3">
-              <div class="flex flex-wrap align-items-center gap-2 justify-content-between">
-                <div class="uppercase font-light font-sm text-gray-400 mr-2">
+              <div
+                class="flex flex-wrap align-items-center gap-2 justify-content-between"
+              >
+                <div class="uppercase font-light text-sm text-gray-400 mr-2">
                   {{ displayOrgType }}
                 </div>
                 <div class="text-xl text-gray-600">
@@ -27,11 +32,13 @@
                   :aria-expanded="isUserCountExpanded"
                   @click="isUserCountExpanded = !isUserCountExpanded"
                 >
-                  <div class="uppercase font-light font-sm text-gray-400 mb-1">
+                  <div class="uppercase font-light text-sm text-gray-400 mb-1">
                     <i
                       :class="[
                         'pi text-gray-400 transition-transform transition-duration-200',
-                        isUserCountExpanded ? 'pi-chevron-down' : 'pi-chevron-right',
+                        isUserCountExpanded
+                          ? 'pi-chevron-down'
+                          : 'pi-chevron-right',
                       ]"
                     ></i
                     >User Count
@@ -48,19 +55,31 @@
                   style="border-left: 2px solid var(--gray-300)"
                 >
                   <div class="flex flex-wrap gap-2 justify-content-between">
-                    <div class="uppercase font-light font-sm text-gray-400 mb-1">Children</div>
+                    <div
+                      class="uppercase font-light text-sm text-gray-400 mb-1"
+                    >
+                      Children
+                    </div>
                     <div class="text-l text-gray-600">
                       <b> {{ childrenCount }} </b>
                     </div>
                   </div>
                   <div class="flex flex-wrap gap-2 justify-content-between">
-                    <div class="uppercase font-light font-sm text-gray-400 mb-1">Caregivers</div>
+                    <div
+                      class="uppercase font-light text-sm text-gray-400 mb-1"
+                    >
+                      Caregivers
+                    </div>
                     <div class="text-l text-gray-600">
                       <b> {{ caregiversCount }} </b>
                     </div>
                   </div>
                   <div class="flex flex-wrap gap-2 justify-content-between">
-                    <div class="uppercase font-light font-sm text-gray-400 mb-1">Teachers</div>
+                    <div
+                      class="uppercase font-light text-sm text-gray-400 mb-1"
+                    >
+                      Teachers
+                    </div>
                     <div class="text-l text-gray-600">
                       <b> {{ teachersCount }} </b>
                     </div>
@@ -69,15 +88,25 @@
               </div>
             </div>
           </div>
-          <div class="text-md text-gray-500 ml-6">View users for {{ displayOrgType }} {{ orgName }}.</div>
+          <div class="text-md text-gray-500 ml-6">
+            View users for {{ displayOrgType }} {{ orgName }}.
+          </div>
         </div>
         <!-- Users table -->
         <PvTabs v-model:value="activeTab" lazy class="relative">
           <!-- Search filter, aligned to the right of the tab header row -->
           <PvIconField class="absolute right-0 z-1" style="top: 0.5rem">
             <PvInputIcon class="pi pi-search" />
-            <PvInputText v-model="searchQuery" placeholder="Search users" class="p-inputtext-sm" />
-            <PvInputIcon v-if="searchQuery" class="pi pi-times cursor-pointer" @click="resetSearch" />
+            <PvInputText
+              v-model="searchQuery"
+              placeholder="Search users"
+              class="p-inputtext-sm"
+            />
+            <PvInputIcon
+              v-if="searchQuery"
+              class="pi pi-times cursor-pointer"
+              @click="resetSearch"
+            />
           </PvIconField>
           <PvTabList>
             <PvTab v-for="tab in USER_TABS" :key="tab.id" :value="tab.id">
@@ -106,44 +135,74 @@
           </PvTabPanels>
         </PvTabs>
       </div>
-      <!-- Edit user modal -->
-      <RoarModal
-        title="Edit User"
-        subtitle="View and update user information"
-        :is-enabled="showEditModal"
-        @modal-closed="onEditModalClosed"
+
+      <PvDrawer
+        v-model:visible="isOpenEditUserDrawer"
+        :dismissable="false"
+        :closeOnEscape="!isSubmitting"
+        class="edit-user-drawer"
+        header="Drawer Title"
+        position="right"
       >
-        <EditUserForm
-          v-if="currentEditUser"
-          :user="currentEditUser"
-          :orgs="userOverview?.orgs"
-          :assignments="userOverview?.assignments"
-          :is-loading="isOverviewLoading"
-          :is-error="isOverviewError"
-          @change="pendingUserUpdate = $event"
-          @dirty="isUserDirty = $event"
-        />
-        <template #footer>
-          <div class="flex gap-2">
+        <template #container>
+          <div
+            class="flex justify-content-between align-items-center w-full p-4 py-3 border-bottom-1 border-gray-200 border-top-6"
+          >
+            <div class="flex flex-column">
+              <h3 class="m-0 font-semibold">Edit User</h3>
+              <small class="m-0">View and update user information</small>
+            </div>
+
+            <PvButton
+              class="p-0 py-2 text-color-secondary hover:text-primary"
+              severity="secondary"
+              variant="link"
+              :disabled="isSubmitting"
+              @click="isOpenEditUserDrawer = false"
+            >
+              <i class="pi pi-times"></i>
+            </PvButton>
+          </div>
+
+          <div class="flex-1 overflow-auto">
+            <EditUserForm
+              v-if="currentEditUser"
+              :user="currentEditUser"
+              :orgs="userOverview?.orgs"
+              :assignments="userOverview?.assignments"
+              :birth-month="userOverview?.birthMonth"
+              :birth-year="userOverview?.birthYear"
+              :is-loading="isOverviewLoading"
+              :is-error="isOverviewError"
+              @change="pendingUserUpdate = $event"
+              @dirty="isUserDirty = $event"
+            />
+          </div>
+
+          <div
+            class="flex justify-content-end align-items-center gap-2 w-full mt-auto p-4 py-3 border-top-1 border-gray-200"
+          >
             <PvButton
               tabindex="0"
-              class="border-none border-round bg-white text-primary p-2 hover:surface-200"
-              text
-              label="Cancel"
-              outlined
+              class="text-color-secondary hover:text-primary"
+              variant="link"
+              :disabled="isSubmitting"
               @click="onEditModalClosed"
-            ></PvButton>
+            >
+              <p class="m-0">
+                {{ isUserDirty ? "Discard" : "Cancel" }}
+              </p>
+            </PvButton>
             <PvButton
               tabindex="0"
-              class="border-none border-round bg-primary text-white p-2 hover:surface-400"
+              :disabled="!isUserDirty || isSubmitting"
               :label="isSubmitting ? 'Saving...' : 'Save'"
               :loading="isSubmitting"
-              :disabled="!isUserDirty"
               @click="submitUpdateUsersInfo"
             ></PvButton>
           </div>
         </template>
-      </RoarModal>
+      </PvDrawer>
     </section>
   </main>
 </template>
@@ -151,6 +210,7 @@
 <script setup lang="ts">
 import { watchDebounced } from '@vueuse/core';
 import PvButton from 'primevue/button';
+import PvDrawer from 'primevue/drawer';
 import PvIconField from 'primevue/iconfield';
 import PvInputIcon from 'primevue/inputicon';
 import PvInputText from 'primevue/inputtext';
@@ -163,7 +223,6 @@ import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
 import AppSpinner from '@/components/AppSpinner.vue';
 import EditUserForm, { type EditableUser, type EditableUserUpdate } from '@/components/EditUserForm.vue';
-import RoarModal from '@/components/modals/RoarModal.vue';
 import RoarDataTable from '@/components/RoarDataTable.vue';
 import useUpdateUsersInfoMutation from '@/composables/mutations/useUpdateUsersInfoMutation';
 import { useGetUserOverviewQuery } from '@/composables/queries/useGetUserOverviewQuery';
@@ -283,8 +342,11 @@ const pendingUserUpdate = ref<EditableUserUpdate | null>(null);
 const searchQuery = ref('');
 const debouncedSearchQuery = ref('');
 const showEditModal = ref(false);
+const isOpenEditUserDrawer = ref(false);
 
-watchDebounced(searchQuery, (value) => (debouncedSearchQuery.value = value), { debounce: 300 });
+watchDebounced(searchQuery, (value) => (debouncedSearchQuery.value = value), {
+  debounce: 300,
+});
 
 // +---------------+
 // | Data fetching |
@@ -415,7 +477,12 @@ const exportRowsToCsv = (rows: EditableUser[], filename: string) => {
   );
   const csv = unparseCsvFile(exportRows);
 
-  downloadCsv(csv, deriveNextCsvFilename(sanitizeCsvFilename(filename), { timestamp: new Date() }));
+  downloadCsv(
+    csv,
+    deriveNextCsvFilename(sanitizeCsvFilename(filename), {
+      timestamp: new Date(),
+    }),
+  );
 };
 
 const downloadAllUsers = () => {
@@ -433,22 +500,32 @@ const downloadSelectedUsers = (rows: EditableUser[]) => {
 const onEditButtonClick = (event: EditableUser) => {
   currentEditUser.value = event;
   showEditModal.value = true;
+  isOpenEditUserDrawer.value = true;
 };
 
 const onEditModalClosed = () => {
   showEditModal.value = false;
+  isOpenEditUserDrawer.value = false;
   currentEditUser.value = null;
   pendingUserUpdate.value = null;
   isUserDirty.value = false;
 };
 
 const submitUpdateUsersInfo = async () => {
-  if (!pendingUserUpdate.value) return;
+  // Guard against re-entrancy: a rapid double-click can fire a second call
+  // before the disabled binding re-renders, which would submit (and toast) twice.
+  if (isSubmitting.value || !pendingUserUpdate.value) return;
 
   const { uid } = pendingUserUpdate.value;
 
   try {
-    await updateUsersInfo({ users: [pendingUserUpdate.value] });
+    const result = await updateUsersInfo({ users: [pendingUserUpdate.value] });
+
+    // updateUsersInfo signals per-uid failures by omitting them from the response.
+    // Until a dedicated failure field exists, treat a missing uid as a failed update.
+    const didUpdate = result.users.some((user) => user.uid === uid);
+    if (!didUpdate) throw new Error('updateUsersInfo returned no result for user');
+
     toast.add({
       severity: TOAST_SEVERITIES.SUCCESS,
       summary: 'User updated',

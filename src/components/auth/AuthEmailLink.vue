@@ -4,7 +4,7 @@
     <i class="pi pi-exclamation-circle text-6xl text-red-500 center"></i>
     <p class="text-xl font-semibold text-center">There was a problem with the email sign-in link. Please try again.</p>
     <div class="center">
-      <PvButton label="Back to sign in" @click="router.push({ name: 'SignIn' })" />
+      <PvButton label="Back to sign in" @click="router.push({ name: 'Login' })" />
     </div>
   </div>
 </template>

@@ -20,7 +20,9 @@ const props = defineProps({
 });
 
 let levanteTaskLauncher;
+let levanteTask;
 let checkGameStarted;
+let isUnmounted = false;
 
 const { version } = packageLockJson.packages['node_modules/@levante-framework/core-tasks'];
 const router = useRouter();
@@ -56,13 +58,7 @@ const { isLoading: isLoadingUserData, data: userData } = useUserChildDataQuery({
 
 // The following code intercepts the back button and instead forces a refresh.
 // We add { once: true } to prevent an infinite loop.
-window.addEventListener(
-  'popstate',
-  () => {
-    handlePopState();
-  },
-  { once: true },
-);
+window.addEventListener('popstate', handlePopState, { once: true });
 
 onMounted(async () => {
   try {
@@ -84,22 +80,31 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  isUnmounted = true;
   window.removeEventListener('popstate', handlePopState);
   if (checkGameStarted) clearInterval(checkGameStarted);
+  levanteTask?.abort();
 });
 
 watch(
   [isFirekitInit, isCoreTasksReady, isLoadingUserData, selectedAssignment, userData],
   async ([newFirekitInitValue, newIsCoreTasksReady, newLoadingUserData, newSelectedAssignment, _newUserData]) => {
+    // Wait for the user data to load, then gate on age for children only: the task's age-based
+    // difficulty needs it, while other user types (caregivers, teachers) launch without it.
+    const userType = _get(userData.value, 'userType');
+    const isChild = userType === 'student';
+
     const birthMonth = _get(userData.value, 'birthMonth');
     const birthYear = _get(userData.value, 'birthYear');
     const hasAgeData = birthMonth !== undefined && birthYear !== undefined;
+
+    const hasRequiredUserData = !!userType && (!isChild || hasAgeData);
 
     if (
       !taskStarted.value &&
       newSelectedAssignment &&
       newIsCoreTasksReady &&
-      hasAgeData &&
+      hasRequiredUserData &&
       !newLoadingUserData &&
       newFirekitInitValue
     ) {
@@ -111,7 +116,7 @@ watch(
 );
 
 function goHome() {
-  // Navigate to home, but first set the refresh flag to true.
+  if (isUnmounted) return;
   assignmentsStore.setHomeRefresh();
   router.push({ name: 'Home' });
 }
@@ -147,10 +152,13 @@ async function startTask(selectedAdmin) {
 
     const gameParams = { ...appKit._taskInfo.variantParams };
 
-    const levanteTask = new levanteTaskLauncher(appKit, gameParams, userParams, logger);
+    if (isUnmounted) return;
+
+    levanteTask = new levanteTaskLauncher(appKit, gameParams, userParams, logger);
 
     await levanteTask.run().then(async () => {
-      // Handle any post-game actions.
+      if (isUnmounted) return;
+
       await completeAssessmentMutate({
         adminId: selectedAdmin.value?.id,
         taskId: props.taskId,
@@ -159,6 +167,8 @@ async function startTask(selectedAdmin) {
       goHome();
     });
   } catch (error) {
+    if (isUnmounted) return;
+
     if (error?.name === 'AbortError') {
       goHome();
     } else {

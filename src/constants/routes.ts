@@ -8,11 +8,12 @@
  */
 export const APP_ROUTES = {
   ACCOUNT_PROFILE: '/profile',
+  ADMINISTRATION_PROGRESS_REPORT: '/administration/:administrationId',
   CHILD_REPORT: '/scores/:administrationId/:orgType/:orgId/user/:userId',
   HOME: '/',
   LIST_ORGS: '/list-orgs',
+  LOGIN: '/login',
   PROGRESS_REPORT: '/administration/:administrationId/:orgType/:orgId',
-  ADMINISTRATION_PROGRESS_REPORT: '/administration/:administrationId',
   SCORE_REPORT: '/scores/:administrationId/:orgType/:orgId',
   SIGN_IN: '/signin',
   SSO: '/sso',

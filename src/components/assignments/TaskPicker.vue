@@ -63,7 +63,7 @@
                     :data-task-id="getTaskId(element.task)"
                     class="cursor-grab"
                   >
-                    <VariantCard :variant="element" :update-variant="bindUpdateVariant" @select="selectCard" />
+                    <VariantCard :variant="element" :update-variant="updateVariant" @select="selectCard" />
                   </div>
                 </transition-group>
               </VueDraggableNext>
@@ -105,7 +105,7 @@
                             >
                               <VariantCard
                                 :variant="element"
-                                :update-variant="bindUpdateVariant"
+                                :update-variant="updateVariant"
                                 @select="selectCard"
                               />
                             </div>
@@ -138,7 +138,7 @@
               animation: 100,
             }"
             :sort="true"
-            class="w-full h-full overflow-auto"
+            class="w-full h-full overflow-auto pt-3 pr-3"
             @add="handleCardAdd"
           >
             <transition-group>
@@ -152,7 +152,7 @@
                 <VariantCard
                   :variant="element"
                   has-controls
-                  :update-variant="bindUpdateVariant"
+                  :update-variant="updateVariant"
                   :pre-existing-assessment-info="preExistingAssessmentInfo"
                   @remove="removeCard"
                   @move-up="moveCardUp"
@@ -188,20 +188,20 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, nextTick, ref, watch } from 'vue';
 import { VueDraggableNext } from 'vue-draggable-next';
+import { type PreExistingAssessmentInfo } from '@/components/assignments/EditVariantDialog.vue';
+import VariantCard, { type VariantObject } from '@/components/assignments/VariantCard.vue';
 import { resolveVariantDisplayName } from '@/helpers';
+import { getFallbackUserTypeForTask } from '@/helpers/userType';
 import { useAuthStore } from '@/store/auth';
 import { languageOptions } from '@/translations/i18n';
-import VariantCard, { type VariantObject } from './VariantCard.vue';
 
-interface PreExistingAssessmentRecord {
-  variantId: string;
-  conditions: VariantObject['variant']['conditions'];
-}
-
+// +-------+
+// | Types |
+// +-------+
 interface Props {
   allVariants: Record<string, VariantObject[]>;
   inputVariants?: VariantObject[];
-  preExistingAssessmentInfo?: PreExistingAssessmentRecord[];
+  preExistingAssessmentInfo?: PreExistingAssessmentInfo[];
 }
 
 interface Emits {
@@ -227,15 +227,12 @@ interface TaskSection {
   tasks: TaskWithVariants[];
 }
 
-const getTaskId = (task: VariantObject['task']): string => (task as unknown as { id: string }).id;
-
+// +-----------+
+// | Constants |
+// +-----------+
 const LANGUAGE_PREFIX_MATCH_TASK_IDS = new Set(['swr', 'sre', 'pa']);
 
-function getLanguagePrefix(locale: string): string {
-  return locale.split('-')[0] ?? locale.slice(0, 2);
-}
-
-const groupedTasks: Record<string, string[]> = {
+const GROUPED_TASKS: Record<string, string[]> = {
   Introduction: ['Instructions'],
   'Language and Literacy': [
     'Vocabulary',
@@ -252,25 +249,27 @@ const groupedTasks: Record<string, string[]> = {
   Surveys: ['Child Survey', 'Caregiver Survey', 'Teacher Survey'],
 };
 
+// +-----------------+
+// | Props and emits |
+// +-----------------+
 const props = withDefaults(defineProps<Props>(), {
   inputVariants: () => [],
   preExistingAssessmentInfo: () => [],
 });
 
 const emit = defineEmits<Emits>();
+
+// +------------------------+
+// | Composables and stores |
+// +------------------------+
 const toast = useToast();
+const confirm = useConfirm();
 const authStore = useAuthStore();
 const { isUserSuperAdmin } = authStore;
 
-const confirm = useConfirm();
-
-const languages = computed(() =>
-  Object.entries(languageOptions).map(([key, options]) => ({
-    name: options.languageTaskPicker,
-    value: key,
-  })),
-);
-
+// +----------------+
+// | Reactive state |
+// +----------------+
 const availableSearchResults = ref<VariantObject[]>([]);
 const isSearching = ref(false);
 const searchMatchesAll = ref<VariantObject[]>([]);
@@ -279,56 +278,25 @@ const selectedLanguage = ref<{ name: string; value: string } | null>(null);
 const selectedTasksScrollPanelRef = ref<HTMLElement | null>(null);
 const selectedVariants = ref<VariantObject[]>([]);
 
+// +----------+
+// | Computed |
+// +----------+
+const languages = computed(() =>
+  Object.entries(languageOptions).map(([key, options]) => ({
+    name: options.languageTaskPicker,
+    value: key,
+  })),
+);
+
 const selectedVariantIdSet = computed(() => new Set(selectedVariants.value.map((v) => v.id)));
-
-const rebuildAvailableSearchResults = (): void => {
-  availableSearchResults.value = searchMatchesAll.value.filter(
-    (variant) => !selectedVariantIdSet.value.has(variant.id),
-  );
-};
-
-// @TODO: Remove the following function after normalizing the variant docs
-const formatVariantLanguage = (variantLanguage: string): string => {
-  if (!variantLanguage) return '';
-
-  if (variantLanguage === 'en') return 'en-us';
-  if (variantLanguage === 'es') return 'es-co';
-  if (variantLanguage === 'de') return 'de-de';
-
-  return variantLanguage?.toLowerCase();
-};
-
-const variantsByLanguage = (variants: VariantObject[] = []): VariantObject[] => {
-  if (!selectedLanguage.value) return variants;
-
-  const selectedLang = selectedLanguage.value.value.toLowerCase();
-
-  return variants.filter((variant) => {
-    const variantLanguage = variant.variant?.params?.language?.toLowerCase();
-    if (!variantLanguage) return false;
-    if (variantLanguage === 'all languages') return true;
-
-    const formattedVariantLanguage = formatVariantLanguage(variantLanguage);
-    const taskId = getTaskId(variant.task).toLowerCase();
-
-    if (LANGUAGE_PREFIX_MATCH_TASK_IDS.has(taskId)) {
-      return getLanguagePrefix(selectedLang) === getLanguagePrefix(formattedVariantLanguage);
-    }
-
-    const exactLangMatch = formattedVariantLanguage === selectedLang;
-    const langPrefixMatch = selectedLang.includes(formattedVariantLanguage);
-
-    return exactLangMatch || langPrefixMatch;
-  });
-};
 
 const groupedTaskSections = computed((): TaskSection[] => {
   const sectionMap = new Map<string, TaskWithVariants[]>();
 
   const resolveSectionLabel = (taskLabel: string, taskKey: string): string => {
-    const entryByLabel = Object.entries(groupedTasks).find(([, tasks]) => tasks.includes(taskLabel));
+    const entryByLabel = Object.entries(GROUPED_TASKS).find(([, tasks]) => tasks.includes(taskLabel));
     if (entryByLabel) return entryByLabel[0];
-    const entryByKey = Object.entries(groupedTasks).find(([, tasks]) => tasks.includes(taskKey));
+    const entryByKey = Object.entries(GROUPED_TASKS).find(([, tasks]) => tasks.includes(taskKey));
     return entryByKey ? entryByKey[0] : 'Other';
   };
 
@@ -361,12 +329,12 @@ const groupedTaskSections = computed((): TaskSection[] => {
 
   const sections: TaskSection[] = [];
 
-  Object.keys(groupedTasks).forEach((label) => {
+  Object.keys(GROUPED_TASKS).forEach((label) => {
     const tasks = sectionMap.get(label);
     if (!tasks?.length) return;
 
     const orderedTasks = tasks.sort((taskA, taskB) => {
-      const desiredOrder = groupedTasks[label as keyof typeof groupedTasks] ?? [];
+      const desiredOrder = GROUPED_TASKS[label as keyof typeof GROUPED_TASKS] ?? [];
       const indexA = desiredOrder.indexOf(taskA.label);
       const indexB = desiredOrder.indexOf(taskB.label);
       if (indexA !== indexB) {
@@ -390,10 +358,62 @@ const groupedTaskSections = computed((): TaskSection[] => {
   return sections;
 });
 
+// +---------+
+// | Methods |
+// +---------+
+// Task id and language helpers
+const getTaskId = (task: VariantObject['task']): string => (task as unknown as { id: string }).id;
+
+function getLanguagePrefix(locale: string): string {
+  return locale.split('-')[0] ?? locale.slice(0, 2);
+}
+
+// @TODO: Remove the following function after normalizing the variant docs
+const formatVariantLanguage = (variantLanguage: string): string => {
+  if (!variantLanguage) return '';
+
+  if (variantLanguage === 'en') return 'en-us';
+  if (variantLanguage === 'es') return 'es-co';
+  if (variantLanguage === 'de') return 'de-de';
+
+  return variantLanguage?.toLowerCase();
+};
+
+const variantsByLanguage = (variants: VariantObject[] = []): VariantObject[] => {
+  if (!selectedLanguage.value) return variants;
+
+  const selectedLang = selectedLanguage.value.value.toLowerCase();
+
+  return variants.filter((variant) => {
+    const variantLanguage = String(variant.variant?.params?.language ?? '').toLowerCase();
+    if (!variantLanguage) return false;
+    if (variantLanguage === 'all languages') return true;
+
+    const formattedVariantLanguage = formatVariantLanguage(variantLanguage);
+    const taskId = getTaskId(variant.task).toLowerCase();
+
+    if (LANGUAGE_PREFIX_MATCH_TASK_IDS.has(taskId)) {
+      return getLanguagePrefix(selectedLang) === getLanguagePrefix(formattedVariantLanguage);
+    }
+
+    const exactLangMatch = formattedVariantLanguage === selectedLang;
+    const langPrefixMatch = selectedLang.includes(formattedVariantLanguage);
+
+    return exactLangMatch || langPrefixMatch;
+  });
+};
+
 const compareVariantNames = (variantA: VariantObject, variantB: VariantObject): number => {
   const variantNameA = resolveVariantDisplayName(variantA?.variant ?? {});
   const variantNameB = resolveVariantDisplayName(variantB?.variant ?? {});
   return variantNameA.localeCompare(variantNameB, undefined, { sensitivity: 'base' });
+};
+
+// Search
+const rebuildAvailableSearchResults = (): void => {
+  availableSearchResults.value = searchMatchesAll.value.filter(
+    (variant) => !selectedVariantIdSet.value.has(variant.id),
+  );
 };
 
 const searchCards = (term: string): void => {
@@ -432,6 +452,7 @@ const clearSearch = (): void => {
 
 const debounceSearch = _debounce(searchCards, 250);
 
+// Toast
 const debounceToast = _debounce(
   () => {
     toast.add({
@@ -445,14 +466,12 @@ const debounceToast = _debounce(
   { leading: true },
 );
 
+// Variant selection and mutation
 const updateVariant = (variantId: string, conditions: VariantObject['variant']['conditions']): void => {
   selectedVariants.value = selectedVariants.value.map((variant) =>
     variant.id === variantId ? { ...variant, variant: { ...variant.variant, conditions } } : variant,
   );
 };
-
-const bindUpdateVariant = updateVariant as unknown as (variant: VariantObject) => void;
-
 const handleCardMove = (card: DragEvent): boolean => {
   const cardVariantId = card.dragged.id;
   const index = selectedVariants.value.findIndex((element) => element.id === cardVariantId);
@@ -490,25 +509,27 @@ const removeCard = (variant: VariantObject): void => {
 
 const addUserDefaultCondition = (variant: VariantObject): VariantObject => {
   const defaultedVariant = _cloneDeep(variant);
-  const id = getTaskId(variant.task);
   const conditions: Record<string, unknown> = {};
 
-  if (id === 'teacher-survey') {
+  // Prefer the task's validUserTypes field when present (values are already
+  // backend user types). De-duplicate defensively against malformed data, then
+  // OR multiple valid user types together.
+  const validUserTypes = variant.task.validUserTypes;
+  if (validUserTypes?.length) {
+    const uniqueUserTypes = [...new Set(validUserTypes)];
     conditions.assigned = {
-      op: 'AND',
-      conditions: [{ field: 'userType', op: 'EQUAL', value: 'teacher' }],
+      op: uniqueUserTypes.length > 1 ? 'OR' : 'AND',
+      conditions: uniqueUserTypes.map((userType) => ({ field: 'userType', op: 'EQUAL', value: userType })),
     };
-  } else if (id === 'caregiver-survey' || id === 'adult-reasoning') {
-    conditions.assigned = {
-      op: 'AND',
-      conditions: [{ field: 'userType', op: 'EQUAL', value: 'parent' }],
-    };
-  } else {
-    conditions.assigned = {
-      op: 'AND',
-      conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }],
-    };
+    defaultedVariant.variant.conditions = conditions as VariantObject['variant']['conditions'];
+    return defaultedVariant;
   }
+
+  // Fallback for tasks that have not been backfilled with validUserTypes.
+  conditions.assigned = {
+    op: 'AND',
+    conditions: [{ field: 'userType', op: 'EQUAL', value: getFallbackUserTypeForTask(getTaskId(variant.task)) }],
+  };
 
   defaultedVariant.variant.conditions = conditions as VariantObject['variant']['conditions'];
   return defaultedVariant;
@@ -560,7 +581,15 @@ const handleCardAdd = (card: DragEvent): void => {
   const existingIndex = selectedVariants.value.findIndex(
     (variant, index) => index !== droppedIndex && getTaskId(variant.task) === droppedTaskId,
   );
-  if (existingIndex === -1) return;
+  if (existingIndex === -1) {
+    // The drag library inserts the raw variant as-is. Seed its default userType
+    // conditions like selectCard does, otherwise a drop-then-submit (without opening
+    // the edit dialog) persists the assessment with no assigned userType and the task
+    // is given to every user in the group.
+    const newVariant = selectedVariants.value[droppedIndex];
+    if (newVariant) selectedVariants.value.splice(droppedIndex, 1, addUserDefaultCondition(newVariant));
+    return;
+  }
 
   const droppedVariant = selectedVariants.value[droppedIndex];
   selectedVariants.value.splice(droppedIndex, 1);
@@ -610,6 +639,9 @@ const moveCardDown = (variant: VariantObject): void => {
   selectedVariants.value.splice(index + 1, 0, item);
 };
 
+// +----------+
+// | Watchers |
+// +----------+
 watch(
   () => props.inputVariants,
   (newVariants) => {

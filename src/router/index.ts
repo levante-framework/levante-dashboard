@@ -115,7 +115,7 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
-    path: '/login',
+    path: APP_ROUTES.LOGIN,
     name: 'Login',
     component: () => import('@/pages/Login.vue'),
     meta: {
@@ -177,15 +177,6 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       pageTitle: 'Edit an Assignment',
       allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SITE_ADMIN],
-    },
-  },
-  {
-    path: '/create-administrator',
-    name: 'CreateAdministrator',
-    component: () => import('@/pages/CreateAdministrator.vue'),
-    meta: {
-      pageTitle: 'Create an administrator account',
-      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
     },
   },
   {
@@ -388,9 +379,9 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
     return next({ name: 'Home' });
   }
 
-  // Check if user is signed in. If not, go to signin
+  // Check if user is signed in. If not, go to login
   if (!to.path.includes('__/auth/handler') && !isAuthenticated() && !allowedUnauthenticatedRoutes.includes(to.name)) {
-    return next({ name: 'SignIn' });
+    return next({ name: 'Login' });
   }
 
   // @TODO

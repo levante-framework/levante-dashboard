@@ -14,6 +14,7 @@ export const LEVANTE_TASK_IDS = [
   'theoryOfMind',
   'trog',
   'vocab',
+  'locationSelection',
 ] as const;
 
 export const ROAR_TASK_IDS = ['pa', 'swr', 'sre'] as const;

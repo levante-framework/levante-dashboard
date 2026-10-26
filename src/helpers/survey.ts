@@ -4,22 +4,18 @@ import _merge from 'lodash/merge';
 import type { ToastServiceMethods } from 'primevue/toastservice';
 import { Converter } from 'showdown';
 import type { Question, SurveyModel } from 'survey-core';
+import { SC2020 } from 'survey-creator-core/themes';
 import { toRaw } from 'vue';
 import type { Router } from 'vue-router';
 import { LEVANTE_SURVEY_RESPONSES_KEY } from '@/constants/bucket';
 import { SURVEY_RESPONSES_QUERY_KEY } from '@/constants/queryKeys';
+import { findSpecificSurveyResponse } from '@/helpers/surveyGameCards';
 import { logger } from '@/logger';
 import type { useAssignmentsStore } from '@/store/assignments';
 // @ts-expect-error - Will be resolved when store file is converted to TS
 import type { UseSurveyStore } from '@/store/survey';
-import { findBestMatchingLocale } from '@/translations/i18n';
-
-interface SurveyResponseDoc {
-  administrationId?: string;
-  general?: { responses: Record<string, any> };
-  specific?: { responses: Record<string, any> }[];
-  pageNo?: number;
-}
+import { findBestMatchingLocale, i18n } from '@/translations/i18n';
+import type { SurveyResponseDoc } from '@/types/surveyGameCards';
 
 interface RestoreSurveyDataParams {
   surveyInstance: SurveyModel;
@@ -121,16 +117,22 @@ export function restoreSurveyData({
     if (surveyResponse) {
       if (!surveyStore.isGeneralSurveyComplete && surveyResponse.general) {
         const formattedResponses = Object.fromEntries(
-          Object.entries(surveyResponse.general.responses).map(([key, value]) => [key, value.responseValue]),
+          Object.entries(surveyResponse.general.responses ?? {}).map(([key, value]) => [
+            key,
+            (value as { responseValue?: unknown })?.responseValue,
+          ]),
         );
 
         surveyInstance.data = formattedResponses;
       } else if (surveyResponse.specific) {
-        const specificIndex = surveyStore.specificSurveyRelationIndex;
+        const relationId = surveyStore.specificSurveyRelationData[surveyStore.specificSurveyRelationIndex]?.id;
+        const specificResponse = findSpecificSurveyResponse(surveyResponse, relationId);
+        if (!specificResponse) return { isRestored: false, pageNo: 0 };
+
         const formattedResponses = Object.fromEntries(
-          Object.entries(surveyResponse.specific[specificIndex].responses).map(([key, value]) => [
+          Object.entries(specificResponse.responses ?? {}).map(([key, value]) => [
             key,
-            value.responseValue,
+            (value as { responseValue?: unknown })?.responseValue,
           ]),
         );
         surveyInstance.data = formattedResponses;
@@ -328,4 +330,55 @@ export type { RoarFirekit as RoarfirekitType } from '@bdelab/roar-firekit';
 
 export const getPlainSurveyData = (raw: unknown) => {
   return typeof structuredClone === 'function' ? structuredClone(toRaw(raw)) : JSON.parse(JSON.stringify(toRaw(raw)));
+};
+
+const defaultSurveyTitleKeys: Record<string, string> = {
+  default: 'gameTabs.surveyNameChild',
+  child_survey: 'gameTabs.surveyNameChild',
+  parent_survey_family: 'gameTabs.surveyNameParentPart2',
+  parent_survey_child: 'gameTabs.surveyNameParentPart1',
+  teacher_survey_general: 'gameTabs.surveyNameTeacherPart1',
+  teacher_survey_classroom: 'gameTabs.surveyNameTeacherPart2',
+};
+
+export const getSurveyDataWithDefaults = (surveyId: string, surveyData: Record<string, any>): Record<string, any> => {
+  const title = surveyData?.title || i18n.global.t(defaultSurveyTitleKeys[surveyId] ?? defaultSurveyTitleKeys.default);
+  const hasMultiplePages = surveyData?.pages?.length > 2; // Start page does not count
+
+  // In case the JSON file does not contain any of the following props
+  const fallbackOptions = {
+    firstPageIsStartPage: true,
+    showProgressBar: hasMultiplePages,
+    title,
+    widthMode: 'responsive',
+  };
+
+  // Every survey should have showTitle == true
+  const defaultOptions = {
+    progressBarLocation: 'bottom',
+    showTitle: true,
+  };
+
+  const surveyDataWithFallback = _merge({}, fallbackOptions, surveyData);
+  const surveyDataWithDefaults = _merge({}, surveyDataWithFallback, defaultOptions);
+
+  return surveyDataWithDefaults;
+};
+
+export const getSurveyTheme = (customStyles: Record<string, unknown> = {}): Record<string, unknown> => {
+  const defaultStyles = {
+    ...SC2020,
+    cssVariables: {
+      ...SC2020.cssVariables,
+      '--sjs-font-family': 'Inter',
+      '--sjs-corner-radius': '8px',
+      '--sjs-primary-backcolor-dark': 'rgba(162, 45, 16, 1)',
+      '--sjs-primary-backcolor-light': 'rgba(218, 61, 22, 0.1)',
+      '--sjs-primary-backcolor': 'rgba(218, 61, 22, 1)',
+      '--sjs-primary-background-500': 'rgba(218, 61, 22, 1)',
+      '--sjs-secondary-background-500': 'rgba(218, 61, 22, 1)',
+    },
+  };
+
+  return _merge({}, defaultStyles, customStyles);
 };

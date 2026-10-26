@@ -1,0 +1,14 @@
+.p-drawer {
+  &.edit-user-drawer {
+    min-width: 480px;
+    max-width: 50%;
+    width: 100%;
+    border: none;
+    border-top: 7px solid var(--primary-color);
+
+    @media (max-width: 480px) {
+      max-width: 100%;
+      min-width: auto;
+    }
+  }
+}
