@@ -10,15 +10,24 @@ import { SURVEY_FORM_DEFINITION_QUERY_KEY } from '@/constants/queryKeys';
 import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsRepository';
 import SurveyFormPreview from './SurveyFormPreview.vue';
 
-const route = vi.hoisted(() => ({
-  params: { formType: 'site' as string },
-  query: { orgId: 'district-1' as string },
+const mocks = vi.hoisted(() => ({
+  route: {
+    params: { formType: 'site' as string },
+    query: { orgId: 'district-1' as string },
+  },
 }));
 
-vi.mock('vue-router', () => ({
-  useRoute: () => route,
-  useRouter: () => ({ push: vi.fn() }),
-}));
+vi.mock('vue-router', async () => {
+  const { reactive } = await import('vue');
+  mocks.route = reactive({
+    params: { formType: 'site' },
+    query: { orgId: 'district-1' },
+  });
+  return {
+    useRoute: () => mocks.route,
+    useRouter: () => ({ push: vi.fn() }),
+  };
+});
 
 vi.mock('primevue/usetoast', () => ({
   useToast: () => ({ add: vi.fn() }),
@@ -92,8 +101,8 @@ async function saveCurrentPage(wrapper: VueWrapper) {
 
 describe('SurveyFormPreview', () => {
   beforeEach(() => {
-    route.params.formType = 'site';
-    route.query.orgId = 'district-1';
+    mocks.route.params.formType = 'site';
+    mocks.route.query.orgId = 'district-1';
   });
 
   it('passes savedResponses[0].responses to FormRenderer', () => {
@@ -168,5 +177,41 @@ describe('SurveyFormPreview', () => {
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: [SURVEY_FORM_DEFINITION_QUERY_KEY, 'site', 'district-1'],
     });
+  });
+
+  it('resets complete state when the org changes', async () => {
+    vi.mocked(surveyFormsRepository.saveOrgInformation).mockResolvedValue({
+      orgType: 'site',
+      orgId: 'district-1',
+      formVersion: 'v1',
+      status: 'complete',
+      path: 'districts/district-1/siteInformation/v1',
+    });
+    mockQuery([]);
+
+    const wrapper = mountPage().wrapper;
+    await buttonByLabel(wrapper, 'Get started').trigger('click');
+    await flushPromises();
+    await wrapper.get('#site_02').setValue('email');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Submitted');
+
+    mocks.route.query.orgId = 'district-2';
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain('Submitted');
+    expect(wrapper.getComponent(FormRenderer).exists()).toBe(true);
+
+    await buttonByLabel(wrapper, 'Get started').trigger('click');
+    await flushPromises();
+    await wrapper.get('#site_02').setValue('email');
+    await buttonByLabel(wrapper, 'Save').trigger('click');
+    await flushPromises();
+
+    expect(surveyFormsRepository.saveOrgInformation).toHaveBeenLastCalledWith(
+      expect.objectContaining({ orgId: 'district-2', status: 'draft' }),
+    );
   });
 });

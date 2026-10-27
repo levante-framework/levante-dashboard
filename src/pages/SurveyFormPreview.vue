@@ -22,6 +22,7 @@
 
     <div v-else-if="data" class="survey-preview__body">
       <FormRenderer
+        :key="`${formType}-${orgId}`"
         :fields="data.fullFields"
         :general-prompt="data.generalPrompt"
         :section-info="data.sectionInfo"
@@ -40,7 +41,7 @@
 import { useQueryClient } from '@tanstack/vue-query';
 import PvMessage from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import FormRenderer from '@/components/FormRenderer.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
@@ -85,6 +86,12 @@ const versionTooltip = computed(() => {
 const isSaving = ref(false);
 const isComplete = ref(false);
 const persistedStatus = ref<'draft' | 'complete'>();
+
+watch([formType, orgId], () => {
+  isComplete.value = false;
+  persistedStatus.value = undefined;
+  isSaving.value = false;
+});
 
 async function persist(
   responses: Record<string, unknown>,
