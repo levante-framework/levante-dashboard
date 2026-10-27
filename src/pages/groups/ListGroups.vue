@@ -227,7 +227,7 @@ import PvTabPanel from 'primevue/tabpanel';
 import PvTabPanels from 'primevue/tabpanels';
 import PvTabs from 'primevue/tabs';
 import { useToast } from 'primevue/usetoast';
-import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
 import DocsButton from '@/components/DocsButton.vue';
 import EditOrgsForm from '@/components/EditOrgsForm.vue';
 import AddGroupModal from '@/components/modals/AddGroupModal.vue';
@@ -249,6 +249,7 @@ import { getAdministrationsByOrg } from '@/helpers/query/administrations';
 import { countUsersByOrg, fetchUsersByOrg } from '@/helpers/query/users';
 import { exportCsv, fetchDocById, orderByDefault } from '@/helpers/query/utils';
 import { useAuthStore } from '@/store/auth';
+import { clickBeforeRefreshMs, registerWizardNextClick } from '@/wizard';
 
 const initialized = ref(false);
 const selectedDistrict = ref(undefined);
@@ -678,9 +679,18 @@ unsubscribe = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit.restConfig) initTable();
 });
 
+const openAddGroupModalFromWizard = async (_element, _step, { driver }) => {
+  isAddGroupModalVisible.value = true;
+  await nextTick();
+  setTimeout(() => driver.moveNext(), clickBeforeRefreshMs);
+};
+
+let unregisterWizardNextClick;
+
 onMounted(() => {
   if (roarfirekit.value.restConfig) initTable();
   history.replaceState({}, '');
+  unregisterWizardNextClick = registerWizardNextClick('[data-wizard="create-group"]', openAddGroupModalFromWizard);
 });
 
 onUnmounted(() => {
@@ -688,6 +698,8 @@ onUnmounted(() => {
   if (unsubscribe) {
     unsubscribe();
   }
+
+  unregisterWizardNextClick?.();
 
   // Reset modal states
   isAssignmentsModalVisible.value = false;
