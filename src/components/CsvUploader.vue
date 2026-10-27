@@ -1,5 +1,5 @@
 <template>
-  <div class="flex align-items-center gap-3 mb-3" data-wizard="upload-add-users">
+  <div class="flex align-items-center gap-3 mb-3" :data-wizard="dataWizard">
     <PvFileUpload
       :choose-label="!uploadedFile ? 'Choose CSV File' : 'Choose Another CSV File'"
       :show-cancel-button="false"
@@ -21,6 +21,16 @@
 <script setup lang="ts">
 import type { FileUploadUploaderEvent } from 'primevue/fileupload';
 import PvFileUpload from 'primevue/fileupload';
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
+const dataWizard = computed(() => {
+  const routeName = route.name?.toString().trim().toLowerCase();
+  if (routeName === 'add users') return 'upload-add-users';
+  else if (routeName === 'link users') return 'upload-link-users';
+  return undefined;
+});
 
 defineProps<{
   disabled: boolean;
