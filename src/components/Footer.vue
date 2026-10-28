@@ -57,6 +57,7 @@ defineExpose({ getFooterHeight });
   bottom: 0;
   left: 0;
   z-index: 1000;
+  pointer-events: none;
 
   &.footer--secondary {
     padding: 2rem;
@@ -73,6 +74,7 @@ defineExpose({ getFooterHeight });
 .footer__link {
   color: var(--primary-color);
   text-decoration: none;
+  pointer-events: auto;
 
   &:hover {
     text-decoration: underline;

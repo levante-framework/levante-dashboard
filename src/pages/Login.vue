@@ -542,7 +542,7 @@ onMounted(() => {
   background-color: var(--primary-color);
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow-y: auto;
 
   &::before {
     content: '';
