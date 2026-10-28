@@ -57,13 +57,13 @@ defineExpose({ getFooterHeight });
   bottom: 0;
   left: 0;
   z-index: 1000;
-  pointer-events: none;
 
   &.footer--secondary {
     padding: 2rem;
     background-color: transparent;
     border-top: none;
     color: rgba(white, 0.5);
+    pointer-events: none;
 
     .footer__link {
       color: white;
