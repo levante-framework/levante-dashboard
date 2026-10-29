@@ -100,7 +100,7 @@
           <div class="flex gap-1 text-sm">
             <div class="text-color-secondary">Not sure how to login?</div>
             <a
-              href="https://researcher.levante-network.org/dashboard"
+              href="https://researcher.levante-network.org/dashboard/administrator-log-in"
               target="_blank"
               class="font-medium text-color no-underline hover:underline"
             >
@@ -542,7 +542,7 @@ onMounted(() => {
   background-color: var(--primary-color);
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow-y: auto;
 
   &::before {
     content: '';
