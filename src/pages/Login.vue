@@ -104,7 +104,7 @@
               target="_blank"
               class="font-medium text-color no-underline hover:underline"
             >
-              Read sign-in docs
+              Read sign in docs
             </a>
           </div>
 
