@@ -100,11 +100,11 @@
           <div class="flex gap-1 text-sm">
             <div class="text-color-secondary">Not sure how to login?</div>
             <a
-              href="https://researcher.levante-network.org/dashboard"
+              href="https://researcher.levante-network.org/dashboard/administrator-log-in"
               target="_blank"
               class="font-medium text-color no-underline hover:underline"
             >
-              Read sign in docs
+              Read sign-in docs
             </a>
           </div>
 
