@@ -229,6 +229,7 @@ const props = defineProps<{
   sectionInfo?: FormSectionInfo[];
   isSaving?: boolean;
   isComplete?: boolean;
+  initialResponses?: Record<string, unknown>;
   saveDraft: (values: Record<string, unknown>, options?: { silent?: boolean }) => Promise<boolean>;
 }>();
 
@@ -329,17 +330,21 @@ function onLanguageOther(itemId: string, variableName: string, text: string | un
 const model = reactive<Record<string, unknown>>({});
 
 watch(
-  () => props.fields,
-  (fields) => {
+  () => [props.fields, props.initialResponses] as const,
+  ([fields, initialResponses]) => {
     for (const field of fields) {
-      if (!(field.variableName in model)) {
-        model[field.variableName] =
-          field.kind === 'multi-select'
-            ? []
-            : field.kind === 'language-selection'
-              ? { codes: [], otherDescription: null }
-              : null;
+      if (field.variableName in model) continue;
+      const saved = initialResponses?.[field.variableName];
+      if (saved !== undefined) {
+        model[field.variableName] = saved;
+        continue;
       }
+      model[field.variableName] =
+        field.kind === 'multi-select'
+          ? []
+          : field.kind === 'language-selection'
+            ? { codes: [], otherDescription: null }
+            : null;
     }
   },
   { immediate: true },
@@ -360,18 +365,22 @@ const visibleFields = computed(() => {
   });
 });
 
-// When a conditional field is hidden again (e.g. the controlling answer no longer
-// includes "other"), drop any value it had collected so it isn't submitted.
-watch(visibleFields, (visible) => {
-  const visibleVars = new Set(visible.map((field) => field.variableName));
-  for (const field of props.fields) {
-    if (!field.displayLogic || visibleVars.has(field.variableName)) continue;
-    const emptyValue = field.kind === 'multi-select' ? [] : null;
-    const current = model[field.variableName];
-    const isEmpty = Array.isArray(current) ? current.length === 0 : current === null;
-    if (!isEmpty) model[field.variableName] = emptyValue;
-  }
-});
+// When a conditional field is hidden (including on load, e.g. the controlling
+// answer no longer includes "other"), drop any value so it isn't submitted.
+watch(
+  visibleFields,
+  (visible) => {
+    const visibleVars = new Set(visible.map((field) => field.variableName));
+    for (const field of props.fields) {
+      if (!field.displayLogic || visibleVars.has(field.variableName)) continue;
+      const emptyValue = field.kind === 'multi-select' ? [] : null;
+      const current = model[field.variableName];
+      const isEmpty = Array.isArray(current) ? current.length === 0 : current === null;
+      if (!isEmpty) model[field.variableName] = emptyValue;
+    }
+  },
+  { immediate: true },
+);
 
 /**
  * Groups visible fields into ordered sections (by first appearance), attaching
@@ -508,10 +517,12 @@ function currentPageValues(): Record<string, unknown> {
 
 async function goNext() {
   if (!validateCurrentSection()) return;
+  const pageIndex = currentPageIndex.value;
   if (!isIntroPage.value) {
     const didSave = await props.saveDraft(currentPageValues(), { silent: true });
     if (!didSave) return;
   }
+  if (currentPageIndex.value !== pageIndex) return;
   if (!isLastPage.value) currentPageIndex.value += 1;
 }
 

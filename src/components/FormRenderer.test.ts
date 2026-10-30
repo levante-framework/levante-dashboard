@@ -66,13 +66,18 @@ function buttonByLabel(wrapper: VueWrapper, label: string) {
   return match;
 }
 
-async function mountForm(saveDraft = vi.fn().mockResolvedValue(true), extraFields: InformationFormField[] = []) {
+async function mountForm(
+  saveDraft = vi.fn().mockResolvedValue(true),
+  initialResponses?: Record<string, unknown>,
+  extraFields: InformationFormField[] = [],
+) {
   const wrapper = mount(FormRenderer, {
     props: {
       fields: [...FIELDS, ...extraFields],
       generalPrompt: 'Please complete.',
       sectionInfo: SECTION_INFO,
       saveDraft,
+      initialResponses,
     },
     global: {
       plugins: [PrimeVue],
@@ -151,7 +156,7 @@ describe('FormRenderer', () => {
   });
 
   it('gives the language MultiSelect English options, no bh, and search', async () => {
-    const { wrapper } = await mountForm(vi.fn().mockResolvedValue(true), [LANGUAGE_FIELD]);
+    const { wrapper } = await mountForm(vi.fn().mockResolvedValue(true), undefined, [LANGUAGE_FIELD]);
     await startRecruitment(wrapper);
 
     const select = languageSelect(wrapper);
@@ -162,7 +167,7 @@ describe('FormRenderer', () => {
   });
 
   it('shows the language Other textarea only when Other is selected', async () => {
-    const { wrapper } = await mountForm(vi.fn().mockResolvedValue(true), [LANGUAGE_FIELD]);
+    const { wrapper } = await mountForm(vi.fn().mockResolvedValue(true), undefined, [LANGUAGE_FIELD]);
     await startRecruitment(wrapper);
 
     expect(wrapper.find('#site_15-other').exists()).toBe(false);
@@ -176,7 +181,7 @@ describe('FormRenderer', () => {
   });
 
   it('blocks Next when required language-selection has no codes', async () => {
-    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [LANGUAGE_FIELD]);
+    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), undefined, [LANGUAGE_FIELD]);
     await startRecruitment(wrapper);
     await setApproach(wrapper, ['convenience']);
     await wrapper.get('#site_02').setValue('email');
@@ -190,7 +195,7 @@ describe('FormRenderer', () => {
   });
 
   it('blocks Save when Other is selected without a description', async () => {
-    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [LANGUAGE_FIELD]);
+    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), undefined, [LANGUAGE_FIELD]);
     await startRecruitment(wrapper);
     await setApproach(wrapper, ['convenience']);
     await wrapper.get('#site_02').setValue('email');
@@ -205,7 +210,7 @@ describe('FormRenderer', () => {
   });
 
   it('blocks Save when Other description is only whitespace', async () => {
-    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [LANGUAGE_FIELD]);
+    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), undefined, [LANGUAGE_FIELD]);
     await startRecruitment(wrapper);
     await setApproach(wrapper, ['convenience']);
     await wrapper.get('#site_02').setValue('email');
@@ -221,7 +226,7 @@ describe('FormRenderer', () => {
   });
 
   it('allows Next when a language is selected', async () => {
-    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [LANGUAGE_FIELD]);
+    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), undefined, [LANGUAGE_FIELD]);
     await startRecruitment(wrapper);
     await setApproach(wrapper, ['convenience']);
     await wrapper.get('#site_02').setValue('email');
@@ -235,7 +240,7 @@ describe('FormRenderer', () => {
   });
 
   it('saves selected languages and a trimmed Other description', async () => {
-    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [LANGUAGE_FIELD]);
+    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), undefined, [LANGUAGE_FIELD]);
     await startRecruitment(wrapper);
     await setApproach(wrapper, ['convenience']);
     await wrapper.get('#site_02').setValue('email');
@@ -265,7 +270,7 @@ describe('FormRenderer', () => {
 
   it('keeps ISO codes when optional Other has no description', async () => {
     const optionalLanguage: InformationFormField = { ...LANGUAGE_FIELD, required: false };
-    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [optionalLanguage]);
+    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), undefined, [optionalLanguage]);
     await startRecruitment(wrapper);
     await setApproach(wrapper, ['convenience']);
     await wrapper.get('#site_02').setValue('email');
@@ -283,7 +288,7 @@ describe('FormRenderer', () => {
 
   it('sends null when optional Other has no description and no ISO codes', async () => {
     const optionalLanguage: InformationFormField = { ...LANGUAGE_FIELD, required: false };
-    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [optionalLanguage]);
+    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), undefined, [optionalLanguage]);
     await startRecruitment(wrapper);
     await setApproach(wrapper, ['convenience']);
     await wrapper.get('#site_02').setValue('email');
@@ -301,7 +306,7 @@ describe('FormRenderer', () => {
 
   it('sends null when an optional language selection is cleared', async () => {
     const optionalLanguage: InformationFormField = { ...LANGUAGE_FIELD, required: false };
-    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [optionalLanguage]);
+    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), undefined, [optionalLanguage]);
     await startRecruitment(wrapper);
     await setApproach(wrapper, ['convenience']);
     await wrapper.get('#site_02').setValue('email');
@@ -322,7 +327,7 @@ describe('FormRenderer', () => {
   });
 
   it('drops Other description when Other is removed', async () => {
-    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [LANGUAGE_FIELD]);
+    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), undefined, [LANGUAGE_FIELD]);
     await startRecruitment(wrapper);
     await setApproach(wrapper, ['convenience']);
     await wrapper.get('#site_02').setValue('email');
@@ -386,6 +391,34 @@ describe('FormRenderer', () => {
     expect(buttonByLabel(wrapper, 'Previous').attributes('disabled')).toBeDefined();
   });
 
+  it('does not advance after Next if the user went back during save', async () => {
+    let finishSave: (ok: boolean) => void = () => {};
+    const saveDraft = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finishSave = resolve;
+        }),
+    );
+    const { wrapper } = await mountForm(saveDraft);
+    await startRecruitment(wrapper);
+    await setApproach(wrapper, ['convenience']);
+    await wrapper.get('#site_02').setValue('email');
+
+    const nextClick = buttonByLabel(wrapper, 'Next').trigger('click');
+    await flushPromises();
+
+    await buttonByLabel(wrapper, 'Previous').trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain('Please complete.');
+
+    finishSave(true);
+    await nextClick;
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Please complete.');
+    expect(wrapper.text()).not.toContain('Section 2 of 2');
+  });
+
   it('does not submit from a non-last page', async () => {
     const { wrapper } = await mountForm();
     await startRecruitment(wrapper);
@@ -437,7 +470,7 @@ describe('FormRenderer', () => {
     });
   });
 
-  it('sends null when an optional answer is cleared', async () => {
+  it('sends null when a saved optional answer is cleared', async () => {
     const optionalNotes: InformationFormField = {
       itemId: 'site_02b',
       variableName: 'siteNotes',
@@ -446,13 +479,16 @@ describe('FormRenderer', () => {
       sectionId: 'recruitment',
       questionText: 'Optional notes',
     };
-    const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), [optionalNotes]);
+    const { wrapper, saveDraft } = await mountForm(
+      undefined,
+      {
+        sampleApproach: ['convenience'],
+        siteRecruitment: 'email',
+        siteNotes: 'old note',
+      },
+      [optionalNotes],
+    );
     await startRecruitment(wrapper);
-    await setApproach(wrapper, ['convenience']);
-    await wrapper.get('#site_02').setValue('email');
-    await wrapper.get('#site_02b').setValue('old note');
-    await buttonByLabel(wrapper, 'Save').trigger('click');
-    await flushPromises();
 
     await wrapper.get('#site_02b').setValue('');
     await buttonByLabel(wrapper, 'Save').trigger('click');
@@ -492,5 +528,53 @@ describe('FormRenderer', () => {
     expect(example.html()).toContain('<ul>');
     expect(example.html()).toContain('<li>');
     expect(example.html()).not.toMatch(/<p>Family-based remote assessment\.<\/p>/);
+  });
+
+  it('fills saved answers and shows Other text when Other was saved', async () => {
+    const { wrapper } = await mountForm(undefined, {
+      sampleApproach: ['other'],
+      sampleApproachOther: 'word of mouth',
+      siteRecruitment: 'email',
+    });
+    await startRecruitment(wrapper);
+
+    expect(wrapper.findComponent({ name: 'MultiSelect' }).props('modelValue')).toEqual(['other']);
+    expect(wrapper.text()).toContain('Please specify');
+    expect((wrapper.get('#site_01b').element as HTMLTextAreaElement).value).toBe('word of mouth');
+    expect((wrapper.get('#site_02').element as HTMLTextAreaElement).value).toBe('email');
+  });
+
+  it('hides Other text when the saved approach is not Other', async () => {
+    const { wrapper, saveDraft } = await mountForm(undefined, {
+      sampleApproach: ['convenience'],
+      sampleApproachOther: 'word of mouth',
+      siteRecruitment: 'email',
+    });
+    await startRecruitment(wrapper);
+
+    expect(wrapper.text()).not.toContain('Please specify');
+
+    await buttonByLabel(wrapper, 'Save').trigger('click');
+    await flushPromises();
+
+    expect(saveDraft.mock.calls.at(-1)?.[0]).toEqual({
+      sampleApproach: ['convenience'],
+      sampleApproachOther: null,
+      siteRecruitment: 'email',
+    });
+  });
+
+  it('advances Next when required fields were saved', async () => {
+    const { wrapper } = await mountForm(undefined, {
+      sampleApproach: ['convenience'],
+      siteRecruitment: 'email',
+    });
+    await startRecruitment(wrapper);
+    await buttonByLabel(wrapper, 'Next').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Size');
+    expect(wrapper.text()).toContain('Section 2 of 2');
+    expect(wrapper.text()).not.toContain('This field is required');
   });
 });

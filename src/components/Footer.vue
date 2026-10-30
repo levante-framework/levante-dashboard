@@ -63,6 +63,7 @@ defineExpose({ getFooterHeight });
     background-color: transparent;
     border-top: none;
     color: rgba(white, 0.5);
+    pointer-events: none;
 
     .footer__link {
       color: white;
@@ -73,6 +74,7 @@ defineExpose({ getFooterHeight });
 .footer__link {
   color: var(--primary-color);
   text-decoration: none;
+  pointer-events: auto;
 
   &:hover {
     text-decoration: underline;
