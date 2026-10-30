@@ -326,6 +326,49 @@ describe('FormRenderer', () => {
     });
   });
 
+  it('renders the language field when the saved selection is null', async () => {
+    const optionalLanguage: InformationFormField = { ...LANGUAGE_FIELD, required: false };
+    const { wrapper, saveDraft } = await mountForm(
+      vi.fn().mockResolvedValue(true),
+      {
+        sampleApproach: ['convenience'],
+        siteRecruitment: 'email',
+        siteLanguages: null,
+      },
+      [optionalLanguage],
+    );
+    await startRecruitment(wrapper);
+
+    expect(languageSelect(wrapper).props('modelValue')).toEqual([]);
+    expect(wrapper.find('#site_15-other').exists()).toBe(false);
+
+    await setLanguages(wrapper, ['en']);
+    await buttonByLabel(wrapper, 'Save').trigger('click');
+    await flushPromises();
+
+    expect(saveDraft.mock.calls.at(-1)?.[0].siteLanguages).toEqual({
+      codes: ['en'],
+      otherDescription: null,
+    });
+  });
+
+  it('renders the language field when the saved value is leftover text', async () => {
+    const { wrapper } = await mountForm(
+      vi.fn().mockResolvedValue(true),
+      {
+        sampleApproach: ['convenience'],
+        siteRecruitment: 'email',
+        siteLanguages: 'Spanish and English',
+      },
+      [LANGUAGE_FIELD],
+    );
+    await startRecruitment(wrapper);
+
+    expect(wrapper.text()).toContain('Spoken languages');
+    expect(languageSelect(wrapper).props('modelValue')).toEqual([]);
+    expect(wrapper.find('#site_15-other').exists()).toBe(false);
+  });
+
   it('drops Other description when Other is removed', async () => {
     const { wrapper, saveDraft } = await mountForm(vi.fn().mockResolvedValue(true), undefined, [LANGUAGE_FIELD]);
     await startRecruitment(wrapper);

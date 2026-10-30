@@ -295,8 +295,19 @@ function onNumberBlur(itemId: string) {
   if (fieldErrors[itemId] === MESSAGES.numbersOnly) clearFieldError(itemId);
 }
 
+function asLanguageSelection(value: unknown): LanguageSelection {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+    return { codes: [], otherDescription: null };
+  }
+  const { codes, otherDescription } = value as LanguageSelection;
+  return {
+    codes: Array.isArray(codes) ? codes : [],
+    otherDescription: typeof otherDescription === 'string' ? otherDescription : null,
+  };
+}
+
 function languageCodes(variableName: string): string[] {
-  return (model[variableName] as LanguageSelection).codes;
+  return asLanguageSelection(model[variableName]).codes;
 }
 
 function languageHasOther(variableName: string): boolean {
@@ -304,12 +315,12 @@ function languageHasOther(variableName: string): boolean {
 }
 
 function languageOtherDescription(variableName: string): string {
-  return (model[variableName] as LanguageSelection).otherDescription ?? '';
+  return asLanguageSelection(model[variableName]).otherDescription ?? '';
 }
 
 function onLanguageCodes(itemId: string, variableName: string, codes: string[] | null | undefined) {
   const nextCodes = codes ?? [];
-  const current = model[variableName] as LanguageSelection;
+  const current = asLanguageSelection(model[variableName]);
   model[variableName] = {
     codes: nextCodes,
     otherDescription: nextCodes.includes(LANGUAGE_OTHER) ? current.otherDescription : null,
@@ -318,7 +329,7 @@ function onLanguageCodes(itemId: string, variableName: string, codes: string[] |
 }
 
 function onLanguageOther(itemId: string, variableName: string, text: string | undefined) {
-  const current = model[variableName] as LanguageSelection;
+  const current = asLanguageSelection(model[variableName]);
   model[variableName] = {
     codes: current.codes,
     otherDescription: text ?? '',
