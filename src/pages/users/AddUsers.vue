@@ -59,6 +59,7 @@
                 variant="outlined"
                 class="download-button"
                 data-cy="button-download-users"
+                data-wizard="download-users"
                 @click="downloadRegisteredUsers"
               />
             </div>

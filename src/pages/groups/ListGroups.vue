@@ -16,9 +16,7 @@
               href="https://researcher.levante-network.org/dashboard/create-a-group"
               target="_blank"
               rel="noopener noreferrer"
-            >
-              documentation on creating groups
-            </a>
+            >documentation on creating groups</a>
             for guidance on creating and naming groups.
           </div>
         </div>
@@ -30,6 +28,7 @@
                 class="bg-primary text-white border-none p-2 ml-auto"
                 data-testid="add-group-btn"
                 data-cy="add-group-btn"
+                data-wizard="create-group"
                 :disabled="currentSite === 'any' && activeIndex != 0"
                 @click="isAddGroupModalVisible = true"
               >
@@ -47,7 +46,7 @@
         </div>
       </div>
       <PvTabs v-if="claimsLoaded" v-model:value="activeOrgType" lazy data-cy="groups-page-ready">
-        <PvTabList>
+        <PvTabList data-wizard="groups-tabs">
           <PvTab v-for="orgType in orgHeaders" :key="orgType.id" :value="orgType.id">{{ orgType.header }}</PvTab>
         </PvTabList>
         <PvTabPanels>
@@ -228,7 +227,7 @@ import PvTabPanel from 'primevue/tabpanel';
 import PvTabPanels from 'primevue/tabpanels';
 import PvTabs from 'primevue/tabs';
 import { useToast } from 'primevue/usetoast';
-import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
 import DocsButton from '@/components/DocsButton.vue';
 import EditOrgsForm from '@/components/EditOrgsForm.vue';
 import AddGroupModal from '@/components/modals/AddGroupModal.vue';
@@ -250,6 +249,7 @@ import { getAdministrationsByOrg } from '@/helpers/query/administrations';
 import { countUsersByOrg, fetchUsersByOrg } from '@/helpers/query/users';
 import { exportCsv, fetchDocById, orderByDefault } from '@/helpers/query/utils';
 import { useAuthStore } from '@/store/auth';
+import { clickBeforeRefreshMs, registerWizardNextClick } from '@/wizard';
 
 const initialized = ref(false);
 const selectedDistrict = ref(undefined);
@@ -506,6 +506,7 @@ const tableColumns = computed(() => {
   }
 
   columns.push({
+    dataWizard: 'group-users',
     header: 'Users',
     link: true,
     routeName: 'ListUsers',
@@ -517,6 +518,7 @@ const tableColumns = computed(() => {
 
   // Add Assignments column for all org types
   columns.push({
+    dataWizard: 'group-assignments',
     header: 'Assignments',
     button: true,
     eventName: 'assignments-button',
@@ -677,9 +679,18 @@ unsubscribe = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit.restConfig) initTable();
 });
 
+const openAddGroupModalFromWizard = async (_element, _step, { driver }) => {
+  isAddGroupModalVisible.value = true;
+  await nextTick();
+  setTimeout(() => driver.moveNext(), clickBeforeRefreshMs);
+};
+
+let unregisterWizardNextClick;
+
 onMounted(() => {
   if (roarfirekit.value.restConfig) initTable();
   history.replaceState({}, '');
+  unregisterWizardNextClick = registerWizardNextClick('[data-wizard="create-group"]', openAddGroupModalFromWizard);
 });
 
 onUnmounted(() => {
@@ -687,6 +698,8 @@ onUnmounted(() => {
   if (unsubscribe) {
     unsubscribe();
   }
+
+  unregisterWizardNextClick?.();
 
   // Reset modal states
   isAssignmentsModalVisible.value = false;
