@@ -19,6 +19,8 @@ const props = defineProps({
   taskId: { type: String, default: 'egma-math' },
 });
 
+const NORMAL_FINISH_REASONS = ['earlyCompletion', 'sufficientTrials'];
+
 let levanteTaskLauncher;
 let levanteTask;
 let checkGameStarted;
@@ -121,6 +123,20 @@ function goHome() {
   router.push({ name: 'Home' });
 }
 
+// run() does not return why the task finished. The launcher reports that through
+// updateStopReason, and only a non-aborted finish marks the run completed.
+function rememberStopReason(appKit) {
+  let stopReason;
+  if (typeof appKit?.updateStopReason !== 'function') return () => stopReason;
+
+  const updateStopReason = appKit.updateStopReason.bind(appKit);
+  appKit.updateStopReason = (reason) => {
+    stopReason = reason;
+    return updateStopReason(reason);
+  };
+  return () => stopReason;
+}
+
 async function startTask(selectedAdmin) {
   let startAssessmentSucceeded = false;
 
@@ -151,6 +167,7 @@ async function startTask(selectedAdmin) {
     };
 
     const gameParams = { ...appKit._taskInfo.variantParams };
+    const stopReason = rememberStopReason(appKit);
 
     if (isUnmounted) return;
 
@@ -159,10 +176,12 @@ async function startTask(selectedAdmin) {
     await levanteTask.run().then(async () => {
       if (isUnmounted) return;
 
-      await completeAssessmentMutate({
-        adminId: selectedAdmin.value?.id,
-        taskId: props.taskId,
-      });
+      if (appKit.run?.completed && NORMAL_FINISH_REASONS.includes(stopReason())) {
+        await completeAssessmentMutate({
+          adminId: selectedAdmin.value?.id,
+          taskId: props.taskId,
+        });
+      }
 
       goHome();
     });
