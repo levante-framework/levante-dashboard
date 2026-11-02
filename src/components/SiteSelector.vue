@@ -1,6 +1,6 @@
 <template>
   <div class="flex align-items-center gap-2 --djs-site-selector">
-    <label for="site-selector" class="font-semibold">Site:</label>
+    <label for="site-selector" class="font-semibold">Site</label>
     <PvSelect
       v-model="pendingSelectedSite"
       :options="siteOptions"
