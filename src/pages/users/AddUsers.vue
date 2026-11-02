@@ -90,7 +90,7 @@
       data-cy="dialog-bulk-create-users"
     >
       <div class="flex flex-column align-items-center gap-3 py-4">
-        <AppSpinner />
+        <AppSpinner class="m-0" />
         <p class="m-0 text-center text-gray-700 line-height-3">
           This step runs on the server and can take several minutes for sites with many users or many assignments.
         </p>
