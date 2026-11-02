@@ -34,64 +34,66 @@
 
       <div class="text-sm text-gray-500 mt-3 mr-3 required"><span class="required-asterisk">*</span> Required</div>
       <div class="bg-gray-100 rounded p-5">
-        <div class="formgrid grid mt-5">
-          <div class="field col-12 xl:col-6 mb-5">
-            <PvFloatLabel>
-              <PvInputText
-                id="administration-name"
-                v-model="state.administrationName"
-                class="w-full"
-                data-cy="input-administration-name"
-              />
-              <label for="administration-name" class="w-full"
-                >Assignment Name <span class="required-asterisk">*</span></label
+        <div data-wizard="basic-details">
+          <div class="formgrid grid mt-5">
+            <div class="field col-12 xl:col-6 mb-5">
+              <PvFloatLabel>
+                <PvInputText
+                  id="administration-name"
+                  v-model="state.administrationName"
+                  class="w-full"
+                  data-cy="input-administration-name"
+                />
+                <label for="administration-name" class="w-full"
+                  >Assignment Name <span class="required-asterisk">*</span></label
+                >
+              </PvFloatLabel>
+              <small
+                v-if="v$.administrationName.$invalid && submitted"
+                class="p-error white-space-nowrap overflow-hidden text-overflow-ellipsis"
+                >Please name your assignment</small
               >
-            </PvFloatLabel>
-            <small
-              v-if="v$.administrationName.$invalid && submitted"
-              class="p-error white-space-nowrap overflow-hidden text-overflow-ellipsis"
-              >Please name your assignment</small
-            >
+            </div>
           </div>
-        </div>
-        <div class="formgrid grid">
-          <div class="field col-12 md:col-6 mb-5">
-            <PvFloatLabel>
-              <PvDatePicker
-                v-model="state.dateStarted"
-                class="w-full"
-                :min-date="minStartDate"
-                :number-of-months="1"
-                :manual-input="false"
-                icon="pi pi-calendar text-white p-1"
-                input-id="start-date"
-                show-button-bar
-                data-cy="input-start-date"
-              />
-              <label for="start-date">Start Date <span class="required-asterisk">*</span></label>
-            </PvFloatLabel>
-            <small v-if="v$.dateStarted.required.$invalid && submitted" class="p-error">
-              Please select a start date.
-            </small>
-          </div>
-          <div class="field col-12 md:col-6">
-            <PvFloatLabel>
-              <PvDatePicker
-                v-model="state.dateClosed"
-                class="w-full"
-                :min-date="minEndDate"
-                input-id="end-date"
-                :number-of-months="1"
-                :manual-input="false"
-                icon="pi pi-calendar text-white p-1"
-                show-button-bar
-                data-cy="input-end-date"
-              />
-              <label for="end-date">End Date <span class="required-asterisk">*</span></label>
-            </PvFloatLabel>
-            <small v-if="v$.dateClosed.required.$invalid && submitted" class="p-error">
-              Please select an end date.
-            </small>
+          <div class="formgrid grid">
+            <div class="field col-12 md:col-6 mb-5">
+              <PvFloatLabel>
+                <PvDatePicker
+                  v-model="state.dateStarted"
+                  class="w-full"
+                  :min-date="minStartDate"
+                  :number-of-months="1"
+                  :manual-input="false"
+                  icon="pi pi-calendar text-white p-1"
+                  input-id="start-date"
+                  show-button-bar
+                  data-cy="input-start-date"
+                />
+                <label for="start-date">Start Date <span class="required-asterisk">*</span></label>
+              </PvFloatLabel>
+              <small v-if="v$.dateStarted.required.$invalid && submitted" class="p-error">
+                Please select a start date.
+              </small>
+            </div>
+            <div class="field col-12 md:col-6">
+              <PvFloatLabel>
+                <PvDatePicker
+                  v-model="state.dateClosed"
+                  class="w-full"
+                  :min-date="minEndDate"
+                  input-id="end-date"
+                  :number-of-months="1"
+                  :manual-input="false"
+                  icon="pi pi-calendar text-white p-1"
+                  show-button-bar
+                  data-cy="input-end-date"
+                />
+                <label for="end-date">End Date <span class="required-asterisk">*</span></label>
+              </PvFloatLabel>
+              <small v-if="v$.dateClosed.required.$invalid && submitted" class="p-error">
+                Please select an end date.
+              </small>
+            </div>
           </div>
         </div>
 
@@ -131,7 +133,7 @@
         </div>
         <div class="flex flex-column justify-content-center mt-5">
           <div class="flex flex-column mt-2 align-items-center justify-content-center">
-            <div class="flex">
+            <div class="flex" data-wizard="assignment-sequential-option">
               <label class="mb-2 mx-2 font-semibold"
                 >Sequential Task Order <span class="required-asterisk">*</span></label
               >
@@ -139,7 +141,7 @@
                 <PvRadioButton v-model="state.sequential" input-id="Yes" :value="true" />
                 <label for="Yes">Yes</label>
 
-                <div class="flex gap-2" data-wizard="assignment-not-sequential">
+                <div class="flex gap-2">
                   <PvRadioButton
                     v-model="state.sequential"
                     data-cy="radio-button-not-sequential"
