@@ -14,9 +14,8 @@
               </div>
 
               <div class="text-md text-gray-500 mb-1 line-height-3">
-                This page lists all the assignments that are administered to your users. You can view and monitor
-                completion and create new bundles of tasks, surveys, and questionnaires to be administered as
-                assignments.
+                This page lists all assignments created for your site. Here you can view their progress and edit
+                them.
               </div>
             </div>
             <div class="flex flex-1 justify-content-end align-items-center gap-2 mt-2">

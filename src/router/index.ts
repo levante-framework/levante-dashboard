@@ -180,15 +180,6 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
-    path: '/create-administrator',
-    name: 'CreateAdministrator',
-    component: () => import('@/pages/CreateAdministrator.vue'),
-    meta: {
-      pageTitle: 'Create an administrator account',
-      allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN],
-    },
-  },
-  {
     path: '/manage-researchers',
     name: 'ManageResearchers',
     component: () => import('@/pages/ManageAdministrators.vue'),

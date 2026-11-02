@@ -111,11 +111,16 @@ import { computed, inject, markRaw, nextTick, Ref, ref, watch, watchEffect } fro
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
-const BUCKETS = [
-  { id: 'levante-assets-dev', name: 'Development' },
-  { id: 'levante-assets-draft', name: 'Draft' },
-];
-const DEFAULT_BUCKET_ID = BUCKETS.find((bucket) => bucket.name.toLowerCase() === 'development')?.id ?? '';
+const isDev = import.meta.env.VITE_FIREBASE_PROJECT === 'DEV';
+const BUCKETS = isDev
+  ? [
+      { id: 'levante-assets-dev', name: 'Development' },
+      { id: 'levante-assets-draft', name: 'Draft' },
+    ]
+  : [{ id: 'levante-assets-prod', name: 'Production' }];
+
+const DEFAULT_BUCKET_ID = BUCKETS.find((bucket) => bucket.name === (isDev ? 'Development' : 'Production'))?.id ?? '';
+
 const STORAGE_KEYS = {
   BUCKET_ID: 'levanteBucketId',
   SURVEY_ID: 'levanteSurveyId',
@@ -152,15 +157,21 @@ const clearStoredSurveyDraft = (): void => {
   window.localStorage.removeItem(STORAGE_KEYS.SURVEY);
 };
 
+const isBucketAvailable = (bucketId: string): boolean => BUCKETS.some((bucket) => bucket.id === bucketId);
+
 const bucketOptions = ref(BUCKETS);
 const isSuperAdmin = computed(() => isUserSuperAdmin());
-const routeBucketId = computed(() => getRouteValue(route.query.bucketId));
+const routeBucketId = computed(() =>
+  isBucketAvailable(getRouteValue(route.query.bucketId)) ? getRouteValue(route.query.bucketId) : '',
+);
 const routeSurveyId = computed(() => getRouteValue(route.params.surveyId));
 const routeSurveyLanguage = computed(() => getRouteValue(route.params.surveyLanguage));
 const routeSurveyPreview = computed(() => getRouteValue(route.params.surveyPreview));
-const selectedBucketId = ref<string>(
-  routeBucketId.value || window.localStorage.getItem(STORAGE_KEYS.BUCKET_ID) || DEFAULT_BUCKET_ID,
-);
+const storedBucketId = computed(() => {
+  const localStorageBucketId = window.localStorage.getItem(STORAGE_KEYS.BUCKET_ID) ?? '';
+  return isBucketAvailable(localStorageBucketId) ? localStorageBucketId : '';
+});
+const selectedBucketId = ref<string>(routeBucketId.value || storedBucketId.value || DEFAULT_BUCKET_ID);
 const surveyId = ref<string | null>(routeSurveyId.value || window.localStorage.getItem(STORAGE_KEYS.SURVEY_ID));
 const previousBucketId = ref(selectedBucketId.value);
 const previousSurveyId = ref<string | null>(surveyId.value);

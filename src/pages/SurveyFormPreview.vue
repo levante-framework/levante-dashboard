@@ -18,7 +18,7 @@
       Select a site
     </PvMessage>
 
-    <PvMessage v-else-if="isError" severity="error" :closable="false">
+    <PvMessage v-else-if="isError && !data" severity="error" :closable="false">
       {{ (error as Error)?.message ?? 'Failed to load survey definition.' }}
     </PvMessage>
 
@@ -26,12 +26,13 @@
 
     <div v-else-if="data" class="survey-preview__body">
       <FormRenderer
-        :key="orgId"
+        :key="`${formType}-${orgId}`"
         :fields="data.fullFields"
         :general-prompt="data.generalPrompt"
         :section-info="data.sectionInfo"
         :is-saving="isSaving"
         :is-complete="isComplete"
+        :initial-responses="initialResponses"
         :save-draft="onSave"
         @submit="onSubmit"
         @close="onClose"
@@ -41,6 +42,7 @@
 </template>
 
 <script setup lang="ts">
+import { useQueryClient } from '@tanstack/vue-query';
 import { storeToRefs } from 'pinia';
 import PvMessage from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
@@ -49,12 +51,14 @@ import { useRoute, useRouter } from 'vue-router';
 import FormRenderer from '@/components/FormRenderer.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { type SurveyFormType, useSurveyFormDefinitionQuery } from '@/composables/queries/useSurveyFormDefinitionQuery';
+import { SURVEY_FORM_DEFINITION_QUERY_KEY } from '@/constants/queryKeys';
 import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsRepository';
 import { useAuthStore } from '@/store/auth';
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const queryClient = useQueryClient();
 const authStore = useAuthStore();
 const { currentSite, currentSiteName } = storeToRefs(authStore);
 
@@ -81,6 +85,14 @@ const title = computed(() => {
 
 const { data, isLoading, isError, error } = useSurveyFormDefinitionQuery(formType, orgId, canLoad);
 
+const savedResponse = computed(() => {
+  return data.value?.savedResponses?.[0] as
+    | { responses?: Record<string, unknown>; status?: 'draft' | 'complete' }
+    | undefined;
+});
+
+const initialResponses = computed(() => savedResponse.value?.responses);
+
 const versionTooltip = computed(() => {
   if (!data.value) return '';
   const { formId, versionNumber, versionId, fullFields } = data.value;
@@ -89,9 +101,11 @@ const versionTooltip = computed(() => {
 
 const isSaving = ref(false);
 const isComplete = ref(false);
+const persistedStatus = ref<'draft' | 'complete'>();
 
-watch(orgId, () => {
+watch([formType, orgId], () => {
   isComplete.value = false;
+  persistedStatus.value = undefined;
   isSaving.value = false;
 });
 
@@ -101,16 +115,24 @@ async function persist(
   options?: { silent?: boolean },
 ): Promise<boolean> {
   if (!data.value) return false;
+  const savedFormType = formType.value;
+  const savedOrgId = orgId.value;
+  const formVersion = data.value.versionId;
+  const stillOnSavedOrg = () => formType.value === savedFormType && orgId.value === savedOrgId;
   isSaving.value = true;
   try {
     await surveyFormsRepository.saveOrgInformation({
-      orgType: formType.value,
-      orgId: orgId.value,
-      formVersion: data.value.versionId,
+      orgType: savedFormType,
+      orgId: savedOrgId,
+      formVersion,
       responses,
       status,
     });
-    if (options?.silent || status === 'complete') return true;
+    if (stillOnSavedOrg()) persistedStatus.value = status;
+    await queryClient.invalidateQueries({
+      queryKey: [SURVEY_FORM_DEFINITION_QUERY_KEY, savedFormType, savedOrgId],
+    });
+    if (options?.silent) return true;
     toast.add({
       severity: 'success',
       summary: 'Saved',
@@ -127,18 +149,21 @@ async function persist(
     });
     return false;
   } finally {
-    isSaving.value = false;
+    if (stillOnSavedOrg()) isSaving.value = false;
   }
 }
 
 function onSave(values: Record<string, unknown>, options?: { silent?: boolean }) {
-  return persist(values, 'draft', options);
+  const status =
+    persistedStatus.value === 'complete' || savedResponse.value?.status === 'complete' ? 'complete' : 'draft';
+  return persist(values, status, options);
 }
 
 async function onSubmit(values: Record<string, unknown>) {
+  const submittedFormType = formType.value;
   const submittedOrgId = orgId.value;
-  const ok = await persist(values, 'complete');
-  if (ok && orgId.value === submittedOrgId) {
+  const ok = await persist(values, 'complete', { silent: true });
+  if (ok && formType.value === submittedFormType && orgId.value === submittedOrgId) {
     isComplete.value = true;
   }
 }
