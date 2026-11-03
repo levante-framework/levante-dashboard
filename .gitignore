@@ -51,3 +51,6 @@ cypress/screenshots
 
 # Intl Hash
 .cache/
+
+# Local SWR media for /game/levante-swr (copy of levante-roar-swr/assets)
+/public/levante-swr
