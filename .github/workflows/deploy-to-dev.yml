@@ -10,6 +10,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.LEVANTE_BOT_APP_ID }}
+          private_key: ${{ secrets.LEVANTE_BOT_APP_PRIVATE_KEY }}
+      # Private git dependencies (e.g. levante-swr) are locked to SSH URLs; runners have no SSH key.
+      - name: Authenticate Git for private dependencies
+        env:
+          GH_APP_TOKEN: ${{ steps.generate_token.outputs.token }}
+        run: |
+          git config --global url."https://x-access-token:${GH_APP_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global --add url."https://x-access-token:${GH_APP_TOKEN}@github.com/".insteadOf "git@github.com:"
       - uses: actions/setup-node@v6
         with:
           node-version-file: 'package.json'
