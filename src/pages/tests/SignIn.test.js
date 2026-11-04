@@ -1,6 +1,6 @@
 import { flushPromises, shallowMount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getIdTokenClaims } from '@/helpers/query/utils';
+import { fetchDocById, getIdTokenClaims } from '@/helpers/query/utils';
 import SignIn from '@/pages/SignIn.vue';
 
 // Create mock auth store for testing
@@ -325,11 +325,11 @@ describe('SignIn.vue', () => {
     expect(authStoreMock.signInWithGooglePopup).not.toHaveBeenCalled();
   });
 
-  it('shows "user not found" when a Google account has no provisioned claims', async () => {
+  it('shows "user not found" when a Google account has no Levante user document', async () => {
     authStoreMock.signInWithGooglePopup.mockResolvedValue({});
     authStoreMock.getUserId = () => 'uid-1';
-    // An unregistered Google account authenticates but carries no custom claims.
-    vi.mocked(getIdTokenClaims).mockResolvedValueOnce({ super_admin: false });
+    // An unregistered Google account authenticates but has no `users` doc, so the fetch 404s.
+    vi.mocked(fetchDocById).mockRejectedValueOnce({ response: { status: 404 } });
 
     const instance = wrapper.vm;
     await instance.authWithGoogle();
@@ -337,14 +337,18 @@ describe('SignIn.vue', () => {
 
     expect(instance.googleSignInErrorKey).toBe('pageSignIn.googleSignInUserNotFound');
     // Must not proceed to load the user profile.
+    expect(getIdTokenClaims).not.toHaveBeenCalled();
     expect(authStoreMock.setUserClaims).not.toHaveBeenCalled();
     expect(authStoreMock.setUserData).not.toHaveBeenCalled();
   });
 
-  it('proceeds when a Google account has provisioned claims', async () => {
+  it('proceeds for a registered user regardless of the useNewPermissions flag', async () => {
     authStoreMock.signInWithGooglePopup.mockResolvedValue({});
     authStoreMock.getUserId = () => 'uid-1';
-    const claims = { super_admin: true, useNewPermissions: true, siteRoles: { any: ['super_admin'] } };
+    const userData = { id: 'uid-1', roles: [] };
+    vi.mocked(fetchDocById).mockResolvedValueOnce(userData);
+    // A legacy user still has custom claims, just useNewPermissions false.
+    const claims = { super_admin: false, useNewPermissions: false, siteRoles: { siteA: ['admin'] } };
     vi.mocked(getIdTokenClaims).mockResolvedValueOnce(claims);
 
     const instance = wrapper.vm;
@@ -352,6 +356,7 @@ describe('SignIn.vue', () => {
     await flushPromises();
 
     expect(authStoreMock.setUserClaims).toHaveBeenCalledWith(claims);
+    expect(authStoreMock.setUserData).toHaveBeenCalledWith(userData);
     expect(instance.googleSignInErrorKey).toBe('');
   });
 });

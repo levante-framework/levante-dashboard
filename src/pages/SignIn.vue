@@ -184,19 +184,22 @@ const authWithGoogle = () => {
       .signInWithGooglePopup()
       .then(async () => {
         if (authStore.getUserId()) {
-          const userClaims = await getIdTokenClaims();
-
-          // A provisioned Levante user always has custom claims (useNewPermissions). A Google
-          // account that was never registered authenticates but carries no such claims.
-          if (!userClaims?.useNewPermissions) {
-            googleSignInErrorKey.value = 'pageSignIn.googleSignInUserNotFound';
-            spinner.value = false;
-            return;
+          // A Google account that was never registered as a Levante user authenticates
+          // successfully but has no corresponding `users` document, so the fetch 404s.
+          let userData;
+          try {
+            userData = await fetchDocById('users', authStore.getUserId());
+          } catch (error) {
+            if (error?.response?.status === 404) {
+              googleSignInErrorKey.value = 'pageSignIn.googleSignInUserNotFound';
+              spinner.value = false;
+              return;
+            }
+            throw error;
           }
 
+          const userClaims = await getIdTokenClaims();
           authStore.setUserClaims(userClaims);
-
-          const userData = await fetchDocById('users', authStore.getUserId());
           authStore.setUserData(userData);
 
           if (!authStore.isUserAdmin() && !authStore.isUserSuperAdmin()) {
