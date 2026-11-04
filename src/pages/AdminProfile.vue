@@ -51,8 +51,8 @@ import { storeToRefs } from 'pinia';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
-import { isAdminForSite } from '@/composables/useUserType';
 import { isLevante } from '@/constants';
+import { isAdminForSite } from '@/helpers/claims';
 import { useAuthStore } from '@/store/auth';
 
 const { t } = useI18n();

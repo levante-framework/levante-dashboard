@@ -4,7 +4,7 @@ import { type Auth, onAuthStateChanged, type Unsubscribe, type User } from 'fire
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { markRaw, type Ref, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { isAdminForSite } from '@/composables/useUserType';
+import { isAdminForSite } from '@/helpers/claims';
 import { identitySiteName, usernameFromIdentity } from '@/helpers/sentryPrivacy';
 import { logger } from '@/logger';
 import posthogInstance from '@/plugins/posthog';

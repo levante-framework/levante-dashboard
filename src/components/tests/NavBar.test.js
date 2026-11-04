@@ -23,7 +23,6 @@ vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
 }));
 
 vi.mock('@/composables/useUserType', () => ({
-  isAdminForSite: vi.fn(() => false),
   default: vi.fn(() => ({
     isAdmin: computed(
       () =>
