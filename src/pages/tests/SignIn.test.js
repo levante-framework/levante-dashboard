@@ -1,5 +1,6 @@
-import { shallowMount } from '@vue/test-utils';
+import { flushPromises, shallowMount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getIdTokenClaims } from '@/helpers/query/utils';
 import SignIn from '@/pages/SignIn.vue';
 
 // Create mock auth store for testing
@@ -8,6 +9,10 @@ const authStoreMock = {
   initiateLoginWithEmailLink: vi.fn(),
   signInWithGooglePopup: vi.fn(),
   signInWithGoogleRedirect: vi.fn(),
+  setUserClaims: vi.fn(),
+  setUserData: vi.fn(),
+  isUserAdmin: vi.fn(() => true),
+  isUserSuperAdmin: vi.fn(() => false),
   spinner: false,
   getUserId: () => null,
   $subscribe: vi.fn(),
@@ -45,6 +50,7 @@ vi.mock('@/helpers', () => ({
 
 vi.mock('@/helpers/query/utils', () => ({
   fetchDocById: vi.fn().mockResolvedValue({}),
+  getIdTokenClaims: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('@/constants/auth', () => ({
@@ -122,6 +128,11 @@ describe('SignIn.vue', () => {
     authStoreMock.logInWithEmailAndPassword.mockReset();
     authStoreMock.signInWithGooglePopup.mockReset();
     authStoreMock.signInWithGoogleRedirect.mockReset();
+    authStoreMock.setUserClaims.mockReset();
+    authStoreMock.setUserData.mockReset();
+    authStoreMock.isUserAdmin.mockReset().mockReturnValue(true);
+    authStoreMock.isUserSuperAdmin.mockReset().mockReturnValue(false);
+    authStoreMock.getUserId = () => null;
 
     // Mock console error to avoid test noise
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -182,6 +193,25 @@ describe('SignIn.vue', () => {
         password: 'password123',
       }),
     );
+  });
+
+  it('loads and stores claims after a successful email+password sign-in', async () => {
+    authStoreMock.logInWithEmailAndPassword.mockResolvedValue({});
+    authStoreMock.getUserId = () => 'uid-1';
+    const claims = { super_admin: false, useNewPermissions: true, siteRoles: { siteA: ['admin'] } };
+    vi.mocked(getIdTokenClaims).mockResolvedValueOnce(claims);
+
+    const instance = wrapper.vm;
+    await instance.authWithEmail({
+      email: 'test@example.com',
+      password: 'password123',
+      usePassword: true,
+      useLink: false,
+    });
+    await flushPromises();
+
+    expect(getIdTokenClaims).toHaveBeenCalled();
+    expect(authStoreMock.setUserClaims).toHaveBeenCalledWith(claims);
   });
 
   it('shows error message for invalid username or password', async () => {
@@ -293,5 +323,35 @@ describe('SignIn.vue', () => {
     // Verify the Google redirect method was called
     expect(authStoreMock.signInWithGoogleRedirect).toHaveBeenCalled();
     expect(authStoreMock.signInWithGooglePopup).not.toHaveBeenCalled();
+  });
+
+  it('shows "user not found" when a Google account has no provisioned claims', async () => {
+    authStoreMock.signInWithGooglePopup.mockResolvedValue({});
+    authStoreMock.getUserId = () => 'uid-1';
+    // An unregistered Google account authenticates but carries no custom claims.
+    vi.mocked(getIdTokenClaims).mockResolvedValueOnce({ super_admin: false });
+
+    const instance = wrapper.vm;
+    await instance.authWithGoogle();
+    await flushPromises();
+
+    expect(instance.googleSignInErrorKey).toBe('pageSignIn.googleSignInUserNotFound');
+    // Must not proceed to load the user profile.
+    expect(authStoreMock.setUserClaims).not.toHaveBeenCalled();
+    expect(authStoreMock.setUserData).not.toHaveBeenCalled();
+  });
+
+  it('proceeds when a Google account has provisioned claims', async () => {
+    authStoreMock.signInWithGooglePopup.mockResolvedValue({});
+    authStoreMock.getUserId = () => 'uid-1';
+    const claims = { super_admin: true, useNewPermissions: true, siteRoles: { any: ['super_admin'] } };
+    vi.mocked(getIdTokenClaims).mockResolvedValueOnce(claims);
+
+    const instance = wrapper.vm;
+    await instance.authWithGoogle();
+    await flushPromises();
+
+    expect(authStoreMock.setUserClaims).toHaveBeenCalledWith(claims);
+    expect(instance.googleSignInErrorKey).toBe('');
   });
 });

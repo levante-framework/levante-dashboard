@@ -1,10 +1,12 @@
-// @TODO: Only setUserData is covered here; the rest of the auth store is untested.
+// Covers the auth store's setUserData, setUserClaims, isUserAdmin, and $reset.
+// @TODO: Much of the store is still untested (e.g. isUserSuperAdmin, the Firekit
+// auth-state listeners, and the various sign-in actions).
 
 import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@levante-framework/permissions-core', () => ({
-  ROLES: { SUPER_ADMIN: 'super_admin', ADMIN: 'admin' },
+  ROLES: { SUPER_ADMIN: 'super_admin', ADMIN: 'admin', PARTICIPANT: 'participant' },
 }));
 
 vi.mock('../firebaseInit', () => ({
@@ -188,5 +190,115 @@ describe('auth store — setUserData', () => {
     store.setUserData(data);
 
     expect(loggerMock.setUser).toHaveBeenCalledWith({ username: 'maria@Lincoln' });
+  });
+});
+
+describe('auth store — setUserClaims', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+  });
+
+  it('stores the flat claims object', () => {
+    const store = useAuthStore();
+    const claims = { super_admin: false, useNewPermissions: true, siteRoles: { siteA: ['admin'] } };
+
+    store.setUserClaims(claims);
+
+    expect(store.userClaims).toEqual(claims);
+  });
+
+  it('clears the stored claims when passed null', () => {
+    const store = useAuthStore();
+    store.setUserClaims({ useNewPermissions: true });
+
+    store.setUserClaims(null);
+
+    expect(store.userClaims).toBeNull();
+  });
+
+  it('enables permissions when useNewPermissions is true', () => {
+    const store = useAuthStore();
+
+    store.setUserClaims({ useNewPermissions: true });
+
+    expect(store.shouldUsePermissions).toBe(true);
+  });
+
+  it('disables permissions when useNewPermissions is absent or false', () => {
+    const store = useAuthStore();
+
+    store.setUserClaims({ useNewPermissions: false });
+    expect(store.shouldUsePermissions).toBe(false);
+
+    store.setUserClaims({ siteRoles: { siteA: ['admin'] } });
+    expect(store.shouldUsePermissions).toBe(false);
+
+    store.setUserClaims(null);
+    expect(store.shouldUsePermissions).toBe(false);
+  });
+});
+
+describe('auth store — isUserAdmin', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+  });
+
+  it('is false when there are no claims', () => {
+    const store = useAuthStore();
+    expect(store.isUserAdmin()).toBe(false);
+  });
+
+  it('is true for a super admin regardless of current site', () => {
+    const store = useAuthStore();
+    store.setUserClaims({ super_admin: true });
+    store.currentSite = null;
+
+    expect(store.isUserAdmin()).toBe(true);
+  });
+
+  it('is true when the current site grants a non-participant role', () => {
+    const store = useAuthStore();
+    store.setUserClaims({ siteRoles: { siteA: ['admin'], siteB: ['participant'] } });
+    store.currentSite = 'siteA';
+
+    expect(store.isUserAdmin()).toBe(true);
+  });
+
+  it('is false when the current site only grants a participant role', () => {
+    const store = useAuthStore();
+    store.setUserClaims({ siteRoles: { siteA: ['admin'], siteB: ['participant'] } });
+    store.currentSite = 'siteB';
+
+    expect(store.isUserAdmin()).toBe(false);
+  });
+
+  it('is false when there is no current site and the user is not a super admin', () => {
+    const store = useAuthStore();
+    store.setUserClaims({ siteRoles: { siteA: ['admin'] } });
+    store.currentSite = null;
+
+    expect(store.isUserAdmin()).toBe(false);
+  });
+});
+
+describe('auth store — $reset', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+  });
+
+  it('clears user claims and current site', () => {
+    const store = useAuthStore();
+    store.setUserClaims({ super_admin: true, useNewPermissions: true });
+    store.currentSite = 'siteA';
+    store.currentSiteName = 'Site A';
+
+    store.$reset();
+
+    expect(store.userClaims).toBeNull();
+    expect(store.currentSite).toBeNull();
+    expect(store.currentSiteName).toBeNull();
   });
 });
