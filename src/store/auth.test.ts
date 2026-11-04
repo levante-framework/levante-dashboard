@@ -5,8 +5,10 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// The store only reads ROLES.SUPER_ADMIN from permissions-core (in isUserSuperAdmin);
+// the participant role used by isAdminForSite comes from the unmocked @/constants/roles.
 vi.mock('@levante-framework/permissions-core', () => ({
-  ROLES: { SUPER_ADMIN: 'super_admin', ADMIN: 'admin', PARTICIPANT: 'participant' },
+  ROLES: { SUPER_ADMIN: 'super_admin' },
 }));
 
 vi.mock('../firebaseInit', () => ({
