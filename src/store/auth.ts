@@ -239,6 +239,15 @@ export const useAuthStore = defineStore(
       }
     }
 
+    /**
+     * Force a refresh of the signed-in user's Firebase Auth ID token.
+     *
+     * Auth claims are read from the ID token, not a live Firestore listener,
+     * so a server-side claim change does not reach an active session until the
+     * token is refreshed (otherwise only on the ~1h auto-refresh). Call this
+     * after any operation that changes the current user's custom claims so the
+     * store re-reads fresh claims on the next `getIdTokenClaims()`.
+     */
     async function forceIdTokenRefresh(): Promise<void> {
       await roarfirekit.value?.forceIdTokenRefresh();
     }
