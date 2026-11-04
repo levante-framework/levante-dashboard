@@ -18,7 +18,6 @@ export const FIRESTORE_COLLECTIONS = {
   LEGAL: 'legal',
   SCHOOLS: 'schools',
   TASKS: 'tasks',
-  USER_CLAIMS: 'userClaims',
   USERS: 'users',
   GUESTS: 'guests',
 } as const;

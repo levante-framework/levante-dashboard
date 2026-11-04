@@ -26,7 +26,7 @@ const useAdministrationsListQuery = (
   const { userClaims } = storeToRefs(authStore);
 
   // Ensure all necessary data is loaded before enabling the query.
-  const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
+  const claimsLoaded = computed(() => !_isEmpty(userClaims?.value));
   const queryConditions = [() => claimsLoaded.value];
   const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
 
@@ -67,7 +67,7 @@ const useFullAdministrationsListQuery = (
   const { userClaims } = storeToRefs(authStore);
 
   // Ensure all necessary data is loaded before enabling the query.
-  const claimsLoaded = computed(() => !_isEmpty(userClaims?.value?.claims));
+  const claimsLoaded = computed(() => !_isEmpty(userClaims?.value));
   const queryConditions = [() => claimsLoaded.value];
   const { isQueryEnabled, options } = computeQueryOverrides(queryConditions, queryOptions);
 

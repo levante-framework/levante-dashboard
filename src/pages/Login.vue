@@ -198,7 +198,7 @@ import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toast
 import { isEmailValid, isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { getUserAssignments } from '@/helpers/query/assignments';
-import { fetchDocById } from '@/helpers/query/utils';
+import { fetchDocById, getIdTokenClaims } from '@/helpers/query/utils';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { type UserClaims, type UserData, useAuthStore } from '@/store/auth';
@@ -375,7 +375,7 @@ const getAuthUserAssignments = async () => {
 
 const getAuthUserClaims = async () => {
   try {
-    const userClaims = await fetchDocById('userClaims', getUserId()!);
+    const userClaims = await getIdTokenClaims();
     setUserClaims(userClaims as UserClaims);
   } catch (error) {
     logger.error(new Error('Failed to get user claims', { cause: error }), {

@@ -143,7 +143,7 @@ import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toast
 import { isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { getUserAssignments } from '@/helpers/query/assignments';
-import { fetchDocById } from '@/helpers/query/utils';
+import { fetchDocById, getIdTokenClaims } from '@/helpers/query/utils';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 
@@ -175,11 +175,6 @@ const toggleAdminSignIn = () => {
   adminSignIn.value = !adminSignIn.value;
 };
 
-function isMissingUserClaimsError(error) {
-  const msg = typeof error?.message === 'string' ? error.message : '';
-  return msg.toLowerCase().includes('user claims document does not exist');
-}
-
 const authWithGoogle = () => {
   if (isMobileBrowser()) {
     authStore.signInWithGoogleRedirect();
@@ -189,7 +184,16 @@ const authWithGoogle = () => {
       .signInWithGooglePopup()
       .then(async () => {
         if (authStore.getUserId()) {
-          const userClaims = await fetchDocById('userClaims', authStore.getUserId());
+          const userClaims = await getIdTokenClaims();
+
+          // A provisioned Levante user always has custom claims (useNewPermissions). A Google
+          // account that was never registered authenticates but carries no such claims.
+          if (!userClaims?.useNewPermissions) {
+            googleSignInErrorKey.value = 'pageSignIn.googleSignInUserNotFound';
+            spinner.value = false;
+            return;
+          }
+
           authStore.setUserClaims(userClaims);
 
           const userData = await fetchDocById('users', authStore.getUserId());
@@ -211,11 +215,7 @@ const authWithGoogle = () => {
           spinner.value = false;
           return;
         }
-        if (isMissingUserClaimsError(e)) {
-          googleSignInErrorKey.value = 'pageSignIn.googleSignInUserNotFound';
-        } else {
-          googleSignInErrorKey.value = 'pageSignIn.googleSignInGenericError';
-        }
+        googleSignInErrorKey.value = 'pageSignIn.googleSignInGenericError';
         console.error('Google sign-in error', e);
         spinner.value = false;
       });
@@ -256,7 +256,7 @@ const authWithEmail = async (state) => {
       .logInWithEmailAndPassword(creds)
       .then(async () => {
         if (authStore.getUserId()) {
-          const userClaims = await fetchDocById('userClaims', authStore.getUserId());
+          const userClaims = await getIdTokenClaims();
           authStore.setUserClaims(userClaims);
 
           const userData = await fetchDocById('users', authStore.getUserId());
