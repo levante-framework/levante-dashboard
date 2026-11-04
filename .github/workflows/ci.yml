@@ -22,6 +22,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          # Avoid persisting the default GITHUB_TOKEN as a git credential header for github.com;
+          # it would override our app-token URL rewrite used for private deps like levante-swr.
+          persist-credentials: false
 
       - name: Generate token
         id: generate_token
@@ -29,14 +33,6 @@ jobs:
         with:
           app_id: ${{ secrets.LEVANTE_BOT_APP_ID }}
           private_key: ${{ secrets.LEVANTE_BOT_APP_PRIVATE_KEY }}
-
-      # TEMPORARY: confirms which repos the app installation token can see. Remove once levante-swr access is confirmed.
-      - name: Debug - list repos visible to app token
-        env:
-          GH_APP_TOKEN: ${{ steps.generate_token.outputs.token }}
-        run: |
-          curl -s -H "Authorization: token ${GH_APP_TOKEN}" https://api.github.com/installation/repositories > /tmp/installation_repos.json
-          node -e "const d=require('/tmp/installation_repos.json'); console.log(d.repositories ? d.repositories.map(r=>r.full_name) : d);"
 
       # Private git dependencies (e.g. levante-swr) are locked to SSH URLs; runners have no SSH key.
       - name: Authenticate Git for private dependencies

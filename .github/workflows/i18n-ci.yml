@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Avoid persisting the default GITHUB_TOKEN as a git credential header for github.com;
+          # it would override our app-token URL rewrite used for private deps like levante-swr.
+          persist-credentials: false
 
       - name: Generate token
         id: generate_token

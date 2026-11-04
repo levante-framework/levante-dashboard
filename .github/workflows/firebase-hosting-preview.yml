@@ -31,6 +31,10 @@ jobs:
       - name: Checkout PR code
         if: github.event_name == 'pull_request'
         uses: actions/checkout@v4
+        with:
+          # Avoid persisting the default GITHUB_TOKEN as a git credential header for github.com;
+          # it would override our app-token URL rewrite used for private deps like levante-swr.
+          persist-credentials: false
 
       # For workflows triggered manually, targeting the LEVANTE dashboard repository specifically
       - name: Checkout manual trigger code
@@ -40,6 +44,7 @@ jobs:
           repository: levante-framework/levante-dashboard
           ref: ${{ github.event.inputs.pr_branch }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Generate token
         id: generate_token
@@ -86,6 +91,10 @@ jobs:
       - name: Checkout PR code
         if: github.event_name == 'pull_request'
         uses: actions/checkout@v4
+        with:
+          # Avoid persisting the default GITHUB_TOKEN as a git credential header for github.com;
+          # it would override our app-token URL rewrite used for private deps like levante-swr.
+          persist-credentials: false
 
       # For workflows triggered manually, targeting the LEVANTE dashboard repository specifically
       - name: Checkout manual trigger code
@@ -95,6 +104,7 @@ jobs:
           repository: levante-framework/levante-dashboard
           ref: ${{ github.event.inputs.pr_branch }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Generate token
         id: generate_token
