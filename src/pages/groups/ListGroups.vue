@@ -288,7 +288,7 @@ const authStore = useAuthStore();
 const { currentSite, roarfirekit, shouldUsePermissions, userClaims } = storeToRefs(authStore);
 const { isUserSuperAdmin } = authStore;
 
-const claimsLoaded = computed(() => !!userClaims.value?.claims);
+const claimsLoaded = computed(() => !!userClaims.value);
 const selectedSite = computed(() => (shouldUsePermissions.value ? currentSite.value : selectedDistrict.value));
 
 const orgHeaders = computed(() => {

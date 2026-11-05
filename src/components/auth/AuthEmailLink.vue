@@ -15,7 +15,7 @@ import PvButton from 'primevue/button';
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
-import { fetchDocById } from '@/helpers/query/utils';
+import { fetchDocById, getIdTokenClaims } from '@/helpers/query/utils';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
@@ -35,7 +35,7 @@ const loginFromEmailLink = async (email) => {
         // Not sure why we need this since user data and claims are fetched in the HomeSelector.vue but otherwise won't load homepage.
         // TODO: Remove once we figure out why the homepage doesn't load without this.
         const userData = await fetchDocById('users', getUserId());
-        const userClaims = await fetchDocById('userClaims', getUserId());
+        const userClaims = await getIdTokenClaims();
 
         authStore.setUserData(userData);
         authStore.setUserClaims(userClaims);

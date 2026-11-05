@@ -210,6 +210,23 @@ export const exportCsv = (data, filename) => {
 };
 
 /**
+ * Get the signed-in user's custom claims from their Firebase Auth ID token.
+ *
+ * Replaces the deprecated Firestore `userClaims` collection: the custom claims
+ * are merged flat into the ID token, so `getIdTokenResult().claims` returns them
+ * directly (alongside the standard JWT fields).
+ *
+ * @returns {Promise<Object|null>} The token claims, or null if no user is signed in.
+ */
+export const getIdTokenClaims = async () => {
+  const authStore = useAuthStore();
+  const user = authStore.firebaseUser?.adminFirebaseUser;
+  if (!user) return null;
+  const { claims } = await user.getIdTokenResult();
+  return claims;
+};
+
+/**
  * Fetch a document by its ID
  *
  * @param {String} collection - The Firestore collection name.

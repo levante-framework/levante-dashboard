@@ -40,15 +40,8 @@ vi.mock('@/store/auth', () => ({
     shouldUsePermissions: ref(false),
     currentSite: '12345', // Site id
     userClaims: ref({
-      claims: {
-        adminOrgs: {
-          districts: [],
-          schools: [],
-          classes: [],
-          groups: [],
-          families: [],
-        },
-      },
+      useNewPermissions: false,
+      siteRoles: {},
     }),
     sites: [],
     currentSiteName: 'Test Site',

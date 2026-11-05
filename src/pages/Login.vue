@@ -198,7 +198,7 @@ import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toast
 import { isEmailValid, isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { getUserAssignments } from '@/helpers/query/assignments';
-import { fetchDocById } from '@/helpers/query/utils';
+import { fetchDocById, getIdTokenClaims } from '@/helpers/query/utils';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { type UserClaims, type UserData, useAuthStore } from '@/store/auth';
@@ -224,7 +224,7 @@ const router = useRouter();
 const toast = useToast();
 
 const { setUserAssignments } = assignmentsStore;
-const { roarfirekit, routeToProfile, spinner, ssoProvider, userClaims } = storeToRefs(authStore);
+const { roarfirekit, routeToProfile, spinner, ssoProvider } = storeToRefs(authStore);
 const {
   getUserId,
   initiateLoginWithEmailLink,
@@ -329,8 +329,21 @@ const authWithGoogle = async () => {
 
   signInWithGooglePopup()
     .then(async () => {
+      // A Google account that was never registered as a Levante user authenticates
+      // successfully but has no corresponding `users` document, so the fetch 404s.
+      let userData: UserData;
+      try {
+        userData = (await fetchDocById('users', getUserId()!)) as UserData;
+      } catch (error) {
+        if ((error as { response?: { status?: number } })?.response?.status === 404) {
+          googleSignInErrorKey.value = 'pageSignIn.googleSignInUserNotFound';
+          return;
+        }
+        throw error;
+      }
+
       await getAuthUserClaims();
-      await getAuthUserData();
+      setUserData(userData);
 
       if (!isUserAdmin() && !isUserSuperAdmin()) {
         await getAuthUserAssignments();
@@ -348,12 +361,7 @@ const authWithGoogle = async () => {
         return;
       }
 
-      if (!userClaims.value) {
-        googleSignInErrorKey.value = 'pageSignIn.googleSignInUserNotFound';
-      } else {
-        googleSignInErrorKey.value = 'pageSignIn.googleSignInGenericError';
-      }
-
+      googleSignInErrorKey.value = 'pageSignIn.googleSignInGenericError';
       console.error('Google sign-in error', e);
     })
     .finally(() => {
@@ -375,7 +383,7 @@ const getAuthUserAssignments = async () => {
 
 const getAuthUserClaims = async () => {
   try {
-    const userClaims = await fetchDocById('userClaims', getUserId()!);
+    const userClaims = await getIdTokenClaims();
     setUserClaims(userClaims as UserClaims);
   } catch (error) {
     logger.error(new Error('Failed to get user claims', { cause: error }), {

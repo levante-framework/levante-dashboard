@@ -17,9 +17,7 @@ const currentTestRole = ref(ROLES.PARTICIPANT);
 vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
   default: vi.fn(() => ({
     data: computed(() => ({
-      claims: {
-        super_admin: currentTestRole.value === ROLES.SUPER_ADMIN,
-      },
+      super_admin: currentTestRole.value === ROLES.SUPER_ADMIN,
     })),
   })),
 }));
