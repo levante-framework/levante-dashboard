@@ -1,5 +1,6 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
+import PvInputNumber from 'primevue/inputnumber';
 import PvSelect from 'primevue/select';
 import PvToggleSwitch from 'primevue/toggleswitch';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -31,6 +32,9 @@ const openDialog = async (wrapper: VueWrapper) => {
 };
 
 const selectLabels = (wrapper: VueWrapper) => wrapper.findAll('.p-select-label').map((el) => el.text());
+
+const ageInputValues = (wrapper: VueWrapper) =>
+  wrapper.findAllComponents(PvInputNumber).map((input) => input.props('modelValue'));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -85,7 +89,7 @@ describe('stored condition rendering (regression #1013)', () => {
     const labels = selectLabels(wrapper);
     expect(labels).toContain('Age');
     expect(labels).toContain('Greater Than');
-    expect(labels).toContain('5');
+    expect(ageInputValues(wrapper)).toEqual([5, 0]);
 
     wrapper.unmount();
   });
@@ -111,11 +115,11 @@ describe('stored condition rendering (regression #1013)', () => {
 
     const labels = selectLabels(wrapper);
     expect(labels).toContain('Age');
-    // op and value fall back to their placeholders instead of the stale userType values.
+    // The operator select clears, and the year/month inputs start empty.
     expect(labels).toContain('Condition');
-    expect(labels).toContain('Value');
     expect(labels).not.toContain('Equal');
     expect(labels).not.toContain('Child');
+    expect(ageInputValues(wrapper)).toEqual([null, null]);
 
     wrapper.unmount();
   });
@@ -169,6 +173,75 @@ describe('stored condition rendering (regression #1013)', () => {
 
     expect(updateVariant).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('Duplicate User Type conditions in Assigned Conditions');
+
+    wrapper.unmount();
+  });
+});
+
+describe('age years and months', () => {
+  it('loads an ageMonths rule of 66 as 5 years and 6 months and saves it unchanged', async () => {
+    const updateVariant = vi.fn();
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({
+          assigned: { op: 'AND', conditions: [{ field: 'ageMonths', op: 'EQUAL', value: 66 }] },
+        }),
+        updateVariant,
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    expect(selectLabels(wrapper)).toContain('Age');
+    expect(selectLabels(wrapper)).toContain('Equal');
+    expect(ageInputValues(wrapper)).toEqual([5, 6]);
+
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      assigned: {
+        op: 'AND',
+        conditions: [
+          { field: 'ageMonths', op: 'EQUAL', value: 66 },
+          { field: 'userType', op: 'EQUAL', value: 'student' },
+        ],
+      },
+    });
+
+    wrapper.unmount();
+  });
+
+  it('saves a legacy whole-year age rule as total months', async () => {
+    const updateVariant = vi.fn();
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({
+          assigned: { op: 'AND', conditions: [{ field: 'age', op: 'GREATER_THAN', value: '5' }] },
+        }),
+        updateVariant,
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+    expect(ageInputValues(wrapper)).toEqual([5, 0]);
+
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      assigned: {
+        op: 'AND',
+        conditions: [
+          { field: 'ageMonths', op: 'GREATER_THAN', value: 60 },
+          { field: 'userType', op: 'EQUAL', value: 'student' },
+        ],
+      },
+    });
 
     wrapper.unmount();
   });
@@ -559,11 +632,13 @@ describe('read-only userType conditions', () => {
     await openDialog(wrapper);
 
     // The seeded userType row is disabled; the stored age row remains editable.
+    // Age uses two selects (field, operator) plus year and month inputs.
     const selects = wrapper.findAllComponents(PvSelect);
     const disabledCount = selects.filter((select) => select.props('disabled') === true).length;
     const enabledCount = selects.filter((select) => select.props('disabled') !== true).length;
     expect(disabledCount).toBe(3);
-    expect(enabledCount).toBe(3);
+    expect(enabledCount).toBe(2);
+    expect(wrapper.findAllComponents(PvInputNumber).every((input) => input.props('disabled') !== true)).toBe(true);
 
     wrapper.unmount();
   });
@@ -730,7 +805,7 @@ describe('optional-for-all toggle', () => {
     expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
       // The dialog always seeds the assigned default (student for a generic task).
       assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }] },
-      optional: { op: 'AND', conditions: [{ field: 'age', op: 'EQUAL', value: '5' }] },
+      optional: { op: 'AND', conditions: [{ field: 'ageMonths', op: 'EQUAL', value: 60 }] },
     });
 
     wrapper.unmount();
@@ -758,7 +833,7 @@ describe('preExistingAssessmentInfo fallback', () => {
     const labels = selectLabels(wrapper);
     expect(labels).toContain('Age');
     expect(labels).toContain('Greater Than');
-    expect(labels).toContain('7');
+    expect(ageInputValues(wrapper)).toEqual([7, 0]);
 
     wrapper.unmount();
   });

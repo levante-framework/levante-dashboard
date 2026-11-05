@@ -71,7 +71,7 @@
           <div class="flex gap-2 align-content-start flex-grow-0 params-container mb-2">
             <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
               <PvSelect
-                :model-value="condition.field"
+                :model-value="ageFieldValue(condition.field)"
                 :options="fieldOptionsForCondition(condition)"
                 optionLabel="label"
                 optionValue="value"
@@ -97,7 +97,33 @@
             </div>
 
             <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
+              <div v-if="isAgeField(condition.field)" class="flex gap-2 w-full">
+                <PvInputNumber
+                  :model-value="ageParts(condition).years"
+                  :min="0"
+                  :step="1"
+                  :max-fraction-digits="0"
+                  :use-grouping="false"
+                  placeholder="Years"
+                  class="w-full"
+                  data-cy="input-age-years"
+                  @update:model-value="(years) => setAgeYears(condition, years)"
+                />
+                <PvInputNumber
+                  :model-value="ageParts(condition).months"
+                  :min="0"
+                  :max="11"
+                  :step="1"
+                  :max-fraction-digits="0"
+                  :use-grouping="false"
+                  placeholder="Months"
+                  class="w-full"
+                  data-cy="input-age-months"
+                  @update:model-value="(months) => setAgeMonths(condition, months)"
+                />
+              </div>
               <PvSelect
+                v-else
                 v-model="condition.value"
                 :options="computedValueOptions(condition.field)"
                 optionLabel="label"
@@ -165,7 +191,7 @@
               <div class="flex gap-2 align-content-start flex-grow-0 params-container mb-2">
                 <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
                   <PvSelect
-                    :model-value="condition.field"
+                    :model-value="ageFieldValue(condition.field)"
                     :options="fieldOptionsForCondition(condition)"
                     optionLabel="label"
                     optionValue="value"
@@ -191,7 +217,33 @@
                 </div>
 
                 <div class="flex flex-row flex-wrap justify-content-between align-content-center gap-2 w-full">
+                  <div v-if="isAgeField(condition.field)" class="flex gap-2 w-full">
+                    <PvInputNumber
+                      :model-value="ageParts(condition).years"
+                      :min="0"
+                      :step="1"
+                      :max-fraction-digits="0"
+                      :use-grouping="false"
+                      placeholder="Years"
+                      class="w-full"
+                      data-cy="input-age-years"
+                      @update:model-value="(years) => setAgeYears(condition, years)"
+                    />
+                    <PvInputNumber
+                      :model-value="ageParts(condition).months"
+                      :min="0"
+                      :max="11"
+                      :step="1"
+                      :max-fraction-digits="0"
+                      :use-grouping="false"
+                      placeholder="Months"
+                      class="w-full"
+                      data-cy="input-age-months"
+                      @update:model-value="(months) => setAgeMonths(condition, months)"
+                    />
+                  </div>
                   <PvSelect
+                    v-else
                     v-model="condition.value"
                     :options="computedValueOptions(condition.field)"
                     optionLabel="label"
@@ -277,6 +329,7 @@ import _isEmpty from 'lodash/isEmpty';
 import PvButton from 'primevue/button';
 import PvDialog from 'primevue/dialog';
 import PvDivider from 'primevue/divider';
+import PvInputNumber from 'primevue/inputnumber';
 import PvSelect from 'primevue/select';
 import PvTag from 'primevue/tag';
 import PvToggleSwitch from 'primevue/toggleswitch';
@@ -387,24 +440,54 @@ const fieldOptionsForCondition = (condition: Condition): FieldOption[] =>
     ? FIELD_OPTIONS.filter((option) => option.value !== 'userType')
     : FIELD_OPTIONS;
 
+// Age is edited as years and months. Legacy `age` is whole years (months 0).
+// `ageMonths` is a total month count. The field dropdown still shows both as Age.
+function isAgeField(field: string): boolean {
+  return field === 'age' || field === 'ageMonths';
+}
+
+function ageFieldValue(field: string): string {
+  return isAgeField(field) ? 'age' : field;
+}
+
+function ageParts(condition: Condition): { years: number | null; months: number | null } {
+  if (condition.value === '') return { years: null, months: null };
+
+  const total = Number(condition.value);
+  if (!Number.isFinite(total)) return { years: null, months: null };
+
+  if (condition.field === 'ageMonths') {
+    return { years: Math.floor(total / 12), months: total % 12 };
+  }
+
+  return { years: total, months: 0 };
+}
+
+function setAgeYears(condition: Condition, years: number | null): void {
+  if (years === null) {
+    condition.value = '';
+    return;
+  }
+  const months = ageParts(condition).months ?? 0;
+  condition.field = 'ageMonths';
+  condition.value = years * 12 + months;
+}
+
+function setAgeMonths(condition: Condition, months: number | null): void {
+  const years = ageParts(condition).years;
+  if (years === null && months === null) {
+    condition.value = '';
+    return;
+  }
+  condition.field = 'ageMonths';
+  condition.value = (years ?? 0) * 12 + (months ?? 0);
+}
+
 // Condition option builders
 const computedValueOptions = (field: string): ConditionOption[] | undefined => {
-  if (!field) return;
+  if (!field || isAgeField(field)) return;
 
-  if (field === 'age') {
-    return [
-      { label: '3', value: '3' },
-      { label: '4', value: '4' },
-      { label: '5', value: '5' },
-      { label: '6', value: '6' },
-      { label: '7', value: '7' },
-      { label: '8', value: '8' },
-      { label: '9', value: '9' },
-      { label: '10', value: '10' },
-      { label: '11', value: '11' },
-      { label: '12', value: '12' },
-    ];
-  } else if (field === 'userType') {
+  if (field === 'userType') {
     return [
       { label: 'Child', value: 'student' },
       { label: 'Caregiver', value: 'parent' },
@@ -416,7 +499,7 @@ const computedValueOptions = (field: string): ConditionOption[] | undefined => {
 const computedConditionOptions = (field: string): ConditionOption[] | undefined => {
   if (!field) return;
 
-  if (field === 'age') {
+  if (isAgeField(field)) {
     return [
       { label: 'Less Than', value: 'LESS_THAN' },
       { label: 'Greater Than', value: 'GREATER_THAN' },
@@ -563,9 +646,20 @@ function hasDuplicateUserTypeConditions(conditions: Condition[]): boolean {
   return false;
 }
 
-// Conditions are stored as string values; clone for the save payload.
+// Legacy whole-year `age` and edited `ageMonths` both save as a total month count.
+function savedCondition(condition: Condition): Condition {
+  if (!isAgeField(condition.field) || condition.value === '') return condition;
+
+  const years = ageParts(condition).years ?? 0;
+  const months = ageParts(condition).months ?? 0;
+  return { field: 'ageMonths', op: condition.op, value: years * 12 + months };
+}
+
 function conditionsToValues(): [Condition[], Condition[]] {
-  return [_cloneDeep(assignedConditions.value), _cloneDeep(optionalConditions.value)];
+  return [
+    _cloneDeep(assignedConditions.value).map(savedCondition),
+    _cloneDeep(optionalConditions.value).map(savedCondition),
+  ];
 }
 
 // Multiple user-type conditions represent "any of these user types", so they are
