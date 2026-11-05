@@ -1,5 +1,5 @@
 <template>
-  <div class="assignment">
+  <div class="assignment" data-wizard="assignment-card">
     <div class="flex align-items-start w-full">
       <main class="assignment__main">
         <h1 class="assignment__name">{{ title }}</h1>
@@ -93,6 +93,7 @@
             },
           }"
           class="no-underline text-black"
+          data-wizard="view-overall-progress"
         >
           <PvButton
             v-tooltip.top="getTooltip('View assignment progress')"
@@ -114,6 +115,7 @@
       >
         <PvButton
           v-if="hasRole(ROLES.ADMIN)"
+          data-wizard="edit-assignment"
           iconOnly
           rounded
           severity="danger"
