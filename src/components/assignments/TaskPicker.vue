@@ -515,7 +515,7 @@ const addUserDefaultCondition = (variant: VariantObject): VariantObject => {
   // backend user types). De-duplicate defensively against malformed data, then
   // OR multiple valid user types together.
   const validUserTypes = variant.task.validUserTypes;
-  if (validUserTypes?.length) {
+  if (Array.isArray(validUserTypes) && validUserTypes.length) {
     const uniqueUserTypes = [...new Set(validUserTypes)];
     conditions.assigned = {
       op: uniqueUserTypes.length > 1 ? 'OR' : 'AND',
