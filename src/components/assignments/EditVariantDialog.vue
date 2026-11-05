@@ -370,7 +370,7 @@ const isOptionalForAllAndOptionalConditionsPresent = computed((): boolean => {
 // ['student', 'student'] (which seeds a single row) still locks, matching TaskPicker.
 const hasSingleValidUserType = computed((): boolean => {
   const validUserTypes = props.assessment.task?.validUserTypes;
-  return !!validUserTypes && new Set(validUserTypes).size === 1;
+  return Array.isArray(validUserTypes) && new Set(validUserTypes).size === 1;
 });
 
 // +---------+
@@ -532,7 +532,7 @@ const seedDefaultUserTypeConditions = (): void => {
   };
 
   const validUserTypes = props.assessment.task?.validUserTypes;
-  if (validUserTypes?.length) {
+  if (Array.isArray(validUserTypes) && validUserTypes.length) {
     validUserTypes.forEach(pushConditionIfMissing);
     return;
   }
