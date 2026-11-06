@@ -109,6 +109,8 @@ jobs:
           projects: dashboard qa
           sourcemaps: ./dist/assets
           version: ${{ steps.version.outputs.tag_name }}
+          # Dev releases on main are not always ancestors of a release branch.
+          ignore_missing: true
           finalize: false
 
       - name: Deploy to Firebase Production
@@ -129,6 +131,7 @@ jobs:
         with:
           environment: production
           version: ${{ steps.version.outputs.tag_name }}
+          ignore_missing: true
           finalize: true
 
       - name: Generate Release Notes

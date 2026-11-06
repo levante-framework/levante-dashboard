@@ -77,6 +77,8 @@ jobs:
           projects: dashboard qa
           sourcemaps: ./dist/assets
           version: hotfix-${{ steps.version.outputs.app_version }}-${{ github.sha }}
+          # A later main release is not an ancestor of the released ref.
+          ignore_missing: true
           finalize: false
 
       - name: Deploy to Firebase Production
@@ -97,6 +99,7 @@ jobs:
         with:
           environment: production
           version: hotfix-${{ steps.version.outputs.app_version }}-${{ github.sha }}
+          ignore_missing: true
           finalize: true
 
       - name: Append notes to existing GitHub release
