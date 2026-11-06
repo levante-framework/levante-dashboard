@@ -134,11 +134,7 @@ async function startTask(selectedAdmin) {
       birthYear: _get(userData.value, 'birthYear'),
     };
 
-    // Local copy of levante-roar-swr/assets, served from public/levante-swr.
-    const gameParams = {
-      ...appKit._taskInfo.variantParams,
-      assetBase: '/levante-swr',
-    };
+    const gameParams = { ...appKit._taskInfo.variantParams };
 
     if (isUnmounted) return;
 
