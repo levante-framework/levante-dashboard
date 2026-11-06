@@ -8,6 +8,7 @@ import {
   SITE_OVERVIEW_QUERY_KEY,
   SYNC_STATUS_QUERY_KEY,
 } from '@/constants/queryKeys';
+import { isNameTakenError } from '@/firebase/failure';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 
@@ -51,6 +52,12 @@ const useUpsertAdministrationMutation = (): UseMutationReturnType<void, Error, A
       logger.capture('Admin: Create Administration', { data });
     },
     onError: (error: Error, data: AdministrationData): void => {
+      if (isNameTakenError(error)) {
+        logger.userMistake('assignment_name_taken', {
+          siteId: typeof data.siteId === 'string' ? data.siteId : undefined,
+        });
+        return;
+      }
       logger.error(new Error('Failed to upsert administration', { cause: error }), {
         tags: { composable: 'useUpsertAdministrationMutation' },
         data,

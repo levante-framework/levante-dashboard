@@ -57,7 +57,10 @@ export const fetchWizardSteps = async (wizard: string) => {
 
     return data;
   } catch (error) {
-    logger.capture('Failed to fetch wizard steps', { error });
+    logger.error(new Error('Failed to fetch wizard steps', { cause: error }), {
+      tags: { function: 'fetchWizardSteps' },
+      wizard: filename,
+    });
     clearWizardSteps();
     return null;
   }

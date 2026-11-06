@@ -2,6 +2,14 @@ import { shallowMount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SignIn from '@/pages/SignIn.vue';
 
+vi.mock('@/logger', () => ({
+  logger: {
+    error: vi.fn(),
+    userMistake: vi.fn(),
+    capture: vi.fn(),
+  },
+}));
+
 // Create mock auth store for testing
 const authStoreMock = {
   logInWithEmailAndPassword: vi.fn(),

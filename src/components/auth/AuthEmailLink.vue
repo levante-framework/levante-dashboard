@@ -77,7 +77,7 @@ onMounted(async () => {
     }
   } else {
     isError.value = true;
-    logger.capture('No email in localStorage');
+    logger.userMistake('email_link_opened_without_stored_address', { page: 'auth-email-link' });
   }
 });
 </script>
