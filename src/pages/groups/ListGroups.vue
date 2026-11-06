@@ -22,6 +22,7 @@
             for guidance on creating and naming groups.
           </div>
         </div>
+
         <div class="flex flex-column align-items-start mb-2 md:flex-row w-full justify-content-between">
           <div class="flex align-items-center gap-3 mb-4 md:mb-0">
             <PermissionGuard :requiredRole="ROLES.SITE_ADMIN">
@@ -526,10 +527,9 @@ const tableColumns = computed(() => {
 
   if (isUserSuperAdmin()) {
     columns.push({
-      header: 'Edit',
-      button: true,
-      eventName: 'edit-button',
-      buttonIcon: 'pi pi-pencil',
+      field: 'actions',
+      header: 'Actions',
+      dataType: 'string',
       sort: false,
     });
   }
@@ -584,6 +584,7 @@ watchEffect(async () => {
           ...org,
           userCount,
           assignmentCount,
+          actions: isUserSuperAdmin() ? buildGroupActions(org) : [],
           routeParams: {
             orgType: activeOrgType.value,
             orgId: org.id,
@@ -607,6 +608,26 @@ const showCode = async (selectedOrg) => {
     isDialogVisible.value = true;
   }
 };
+
+const buildGroupActions = (org) => [
+  {
+    name: 'information',
+    tooltip: 'Information for this site is complete',
+    // icon: 'pi pi-info-circle',
+    icon: 'pi pi-check',
+    // pulse: true,
+    status: 'success',
+    // status: 'error',
+    // callback: () => exportOrgUsers(org),
+    callback: null,
+  },
+  {
+    name: 'edit',
+    tooltip: 'Edit',
+    icon: 'pi pi-pencil',
+    callback: () => onEditButtonClick(org),
+  },
+];
 
 const onEditButtonClick = (event) => {
   isEditModalEnabled.value = true;
