@@ -92,6 +92,32 @@ function error(
 }
 
 /**
+ * Logs a user mistake for product review.
+ * Production sends a PostHog event and a Sentry log. It does not open a Sentry issue.
+ */
+function userMistake(code: string, attributes?: Record<string, unknown>, force = false) {
+  const payload = omitSensitiveSentryFields({
+    category: 'user_mistake',
+    code,
+    appVersion,
+    coreTasksVersion,
+    commitHash,
+    ...attributes,
+    ...currentProperties,
+  });
+
+  if (isProduction || force) {
+    if (typeof posthogInstance.capture === 'function') {
+      posthogInstance.capture('User Mistake', payload);
+    }
+    Sentry.logger.warn(code, payload);
+    return;
+  }
+
+  console.info('[Logger User Mistake]', code, payload);
+}
+
+/**
  * Sets user information for analytics and error reporting.
  * In production, identifies the user in PostHog and Sentry.
  * If null is passed, resets user data in PostHog and Sentry.
@@ -152,6 +178,7 @@ async function enrichClientHints(): Promise<void> {
 export const logger = {
   capture,
   error,
+  userMistake,
   setUser,
   setAdditionalProperties,
   enrichClientHints,
