@@ -813,6 +813,7 @@ const submit = async () => {
   const { data: assignmentExists } = await refetchAssignmentExists();
 
   if (assignmentExists) {
+    logger.userMistake('assignment_name_taken', { siteId: authStore.currentSite, page: 'create-assignment' });
     return toast.add({
       severity: 'error',
       summary: 'Assignment Creation Error',
@@ -845,8 +846,6 @@ const submit = async () => {
         detail: error.message,
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
-
-      console.error('Error creating administration:', error.message);
     },
   });
 };

@@ -33,13 +33,15 @@ vi.mock('@/helpers/query/orgs', () => ({
 // JSDOM. Stubbing the surface used by submitUsers' catch block keeps the
 // test environment quiet.
 
-const { loggerErrorMock } = vi.hoisted(() => ({
+const { loggerErrorMock, loggerUserMistakeMock } = vi.hoisted(() => ({
   loggerErrorMock: vi.fn(),
+  loggerUserMistakeMock: vi.fn(),
 }));
 
 vi.mock('@/logger', () => ({
   logger: {
     error: loggerErrorMock,
+    userMistake: loggerUserMistakeMock,
     info: vi.fn(),
     warn: vi.fn(),
     debug: vi.fn(),
@@ -205,6 +207,7 @@ describe('AddUsers Page', () => {
     signOutMock.mockReset();
     createUsersMock.mockReset();
     loggerErrorMock.mockReset();
+    loggerUserMistakeMock.mockReset();
     vi.mocked(useAuthStore).mockReset();
     vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock());
     vi.mocked(useGetSyncStatusQuery).mockReturnValue({
@@ -1063,6 +1066,11 @@ describe('AddUsers Page', () => {
       expect(vm.isSubmitting).toBe(false);
       expect(vm.showSyncPendingModal).toBe(false);
       expect(vm.registeredUsers).toBeNull();
+      expect(loggerErrorMock).not.toHaveBeenCalled();
+      expect(loggerUserMistakeMock).toHaveBeenCalledWith(
+        'users_already_exist',
+        expect.objectContaining({ rowCount: 1 }),
+      );
     });
 
     it('surfaces an unexpected createUsers failure and resets submission state', async () => {

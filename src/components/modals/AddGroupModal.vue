@@ -468,8 +468,6 @@ const submit = async () => {
         detail: error.message,
         life: TOAST_DEFAULT_LIFE_DURATION,
       });
-
-      console.error(`Error creating ${orgTypeLabel.value}:`, error);
     },
     onSettled: () => {
       isSubmitting.value = false;

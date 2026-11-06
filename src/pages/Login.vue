@@ -305,13 +305,24 @@ const authWithEmailOrUsername = async () => {
       redirectAfterLogin();
     })
     .catch((e) => {
-      const errorCodes = ['auth/invalid-email', 'auth/user-not-found', 'auth/wrong-password'];
-      if (errorCodes.includes(e.code)) {
+      const code = e?.code;
+      if (code === 'auth/missing-password') {
         messages.value.push({
-          id: e.code,
+          id: code,
           severity: 'error',
           content: 'Incorrect username/email or password',
         });
+        logger.userMistake('sign_in_missing_password', { authCode: code, page: 'login' });
+        return;
+      }
+      if (['auth/invalid-email', 'auth/user-not-found', 'auth/wrong-password'].includes(code)) {
+        messages.value.push({
+          id: code,
+          severity: 'error',
+          content: 'Incorrect username/email or password',
+        });
+        logger.userMistake('sign_in_rejected', { authCode: code, page: 'login' });
+        return;
       }
       throw e;
     })
@@ -339,7 +350,6 @@ const authWithGoogle = async () => {
       redirectAfterLogin();
     })
     .catch((e) => {
-      console.log('ERROR', e);
       const errorCode = e?.code;
 
       if (errorCode === 'auth/email-already-in-use') {
@@ -354,7 +364,14 @@ const authWithGoogle = async () => {
         googleSignInErrorKey.value = 'pageSignIn.googleSignInGenericError';
       }
 
-      console.error('Google sign-in error', e);
+      if (isMissingUserClaimsError(e)) {
+        logger.userMistake('google_account_not_registered', { page: 'login' });
+        return;
+      }
+
+      logger.error(new Error('Google sign-in failed', { cause: e }), {
+        tags: { component: 'Login', function: 'authWithGoogle' },
+      });
     })
     .finally(() => {
       spinner.value = false;
@@ -400,6 +417,11 @@ const changeMode = async (): Promise<void> => {
   mode.value = isParticipantMode.value ? MODES.researcher : MODES.participant;
 };
 
+function isMissingUserClaimsError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : '';
+  return message.toLowerCase().includes('user claims document does not exist');
+}
+
 const checkForCapsLock = (e: KeyboardEvent): void => {
   isCapsLockOn.value = e.getModifierState('CapsLock');
 };
@@ -421,6 +443,11 @@ const handleTroubleModalError = (e: unknown, fallbackCode: string, fallbackMessa
       content: e instanceof Error && isEmailNotRegistered ? e.message : fallbackMessage,
     },
   ];
+
+  if (code === 'auth/invalid-email' && fallbackCode === 'sendResetPasswordEmail') {
+    logger.userMistake('password_reset_invalid_email', { page: 'login' });
+    return;
+  }
 
   if (!isEmailNotRegistered) {
     logger.error(new Error('Trouble-logging-in modal action failed', { cause: e }), {

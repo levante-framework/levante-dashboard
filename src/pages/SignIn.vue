@@ -144,6 +144,7 @@ import { isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { getUserAssignments } from '@/helpers/query/assignments';
 import { fetchDocById } from '@/helpers/query/utils';
+import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 
@@ -213,10 +214,13 @@ const authWithGoogle = () => {
         }
         if (isMissingUserClaimsError(e)) {
           googleSignInErrorKey.value = 'pageSignIn.googleSignInUserNotFound';
+          logger.userMistake('google_account_not_registered', { page: 'signin' });
         } else {
           googleSignInErrorKey.value = 'pageSignIn.googleSignInGenericError';
+          logger.error(new Error('Google sign-in failed', { cause: e }), {
+            tags: { component: 'SignIn', function: 'authWithGoogle' },
+          });
         }
-        console.error('Google sign-in error', e);
         spinner.value = false;
       });
 
@@ -273,11 +277,16 @@ const authWithEmail = async (state) => {
       })
       .catch((e) => {
         incorrect.value = true;
-        if (['auth/user-not-found', 'auth/wrong-password'].includes(e.code)) {
+        const code = e?.code;
+        if (code === 'auth/missing-password') {
+          logger.userMistake('sign_in_missing_password', { authCode: code, page: 'signin' });
           return;
-        } else {
-          throw e;
         }
+        if (['auth/invalid-email', 'auth/user-not-found', 'auth/wrong-password'].includes(code)) {
+          logger.userMistake('sign_in_rejected', { authCode: code, page: 'signin' });
+          return;
+        }
+        throw e;
       })
       .finally(() => {
         spinner.value = false;
