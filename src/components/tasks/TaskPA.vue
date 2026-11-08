@@ -177,6 +177,18 @@ async function startTask(selectedAdmin) {
   left: 0;
   width: 100%;
   height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+.game-target.jspsych-display-element * {
+  touch-action: none;
+}
+
+.game-target .scrollable-consent-form,
+.game-target .scrollable-consent-form * {
+  touch-action: pan-y;
 }
 
 .game-target:focus {
