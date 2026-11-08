@@ -1,11 +1,11 @@
 <template>
-  <div id="jspsych-target" class="game-target" translate="no" />
+  <div id="jspsych-target" class="game-target" :class="{ 'lock-pan': locksPan }" translate="no" />
 </template>
 
 <script setup>
 import _get from 'lodash/get';
 import { storeToRefs } from 'pinia';
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import useCompleteAssessmentMutation from '@/composables/mutations/useCompleteAssessmentMutation';
 import useUserChildDataQuery from '@/composables/queries/useUserChildDataQuery';
@@ -18,6 +18,8 @@ import packageLockJson from '../../../package-lock.json';
 const props = defineProps({
   taskId: { type: String, default: 'egma-math' },
 });
+
+const locksPan = computed(() => props.taskId.toLowerCase().replace(/-/g, '') === 'mentalrotation');
 
 let levanteTaskLauncher;
 let levanteTask;
@@ -203,6 +205,11 @@ async function startTask(selectedAdmin) {
   left: 0;
   width: 100%;
   height: 100%;
+}
+
+.game-target.lock-pan,
+.game-target.lock-pan * {
+  touch-action: none;
 }
 .game-target:focus {
   outline: none;
