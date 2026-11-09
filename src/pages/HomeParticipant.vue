@@ -456,7 +456,10 @@ const { data: surveyData } = useQuery({
       };
     }
   },
-  enabled: userData?.value?.userType !== 'admin' && initialized && hasSurvey,
+  enabled: computed(
+    () =>
+      Boolean(userData.value?.userType) && userData.value.userType !== 'admin' && initialized.value && hasSurvey.value,
+  ),
   staleTime: 24 * 60 * 60 * 1000, // 24 hours
 });
 
