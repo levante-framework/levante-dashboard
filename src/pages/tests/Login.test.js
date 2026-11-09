@@ -24,11 +24,15 @@ const mobileState = vi.hoisted(() => ({ isMobile: false }));
 const emailLinkState = vi.hoisted(() => ({ rejectWith: null }));
 
 const loggerErrors = vi.hoisted(() => []);
+const loggerUserMistakes = vi.hoisted(() => []);
 
 vi.mock('@/logger', () => ({
   logger: {
     error: (...args) => {
       loggerErrors.push(args);
+    },
+    userMistake: (...args) => {
+      loggerUserMistakes.push(args);
     },
   },
 }));
@@ -243,6 +247,7 @@ describe('Login.vue', () => {
     routeState.query = {};
     emailLinkState.rejectWith = null;
     loggerErrors.length = 0;
+    loggerUserMistakes.length = 0;
     authRefs.spinner.value = false;
     authRefs.routeToProfile.value = false;
     authRefs.ssoProvider.value = null;
@@ -394,6 +399,22 @@ describe('Login.vue', () => {
     expect(captured.confirmRequests).toHaveLength(0);
     expect(wrapper.text()).toContain('There was a problem sending the password reset email. Please try again.');
     expect(loggerErrors).toHaveLength(1);
+  });
+
+  it('records an invalid reset address as a user mistake', async () => {
+    const invalidEmail = new Error('The email address is badly formatted.');
+    invalidEmail.code = 'auth/invalid-email';
+    wrapper = mountLogin();
+    authRefs.roarfirekit.value = {
+      sendPasswordResetEmail: () => Promise.reject(invalidEmail),
+    };
+    await switchToResearcherMode();
+    await openTroubleOnSignInModal();
+    await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('valid@mail.com');
+    await clickModalButton('Reset Password');
+    await flushPromises();
+    expect(loggerErrors).toHaveLength(0);
+    expect(loggerUserMistakes).toEqual([['password_reset_invalid_email', expect.objectContaining({ page: 'login' })]]);
   });
 
   it('uses Google popup on desktop when Stanford DCC Sign in is clicked', async () => {

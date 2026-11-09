@@ -1,6 +1,7 @@
 import type { CreateOrgType } from '@levante-framework/levante-zod';
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { ORG_MUTATION_KEY, SITE_OVERVIEW_QUERY_KEY } from '@/constants/queryKeys';
+import { isNameTakenError } from '@/firebase/failure';
 import { groupsRepository } from '@/firebase/repositories/GroupsRepository';
 import { logger } from '@/logger';
 
@@ -17,6 +18,13 @@ const useUpsertOrgMutation = () => {
       queryClient.invalidateQueries({ queryKey: [SITE_OVERVIEW_QUERY_KEY, data.siteId] });
     },
     onError: (err, newOrgData) => {
+      if (isNameTakenError(err)) {
+        logger.userMistake('org_name_taken', {
+          siteId: newOrgData.siteId,
+          orgType: newOrgData.type,
+        });
+        return;
+      }
       logger.error(new Error('Failed to upsert org', { cause: err }), {
         tags: { composable: 'useUpsertOrgMutation' },
         siteId: newOrgData.siteId,

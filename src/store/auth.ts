@@ -178,13 +178,7 @@ export const useAuthStore = defineStore(
 
     async function logInWithEmailAndPassword({ email, password }: LoginCredentials): Promise<void> {
       if (isFirekitInit()) {
-        return roarfirekit.value
-          ?.logInWithEmailAndPassword({ email, password })
-          .then(() => {})
-          .catch((error) => {
-            console.error(`Error signing in: ${error}`);
-            throw error;
-          });
+        return roarfirekit.value?.logInWithEmailAndPassword({ email, password }).then(() => {});
       }
     }
 
@@ -195,7 +189,9 @@ export const useAuthStore = defineStore(
 
         const isEmailAvailable = await roarfirekit.value?.isEmailAvailable(trimmedEmail);
         if (isEmailAvailable) {
-          logger.capture('Email link sign-in blocked, address not registered', { email: trimmedEmail });
+          logger.userMistake('email_link_not_registered', {
+            page: 'email-link',
+          });
           const notRegisteredError = new Error(
             'This email is not in our records. We did not send a sign-in link. Ask your site administrator to add this address before using email-link sign-in.',
           ) as Error & { code: string };

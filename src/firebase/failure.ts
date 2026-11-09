@@ -19,6 +19,14 @@ export type FirebaseFailure<TError> =
  * stable, low-cardinality identifier for logging/telemetry. Appends nested codes
  * where present: the failure tag, then `error.code`, then `error.details.code`.
  */
+export function isNameTakenError(error: unknown): boolean {
+  const code =
+    error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : '';
+  if (code === 'functions/already-exists' || code === 'already-exists') return true;
+  const message = error instanceof Error ? error.message : '';
+  return /already exists/i.test(message);
+}
+
 export function toFirebaseFailureCode(failure: FirebaseFailure<{ code: string; details?: { code: string } }>): string {
   let code = `${failure.code}`;
   if (failure.code !== 'error') {

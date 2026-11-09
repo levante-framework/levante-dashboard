@@ -17,9 +17,14 @@ import LinkUsers from './LinkUsers.vue';
 // The real logger pulls in PostHog and Sentry, which fail to initialise in
 // JSDOM. Stubbing the surface used by submitUsers keeps the environment quiet.
 
+const { loggerUserMistakeMock } = vi.hoisted(() => ({
+  loggerUserMistakeMock: vi.fn(),
+}));
+
 vi.mock('@/logger', () => ({
   logger: {
     error: vi.fn(),
+    userMistake: loggerUserMistakeMock,
     info: vi.fn(),
     warn: vi.fn(),
     debug: vi.fn(),
@@ -117,6 +122,7 @@ describe('LinkUsers Page', () => {
     setActivePinia(createPinia());
     setShouldUserConfirmMock.mockReset();
     linkUsersMock.mockReset();
+    loggerUserMistakeMock.mockReset();
     vi.mocked(useAuthStore).mockReset();
     vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock() as any);
   });
@@ -572,6 +578,7 @@ describe('LinkUsers Page', () => {
         { message: 'id|uid: Does not match previously registered user', rowNums: [2] },
       ]);
       expect(vm.isSubmitting).toBe(false);
+      expect(loggerUserMistakeMock).toHaveBeenCalledWith('link_id_mismatch', expect.objectContaining({ rowCount: 1 }));
     });
 
     it('drops uids that are not present in the uploaded CSV', async () => {

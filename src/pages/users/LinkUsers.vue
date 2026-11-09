@@ -364,7 +364,7 @@ const submitUsers = async () => {
       let message = 'Failed to link users. Please try again. If the problem persists, contact support.';
       let shouldLog = true;
 
-      const setValidationErrors = (issues: { message: string; rowNums: number[] }[]) => {
+      const setValidationErrors = (issues: { message: string; rowNums: number[] }[], mistakeCode: string) => {
         message = 'Failed to link users. Please fix the errors in your CSV file and try again.';
         shouldLog = false;
         validationErrors.value = {
@@ -373,6 +373,7 @@ const submitUsers = async () => {
           rows: issues,
           showDownloadButton: true,
         };
+        logger.userMistake(mistakeCode, { siteId, rowCount: issues.length });
       };
 
       if (failure.code === 'app-error') {
@@ -393,7 +394,7 @@ const submitUsers = async () => {
                     ];
               }),
             );
-            setValidationErrors(issues);
+            setValidationErrors(issues, 'link_id_mismatch');
           } else if (failure.error.details.code === 'schema') {
             // Handle app-error/functions/invalid-argument/schema
             message = 'Failed to link users due to an unexpected error. Please contact support.';
@@ -413,7 +414,7 @@ const submitUsers = async () => {
                     ];
               }),
             );
-            setValidationErrors(issues);
+            setValidationErrors(issues, 'link_wrong_site');
           } else if (failure.error.details.code === 'users-usertype-mismatch') {
             // Handle app-error/functions/invalid-argument/users-usertype-mismatch
             const issues = combineUsersCsvIssues(
@@ -430,7 +431,7 @@ const submitUsers = async () => {
                     ];
               }),
             );
-            setValidationErrors(issues);
+            setValidationErrors(issues, 'link_wrong_user_type');
           }
         } else if (failure.error.code === 'functions/not-found') {
           // Handle app-error/functions/not-found/users
@@ -449,7 +450,7 @@ const submitUsers = async () => {
                     ];
               }),
             );
-            setValidationErrors(issues);
+            setValidationErrors(issues, 'link_user_not_found');
           }
         } else if (failure.error.code === 'functions/permission-denied') {
           message = 'Failed to link users due to insufficient permissions. Please contact support.';

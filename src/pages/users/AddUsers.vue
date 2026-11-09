@@ -565,6 +565,10 @@ const handleCreateUsersFailure = async (failure: FirebaseFailure<CreateUsersErro
     if (error.code === 'functions/already-exists') {
       message = 'One or more users already exist. Please fix the errors in your CSV file and try again.';
       shouldLog = false;
+      logger.userMistake('users_already_exist', {
+        siteId: selectedSiteId.value,
+        rowCount: error.details.users.length,
+      });
       const validatedUsers = validatedData.value ?? [];
       const rowNumMap = validatedUsers.reduce(
         (acc, user, idx) => {
