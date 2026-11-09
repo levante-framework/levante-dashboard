@@ -92,6 +92,15 @@ export function bootstrapSurveyInstance({
   surveyStore.setNumberOfSurveyPages(numGeneralPages, numSpecificPages);
 }
 
+/** Reset the survey's scroll container to the top once the page has rendered. */
+function scrollSurveyToTop(): void {
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.survey-wrapper .sv-scroll__scroller').forEach((node) => {
+      if (node instanceof HTMLElement) node.scrollTop = 0;
+    });
+  });
+}
+
 export function setupSurveyEventHandlers({
   surveyInstance,
   userType,
@@ -111,6 +120,17 @@ export function setupSurveyEventHandlers({
   } else if (userType === 'teacher') {
     specificIds = getTeacherClassroomSurveyIds(userData);
   }
+
+  // SurveyJS scrolls inside its own `.sv-scroll__scroller` container, and on a
+  // page taller than the viewport its built-in scroll can leave that scroller
+  // displaced from the top. Cancel it and reset the scroller after each page
+  // renders. autoFocusFirstQuestion is off by default; set it explicitly as a
+  // guard against a focus-driven scroll.
+  surveyInstance.autoFocusFirstQuestion = false;
+  surveyInstance.onScrollToTop.add((_sender, options) => {
+    options.allow = false;
+  });
+  surveyInstance.onAfterRenderPage.add(scrollSurveyToTop);
 
   surveyInstance.onValueChanged.add((sender: SurveyModel, options: { name: string; question: Question; value: any }) =>
     saveSurveyData({
