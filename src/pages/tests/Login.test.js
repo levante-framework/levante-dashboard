@@ -455,7 +455,9 @@ describe('Login.vue', () => {
       .find((s) => s.text().includes('Stanford DCC Sign in'))
       .trigger('click');
     await flushPromises();
-    expect(wrapper.text()).toContain('pageSignIn.googleSignInUserNotFound');
+    expect(wrapper.text()).toContain(
+      'No account exists for this sign-in. Contact your administrator if you need access.',
+    );
     // Must not redirect into the app.
     expect(captured.routerReplaces).not.toContainEqual({ path: '/' });
   });
@@ -473,7 +475,7 @@ describe('Login.vue', () => {
       .find((s) => s.text().includes('Stanford DCC Sign in'))
       .trigger('click');
     await flushPromises();
-    expect(wrapper.text()).not.toContain('pageSignIn.googleSignInUserNotFound');
+    expect(wrapper.text()).not.toContain('No account exists for this sign-in.');
     expect(captured.routerReplaces).toContainEqual({ path: '/' });
   });
 
