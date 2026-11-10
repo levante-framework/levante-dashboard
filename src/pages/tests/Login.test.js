@@ -474,4 +474,21 @@ describe('Login.vue', () => {
     expect(captured.toasts).toHaveLength(0);
     expect(captured.routerReplaces).toHaveLength(0);
   });
+
+  it('ignores a non-keyboard event when checking caps lock', () => {
+    wrapper = mountLogin();
+    const input = wrapper.get('[data-cy="input-password"]').element;
+    expect(() => input.dispatchEvent(new Event('keydown', { bubbles: true }))).not.toThrow();
+    expect(wrapper.text()).not.toContain('capsLockIsOn');
+  });
+
+  it('shows the caps lock warning for a keyboard event', async () => {
+    wrapper = mountLogin();
+    const input = wrapper.get('[data-cy="input-password"]').element;
+    const event = new KeyboardEvent('keydown', { bubbles: true });
+    Object.defineProperty(event, 'getModifierState', { value: () => true });
+    input.dispatchEvent(event);
+    await nextTick();
+    expect(wrapper.text()).toContain('capsLockIsOn');
+  });
 });
