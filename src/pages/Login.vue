@@ -400,8 +400,10 @@ const changeMode = async (): Promise<void> => {
   mode.value = isParticipantMode.value ? MODES.researcher : MODES.participant;
 };
 
-const checkForCapsLock = (e: KeyboardEvent): void => {
-  isCapsLockOn.value = e.getModifierState('CapsLock');
+const checkForCapsLock = (e: Event): void => {
+  if (e instanceof KeyboardEvent) {
+    isCapsLockOn.value = e.getModifierState('CapsLock');
+  }
 };
 
 const closeTroubleOnSignInModal = () => {
