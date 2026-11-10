@@ -186,6 +186,8 @@ async function startTask(selectedAdmin) {
   touch-action: none;
 }
 
+/* Must stay after the blanket rule above: equal specificity, so source order
+re-enables scrolling here. */
 .game-target .scrollable-consent-form,
 .game-target .scrollable-consent-form * {
   touch-action: pan-y;
