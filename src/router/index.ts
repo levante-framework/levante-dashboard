@@ -234,14 +234,6 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/pages/AdminProfile.vue'),
     children: [
       {
-        path: 'accounts',
-        name: 'ProfileAccounts',
-        component: () => import('../components/adminSettings/LinkAccountsView.vue'),
-        meta: {
-          allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
-        },
-      },
-      {
         path: 'settings',
         name: 'ProfileSettings',
         component: () => import('../components/adminSettings/Settings.vue'),
