@@ -1,7 +1,5 @@
 import { type CollectionReference, getDocs, type Query, query, where } from 'firebase/firestore';
-import _fromPairs from 'lodash/fromPairs';
 import _invert from 'lodash/invert';
-import _toPairs from 'lodash/toPairs';
 import type { TooltipOptions } from 'primevue/tooltip';
 import { findBestMatchingLocale, languageOptions } from '@/translations/i18n';
 
@@ -201,22 +199,6 @@ export const standardDeviation = (arr: number[], usePopulation: boolean = false)
   const mean = arr.reduce((acc, val) => acc + val, 0) / arr.length;
   const variance = arr.reduce((acc, val) => acc + (val - mean) ** 2, 0) / (arr.length - (usePopulation ? 0 : 1));
   return Math.sqrt(variance);
-};
-
-export const filterAdminOrgs = (
-  adminOrgs: Record<string, string[]>,
-  filters: Record<string, string[]>,
-): Record<string, string[]> => {
-  const filteredOrgPairs = _toPairs(adminOrgs).map(([orgType, orgs]) => [
-    orgType,
-    orgs.filter((org) => filters[orgType]?.includes(org)),
-  ]);
-
-  return _fromPairs(filteredOrgPairs);
-};
-
-export const removeEmptyOrgs = (orgs: Record<string, any[]>): Record<string, any[]> => {
-  return _fromPairs(_toPairs(orgs).filter(([_, orgArray]) => orgArray.length > 0));
 };
 
 const plurals: Record<string, string> = {

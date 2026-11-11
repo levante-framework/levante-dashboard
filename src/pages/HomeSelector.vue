@@ -38,7 +38,7 @@ const HomeError = defineAsyncComponent(() => import('@/pages/HomeError.vue'));
 const ConsentModal = defineAsyncComponent(() => import('@/components/ConsentModal.vue'));
 
 const authStore = useAuthStore();
-const { roarfirekit, sites, ssoProvider, userClaims, userData } = storeToRefs(authStore);
+const { currentSite, roarfirekit, sites, ssoProvider, userClaims, userData } = storeToRefs(authStore);
 const { hasRole, isLoadingPermissions } = usePermissions();
 
 const router = useRouter();
@@ -72,7 +72,7 @@ const shouldRenderAdminPage = computed(() => {
   return adminRoles.some((role) => hasRole(role));
 });
 
-const { isAdmin, isSuperAdmin } = useUserType(userClaims);
+const { isAdmin, isSuperAdmin } = useUserType(userClaims, currentSite);
 
 const isAdminUser = computed(() => isAdmin.value || isSuperAdmin.value);
 const isLoading = computed(() => {

@@ -1,34 +1,32 @@
-import _isEmpty from 'lodash/isEmpty';
-import { computed } from 'vue';
+import { computed, toValue } from 'vue';
 import { AUTH_USER_TYPE } from '@/constants/auth';
+import { isAdminForSite } from '@/helpers/claims';
 
 /**
  * Get user type
  *
- * Composable function to determine the user type based on the user claims. The user type can be either an admin or a
- * participant. The user type is determined based on the user claims, where a user is considered an admin if they have
- * the corresponding super_admin or adminOrgs claims.
+ * Composable function to determine the user type based on the user's custom claims and the
+ * current site. The user type can be a super admin, an admin, or a participant. A user is a
+ * super admin when the `super_admin` claim is true, an admin when they hold a non-participant
+ * role on the current site, and a participant otherwise.
  *
- * @param {Object} userClaims - The user claims object.
+ * @param {Object} userClaims - A ref/computed of the flat custom claims object.
+ * @param {Object} currentSite - A ref/computed of the current site ID.
  * @returns {Object} The user type and related computed properties.
  */
-export default function useUserType(userClaims) {
+export default function useUserType(userClaims, currentSite) {
   const userType = computed(() => {
     // Abort the user type determination if the user claims are not available yet.
-    if (!userClaims.value) return;
-
-    const claims = userClaims.value.claims;
+    const claims = toValue(userClaims);
+    if (!claims) return;
 
     // Check if the user is a super admin.
-    if (claims?.super_admin) {
+    if (claims.super_admin) {
       return AUTH_USER_TYPE.SUPER_ADMIN;
     }
 
-    // Check if the user has any admin organizations.
-    const adminOrgs = claims?.adminOrgs || {};
-    const hasAdminOrgs = Object.values(adminOrgs).some((org) => !_isEmpty(org));
-
-    if (hasAdminOrgs) {
+    // Check if the user holds a non-participant role on the current site.
+    if (isAdminForSite(claims, toValue(currentSite))) {
       return AUTH_USER_TYPE.ADMIN;
     }
 
