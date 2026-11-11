@@ -574,27 +574,33 @@ function getOptionalConditions(taskId: string): Condition[] {
   return [];
 }
 
-// A stored whole year N is the month span N*12 through N*12+11. Load that span
-// as ageMonths so a later save writes months even when the inputs are not edited.
+// A legacy year matches floor(ageMonths / 12). The next year starts at (year + 1) * 12,
+// so year 5 is 60 months through 71 months. Load that as ageMonths.
 function legacyAgeInMonths(condition: Condition): Condition[] {
   if (condition.field !== 'age' || condition.value === '') return [condition];
 
   const year = parseInt(String(condition.value), 10);
   if (Number.isNaN(year)) return [condition];
 
-  const lower = year * 12;
-  const upper = lower + 11;
+  const start = year * 12;
+  const nextYear = (year + 1) * 12;
   if (condition.op === 'EQUAL') {
     return [
-      { field: 'ageMonths', op: 'GREATER_THAN_OR_EQUAL', value: lower },
-      { field: 'ageMonths', op: 'LESS_THAN_OR_EQUAL', value: upper },
+      { field: 'ageMonths', op: 'GREATER_THAN_OR_EQUAL', value: start },
+      { field: 'ageMonths', op: 'LESS_THAN', value: nextYear },
     ];
   }
-  if (condition.op === 'GREATER_THAN' || condition.op === 'LESS_THAN_OR_EQUAL') {
-    return [{ field: 'ageMonths', op: condition.op, value: upper }];
+  if (condition.op === 'GREATER_THAN_OR_EQUAL') {
+    return [{ field: 'ageMonths', op: 'GREATER_THAN_OR_EQUAL', value: start }];
   }
-  if (condition.op === 'LESS_THAN' || condition.op === 'GREATER_THAN_OR_EQUAL') {
-    return [{ field: 'ageMonths', op: condition.op, value: lower }];
+  if (condition.op === 'LESS_THAN') {
+    return [{ field: 'ageMonths', op: 'LESS_THAN', value: start }];
+  }
+  if (condition.op === 'GREATER_THAN') {
+    return [{ field: 'ageMonths', op: 'GREATER_THAN_OR_EQUAL', value: nextYear }];
+  }
+  if (condition.op === 'LESS_THAN_OR_EQUAL') {
+    return [{ field: 'ageMonths', op: 'LESS_THAN', value: nextYear }];
   }
   return [condition];
 }
