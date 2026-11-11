@@ -79,7 +79,7 @@ const router = useRouter();
 
 const shouldShowFooter = computed(() => !FOOTER_BLACKLIST.includes(route.name));
 const footerVariant = computed(() => {
-  const alternativeStylePages = ['Login', 'SignIn'];
+  const alternativeStylePages = ['Login'];
   if (alternativeStylePages.includes(route.name)) return 'secondary';
   return 'primary';
 });

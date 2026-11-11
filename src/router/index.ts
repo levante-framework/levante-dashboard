@@ -107,12 +107,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: APP_ROUTES.SIGN_IN,
-    name: 'SignIn',
-    component: () => import('@/pages/SignIn.vue'),
-    meta: {
-      pageTitle: { translationKey: 'signIn' },
-      allowedRoles: ['*'],
-    },
+    redirect: (to) => ({ name: 'Login', query: to.query, hash: to.hash }),
   },
   {
     path: APP_ROUTES.LOGIN,
