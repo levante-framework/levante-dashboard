@@ -15,11 +15,6 @@
             }}</span>
           </div></router-link
         >
-        <router-link v-if="isAdmin" to="/profile/accounts"
-          ><div class="sidebar-button">
-            <i class="pi pi-users" /><span v-if="sidebarOpen">Link Accounts</span>
-          </div></router-link
-        >
         <router-link to="/profile/settings"
           ><div class="sidebar-button">
             <i class="pi pi-cog" /><span v-if="sidebarOpen">{{ t('profile.settings.settings') }}</span>
