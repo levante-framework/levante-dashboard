@@ -47,18 +47,17 @@
   </div>
 </template>
 <script setup>
-import _isEmpty from 'lodash/isEmpty';
-import _union from 'lodash/union';
 import { storeToRefs } from 'pinia';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import useUserClaimsQuery from '@/composables/queries/useUserClaimsQuery';
 import { isLevante } from '@/constants';
+import { isAdminForSite } from '@/helpers/claims';
 import { useAuthStore } from '@/store/auth';
 
 const { t } = useI18n();
 const authStore = useAuthStore();
-const { roarfirekit } = storeToRefs(authStore);
+const { currentSite, roarfirekit } = storeToRefs(authStore);
 const sidebarOpen = ref(true);
 
 const providerIds = computed(() => {
@@ -95,11 +94,7 @@ const { data: userClaims } = useUserClaimsQuery({
 });
 
 // Keep track of the user's type
-const isAdmin = computed(() => {
-  if (userClaims.value?.claims?.super_admin) return true;
-  if (_isEmpty(_union(...Object.values(userClaims.value?.claims?.adminOrgs ?? {})))) return false;
-  return true;
-});
+const isAdmin = computed(() => isAdminForSite(userClaims.value, currentSite.value));
 </script>
 
 <style lang="scss" scoped>
