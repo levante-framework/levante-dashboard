@@ -263,8 +263,8 @@ export const useAuthStore = defineStore(
       return false;
     }
 
-    async function signOut(): Promise<void> {
-      console.log('PostHog Reset (explicit signOut)');
+    async function logout(): Promise<void> {
+      console.log('PostHog Reset (explicit logout)');
       posthogInstance.reset();
 
       if (isFirekitInit()) {
@@ -361,7 +361,7 @@ export const useAuthStore = defineStore(
       loginWithEmailLink,
       loginWithGooglePopup,
       loginWithGoogleRedirect,
-      signOut,
+      logout,
     };
   },
   {

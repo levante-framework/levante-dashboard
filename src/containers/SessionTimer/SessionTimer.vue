@@ -18,14 +18,14 @@
 import PvConfirmDialog from 'primevue/confirmdialog';
 import { useConfirm } from 'primevue/useconfirm';
 import { useI18n } from 'vue-i18n';
-import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
+import useLogoutMutation from '@/composables/mutations/useLogoutMutation';
 import useInactivityTimeout from '@/composables/useInactivityTimeout/useInactivityTimeout';
 import { AUTH_SESSION_TIMEOUT_COUNTDOWN_DURATION, AUTH_SESSION_TIMEOUT_IDLE_THRESHOLD } from '@/constants/auth';
 
 const confirm = useConfirm();
 const i18n = useI18n();
 
-const { mutate: signOut } = useSignOutMutation();
+const { mutate: logout } = useLogoutMutation();
 
 const { countdownTimer, resetTimer } = useInactivityTimeout({
   idleThreshold: AUTH_SESSION_TIMEOUT_IDLE_THRESHOLD,
@@ -41,7 +41,7 @@ const { countdownTimer, resetTimer } = useInactivityTimeout({
     });
   },
   onTimeout: async () => {
-    await signOut();
+    await logout();
   },
 });
 </script>

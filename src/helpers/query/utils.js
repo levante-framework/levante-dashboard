@@ -87,7 +87,7 @@ export const getBaseDocumentPath = () => {
   return `projects/${getProjectId()}/databases/(default)/documents`;
 };
 
-// Guards against a redirect/sign-out storm when several parallel reads all 401.
+// Guards against a redirect/logout storm when several parallel reads all 401.
 let handlingSessionExpiry = false;
 
 /**
@@ -98,7 +98,7 @@ let handlingSessionExpiry = false;
  * cannot be revived. Just redirecting would leave the stale token in the SDK and
  * the persisted `firebaseUser` in sessionStorage, so `isAuthenticated()` would
  * stay truthy and the router guard would let the user back in on a doomed token.
- * Sign out to clear the token, drop the persisted state, then hard-redirect so
+ * Log out to clear the token, drop the persisted state, then hard-redirect so
  * all in-memory Pinia and TanStack cache state is discarded.
  */
 export const handleExpiredSession = async (authStore) => {
@@ -106,9 +106,9 @@ export const handleExpiredSession = async (authStore) => {
   handlingSessionExpiry = true;
 
   try {
-    await authStore.signOut();
+    await authStore.logout();
   } catch (error) {
-    logger.error(new Error('Failed to sign out after auth token refresh failed', { cause: error }), {
+    logger.error(new Error('Failed to log out after auth token refresh failed', { cause: error }), {
       tags: { function: 'handleExpiredSession' },
     });
   }

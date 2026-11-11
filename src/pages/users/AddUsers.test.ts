@@ -74,18 +74,18 @@ vi.mock('@/store/levante', () => ({
   })),
 }));
 
-// ─── Sign-out mutation ────────────────────────────────────────────────────────
+// ─── Logout mutation ──────────────────────────────────────────────────────────
 //
-// AddUsers no longer signs the user out on failure; the spy is retained to
-// assert that no sign-out is triggered. Hoisted so it can be asserted from
+// AddUsers no longer logs the user out on failure; the spy is retained to
+// assert that no logout is triggered. Hoisted so it can be asserted from
 // within individual tests.
 
-const { signOutMock } = vi.hoisted(() => ({
-  signOutMock: vi.fn(),
+const { logoutMock } = vi.hoisted(() => ({
+  logoutMock: vi.fn(),
 }));
 
-vi.mock('@/composables/mutations/useSignOutMutation', () => ({
-  default: () => ({ mutate: signOutMock }),
+vi.mock('@/composables/mutations/useLogoutMutation', () => ({
+  default: () => ({ mutate: logoutMock }),
 }));
 
 // ─── Create-users mutation ──────────────────────────────────────────────────
@@ -202,7 +202,7 @@ describe('AddUsers Page', () => {
     setActivePinia(createPinia());
     mockRouter.push.mockReset();
     setShouldUserConfirmMock.mockReset();
-    signOutMock.mockReset();
+    logoutMock.mockReset();
     createUsersMock.mockReset();
     loggerErrorMock.mockReset();
     vi.mocked(useAuthStore).mockReset();
@@ -1107,7 +1107,7 @@ describe('AddUsers Page', () => {
       await vm.submitUsers();
 
       expect(createUsers).toHaveBeenCalledOnce();
-      expect(signOutMock).not.toHaveBeenCalled();
+      expect(logoutMock).not.toHaveBeenCalled();
       expect(vm.status).toEqual({
         message: 'Failed to add users due to an expired session. Please log in again and retry.',
         severity: 'error',

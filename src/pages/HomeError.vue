@@ -6,8 +6,8 @@
       <PvButton
         class="mt-4"
         icon="pi pi-sign-out"
-        label="Sign out"
-        @click="() => signOut"
+        label="Log out"
+        @click="() => logout"
       />
     </div>
   </div>
@@ -15,7 +15,7 @@
 
 <script setup lang="ts">
 import PvButton from 'primevue/button';
-import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
+import useLogoutMutation from '@/composables/mutations/useLogoutMutation';
 
-const { mutate: signOut } = useSignOutMutation();
+const { mutate: logout } = useLogoutMutation();
 </script>
