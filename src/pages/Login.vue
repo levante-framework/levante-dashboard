@@ -485,7 +485,7 @@ const loginWithEmailLink = () => {
     .then(() => {
       closeTroubleLoginModal();
       confirmEmailSent(
-        `An email to login with a link is on its way to you from ${supportEmail}. This could take 5-10 minutes. Check your spam folder if you can't find it. If it never arrives, open a ticket with us.`,
+        `An email to log in with a link is on its way to you from ${supportEmail}. This could take 5-10 minutes. Check your spam folder if you can't find it. If it never arrives, open a ticket with us.`,
       );
     })
     .catch((e) => {

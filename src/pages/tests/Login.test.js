@@ -360,6 +360,7 @@ describe('Login.vue', () => {
     await flushPromises();
     expect(captured.initiateLoginWithEmailLink).toEqual([{ email: 'researcher@test.com' }]);
     expect(captured.confirmRequests).toHaveLength(1);
+    expect(captured.confirmRequests[0].message).toContain('An email to log in with a link');
     expect(captured.confirmRequests[0].accept).toBeUndefined();
     expect(captured.routerPushes).not.toContainEqual({ name: 'Home' });
   });
