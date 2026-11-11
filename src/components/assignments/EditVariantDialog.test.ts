@@ -89,7 +89,7 @@ describe('stored condition rendering (regression #1013)', () => {
     const labels = selectLabels(wrapper);
     expect(labels).toContain('Age');
     expect(labels).toContain('Greater Than');
-    expect(ageInputValues(wrapper)).toEqual([5, 0]);
+    expect(ageInputValues(wrapper)).toEqual([5, 11]);
 
     wrapper.unmount();
   });
@@ -214,7 +214,7 @@ describe('age years and months', () => {
     wrapper.unmount();
   });
 
-  it('saves a legacy whole-year age rule as total months', async () => {
+  it('saves a legacy greater-than year as months past the end of that year', async () => {
     const updateVariant = vi.fn();
     const wrapper = mount(EditVariantDialog, {
       ...mountOptions,
@@ -228,7 +228,7 @@ describe('age years and months', () => {
     });
 
     await openDialog(wrapper);
-    expect(ageInputValues(wrapper)).toEqual([5, 0]);
+    expect(ageInputValues(wrapper)).toEqual([5, 11]);
 
     await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
     await nextTick();
@@ -237,7 +237,43 @@ describe('age years and months', () => {
       assigned: {
         op: 'AND',
         conditions: [
-          { field: 'ageMonths', op: 'GREATER_THAN', value: 60 },
+          { field: 'ageMonths', op: 'GREATER_THAN', value: 71 },
+          { field: 'userType', op: 'EQUAL', value: 'student' },
+        ],
+      },
+    });
+
+    wrapper.unmount();
+  });
+
+  it('loads age equal to 5 as the whole year, 60 through 71 months', async () => {
+    const updateVariant = vi.fn();
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment: createAssessment({
+          assigned: { op: 'AND', conditions: [{ field: 'age', op: 'EQUAL', value: '5' }] },
+        }),
+        updateVariant,
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    expect(selectLabels(wrapper)).toContain('Greater Than or Equal');
+    expect(selectLabels(wrapper)).toContain('Less Than or Equal');
+    expect(ageInputValues(wrapper)).toEqual([5, 0, 5, 11]);
+
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      assigned: {
+        op: 'AND',
+        conditions: [
+          { field: 'ageMonths', op: 'GREATER_THAN_OR_EQUAL', value: 60 },
+          { field: 'ageMonths', op: 'LESS_THAN_OR_EQUAL', value: 71 },
           { field: 'userType', op: 'EQUAL', value: 'student' },
         ],
       },
@@ -805,7 +841,13 @@ describe('optional-for-all toggle', () => {
     expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
       // The dialog always seeds the assigned default (student for a generic task).
       assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'student' }] },
-      optional: { op: 'AND', conditions: [{ field: 'ageMonths', op: 'EQUAL', value: 60 }] },
+      optional: {
+        op: 'AND',
+        conditions: [
+          { field: 'ageMonths', op: 'GREATER_THAN_OR_EQUAL', value: 60 },
+          { field: 'ageMonths', op: 'LESS_THAN_OR_EQUAL', value: 71 },
+        ],
+      },
     });
 
     wrapper.unmount();
@@ -833,7 +875,7 @@ describe('preExistingAssessmentInfo fallback', () => {
     const labels = selectLabels(wrapper);
     expect(labels).toContain('Age');
     expect(labels).toContain('Greater Than');
-    expect(ageInputValues(wrapper)).toEqual([7, 0]);
+    expect(ageInputValues(wrapper)).toEqual([7, 11]);
 
     wrapper.unmount();
   });

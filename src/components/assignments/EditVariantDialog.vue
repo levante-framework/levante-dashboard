@@ -440,8 +440,7 @@ const fieldOptionsForCondition = (condition: Condition): FieldOption[] =>
     ? FIELD_OPTIONS.filter((option) => option.value !== 'userType')
     : FIELD_OPTIONS;
 
-// Age is edited as years and months. Legacy `age` is whole years (months 0).
-// `ageMonths` is a total month count. The field dropdown still shows both as Age.
+// Age is edited as years and months. The field dropdown shows both stored shapes as Age.
 function isAgeField(field: string): boolean {
   return field === 'age' || field === 'ageMonths';
 }
@@ -575,14 +574,39 @@ function getOptionalConditions(taskId: string): Condition[] {
   return [];
 }
 
+// A stored whole year N is the month span N*12 through N*12+11. Load that span
+// as ageMonths so a later save writes months even when the inputs are not edited.
+function legacyAgeInMonths(condition: Condition): Condition[] {
+  if (condition.field !== 'age' || condition.value === '') return [condition];
+
+  const year = parseInt(String(condition.value), 10);
+  if (Number.isNaN(year)) return [condition];
+
+  const lower = year * 12;
+  const upper = lower + 11;
+  if (condition.op === 'EQUAL') {
+    return [
+      { field: 'ageMonths', op: 'GREATER_THAN_OR_EQUAL', value: lower },
+      { field: 'ageMonths', op: 'LESS_THAN_OR_EQUAL', value: upper },
+    ];
+  }
+  if (condition.op === 'GREATER_THAN' || condition.op === 'LESS_THAN_OR_EQUAL') {
+    return [{ field: 'ageMonths', op: condition.op, value: upper }];
+  }
+  if (condition.op === 'LESS_THAN' || condition.op === 'GREATER_THAN_OR_EQUAL') {
+    return [{ field: 'ageMonths', op: condition.op, value: lower }];
+  }
+  return [condition];
+}
+
 function setAssignedConditions(existingAssignedConditions: Condition[] | undefined): void {
   if (!existingAssignedConditions) return;
-  assignedConditions.value = _cloneDeep(existingAssignedConditions);
+  assignedConditions.value = _cloneDeep(existingAssignedConditions).flatMap(legacyAgeInMonths);
 }
 
 function setOptionalConditions(existingOptionalConditions: Condition[]): void {
   if (!existingOptionalConditions.length) return;
-  optionalConditions.value = _cloneDeep(existingOptionalConditions);
+  optionalConditions.value = _cloneDeep(existingOptionalConditions).flatMap(legacyAgeInMonths);
 }
 
 // Optional-for-all toggle
@@ -646,19 +670,20 @@ function hasDuplicateUserTypeConditions(conditions: Condition[]): boolean {
   return false;
 }
 
-// Legacy whole-year `age` and edited `ageMonths` both save as a total month count.
-function savedCondition(condition: Condition): Condition {
-  if (!isAgeField(condition.field) || condition.value === '') return condition;
-
-  const years = ageParts(condition).years ?? 0;
-  const months = ageParts(condition).months ?? 0;
-  return { field: 'ageMonths', op: condition.op, value: years * 12 + months };
+function savedCondition(condition: Condition): Condition[] {
+  const converted = legacyAgeInMonths(condition);
+  return converted.map((rule) => {
+    if (rule.field !== 'ageMonths' || rule.value === '') return rule;
+    const years = ageParts(rule).years ?? 0;
+    const months = ageParts(rule).months ?? 0;
+    return { field: 'ageMonths', op: rule.op, value: years * 12 + months };
+  });
 }
 
 function conditionsToValues(): [Condition[], Condition[]] {
   return [
-    _cloneDeep(assignedConditions.value).map(savedCondition),
-    _cloneDeep(optionalConditions.value).map(savedCondition),
+    _cloneDeep(assignedConditions.value).flatMap(savedCondition),
+    _cloneDeep(optionalConditions.value).flatMap(savedCondition),
   ];
 }
 
