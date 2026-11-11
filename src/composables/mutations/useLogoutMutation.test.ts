@@ -77,4 +77,21 @@ describe('useLogoutMutation', () => {
     expect(useRouter().push).toHaveBeenCalledOnce();
     expect(useRouter().push).toHaveBeenCalledWith({ path: APP_ROUTES.LOGIN });
   });
+
+  it('still tears down the session and redirects when logout fails', async () => {
+    vi.mocked(useAuthStore).mockReturnValue({
+      logout: vi.fn().mockRejectedValue(new Error('sign-out failed')),
+      $reset: vi.fn(),
+      initFirekit: vi.fn(),
+    } as unknown as ReturnType<typeof useAuthStore>);
+
+    const [result] = withSetup(() => useLogoutMutation(), {
+      plugins: [[VueQuery.VueQueryPlugin, { queryClient }]],
+    });
+
+    await expect(result.mutateAsync()).rejects.toThrow('sign-out failed');
+
+    expect(useAuthStore().$reset).toHaveBeenCalledOnce();
+    expect(useRouter().push).toHaveBeenCalledWith({ path: APP_ROUTES.LOGIN });
+  });
 });
