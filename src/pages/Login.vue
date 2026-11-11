@@ -98,7 +98,7 @@
       <div v-else class="flex flex-column align-items-center">
         <div class="flex justify-content-between align-items-center w-full mt-3">
           <div class="flex gap-1 text-sm">
-            <div class="text-color-secondary">Not sure how to login?</div>
+            <div class="text-color-secondary">Not sure how to log in?</div>
             <a
               href="https://researcher.levante-network.org/dashboard/administrator-log-in"
               target="_blank"
