@@ -109,7 +109,7 @@ onMounted((): void => {
     },
     reject: (): void => {
       (authStore as any).logout();
-      router.push({ name: 'SignOut' });
+      router.push({ name: 'Login' });
     },
   });
 });
