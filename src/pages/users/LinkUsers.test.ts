@@ -691,7 +691,7 @@ describe('LinkUsers Page', () => {
       const vm = await uploadValidAndSubmit();
 
       expect(vm.status).toEqual({
-        message: 'Failed to link users due to an expired session. Please sign in again and retry.',
+        message: 'Failed to link users due to an expired session. Please log in again and retry.',
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);

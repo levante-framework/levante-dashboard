@@ -153,7 +153,7 @@ describe('TaskLevante.vue', () => {
       wrapper.unmount();
     });
 
-    it('should start after the signed-in adult user type arrives', async () => {
+    it('should start after the logged-in adult user type arrives', async () => {
       selectedAssignmentRef.value = { id: 'assignment-1' };
       userDataRef.value = {};
 

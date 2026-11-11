@@ -50,7 +50,7 @@ const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown>
       queryClient.clear();
 
       // Re-initialize Firekit. This is necessary to ensure that Firekit is properly reset after
-      // sign-out in order to allow a new user to sign in.
+      // sign-out in order to allow a new user to log in.
       await authStore.initFirekit();
 
       // Redirect to login page.

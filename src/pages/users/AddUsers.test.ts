@@ -1109,7 +1109,7 @@ describe('AddUsers Page', () => {
       expect(createUsers).toHaveBeenCalledOnce();
       expect(signOutMock).not.toHaveBeenCalled();
       expect(vm.status).toEqual({
-        message: 'Failed to add users due to an expired session. Please sign in again and retry.',
+        message: 'Failed to add users due to an expired session. Please log in again and retry.',
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);
@@ -1136,7 +1136,7 @@ describe('AddUsers Page', () => {
       expect(createUsers).toHaveBeenCalledOnce();
       expect(loggerErrorMock).not.toHaveBeenCalled();
       expect(vm.status).toEqual({
-        message: 'Failed to add users due to an expired session. Please sign in again and retry.',
+        message: 'Failed to add users due to an expired session. Please log in again and retry.',
         severity: 'error',
       });
       expect(vm.isSubmitting).toBe(false);

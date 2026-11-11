@@ -6,7 +6,7 @@ body.page-register {
 }
 
 #register-container {
-  @extend #signin-container;
+  @extend #login-container;
 
   .register-title {
     text-align: center;
@@ -15,7 +15,7 @@ body.page-register {
 }
 
 #register {
-  @extend #signin;
+  @extend #login;
 
   > div {
     width: 100%;

@@ -175,7 +175,7 @@ export const useAuthStore = defineStore(
           ?.logInWithEmailAndPassword({ email, password })
           .then(() => {})
           .catch((error) => {
-            console.error(`Error signing in: ${error}`);
+            console.error(`Error logging in: ${error}`);
             throw error;
           });
       }
@@ -184,13 +184,13 @@ export const useAuthStore = defineStore(
     async function initiateLoginWithEmailLink({ email }: Pick<LoginCredentials, 'email'>): Promise<void> {
       if (isFirekitInit()) {
         const trimmedEmail = email.trim();
-        logger.capture('Email link sign-in requested', { email: trimmedEmail });
+        logger.capture('Email link login requested', { email: trimmedEmail });
 
         const isEmailAvailable = await roarfirekit.value?.isEmailAvailable(trimmedEmail);
         if (isEmailAvailable) {
-          logger.capture('Email link sign-in blocked, address not registered', { email: trimmedEmail });
+          logger.capture('Email link login blocked, address not registered', { email: trimmedEmail });
           const notRegisteredError = new Error(
-            'This email is not in our records. We did not send a sign-in link. Ask your site administrator to add this address before using email-link sign-in.',
+            'This email is not in our records. We did not send a login link. Ask your site administrator to add this address before using an email login link.',
           ) as Error & { code: string };
           notRegisteredError.code = 'levante/email-not-registered';
           throw notRegisteredError;
@@ -199,27 +199,28 @@ export const useAuthStore = defineStore(
         const redirectUrl = `${window.location.origin}/auth-email-link`;
 
         return roarfirekit.value?.initiateLoginWithEmailLink({ email: trimmedEmail, redirectUrl }).then(() => {
-          window.localStorage.setItem('emailForSignIn', trimmedEmail);
-          logger.capture('Email link sign-in sent', { email: trimmedEmail });
+          window.localStorage.setItem('emailForLogin', trimmedEmail);
+          logger.capture('Email link login sent', { email: trimmedEmail });
         });
       }
     }
 
-    async function signInWithEmailLink({ email, emailLink }: EmailLinkCredentials): Promise<void> {
+    async function loginWithEmailLink({ email, emailLink }: EmailLinkCredentials): Promise<void> {
       if (isFirekitInit()) {
         return roarfirekit.value?.signInWithEmailLink({ email, emailLink }).then(() => {
+          window.localStorage.removeItem('emailForLogin');
           window.localStorage.removeItem('emailForSignIn');
         });
       }
     }
 
-    async function signInWithGooglePopup(): Promise<unknown> {
+    async function loginWithGooglePopup(): Promise<unknown> {
       if (isFirekitInit()) {
         return roarfirekit.value?.signInWithPopup(AUTH_SSO_PROVIDERS.GOOGLE as any);
       }
     }
 
-    async function signInWithGoogleRedirect(): Promise<void> {
+    async function loginWithGoogleRedirect(): Promise<void> {
       return roarfirekit.value?.initiateRedirect(AUTH_SSO_PROVIDERS.GOOGLE as any);
     }
 
@@ -240,7 +241,7 @@ export const useAuthStore = defineStore(
     }
 
     /**
-     * Force a refresh of the signed-in user's Firebase Auth ID token.
+     * Force a refresh of the logged-in user's Firebase Auth ID token.
      *
      * Auth claims are read from the ID token, not a live Firestore listener,
      * so a server-side claim change does not reach an active session until the
@@ -357,9 +358,9 @@ export const useAuthStore = defineStore(
       setCurrentSite,
       setUserClaims,
       setUserData,
-      signInWithEmailLink,
-      signInWithGooglePopup,
-      signInWithGoogleRedirect,
+      loginWithEmailLink,
+      loginWithGooglePopup,
+      loginWithGoogleRedirect,
       signOut,
     };
   },
