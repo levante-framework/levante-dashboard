@@ -24,7 +24,9 @@ const useLogoutMutation = (): UseMutationReturnType<void, Error, void, unknown> 
   return useMutation({
     mutationKey: LOGOUT_MUTATION_KEY,
     mutationFn: async (): Promise<void> => {
-      await authStore.roarfirekit.signOut();
+      // Finish Firebase sign-out before onSuccess clears session state and redirects.
+      // Navigating in parallel lets the next login succeed, then get signed out by this call.
+      await authStore.logout();
     },
     meta: {
       errorMessage: 'Failed to log out',
