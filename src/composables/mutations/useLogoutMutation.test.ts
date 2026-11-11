@@ -78,11 +78,13 @@ describe('useLogoutMutation', () => {
     expect(useRouter().push).toHaveBeenCalledWith({ path: APP_ROUTES.LOGIN });
   });
 
-  it('still tears down the session and redirects when logout fails', async () => {
+  it('hard-redirects to login without re-initializing Firekit when logout fails', async () => {
+    const assignSpy = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    const initFirekit = vi.fn();
     vi.mocked(useAuthStore).mockReturnValue({
       logout: vi.fn().mockRejectedValue(new Error('sign-out failed')),
       $reset: vi.fn(),
-      initFirekit: vi.fn(),
+      initFirekit,
     } as unknown as ReturnType<typeof useAuthStore>);
 
     const [result] = withSetup(() => useLogoutMutation(), {
@@ -91,7 +93,13 @@ describe('useLogoutMutation', () => {
 
     await expect(result.mutateAsync()).rejects.toThrow('sign-out failed');
 
+    // Local session is still torn down, but Firekit is NOT re-initialized (that would resurrect
+    // the live Firebase session), and we hard-redirect rather than client-navigate.
     expect(useAuthStore().$reset).toHaveBeenCalledOnce();
-    expect(useRouter().push).toHaveBeenCalledWith({ path: APP_ROUTES.LOGIN });
+    expect(initFirekit).not.toHaveBeenCalled();
+    expect(assignSpy).toHaveBeenCalledWith(APP_ROUTES.LOGIN);
+    expect(useRouter().push).not.toHaveBeenCalled();
+
+    assignSpy.mockRestore();
   });
 });

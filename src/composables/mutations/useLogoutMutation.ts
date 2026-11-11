@@ -38,7 +38,7 @@ const useLogoutMutation = (): UseMutationReturnType<void, Error, void, unknown> 
     // session and redirects. Otherwise the user stays on an authenticated screen with no way back
     // to login (e.g. after refusing consent, where the dialog has already closed). The sign-out
     // failure itself is still reported to Sentry via meta.errorMessage.
-    onSettled: async (): Promise<void> => {
+    onSettled: async (_data, error): Promise<void> => {
       // Cancel all actively fetching queries.
       await queryClient.cancelQueries();
 
@@ -46,7 +46,6 @@ const useLogoutMutation = (): UseMutationReturnType<void, Error, void, unknown> 
       // remove it manually from sessionStorage to prevent any issues.
       assignmentsStore.$reset();
       authStore.$reset();
-      assignmentsStore.$reset();
       levanteStore.$reset();
       surveyStore.reset();
       sessionStorage.removeItem('authStore');
@@ -54,6 +53,15 @@ const useLogoutMutation = (): UseMutationReturnType<void, Error, void, unknown> 
 
       // Clear the query client to remove all cached data.
       queryClient.clear();
+
+      if (error) {
+        // Sign-out failed, so the Firebase session may still be live. Re-initializing Firekit here
+        // would re-subscribe onAuthStateChanged and resurrect firebaseUser while userData stays
+        // empty, which can hang the router guard. Hard-redirect instead so the app re-bootstraps
+        // from a clean slate (App.vue re-runs initFirekit and re-fetches user data on load).
+        window.location.assign(APP_ROUTES.LOGIN);
+        return;
+      }
 
       // Re-initialize Firekit. This is necessary to ensure that Firekit is properly reset after
       // logout in order to allow a new user to log in.
