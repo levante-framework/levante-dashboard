@@ -7,7 +7,7 @@
         class="mt-4"
         icon="pi pi-sign-out"
         label="Log out"
-        @click="() => logout"
+        @click="() => logout()"
       />
     </div>
   </div>
