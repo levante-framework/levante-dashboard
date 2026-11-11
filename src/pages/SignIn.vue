@@ -48,12 +48,12 @@
             </PvButton>
           </div>
           <small
-            v-if="googleSignInErrorKey"
+            v-if="googleSignInError"
             class="p-error block mt-2 text-center w-full px-2"
             role="alert"
             data-cy="google-sign-in-error"
           >
-            {{ $t(googleSignInErrorKey) }}
+            {{ googleSignInError }}
           </small>
           <small class="mt-3 text-center text-color-secondary">*{{ $t('pageSignIn.adminInfoPrompt') }}</small>
         </section>
@@ -149,7 +149,7 @@ import { useAuthStore } from '@/store/auth';
 
 const incorrect = ref(false);
 const emailLinkError = ref('');
-const googleSignInErrorKey = ref('');
+const googleSignInError = ref('');
 const authStore = useAuthStore();
 const assignmentsStore = useAssignmentsStore();
 const router = useRouter();
@@ -179,7 +179,7 @@ const authWithGoogle = () => {
   if (isMobileBrowser()) {
     authStore.signInWithGoogleRedirect();
   } else {
-    googleSignInErrorKey.value = '';
+    googleSignInError.value = '';
     authStore
       .signInWithGooglePopup()
       .then(async () => {
@@ -191,7 +191,8 @@ const authWithGoogle = () => {
             userData = await fetchDocById('users', authStore.getUserId());
           } catch (error) {
             if (error?.response?.status === 404) {
-              googleSignInErrorKey.value = 'pageSignIn.googleSignInUserNotFound';
+              googleSignInError.value =
+                'No account exists for this sign-in. Contact your administrator if you need access.';
               spinner.value = false;
               return;
             }
@@ -218,7 +219,7 @@ const authWithGoogle = () => {
           spinner.value = false;
           return;
         }
-        googleSignInErrorKey.value = 'pageSignIn.googleSignInGenericError';
+        googleSignInError.value = 'Sign-in failed. Something went wrong. Please contact your administrator.';
         console.error('Google sign-in error', e);
         spinner.value = false;
       });
@@ -235,7 +236,7 @@ const authWithEmail = async (state) => {
   spinner.value = true;
   incorrect.value = false;
   emailLinkError.value = '';
-  googleSignInErrorKey.value = '';
+  googleSignInError.value = '';
   let creds = toRaw(state);
   if (creds.useLink && !creds.usePassword) {
     try {

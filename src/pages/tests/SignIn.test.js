@@ -335,7 +335,9 @@ describe('SignIn.vue', () => {
     await instance.authWithGoogle();
     await flushPromises();
 
-    expect(instance.googleSignInErrorKey).toBe('pageSignIn.googleSignInUserNotFound');
+    expect(instance.googleSignInError).toBe(
+      'No account exists for this sign-in. Contact your administrator if you need access.',
+    );
     // Must not proceed to load the user profile.
     expect(getIdTokenClaims).not.toHaveBeenCalled();
     expect(authStoreMock.setUserClaims).not.toHaveBeenCalled();
@@ -357,6 +359,6 @@ describe('SignIn.vue', () => {
 
     expect(authStoreMock.setUserClaims).toHaveBeenCalledWith(claims);
     expect(authStoreMock.setUserData).toHaveBeenCalledWith(userData);
-    expect(instance.googleSignInErrorKey).toBe('');
+    expect(instance.googleSignInError).toBe('');
   });
 });

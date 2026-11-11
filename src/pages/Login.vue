@@ -87,8 +87,8 @@
         <PvButton v-else class="submit-btn" data-cy="submit-sign-in-with-password" type="submit">Continue</PvButton>
       </form>
 
-      <div v-if="!isParticipantMode && googleSignInErrorKey" class="font-medium text-sm p-error text-center mt-2">
-        {{ $t(googleSignInErrorKey) }}
+      <div v-if="!isParticipantMode && googleSignInError" class="font-medium text-sm p-error text-center mt-2">
+        {{ googleSignInError }}
       </div>
 
       <div v-if="isParticipantMode" class="flex justify-content-center gap-1 mt-5">
@@ -251,7 +251,7 @@ function redirectAfterLogin() {
 
 const freshdeskLink = 'https://levante-support.freshdesk.com/support/tickets/new';
 const supportEmail = 'levantedcc@gmail.com';
-const googleSignInErrorKey = ref('');
+const googleSignInError = ref('');
 const isCapsLockOn = ref(false);
 const isOpenTroubleOnSignInModal = ref(false);
 const isOpenWarningModal = ref(false);
@@ -278,7 +278,7 @@ const isResetEmailValid = computed(() => isEmailValid(formState.email));
 
 const authWithEmailOrUsername = async () => {
   spinner.value = true;
-  googleSignInErrorKey.value = '';
+  googleSignInError.value = '';
   messages.value = [];
 
   const isValid = await v$.value.$validate();
@@ -324,7 +324,7 @@ const authWithGoogle = async () => {
   if (isMobileBrowser()) return signInWithGoogleRedirect();
 
   spinner.value = true;
-  googleSignInErrorKey.value = '';
+  googleSignInError.value = '';
   messages.value = [];
 
   signInWithGooglePopup()
@@ -336,7 +336,8 @@ const authWithGoogle = async () => {
         userData = (await fetchDocById('users', getUserId()!)) as UserData;
       } catch (error) {
         if ((error as { response?: { status?: number } })?.response?.status === 404) {
-          googleSignInErrorKey.value = 'pageSignIn.googleSignInUserNotFound';
+          googleSignInError.value =
+            'No account exists for this sign-in. Contact your administrator if you need access.';
           return;
         }
         throw error;
@@ -361,7 +362,7 @@ const authWithGoogle = async () => {
         return;
       }
 
-      googleSignInErrorKey.value = 'pageSignIn.googleSignInGenericError';
+      googleSignInError.value = 'Sign-in failed. Something went wrong. Please contact your administrator.';
       console.error('Google sign-in error', e);
     })
     .finally(() => {
