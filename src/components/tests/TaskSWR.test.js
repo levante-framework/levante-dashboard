@@ -28,9 +28,11 @@ const mockAuthStore = reactive({
   isFirekitInit: vi.fn(() => true),
 });
 
+const routerPush = vi.fn();
+
 vi.mock('vue-router', () => ({
   useRouter: () => ({
-    push: vi.fn(),
+    push: routerPush,
     go: vi.fn(),
   }),
 }));
@@ -119,7 +121,7 @@ describe('TaskSWR.vue', () => {
     });
 
     it('should start the task when selectedAssignment is present', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = { id: 'assignment-1', assessments: [{ taskId: 'swr' }] };
 
       const wrapper = await mountTaskSWR();
 
@@ -142,7 +144,7 @@ describe('TaskSWR.vue', () => {
 
       expect(startAssessment).not.toHaveBeenCalled();
 
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = { id: 'assignment-1', assessments: [{ taskId: 'swr' }] };
       await flushPromises();
 
       expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'swr', expect.any(String));
@@ -158,7 +160,7 @@ describe('TaskSWR.vue', () => {
     });
 
     it('should not record a launch before the game renders', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = { id: 'assignment-1', assessments: [{ taskId: 'swr' }] };
 
       const wrapper = await mountTaskSWR();
 
@@ -170,6 +172,43 @@ describe('TaskSWR.vue', () => {
       document.body.innerHTML = '<div class="jspsych-content-wrapper"></div>';
       await vi.waitFor(() => expect(logger.capture).toHaveBeenCalled());
       wrapper.unmount();
+    });
+
+    it('returns home without starting when the task is not on the assignment', async () => {
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'caregiver-survey' }],
+      };
+
+      const wrapper = await mountTaskSWR();
+
+      expect(startAssessment).not.toHaveBeenCalled();
+      expect(routerPush).toHaveBeenCalledWith({ name: 'Home' });
+      expect(mockAssignmentsStore.setHomeRefresh).toHaveBeenCalled();
+      expect(logger.capture).toHaveBeenCalledWith('Task not on assignment', {
+        administrationId: 'assignment-1',
+        taskId: 'swr',
+      });
+      expect(logger.error).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('returns home without the refresh alert when start reports the task is missing', async () => {
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'swr' }],
+      };
+      startAssessment.mockRejectedValue({ code: 'functions/not-found' });
+      vi.stubGlobal('alert', vi.fn());
+
+      const wrapper = await mountTaskSWR();
+      await flushPromises();
+
+      expect(window.alert).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
+      expect(routerPush).toHaveBeenCalledWith({ name: 'Home' });
+      wrapper.unmount();
+      vi.unstubAllGlobals();
     });
   });
 });
