@@ -39,3 +39,7 @@ jobs:
           projects: dashboard qa
           sourcemaps: ./dist/assets/*.js.map
           version: ${{ github.ref_name }}-${{ github.sha }}
+          # release/* commits aren't on main, so `set-commits --auto` can't
+          # resolve the previous release's commit and fails the step. Tolerate
+          # this until the release flow keeps release commits on the main branch.
+          ignore_missing: true
