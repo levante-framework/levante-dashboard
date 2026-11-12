@@ -117,7 +117,7 @@ export default function useInactivityTimeout({ idleThreshold, countdownDuration,
   };
 
   /**
-   * Reset the sign-out countdown timer.
+   * Reset the logout countdown timer.
    *
    * @param {Boolean} resetToOriginalValue – Whether to reset the countdown to the original value or not.
    * @returns {void}

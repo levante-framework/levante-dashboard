@@ -26,10 +26,9 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRouter } from 'vue-router';
+import useLogoutMutation from '@/composables/mutations/useLogoutMutation';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { logger } from '@/logger';
-import { useAuthStore } from '@/store/auth';
 
 interface Props {
   consentText: string;
@@ -37,17 +36,15 @@ interface Props {
   onConfirm: () => Promise<void>;
 }
 
-const i18n = useI18n();
-const router = useRouter();
-const authStore = useAuthStore();
-
 const props = withDefaults(defineProps<Props>(), {
   consentText: 'Text Here',
   consentType: 'Consent',
 });
 
+const i18n = useI18n();
 const confirm = useConfirm();
 const toast = useToast();
+const { mutate: logout } = useLogoutMutation();
 
 const dialogVisible = ref<boolean>(false);
 const isSubmitting = ref<boolean>(false);
@@ -108,8 +105,7 @@ onMounted((): void => {
       }
     },
     reject: (): void => {
-      (authStore as any).signOut();
-      router.push({ name: 'SignOut' });
+      logout();
     },
   });
 });

@@ -1,8 +1,8 @@
 <template>
-  <div id="signin-container">
-    <section id="signin">
+  <div id="login-container">
+    <section id="login">
       <header>
-        <div class="signin-logo">
+        <div class="login-logo">
           <PvImage v-if="isLevante" src="/LEVANTE/Levante_Logo.png" alt="LEVANTE Logo" width="200" />
         </div>
       </header>
@@ -19,10 +19,10 @@ import { onBeforeUnmount, onMounted } from 'vue';
 import { isLevante } from '@/constants';
 
 onMounted(() => {
-  document.body.classList.add('page-signin');
+  document.body.classList.add('page-login');
 });
 
 onBeforeUnmount(() => {
-  document.body.classList.remove('page-signin');
+  document.body.classList.remove('page-login');
 });
 </script>

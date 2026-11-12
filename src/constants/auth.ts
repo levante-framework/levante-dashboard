@@ -45,7 +45,6 @@ export const allowedUnauthenticatedRoutes = [
   'Login',
   'Maintenance',
   'PrivacyPolicy',
-  'SignIn',
   'SurveyManager',
   'Translations',
 ] as const;

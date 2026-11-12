@@ -72,23 +72,23 @@
 
         <div v-if="isCapsLockOn" class="text-center p-error font-medium">⇪ {{ $t('capsLockIsOn') }}</div>
 
-        <small v-if="!isParticipantMode" class="ml-auto font-medium cursor-pointer select-none hover:underline" @click="isOpenTroubleOnSignInModal = true">Trouble logging in?</small>
+        <small v-if="!isParticipantMode" class="ml-auto font-medium cursor-pointer select-none hover:underline" @click="isOpenTroubleLoginModal = true">Trouble logging in?</small>
 
         <PvButton
           v-if="isParticipantMode"
           :disabled="spinner"
           class="submit-btn"
-          data-cy="submit-sign-in-with-password"
+          data-cy="submit-login-with-password"
           type="submit"
         >
           {{ $t('authSignIn.buttonLabel') + ' &rarr;' }}
         </PvButton>
 
-        <PvButton v-else class="submit-btn" data-cy="submit-sign-in-with-password" type="submit">Continue</PvButton>
+        <PvButton v-else class="submit-btn" data-cy="submit-login-with-password" type="submit">Continue</PvButton>
       </form>
 
-      <div v-if="!isParticipantMode && googleSignInError" class="font-medium text-sm p-error text-center mt-2">
-        {{ googleSignInError }}
+      <div v-if="!isParticipantMode && googleLoginError" class="font-medium text-sm p-error text-center mt-2">
+        {{ googleLoginError }}
       </div>
 
       <div v-if="isParticipantMode" class="flex justify-content-center gap-1 mt-5">
@@ -98,13 +98,13 @@
       <div v-else class="flex flex-column align-items-center">
         <div class="flex justify-content-between align-items-center w-full mt-3">
           <div class="flex gap-1 text-sm">
-            <div class="text-color-secondary">Not sure how to login?</div>
+            <div class="text-color-secondary">Not sure how to log in?</div>
             <a
               href="https://researcher.levante-network.org/dashboard/administrator-log-in"
               target="_blank"
               class="font-medium text-color no-underline hover:underline"
             >
-              Read sign in docs
+              Read login docs
             </a>
           </div>
 
@@ -116,7 +116,7 @@
         <div class="divider">or</div>
 
         <span class="mt-2 text-sm text-color hover:underline cursor-pointer" @click="authWithGoogle">
-          Stanford DCC Sign in
+          Stanford DCC Login
         </span>
       </div>
     </div>
@@ -140,12 +140,12 @@
 
   <RoarModal
     :draggable="false"
-    :is-enabled="isOpenTroubleOnSignInModal"
+    :is-enabled="isOpenTroubleLoginModal"
     small
     style="max-width: 600px;"
     subtitle=""
     title="Trouble logging in?"
-    @modal-closed="isOpenTroubleOnSignInModal = false"
+    @modal-closed="isOpenTroubleLoginModal = false"
   >
     <template #default>
       <div class="flex flex-column gap-3">
@@ -162,7 +162,7 @@
         severity="danger"
         tabindex="0"
         text
-        @click="signInWithEmailLink"
+        @click="loginWithEmailLink"
       />
 
       <PvButton
@@ -233,8 +233,8 @@ const {
   logInWithEmailAndPassword,
   setUserClaims,
   setUserData,
-  signInWithGooglePopup,
-  signInWithGoogleRedirect,
+  loginWithGooglePopup,
+  loginWithGoogleRedirect,
 } = authStore;
 
 function redirectAfterLogin() {
@@ -251,9 +251,9 @@ function redirectAfterLogin() {
 
 const freshdeskLink = 'https://levante-support.freshdesk.com/support/tickets/new';
 const supportEmail = 'levantedcc@gmail.com';
-const googleSignInError = ref('');
+const googleLoginError = ref('');
 const isCapsLockOn = ref(false);
-const isOpenTroubleOnSignInModal = ref(false);
+const isOpenTroubleLoginModal = ref(false);
 const isOpenWarningModal = ref(false);
 const messages = ref<Array<Message>>([]);
 const mode = ref<Mode>(MODES.participant);
@@ -278,7 +278,7 @@ const isResetEmailValid = computed(() => isEmailValid(formState.email));
 
 const authWithEmailOrUsername = async () => {
   spinner.value = true;
-  googleSignInError.value = '';
+  googleLoginError.value = '';
   messages.value = [];
 
   const isValid = await v$.value.$validate();
@@ -321,13 +321,13 @@ const authWithEmailOrUsername = async () => {
 };
 
 const authWithGoogle = async () => {
-  if (isMobileBrowser()) return signInWithGoogleRedirect();
+  if (isMobileBrowser()) return loginWithGoogleRedirect();
 
   spinner.value = true;
-  googleSignInError.value = '';
+  googleLoginError.value = '';
   messages.value = [];
 
-  signInWithGooglePopup()
+  loginWithGooglePopup()
     .then(async () => {
       // A Google account that was never registered as a Levante user authenticates
       // successfully but has no corresponding `users` document, so the fetch 404s.
@@ -336,8 +336,7 @@ const authWithGoogle = async () => {
         userData = (await fetchDocById('users', getUserId()!)) as UserData;
       } catch (error) {
         if ((error as { response?: { status?: number } })?.response?.status === 404) {
-          googleSignInError.value =
-            'No account exists for this sign-in. Contact your administrator if you need access.';
+          googleLoginError.value = 'No account exists for this login. Contact your administrator if you need access.';
           return;
         }
         throw error;
@@ -362,8 +361,8 @@ const authWithGoogle = async () => {
         return;
       }
 
-      googleSignInError.value = 'Sign-in failed. Something went wrong. Please contact your administrator.';
-      console.error('Google sign-in error', e);
+      googleLoginError.value = 'Login failed. Something went wrong. Please contact your administrator.';
+      console.error('Google login error', e);
     })
     .finally(() => {
       spinner.value = false;
@@ -415,12 +414,12 @@ const checkForCapsLock = (e: Event): void => {
   }
 };
 
-const closeTroubleOnSignInModal = () => {
-  isOpenTroubleOnSignInModal.value = false;
+const closeTroubleLoginModal = () => {
+  isOpenTroubleLoginModal.value = false;
 };
 
 const handleTroubleModalError = (e: unknown, fallbackCode: string, fallbackMessage: string) => {
-  closeTroubleOnSignInModal();
+  closeTroubleLoginModal();
 
   const code = typeof e === 'object' && e !== null && 'code' in e ? String(e.code) : fallbackCode;
   const isEmailNotRegistered = code === 'levante/email-not-registered';
@@ -447,7 +446,7 @@ const sendResetPasswordEmail = () => {
   return roarfirekit
     .value!.sendPasswordResetEmail(email)
     .then(() => {
-      closeTroubleOnSignInModal();
+      closeTroubleLoginModal();
       confirmEmailSent(
         `An email to reset your password is on its way to you from ${supportEmail}. This could take 5-10 minutes. Check your spam folder if you can't find it. If it never arrives, open a ticket with us.`,
       );
@@ -478,23 +477,19 @@ const confirmEmailSent = (message: string) => {
   });
 };
 
-const signInWithEmailLink = () => {
+const loginWithEmailLink = () => {
   const { email } = formState;
   if (!isEmailValid(email)) return false;
 
   return initiateLoginWithEmailLink({ email })
     .then(() => {
-      closeTroubleOnSignInModal();
+      closeTroubleLoginModal();
       confirmEmailSent(
-        `An email to login with a link is on its way to you from ${supportEmail}. This could take 5-10 minutes. Check your spam folder if you can't find it. If it never arrives, open a ticket with us.`,
+        `An email to log in with a link is on its way to you from ${supportEmail}. This could take 5-10 minutes. Check your spam folder if you can't find it. If it never arrives, open a ticket with us.`,
       );
     })
     .catch((e) => {
-      handleTroubleModalError(
-        e,
-        'signInWithEmailLink',
-        'There was a problem sending the sign-in link. Please try again.',
-      );
+      handleTroubleModalError(e, 'loginWithEmailLink', 'There was a problem sending the login link. Please try again.');
     });
 };
 
@@ -503,7 +498,7 @@ onMounted(() => {
     toast.add({
       severity: TOAST_SEVERITIES.WARN,
       summary: 'Session expired',
-      detail: 'Your session expired. Please sign in again.',
+      detail: 'Your session expired. Please log in again.',
       life: TOAST_DEFAULT_LIFE_DURATION,
     });
 
@@ -644,7 +639,7 @@ onMounted(() => {
   margin: 2rem 0 0;
 }
 
-.sign-in-with-email-link,
+.login-with-email-link,
 .forgot-password-link {
   display: block;
   font-weight: 500;
@@ -704,7 +699,7 @@ onMounted(() => {
   }
 }
 
-.google-signin-btn {
+.google-login-btn {
   display: inline-flex;
   width: 100%;
   height: auto;
@@ -723,7 +718,7 @@ onMounted(() => {
   }
 }
 
-.google-signin-btn-logo {
+.google-login-btn-logo {
   display: block;
   width: 1.5rem;
   height: auto;

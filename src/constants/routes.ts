@@ -15,6 +15,7 @@ export const APP_ROUTES = {
   LOGIN: '/login',
   PROGRESS_REPORT: '/administration/:administrationId/:orgType/:orgId',
   SCORE_REPORT: '/scores/:administrationId/:orgType/:orgId',
+  // Old links to /signin still open the login page.
   SIGN_IN: '/signin',
   SSO: '/sso',
   VIEW_ASSIGNMENTS: '/view-assignments',

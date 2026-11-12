@@ -97,7 +97,7 @@ describe('retryRequestWithFreshToken', () => {
     getIdToken = vi.fn().mockResolvedValue('fresh-token');
     authStore = {
       firebaseUser: { adminFirebaseUser: { getIdToken } },
-      signOut: vi.fn().mockResolvedValue(undefined),
+      logout: vi.fn().mockResolvedValue(undefined),
     };
     vi.mocked(logger.error).mockClear();
   });
@@ -161,7 +161,7 @@ describe('retryRequestWithFreshToken', () => {
     );
 
     expect(getIdToken).not.toHaveBeenCalled();
-    expect(authStore.signOut).not.toHaveBeenCalled();
+    expect(authStore.logout).not.toHaveBeenCalled();
     expect(assignSpy).not.toHaveBeenCalled();
     expect(axiosInstance).not.toHaveBeenCalled();
     expect(error.config._retriedAuth).toBeUndefined();
@@ -179,7 +179,7 @@ describe('retryRequestWithFreshToken', () => {
       retryRequestWithFreshToken({ error, axiosInstance, authStore, unauthenticated: false }),
     ).rejects.toThrow('Session expired');
 
-    expect(authStore.signOut).toHaveBeenCalledOnce();
+    expect(authStore.logout).toHaveBeenCalledOnce();
     expect(assignSpy).toHaveBeenCalledWith('/login?sessionExpired=true');
     expect(axiosInstance).not.toHaveBeenCalled();
 

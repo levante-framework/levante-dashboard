@@ -1,7 +1,7 @@
 import type { UseMutationReturnType } from '@tanstack/vue-query';
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { useRouter } from 'vue-router';
-import { SIGN_OUT_MUTATION_KEY } from '@/constants/mutationKeys';
+import { LOGOUT_MUTATION_KEY } from '@/constants/mutationKeys';
 import { APP_ROUTES } from '@/constants/routes';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
@@ -9,11 +9,11 @@ import { useLevanteStore } from '@/store/levante';
 import { useSurveyStore } from '@/store/survey';
 
 /**
- * Sign-Out mutation.
+ * Logout mutation.
  *
  * @returns The mutation object returned by `useMutation`.
  */
-const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown> => {
+const useLogoutMutation = (): UseMutationReturnType<void, Error, void, unknown> => {
   const assignmentsStore = useAssignmentsStore();
   const authStore = useAuthStore();
   const levanteStore = useLevanteStore();
@@ -22,17 +22,23 @@ const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown>
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: SIGN_OUT_MUTATION_KEY,
+    mutationKey: LOGOUT_MUTATION_KEY,
     mutationFn: async (): Promise<void> => {
-      await authStore.roarfirekit.signOut();
+      // Finish Firebase sign-out before onSettled clears session state and redirects.
+      // Navigating in parallel lets the next login succeed, then get signed out by this call.
+      await authStore.logout();
     },
     meta: {
-      errorMessage: 'Failed to sign out',
+      errorMessage: 'Failed to log out',
       errorContext: {
-        tags: { composable: 'useSignOutMutation' },
+        tags: { composable: 'useLogoutMutation' },
       },
     },
-    onSuccess: async (): Promise<void> => {
+    // Use onSettled (not onSuccess) so a failed Firebase sign-out still tears down the local
+    // session and redirects. Otherwise the user stays on an authenticated screen with no way back
+    // to login (e.g. after refusing consent, where the dialog has already closed). The sign-out
+    // failure itself is still reported to Sentry via meta.errorMessage.
+    onSettled: async (_data, error): Promise<void> => {
       // Cancel all actively fetching queries.
       await queryClient.cancelQueries();
 
@@ -40,7 +46,6 @@ const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown>
       // remove it manually from sessionStorage to prevent any issues.
       assignmentsStore.$reset();
       authStore.$reset();
-      assignmentsStore.$reset();
       levanteStore.$reset();
       surveyStore.reset();
       sessionStorage.removeItem('authStore');
@@ -49,8 +54,17 @@ const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown>
       // Clear the query client to remove all cached data.
       queryClient.clear();
 
+      if (error) {
+        // Sign-out failed, so the Firebase session may still be live. Re-initializing Firekit here
+        // would re-subscribe onAuthStateChanged and resurrect firebaseUser while userData stays
+        // empty, which can hang the router guard. Hard-redirect instead so the app re-bootstraps
+        // from a clean slate (App.vue re-runs initFirekit and re-fetches user data on load).
+        window.location.assign(APP_ROUTES.LOGIN);
+        return;
+      }
+
       // Re-initialize Firekit. This is necessary to ensure that Firekit is properly reset after
-      // sign-out in order to allow a new user to sign in.
+      // logout in order to allow a new user to log in.
       await authStore.initFirekit();
 
       // Redirect to login page.
@@ -59,4 +73,4 @@ const useSignOutMutation = (): UseMutationReturnType<void, Error, void, unknown>
   });
 };
 
-export default useSignOutMutation;
+export default useLogoutMutation;

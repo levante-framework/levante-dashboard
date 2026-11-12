@@ -46,7 +46,7 @@ Unit tests are located in various directories and test individual components, ut
 
 - **Location**: [`src/pages/tests/`](src/pages/tests/)
 - **Examples**:
-  - [`SignIn.test.js`](src/pages/tests/SignIn.test.js) - Authentication page
+  - [`Login.test.js`](src/pages/tests/Login.test.js) - Authentication page
   - [`HomeAdministrator.test.js`](src/pages/tests/HomeAdministrator.test.js) - Admin dashboard
   - [`CreateAssignment.test.js`](src/pages/tests/CreateAssignment.test.js) - Assignment creation
   - [`ListGroups.test.js`](src/pages/tests/ListGroups.test.js) - Groups management

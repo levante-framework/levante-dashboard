@@ -72,13 +72,13 @@ function login() {
 
 locales.forEach((locale) => {
   describe(`locale smoke: ${locale}`, () => {
-    it(`renders signin and navigates after login for ${locale}`, () => {
+    it(`renders login and navigates after login for ${locale}`, () => {
       cy.visit(baseUrl, setLocaleBeforeLoad(locale));
-      // ensure signin page shows inputs
+      // ensure login page shows inputs
       cy.get('input').should('have.length.at.least', 2);
       if (skipLoginFlag) {
-        // Only verify sign-in page renders for this locale (no auth calls)
-        cy.contains(/sign in|sign-in|login/i).should('exist');
+        // Only verify the login page renders for this locale (no auth calls)
+        cy.contains(/log[ -]?in/i).should('exist');
         return;
       }
       login();
