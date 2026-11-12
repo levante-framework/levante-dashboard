@@ -39,7 +39,7 @@ jobs:
           projects: dashboard qa
           sourcemaps: ./dist/assets/*.js.map
           version: ${{ github.ref_name }}-${{ github.sha }}
-          # Prod and hotfix releases record a commit on the release branch.
-          # set-commits --auto only walks ancestors of HEAD, so keep going
-          # and still upload source maps when that commit is not on this branch.
+          # release/* commits aren't on main, so `set-commits --auto` can't
+          # resolve the previous release's commit and fails the step. Tolerate
+          # this until the release flow keeps release commits on the main branch.
           ignore_missing: true

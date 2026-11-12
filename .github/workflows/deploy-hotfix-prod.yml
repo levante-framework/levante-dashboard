@@ -77,7 +77,9 @@ jobs:
           projects: dashboard qa
           sourcemaps: ./dist/assets
           version: hotfix-${{ steps.version.outputs.app_version }}-${{ github.sha }}
-          # A later main release is not an ancestor of the released ref.
+          # release/* commits aren't on main, so `set-commits --auto` can't
+          # resolve the previous release's commit and fails the step. Tolerate
+          # this until the release flow keeps release commits on the main branch.
           ignore_missing: true
           finalize: false
 
@@ -99,6 +101,9 @@ jobs:
         with:
           environment: production
           version: hotfix-${{ steps.version.outputs.app_version }}-${{ github.sha }}
+          # release/* commits aren't on main, so `set-commits --auto` can't
+          # resolve the previous release's commit and fails the step. Tolerate
+          # this until the release flow keeps release commits on the main branch.
           ignore_missing: true
           finalize: true
 

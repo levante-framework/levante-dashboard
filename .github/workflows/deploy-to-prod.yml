@@ -109,7 +109,9 @@ jobs:
           projects: dashboard qa
           sourcemaps: ./dist/assets
           version: ${{ steps.version.outputs.tag_name }}
-          # Dev releases on main are not always ancestors of a release branch.
+          # release/* commits aren't on main, so `set-commits --auto` can't
+          # resolve the previous release's commit and fails the step. Tolerate
+          # this until the release flow keeps release commits on the main branch.
           ignore_missing: true
           finalize: false
 
@@ -131,6 +133,9 @@ jobs:
         with:
           environment: production
           version: ${{ steps.version.outputs.tag_name }}
+          # release/* commits aren't on main, so `set-commits --auto` can't
+          # resolve the previous release's commit and fails the step. Tolerate
+          # this until the release flow keeps release commits on the main branch.
           ignore_missing: true
           finalize: true
 
