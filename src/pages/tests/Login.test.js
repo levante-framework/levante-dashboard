@@ -31,11 +31,15 @@ const utilsMocks = vi.hoisted(() => ({
 const emailLinkState = vi.hoisted(() => ({ rejectWith: null }));
 
 const loggerErrors = vi.hoisted(() => []);
+const loggerUserMistakes = vi.hoisted(() => []);
 
 vi.mock('@/logger', () => ({
   logger: {
     error: (...args) => {
       loggerErrors.push(args);
+    },
+    userMistake: (...args) => {
+      loggerUserMistakes.push(args);
     },
   },
 }));
@@ -254,6 +258,7 @@ describe('Login.vue', () => {
     routeState.query = {};
     emailLinkState.rejectWith = null;
     loggerErrors.length = 0;
+    loggerUserMistakes.length = 0;
     authRefs.spinner.value = false;
     authRefs.routeToProfile.value = false;
     authRefs.ssoProvider.value = null;
@@ -390,6 +395,33 @@ describe('Login.vue', () => {
     expect(captured.confirmRequests).toHaveLength(0);
     expect(wrapper.text()).toContain('There was a problem sending the sign-in link. Please try again.');
     expect(loggerErrors).toHaveLength(1);
+  });
+
+  it('records an unknown password reset address as a user mistake', async () => {
+    const unknownAccount = new Error('Firebase: Error (auth/user-not-found).');
+    unknownAccount.code = 'auth/user-not-found';
+    wrapper = mountLogin();
+    authRefs.roarfirekit.value = {
+      sendPasswordResetEmail: () => Promise.reject(unknownAccount),
+    };
+    await switchToResearcherMode();
+    await openTroubleOnSignInModal();
+    await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('missing@mail.com');
+    await clickModalButton('Reset Password');
+    await flushPromises();
+    expect(captured.confirmRequests).toHaveLength(0);
+    expect(wrapper.text()).toContain('There was a problem sending the password reset email. Please try again.');
+    expect(loggerErrors).toHaveLength(0);
+    expect(loggerUserMistakes).toEqual([
+      [
+        'password_reset_unknown_account',
+        {
+          action: 'sendResetPasswordEmail',
+          component: 'Login',
+          authCode: 'auth/user-not-found',
+        },
+      ],
+    ]);
   });
 
   it('shows a fallback message and reports to Sentry when the reset email request fails unexpectedly', async () => {
