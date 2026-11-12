@@ -119,7 +119,7 @@ describe('TaskSRE.vue', () => {
     });
 
     it('should start the task when selectedAssignment is present', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = { id: 'assignment-1', assessments: [{ taskId: 'sre' }] };
 
       const wrapper = await mountTaskSRE();
 
@@ -142,7 +142,7 @@ describe('TaskSRE.vue', () => {
 
       expect(startAssessment).not.toHaveBeenCalled();
 
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = { id: 'assignment-1', assessments: [{ taskId: 'sre' }] };
       await flushPromises();
 
       expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'sre', expect.any(String));
@@ -158,7 +158,7 @@ describe('TaskSRE.vue', () => {
     });
 
     it('should not record a launch before the game renders', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = { id: 'assignment-1', assessments: [{ taskId: 'sre' }] };
 
       const wrapper = await mountTaskSRE();
 

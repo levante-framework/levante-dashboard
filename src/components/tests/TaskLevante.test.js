@@ -123,7 +123,10 @@ describe('TaskLevante.vue', () => {
     });
 
     it('should start the task when selectedAssignment is present', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
 
       const wrapper = await mountTaskLevante();
 
@@ -132,7 +135,10 @@ describe('TaskLevante.vue', () => {
     });
 
     it('should not start a student task when birth month and year are missing', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
       userDataRef.value = { userType: 'student' };
 
       const wrapper = await mountTaskLevante({ taskId: 'adult-reasoning' });
@@ -143,7 +149,10 @@ describe('TaskLevante.vue', () => {
     });
 
     it.each(['parent', 'teacher'])('should start a task for a %s without birth month and year', async (userType) => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
       userDataRef.value = { userType };
 
       const wrapper = await mountTaskLevante({ taskId: 'adult-reasoning' });
@@ -154,7 +163,10 @@ describe('TaskLevante.vue', () => {
     });
 
     it('should start after the signed-in adult user type arrives', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
       userDataRef.value = {};
 
       const wrapper = await mountTaskLevante();
@@ -176,7 +188,10 @@ describe('TaskLevante.vue', () => {
 
       expect(startAssessment).not.toHaveBeenCalled();
 
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
       await flushPromises();
 
       expect(startAssessment).toHaveBeenCalledWith('assignment-1', 'egma-math', expect.any(String), 'runs');
@@ -184,7 +199,10 @@ describe('TaskLevante.vue', () => {
     });
 
     it('should navigate home without alerting or logging when the task is aborted', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
       startAssessment.mockRejectedValueOnce(Object.assign(new Error('aborted'), { name: 'AbortError' }));
 
       const wrapper = await mountTaskLevante();
@@ -198,7 +216,10 @@ describe('TaskLevante.vue', () => {
     });
 
     it('should abort the task launcher on unmount without navigating home', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
 
       const wrapper = await mountTaskLevante();
       await flushPromises();
@@ -211,7 +232,10 @@ describe('TaskLevante.vue', () => {
     });
 
     it('should not complete the assessment or navigate home if the task finishes after unmount', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
       let resolveRun;
       vi.mocked(TaskLauncher).mockImplementationOnce(() => ({
         run: vi.fn().mockReturnValue(
@@ -234,7 +258,10 @@ describe('TaskLevante.vue', () => {
     });
 
     it('should not alert or log if the task rejects after unmount', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
       let rejectRun;
       vi.mocked(TaskLauncher).mockImplementationOnce(() => ({
         run: vi.fn().mockReturnValue(
@@ -258,7 +285,10 @@ describe('TaskLevante.vue', () => {
     });
 
     it('should alert and log without navigating home when the task fails unexpectedly', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
       startAssessment.mockRejectedValueOnce(new Error('boom'));
 
       const wrapper = await mountTaskLevante();
@@ -272,7 +302,10 @@ describe('TaskLevante.vue', () => {
     });
 
     it('does not relaunch the task when the game run fails after a successful start', async () => {
-      selectedAssignmentRef.value = { id: 'assignment-1' };
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
       TaskLauncher.mockImplementationOnce(() => ({
         run: vi.fn().mockRejectedValue(new Error('mid-game boom')),
         abort: vi.fn(),
@@ -287,10 +320,45 @@ describe('TaskLevante.vue', () => {
       expect(logger.error).toHaveBeenCalled();
 
       // Re-trigger the launch watcher; the task must not start a second time.
-      selectedAssignmentRef.value = { id: 'assignment-2' };
+      selectedAssignmentRef.value = {
+        id: 'assignment-2',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
       await flushPromises();
 
       expect(startAssessment).toHaveBeenCalledTimes(1);
+      wrapper.unmount();
+    });
+
+    it('returns home without the refresh alert when the task is not on the assignment', async () => {
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'caregiver-survey' }],
+      };
+
+      const wrapper = await mountTaskLevante();
+
+      expect(startAssessment).not.toHaveBeenCalled();
+      expect(window.alert).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
+      expect(routerPush).toHaveBeenCalledWith({ name: 'Home' });
+      expect(mockAssignmentsStore.setHomeRefresh).toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('returns home without the refresh alert when start reports the task is missing', async () => {
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math' }, { taskId: 'adult-reasoning' }],
+      };
+      startAssessment.mockRejectedValue({ code: 'functions/not-found' });
+
+      const wrapper = await mountTaskLevante();
+      await flushPromises();
+
+      expect(window.alert).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
+      expect(routerPush).toHaveBeenCalledWith({ name: 'Home' });
       wrapper.unmount();
     });
   });
