@@ -19,6 +19,7 @@ jobs:
         with:
           app-id: ${{ secrets.LEVANTE_BOT_APP_ID }}
           private-key: ${{ secrets.LEVANTE_BOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
       # Private git dependencies (e.g. levante-swr) are locked to SSH URLs; runners have no SSH key.
       - name: Authenticate Git for private dependencies
         env:
