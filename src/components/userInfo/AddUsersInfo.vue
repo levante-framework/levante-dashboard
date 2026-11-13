@@ -26,6 +26,7 @@
         <PvButton
           class="download-csv-btn"
           data-testid="download-template"
+          data-wizard="download-template"
           severity="primary"
           variant="outlined"
           @click="downloadTemplate"
@@ -47,8 +48,8 @@
 
       <PvAccordion v-model:value="fileRequirementsAccordionValue" class="mb-4">
         <PvAccordionPanel value="requirements">
-          <PvAccordionHeader>View requirements table and notes</PvAccordionHeader>
-          <PvAccordionContent>
+          <PvAccordionHeader data-wizard="requirements-accordion">View requirements table and notes</PvAccordionHeader>
+          <PvAccordionContent data-wizard="requirements-table">
             <PvDataTable :value="fileRequirementsTableData" show-gridlines class="requirements-table mb-4">
               <PvColumn field="column" header="Column" body-class="text-left" header-class="text-left">
                 <template #body="{ data }">
@@ -100,6 +101,7 @@
           :src="LEVANTE_STATIC_ASSETS_URL + '/add_users_example_with_permissions.png'"
           alt="Add Users CSV Example "
           class="csv-example-image"
+          data-wizard="add-users-example"
         />
       </div>
       <p>

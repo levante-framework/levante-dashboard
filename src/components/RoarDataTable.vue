@@ -2,7 +2,7 @@
   <div v-if="!props.data">
     <SkeletonTable />
   </div>
-  <div v-else class="roar-data-table options-container">
+  <div v-else class="roar-data-table options-container" :data-wizard="dataWizard">
     <div class="flex justify-content-end mr-3 mt-2 button-container">
       <button
         v-if="props.showOptionsControl && shouldRenderToolbar"
@@ -70,6 +70,7 @@
             v-tooltip.bottom="'Export all rows to a CSV file.'"
             label="Export Whole Table"
             class="m-1 h-3rem bg-primary text-white border-none border-round text-sm hover:bg-red-900"
+            data-wizard="progress-export"
             @click="exportCSV(false)"
           />
         </span>
@@ -190,6 +191,7 @@
                     severity="secondary"
                     text
                     class="border border-round surface-200 p-2 hover:surface-500"
+                    :data-wizard="col.dataWizard"
                     :label="colData.routeParams.buttonLabel"
                     :aria-label="col.routeTooltip"
                     :icon="col.routeIcon"
@@ -211,6 +213,7 @@
                     severity="secondary"
                     text
                     class="column-button border border-round surface-200 text-primary p-2 hover:surface-500 hover:text-white"
+                    :data-wizard="col.dataWizard"
                     :label="col.buttonLabel"
                     :aria-label="col.buttonTooltip"
                     :icon="col.buttonIcon"
@@ -470,6 +473,7 @@ const props = defineProps({
   rowClass: { type: Function, default: null },
   allowRowSelection: { type: Boolean, default: true },
   dataKey: { type: String, default: undefined },
+  dataWizard: { type: String, default: undefined },
 });
 
 const slots = useSlots();
