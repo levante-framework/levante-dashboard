@@ -29,11 +29,14 @@ export const useGetOrgInformationStatusQuery = (
 ): UseQueryReturnType<GetOrgInformationStatusResult, FirebaseFailure<GetOrgInformationStatusError>> => {
   return useQuery({
     queryKey: computed(() => [ORG_INFORMATION_STATUS_QUERY_KEY, toValue(orgType), toValue(orgIds)]),
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
+      // This fetch belongs to the query key. Reading the live tab here would store that tab's
+      // result on every list refreshed at the same time.
+      const [, keyedOrgType, keyedOrgIds] = queryKey;
       try {
-        const callableOrgType = CALLABLE_ORG_TYPES[toValue(orgType)];
+        const callableOrgType = CALLABLE_ORG_TYPES[keyedOrgType as OrgInformationOrgType];
         const responses = await Promise.all(
-          _chunk(toValue(orgIds), MAX_ORG_IDS_PER_CALL).map((orgIdsChunk) =>
+          _chunk(keyedOrgIds as string[], MAX_ORG_IDS_PER_CALL).map((orgIdsChunk) =>
             surveyFormsRepository.getOrgInformationStatus(
               GetOrgInformationStatusParamsSchema.parse({ orgType: callableOrgType, orgIds: orgIdsChunk }),
             ),

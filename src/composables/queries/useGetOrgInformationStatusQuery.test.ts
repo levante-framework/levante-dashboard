@@ -2,6 +2,7 @@ import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { type MaybeRefOrGetter, ref } from 'vue';
+import { ORG_INFORMATION_STATUS_QUERY_KEY } from '@/constants/queryKeys';
 import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsRepository';
 import { withSetup } from '@/test-support/withSetup.js';
 import { useGetOrgInformationStatusQuery } from './useGetOrgInformationStatusQuery';
@@ -94,6 +95,28 @@ describe('useGetOrgInformationStatusQuery', () => {
     await flushPromises();
 
     expect(getOrgInformationStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the site result when that query is refetched after the selection moves to a school', async () => {
+    const orgType = ref<'districts' | 'schools'>('districts');
+    const orgIds = ref(['site-1']);
+    mountQuery(orgType, orgIds);
+    await flushPromises();
+
+    orgType.value = 'schools';
+    orgIds.value = ['school-1'];
+    await flushPromises();
+
+    await queryClient.refetchQueries({ queryKey: [ORG_INFORMATION_STATUS_QUERY_KEY], type: 'all' });
+
+    expect(queryClient.getQueryData([ORG_INFORMATION_STATUS_QUERY_KEY, 'districts', ['site-1']])).toEqual({
+      orgType: 'site',
+      results: [{ orgId: 'site-1', progress: 'complete' }],
+    });
+    expect(queryClient.getQueryData([ORG_INFORMATION_STATUS_QUERY_KEY, 'schools', ['school-1']])).toEqual({
+      orgType: 'school',
+      results: [{ orgId: 'school-1', progress: 'complete' }],
+    });
   });
 
   it('surfaces a rejected repository call as a FirebaseFailure', async () => {

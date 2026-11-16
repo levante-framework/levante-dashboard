@@ -46,7 +46,7 @@ import { useRoute, useRouter } from 'vue-router';
 import FormRenderer from '@/components/FormRenderer.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { type SurveyFormType, useSurveyFormDefinitionQuery } from '@/composables/queries/useSurveyFormDefinitionQuery';
-import { SURVEY_FORM_DEFINITION_QUERY_KEY } from '@/constants/queryKeys';
+import { ORG_INFORMATION_STATUS_QUERY_KEY, SURVEY_FORM_DEFINITION_QUERY_KEY } from '@/constants/queryKeys';
 import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsRepository';
 
 const route = useRoute();
@@ -111,6 +111,10 @@ async function persist(
     persistedStatus.value = status;
     await queryClient.invalidateQueries({
       queryKey: [SURVEY_FORM_DEFINITION_QUERY_KEY, formType.value, orgId.value],
+    });
+    await queryClient.invalidateQueries({
+      queryKey: [ORG_INFORMATION_STATUS_QUERY_KEY],
+      refetchType: 'all',
     });
     if (options?.silent) return true;
     toast.add({

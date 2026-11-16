@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import FormRenderer from '@/components/FormRenderer.vue';
 import { useSurveyFormDefinitionQuery } from '@/composables/queries/useSurveyFormDefinitionQuery';
-import { SURVEY_FORM_DEFINITION_QUERY_KEY } from '@/constants/queryKeys';
+import { ORG_INFORMATION_STATUS_QUERY_KEY, SURVEY_FORM_DEFINITION_QUERY_KEY } from '@/constants/queryKeys';
 import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsRepository';
 import SurveyFormPreview from './SurveyFormPreview.vue';
 
@@ -158,6 +158,10 @@ describe('SurveyFormPreview', () => {
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: [SURVEY_FORM_DEFINITION_QUERY_KEY, 'site', 'district-1'],
     });
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: [ORG_INFORMATION_STATUS_QUERY_KEY],
+      refetchType: 'all',
+    });
   });
 
   it('saves as draft when the stored form is still a draft', async () => {
@@ -176,6 +180,10 @@ describe('SurveyFormPreview', () => {
     expect(surveyFormsRepository.saveOrgInformation).toHaveBeenCalledWith(expect.objectContaining({ status: 'draft' }));
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: [SURVEY_FORM_DEFINITION_QUERY_KEY, 'site', 'district-1'],
+    });
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: [ORG_INFORMATION_STATUS_QUERY_KEY],
+      refetchType: 'all',
     });
   });
 
