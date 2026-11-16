@@ -4,6 +4,7 @@ import { type Auth, onAuthStateChanged, type Unsubscribe, type User } from 'fire
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { markRaw, type Ref, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { isAdminForSite } from '@/helpers/claims';
 import { identitySiteName, usernameFromIdentity } from '@/helpers/sentryPrivacy';
 import { logger } from '@/logger';
 import posthogInstance from '@/plugins/posthog';
@@ -15,13 +16,11 @@ interface FirebaseUser {
 }
 
 export interface UserClaims {
-  claims: {
-    roarUid?: string;
-    super_admin?: boolean;
-    admin?: boolean;
-    useNewPermissions?: boolean;
-    [key: string]: unknown;
-  };
+  super_admin?: boolean;
+  useNewPermissions?: boolean;
+  rolesSet?: string[];
+  siteRoles?: Record<string, string[]>;
+  siteNames?: Record<string, string>;
   [key: string]: unknown;
 }
 
@@ -59,7 +58,6 @@ export const useAuthStore = defineStore(
   () => {
     // State
     const adminAuthStateListener: Ref<Unsubscribe | null> = ref(null);
-    const adminOrgs: Ref<unknown | null> = ref(null);
     const currentSite: Ref<string | null> = ref(null);
     const currentSiteName: Ref<string | null> = ref(null);
     const firebaseUser: Ref<FirebaseUser> = ref({ adminFirebaseUser: null });
@@ -77,7 +75,6 @@ export const useAuthStore = defineStore(
     function $reset(): void {
       adminAuthStateListener.value?.();
       adminAuthStateListener.value = null;
-      adminOrgs.value = null;
       currentSite.value = null;
       currentSiteName.value = null;
       firebaseUser.value = { adminFirebaseUser: null };
@@ -101,10 +98,6 @@ export const useAuthStore = defineStore(
       return firebaseUser.value.adminFirebaseUser?.email ?? undefined;
     }
 
-    function getRoarUid(): string | undefined {
-      return userClaims.value?.claims?.roarUid;
-    }
-
     function getUid(): string | undefined {
       return firebaseUser.value.adminFirebaseUser?.uid;
     }
@@ -126,7 +119,7 @@ export const useAuthStore = defineStore(
     }
 
     function isUserAdmin(): boolean {
-      return Boolean(userClaims.value?.claims?.super_admin || userClaims.value?.claims?.admin);
+      return isAdminForSite(userClaims.value, currentSite.value);
     }
 
     function isUserSuperAdmin(): boolean {
@@ -246,6 +239,15 @@ export const useAuthStore = defineStore(
       }
     }
 
+    /**
+     * Force a refresh of the signed-in user's Firebase Auth ID token.
+     *
+     * Auth claims are read from the ID token, not a live Firestore listener,
+     * so a server-side claim change does not reach an active session until the
+     * token is refreshed (otherwise only on the ~1h auto-refresh). Call this
+     * after any operation that changes the current user's custom claims so the
+     * store re-reads fresh claims on the next `getIdTokenClaims()`.
+     */
     async function forceIdTokenRefresh(): Promise<void> {
       await roarfirekit.value?.forceIdTokenRefresh();
     }
@@ -311,13 +313,12 @@ export const useAuthStore = defineStore(
 
     function setUserClaims(claims: UserClaims | null): void {
       userClaims.value = claims;
-      shouldUsePermissions.value = Boolean(claims?.claims?.useNewPermissions);
+      shouldUsePermissions.value = Boolean(claims?.useNewPermissions);
     }
 
     return {
       // State
       adminAuthStateListener,
-      adminOrgs,
       currentSite,
       currentSiteName,
       firebaseUser,
@@ -333,7 +334,6 @@ export const useAuthStore = defineStore(
 
       // Getters
       getEmail,
-      getRoarUid,
       getUid,
       getUserEmail,
       getUserId,

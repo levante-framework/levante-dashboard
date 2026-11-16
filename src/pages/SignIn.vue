@@ -48,12 +48,12 @@
             </PvButton>
           </div>
           <small
-            v-if="googleSignInErrorKey"
+            v-if="googleSignInError"
             class="p-error block mt-2 text-center w-full px-2"
             role="alert"
             data-cy="google-sign-in-error"
           >
-            {{ $t(googleSignInErrorKey) }}
+            {{ googleSignInError }}
           </small>
           <small class="mt-3 text-center text-color-secondary">*{{ $t('pageSignIn.adminInfoPrompt') }}</small>
         </section>
@@ -143,13 +143,13 @@ import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toast
 import { isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { getUserAssignments } from '@/helpers/query/assignments';
-import { fetchDocById } from '@/helpers/query/utils';
+import { fetchDocById, getIdTokenClaims } from '@/helpers/query/utils';
 import { useAssignmentsStore } from '@/store/assignments';
 import { useAuthStore } from '@/store/auth';
 
 const incorrect = ref(false);
 const emailLinkError = ref('');
-const googleSignInErrorKey = ref('');
+const googleSignInError = ref('');
 const authStore = useAuthStore();
 const assignmentsStore = useAssignmentsStore();
 const router = useRouter();
@@ -175,24 +175,32 @@ const toggleAdminSignIn = () => {
   adminSignIn.value = !adminSignIn.value;
 };
 
-function isMissingUserClaimsError(error) {
-  const msg = typeof error?.message === 'string' ? error.message : '';
-  return msg.toLowerCase().includes('user claims document does not exist');
-}
-
 const authWithGoogle = () => {
   if (isMobileBrowser()) {
     authStore.signInWithGoogleRedirect();
   } else {
-    googleSignInErrorKey.value = '';
+    googleSignInError.value = '';
     authStore
       .signInWithGooglePopup()
       .then(async () => {
         if (authStore.getUserId()) {
-          const userClaims = await fetchDocById('userClaims', authStore.getUserId());
-          authStore.setUserClaims(userClaims);
+          // A Google account that was never registered as a Levante user authenticates
+          // successfully but has no corresponding `users` document, so the fetch 404s.
+          let userData;
+          try {
+            userData = await fetchDocById('users', authStore.getUserId());
+          } catch (error) {
+            if (error?.response?.status === 404) {
+              googleSignInError.value =
+                'No account exists for this sign-in. Contact your administrator if you need access.';
+              spinner.value = false;
+              return;
+            }
+            throw error;
+          }
 
-          const userData = await fetchDocById('users', authStore.getUserId());
+          const userClaims = await getIdTokenClaims();
+          authStore.setUserClaims(userClaims);
           authStore.setUserData(userData);
 
           if (!authStore.isUserAdmin() && !authStore.isUserSuperAdmin()) {
@@ -211,11 +219,7 @@ const authWithGoogle = () => {
           spinner.value = false;
           return;
         }
-        if (isMissingUserClaimsError(e)) {
-          googleSignInErrorKey.value = 'pageSignIn.googleSignInUserNotFound';
-        } else {
-          googleSignInErrorKey.value = 'pageSignIn.googleSignInGenericError';
-        }
+        googleSignInError.value = 'Sign-in failed. Something went wrong. Please contact your administrator.';
         console.error('Google sign-in error', e);
         spinner.value = false;
       });
@@ -232,7 +236,7 @@ const authWithEmail = async (state) => {
   spinner.value = true;
   incorrect.value = false;
   emailLinkError.value = '';
-  googleSignInErrorKey.value = '';
+  googleSignInError.value = '';
   let creds = toRaw(state);
   if (creds.useLink && !creds.usePassword) {
     try {
@@ -256,7 +260,7 @@ const authWithEmail = async (state) => {
       .logInWithEmailAndPassword(creds)
       .then(async () => {
         if (authStore.getUserId()) {
-          const userClaims = await fetchDocById('userClaims', authStore.getUserId());
+          const userClaims = await getIdTokenClaims();
           authStore.setUserClaims(userClaims);
 
           const userData = await fetchDocById('users', authStore.getUserId());

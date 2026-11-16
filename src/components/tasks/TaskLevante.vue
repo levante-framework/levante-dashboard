@@ -9,6 +9,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import useCompleteAssessmentMutation from '@/composables/mutations/useCompleteAssessmentMutation';
 import useUserChildDataQuery from '@/composables/queries/useUserChildDataQuery';
+import { assignmentIncludesTask, isUnassignedTaskError } from '@/helpers/assignedTask';
 import { startAssessmentWithRetry } from '@/helpers/startAssessmentWithRetry';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
@@ -122,6 +123,15 @@ function goHome() {
 }
 
 async function startTask(selectedAdmin) {
+  if (!assignmentIncludesTask(selectedAdmin.value, props.taskId)) {
+    logger.capture('Task not on assignment', {
+      administrationId: selectedAdmin.value?.id,
+      taskId: props.taskId,
+    });
+    goHome();
+    return;
+  }
+
   let startAssessmentSucceeded = false;
 
   try {
@@ -170,6 +180,12 @@ async function startTask(selectedAdmin) {
     if (isUnmounted) return;
 
     if (error?.name === 'AbortError') {
+      goHome();
+    } else if (!startAssessmentSucceeded && isUnassignedTaskError(error)) {
+      logger.capture('Task not on assignment', {
+        administrationId: selectedAdmin.value?.id,
+        taskId: props.taskId,
+      });
       goHome();
     } else {
       // Only unlatch when the callable never succeeded. A later failure means the

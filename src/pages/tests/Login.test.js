@@ -21,6 +21,13 @@ const routeState = vi.hoisted(() => ({ query: {} }));
 
 const mobileState = vi.hoisted(() => ({ isMobile: false }));
 
+const authState = vi.hoisted(() => ({ userId: null }));
+
+const utilsMocks = vi.hoisted(() => ({
+  fetchDocById: vi.fn(),
+  getIdTokenClaims: vi.fn(),
+}));
+
 const emailLinkState = vi.hoisted(() => ({ rejectWith: null }));
 
 const loggerErrors = vi.hoisted(() => []);
@@ -78,7 +85,7 @@ vi.mock('@/store/auth', () => ({
     $subscribe: vi.fn(),
     setUserClaims: vi.fn(),
     setUserData: vi.fn(),
-    getUserId: () => null,
+    getUserId: () => authState.userId,
     isUserAdmin: () => false,
     isUserSuperAdmin: () => false,
     logInWithEmailAndPassword: (args) => {
@@ -141,7 +148,8 @@ vi.mock('@/helpers/query/assignments', () => ({
 }));
 
 vi.mock('@/helpers/query/utils', () => ({
-  fetchDocById: vi.fn().mockResolvedValue({}),
+  fetchDocById: utilsMocks.fetchDocById,
+  getIdTokenClaims: utilsMocks.getIdTokenClaims,
 }));
 
 vi.mock('@/components/LanguageSelector.vue', () => ({
@@ -231,6 +239,9 @@ describe('Login.vue', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mobileState.isMobile = false;
+    authState.userId = null;
+    utilsMocks.fetchDocById.mockReset().mockResolvedValue({});
+    utilsMocks.getIdTokenClaims.mockReset().mockResolvedValue({});
     captured.logInWithEmailAndPassword.length = 0;
     captured.initiateLoginWithEmailLink.length = 0;
     captured.googlePopupCalls = 0;
@@ -432,6 +443,42 @@ describe('Login.vue', () => {
     expect(captured.googlePopupCalls).toBe(0);
   });
 
+  it('shows "user not found" when a Google account has no Levante user document', async () => {
+    // An unregistered Google account authenticates but has no `users` doc, so the fetch 404s.
+    utilsMocks.fetchDocById.mockRejectedValueOnce({ response: { status: 404 } });
+    wrapper = mountLogin();
+    await switchToResearcherMode();
+    mobileState.isMobile = false;
+    await wrapper
+      .find('.login-card')
+      .findAll('span')
+      .find((s) => s.text().includes('Stanford DCC Sign in'))
+      .trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain(
+      'No account exists for this sign-in. Contact your administrator if you need access.',
+    );
+    // Must not redirect into the app.
+    expect(captured.routerReplaces).not.toContainEqual({ path: '/' });
+  });
+
+  it('redirects home for a registered Google user (even on legacy permissions)', async () => {
+    authState.userId = 'uid-1';
+    utilsMocks.fetchDocById.mockResolvedValueOnce({ id: 'uid-1', roles: [] });
+    utilsMocks.getIdTokenClaims.mockResolvedValueOnce({ super_admin: false, useNewPermissions: false });
+    wrapper = mountLogin();
+    await switchToResearcherMode();
+    mobileState.isMobile = false;
+    await wrapper
+      .find('.login-card')
+      .findAll('span')
+      .find((s) => s.text().includes('Stanford DCC Sign in'))
+      .trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).not.toContain('No account exists for this sign-in.');
+    expect(captured.routerReplaces).toContainEqual({ path: '/' });
+  });
+
   it('opens the trouble logging in modal and sends reset email for valid email', async () => {
     wrapper = mountLogin();
     await switchToResearcherMode();
@@ -473,5 +520,22 @@ describe('Login.vue', () => {
     wrapper = mountLogin();
     expect(captured.toasts).toHaveLength(0);
     expect(captured.routerReplaces).toHaveLength(0);
+  });
+
+  it('ignores a non-keyboard event when checking caps lock', () => {
+    wrapper = mountLogin();
+    const input = wrapper.get('[data-cy="input-password"]').element;
+    expect(() => input.dispatchEvent(new Event('keydown', { bubbles: true }))).not.toThrow();
+    expect(wrapper.text()).not.toContain('capsLockIsOn');
+  });
+
+  it('shows the caps lock warning for a keyboard event', async () => {
+    wrapper = mountLogin();
+    const input = wrapper.get('[data-cy="input-password"]').element;
+    const event = new KeyboardEvent('keydown', { bubbles: true });
+    Object.defineProperty(event, 'getModifierState', { value: () => true });
+    input.dispatchEvent(event);
+    await nextTick();
+    expect(wrapper.text()).toContain('capsLockIsOn');
   });
 });

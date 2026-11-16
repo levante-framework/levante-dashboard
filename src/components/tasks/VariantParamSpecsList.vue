@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-column gap-4 p-4">
+  <div class="flex flex-column gap-4 pt-3">
     <div class="flex flex-wrap align-items-start justify-content-between gap-3">
       <div class="flex flex-column gap-1">
         <h2 class="text-xl font-bold m-0">Variant parameter specs</h2>
@@ -48,16 +48,23 @@
             <td class="p-2 font-semibold">
               <div class="flex align-items-center gap-2">
                 <span>{{ spec.name || spec.id }}</span>
-                <PvTag v-if="isLive(spec)" value="Live" severity="success" rounded />
+                <StatusBadge v-if="isLive(spec)" label="Live" status="success" />
               </div>
             </td>
             <td class="p-2">
-              <PvTag :value="spec.type" severity="secondary" rounded />
+               <code>{{ spec.type }}</code>
             </td>
             <td class="p-2 text-gray-700">{{ spec.description || '—' }}</td>
             <td class="p-2 text-gray-500 white-space-nowrap">{{ formatTimestamp(spec.updatedAt) }}</td>
             <td class="p-2">
-              <PvButton label="Edit" icon="pi pi-pencil" severity="secondary" text size="small" @click="openEdit(spec)" />
+              <PvButton
+                icon="pi pi-pencil"
+                label="Edit"
+                severity="secondary"
+                size="small"
+                variant="outlined"
+                @click="openEdit(spec)"
+              />
             </td>
           </tr>
         </tbody>
@@ -77,6 +84,7 @@ import useLauncherParamNamesQuery from '@/composables/queries/useLauncherParamNa
 import useVariantParamSpecsQuery from '@/composables/queries/useVariantParamSpecsQuery';
 import { toLaunchedParamNameSet } from '@/helpers/extractTaskLauncherParams';
 import type { SerializedVariantParamSpec } from '@/types/taskCatalog';
+import StatusBadge from '../StatusBadge.vue';
 
 const { data: specs, isFetching, isError } = useVariantParamSpecsQuery();
 const { data: launcherParamNames } = useLauncherParamNamesQuery();

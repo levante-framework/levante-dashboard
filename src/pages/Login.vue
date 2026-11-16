@@ -87,8 +87,8 @@
         <PvButton v-else class="submit-btn" data-cy="submit-sign-in-with-password" type="submit">Continue</PvButton>
       </form>
 
-      <div v-if="!isParticipantMode && googleSignInErrorKey" class="font-medium text-sm p-error text-center mt-2">
-        {{ $t(googleSignInErrorKey) }}
+      <div v-if="!isParticipantMode && googleSignInError" class="font-medium text-sm p-error text-center mt-2">
+        {{ googleSignInError }}
       </div>
 
       <div v-if="isParticipantMode" class="flex justify-content-center gap-1 mt-5">
@@ -100,7 +100,7 @@
           <div class="flex gap-1 text-sm">
             <div class="text-color-secondary">Not sure how to login?</div>
             <a
-              href="https://researcher.levante-network.org/dashboard"
+              href="https://researcher.levante-network.org/dashboard/administrator-log-in"
               target="_blank"
               class="font-medium text-color no-underline hover:underline"
             >
@@ -198,7 +198,7 @@ import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toast
 import { isEmailValid, isMobileBrowser } from '@/helpers';
 import { sortAssignmentsByDateOpened } from '@/helpers/assignments';
 import { getUserAssignments } from '@/helpers/query/assignments';
-import { fetchDocById } from '@/helpers/query/utils';
+import { fetchDocById, getIdTokenClaims } from '@/helpers/query/utils';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
 import { type UserClaims, type UserData, useAuthStore } from '@/store/auth';
@@ -224,7 +224,7 @@ const router = useRouter();
 const toast = useToast();
 
 const { setUserAssignments } = assignmentsStore;
-const { roarfirekit, routeToProfile, spinner, ssoProvider, userClaims } = storeToRefs(authStore);
+const { roarfirekit, routeToProfile, spinner, ssoProvider } = storeToRefs(authStore);
 const {
   getUserId,
   initiateLoginWithEmailLink,
@@ -251,7 +251,7 @@ function redirectAfterLogin() {
 
 const freshdeskLink = 'https://levante-support.freshdesk.com/support/tickets/new';
 const supportEmail = 'levantedcc@gmail.com';
-const googleSignInErrorKey = ref('');
+const googleSignInError = ref('');
 const isCapsLockOn = ref(false);
 const isOpenTroubleOnSignInModal = ref(false);
 const isOpenWarningModal = ref(false);
@@ -278,7 +278,7 @@ const isResetEmailValid = computed(() => isEmailValid(formState.email));
 
 const authWithEmailOrUsername = async () => {
   spinner.value = true;
-  googleSignInErrorKey.value = '';
+  googleSignInError.value = '';
   messages.value = [];
 
   const isValid = await v$.value.$validate();
@@ -324,13 +324,27 @@ const authWithGoogle = async () => {
   if (isMobileBrowser()) return signInWithGoogleRedirect();
 
   spinner.value = true;
-  googleSignInErrorKey.value = '';
+  googleSignInError.value = '';
   messages.value = [];
 
   signInWithGooglePopup()
     .then(async () => {
+      // A Google account that was never registered as a Levante user authenticates
+      // successfully but has no corresponding `users` document, so the fetch 404s.
+      let userData: UserData;
+      try {
+        userData = (await fetchDocById('users', getUserId()!)) as UserData;
+      } catch (error) {
+        if ((error as { response?: { status?: number } })?.response?.status === 404) {
+          googleSignInError.value =
+            'No account exists for this sign-in. Contact your administrator if you need access.';
+          return;
+        }
+        throw error;
+      }
+
       await getAuthUserClaims();
-      await getAuthUserData();
+      setUserData(userData);
 
       if (!isUserAdmin() && !isUserSuperAdmin()) {
         await getAuthUserAssignments();
@@ -348,12 +362,7 @@ const authWithGoogle = async () => {
         return;
       }
 
-      if (!userClaims.value) {
-        googleSignInErrorKey.value = 'pageSignIn.googleSignInUserNotFound';
-      } else {
-        googleSignInErrorKey.value = 'pageSignIn.googleSignInGenericError';
-      }
-
+      googleSignInError.value = 'Sign-in failed. Something went wrong. Please contact your administrator.';
       console.error('Google sign-in error', e);
     })
     .finally(() => {
@@ -375,7 +384,7 @@ const getAuthUserAssignments = async () => {
 
 const getAuthUserClaims = async () => {
   try {
-    const userClaims = await fetchDocById('userClaims', getUserId()!);
+    const userClaims = await getIdTokenClaims();
     setUserClaims(userClaims as UserClaims);
   } catch (error) {
     logger.error(new Error('Failed to get user claims', { cause: error }), {
@@ -400,8 +409,10 @@ const changeMode = async (): Promise<void> => {
   mode.value = isParticipantMode.value ? MODES.researcher : MODES.participant;
 };
 
-const checkForCapsLock = (e: KeyboardEvent): void => {
-  isCapsLockOn.value = e.getModifierState('CapsLock');
+const checkForCapsLock = (e: Event): void => {
+  if (e instanceof KeyboardEvent) {
+    isCapsLockOn.value = e.getModifierState('CapsLock');
+  }
 };
 
 const closeTroubleOnSignInModal = () => {
@@ -542,7 +553,7 @@ onMounted(() => {
   background-color: var(--primary-color);
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow-y: auto;
 
   &::before {
     content: '';

@@ -53,7 +53,7 @@ import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import NavBar from '@/components/NavBar.vue';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
-import { fetchDocById } from '@/helpers/query/utils';
+import { fetchDocById, getIdTokenClaims } from '@/helpers/query/utils';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { getLanguages, getTranslations, i18n } from '@/translations/i18n';
@@ -161,7 +161,7 @@ onBeforeMount(async () => {
         return;
       }
       try {
-        const [userClaims, userData] = await Promise.all([fetchDocById('userClaims', uid), fetchDocById('users', uid)]);
+        const [userClaims, userData] = await Promise.all([getIdTokenClaims(), fetchDocById('users', uid)]);
         authStore.setUserClaims(userClaims);
         authStore.setUserData(userData);
       } catch (error) {

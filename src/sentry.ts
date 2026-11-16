@@ -129,6 +129,12 @@ export function initSentry(app: App) {
 
       return event;
     },
+    beforeSendLog(log) {
+      if (log.attributes) {
+        log.attributes = omitSensitiveSentryFields(log.attributes);
+      }
+      return log;
+    },
   });
 
   Sentry.setTag('commitSHA', import.meta.env.VITE_APP_VERSION);

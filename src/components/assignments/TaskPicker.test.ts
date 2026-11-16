@@ -561,6 +561,22 @@ describe('TaskPicker', () => {
       expect(emittedVariants(wrapper)[0]?.variant.conditions).toEqual(assignedTo('student'));
     });
 
+    it('ignores a malformed string validUserTypes and falls back to the task-id default', async () => {
+      // teacher-survey defaults to teacher; a string must not be read as student.
+      const survey = createVariant({
+        id: 'teacher',
+        taskId: 'teacher-survey',
+        taskName: 'Teacher Survey',
+        displayName: 'Teacher check-in',
+      });
+      survey.task.validUserTypes = 'student' as unknown as NonNullable<VariantObject['task']['validUserTypes']>;
+      const wrapper = mountPicker({ allVariants: catalog([survey]) });
+
+      await addVariant(wrapper, 'Teacher check-in');
+
+      expect(emittedVariants(wrapper)[0]?.variant.conditions).toEqual(assignedTo('teacher'));
+    });
+
     it('applies stored conditions to tasks already on the assignment', () => {
       const seeded = createVariant({
         id: 'vocab-en',

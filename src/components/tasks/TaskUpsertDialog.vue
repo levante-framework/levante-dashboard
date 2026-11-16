@@ -42,11 +42,17 @@
         <PvTextarea id="task-description" v-model="form.description" class="w-full" rows="3" auto-resize />
       </div>
 
-      <div class="flex flex-column gap-1">
-        <label for="task-image" class="text-sm font-medium text-gray-600"
-          >Image URL <span class="text-red-500">*</span></label
-        >
-        <PvInputText id="task-image" v-model="form.image" class="w-full" autocomplete="off" />
+      <div class="flex w-full gap-3 align-items-end">
+        <div class="flex align-items-center justify-content-center flex-shrink-0 w-4rem h-4rem surface-100 border-round border-1 border-200 overflow-hidden">
+          <img v-if="form.image" :src="form.image" alt="Task image preview" class="w-full h-full" style="object-fit: cover" />
+          <i v-else class="pi pi-image text-gray-400" />
+        </div>
+        <div class="flex flex-1 flex-column gap-1">
+          <label for="task-image" class="text-sm font-medium text-gray-600">
+            Image URL <span class="text-red-500">*</span>
+          </label>
+          <PvInputText id="task-image" v-model="form.image" class="w-full" autocomplete="off" />
+        </div>
       </div>
 
       <div class="flex align-items-center gap-2">
