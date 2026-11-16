@@ -1,4 +1,6 @@
 import type {
+  GetOrgInformationStatusParams,
+  GetOrgInformationStatusResult,
   LoadFormDefinitionsParams,
   LoadFormDefinitionsResult,
   SaveOrgInformationParams,
@@ -26,6 +28,10 @@ class SurveyFormsRepository extends Repository {
 
   async saveOrgInformation(params: SaveOrgInformationParams): Promise<SaveOrgInformationResult> {
     return this.call('saveOrgInformation', params);
+  }
+
+  async getOrgInformationStatus(params: GetOrgInformationStatusParams): Promise<GetOrgInformationStatusResult> {
+    return this.call<GetOrgInformationStatusParams, GetOrgInformationStatusResult>('getOrgInformationStatus', params);
   }
 }
 
