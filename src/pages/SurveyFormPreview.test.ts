@@ -187,6 +187,31 @@ describe('SurveyFormPreview', () => {
     });
   });
 
+  it('shows the submitted screen when the status refresh fails', async () => {
+    vi.mocked(surveyFormsRepository.saveOrgInformation).mockResolvedValue({
+      orgType: 'site',
+      orgId: 'district-1',
+      formVersion: 'v1',
+      status: 'complete',
+      path: 'districts/district-1/siteInformation/v1',
+    });
+    mockQuery([]);
+
+    const { wrapper, queryClient } = mountPage();
+    vi.mocked(queryClient.invalidateQueries).mockRejectedValue(new Error('status refresh failed'));
+
+    await buttonByLabel(wrapper, 'Get started').trigger('click');
+    await wrapper.get('textarea').setValue('email');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(surveyFormsRepository.saveOrgInformation).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'complete' }),
+    );
+    expect(wrapper.text()).toContain('Submitted');
+    expect(wrapper.text()).not.toContain('Save failed');
+  });
+
   it('resets complete state when the org changes', async () => {
     vi.mocked(surveyFormsRepository.saveOrgInformation).mockResolvedValue({
       orgType: 'site',

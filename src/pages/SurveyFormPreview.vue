@@ -93,10 +93,22 @@ watch([formType, orgId], () => {
   isSaving.value = false;
 });
 
+function refreshSavedForm(savedFormType: SurveyFormType, savedOrgId: string) {
+  return Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: [SURVEY_FORM_DEFINITION_QUERY_KEY, savedFormType, savedOrgId],
+    }),
+    queryClient.invalidateQueries({
+      queryKey: [ORG_INFORMATION_STATUS_QUERY_KEY],
+      refetchType: 'all',
+    }),
+  ]).catch(() => undefined);
+}
+
 async function persist(
   responses: Record<string, unknown>,
   status: 'draft' | 'complete',
-  options?: { silent?: boolean },
+  options?: { silent?: boolean; awaitRefresh?: boolean },
 ): Promise<boolean> {
   if (!data.value) return false;
   isSaving.value = true;
@@ -109,13 +121,8 @@ async function persist(
       status,
     });
     persistedStatus.value = status;
-    await queryClient.invalidateQueries({
-      queryKey: [SURVEY_FORM_DEFINITION_QUERY_KEY, formType.value, orgId.value],
-    });
-    await queryClient.invalidateQueries({
-      queryKey: [ORG_INFORMATION_STATUS_QUERY_KEY],
-      refetchType: 'all',
-    });
+    const refresh = refreshSavedForm(formType.value, orgId.value);
+    if (options?.awaitRefresh) await refresh;
     if (options?.silent) return true;
     toast.add({
       severity: 'success',
@@ -144,7 +151,7 @@ function onSave(values: Record<string, unknown>, options?: { silent?: boolean })
 }
 
 async function onSubmit(values: Record<string, unknown>) {
-  isComplete.value = await persist(values, 'complete', { silent: true });
+  isComplete.value = await persist(values, 'complete', { silent: true, awaitRefresh: true });
 }
 
 function onClose() {
