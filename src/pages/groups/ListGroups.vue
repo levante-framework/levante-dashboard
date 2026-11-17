@@ -380,7 +380,9 @@ const showsOrgInformation = computed(
 );
 
 const canManageOrgInformation = computed(() =>
-  (userData.value?.roles ?? []).some((role) => role.role === ROLES.SITE_ADMIN || role.role === ROLES.SUPER_ADMIN),
+  (userData.value?.roles ?? []).some(
+    (role) => role.role === ROLES.SUPER_ADMIN || (role.role === ROLES.SITE_ADMIN && role.siteId === currentSite.value),
+  ),
 );
 
 const orgInformationIds = computed(() => {

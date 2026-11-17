@@ -210,7 +210,7 @@ describe('ListGroups org information actions', () => {
 
   it('shows the info icon without the edit icon for a site admin', async () => {
     state.superAdmin = false;
-    state.userData = ref({ roles: [{ role: 'site_admin' }] });
+    state.userData = ref({ roles: [{ role: 'site_admin', siteId: 'test-site' }] });
     state.orgs = [{ id: 'site-2', name: 'North' }];
     state.statusData = ref(statusOf('site', { 'site-2': 'incomplete' }));
 
@@ -218,6 +218,18 @@ describe('ListGroups org information actions', () => {
     const actions = wrapper.getComponent({ name: 'RoarDataTable' }).props('data')[0].actions;
 
     expect(actions.map((action) => action.name)).toEqual(['information']);
+  });
+
+  it('hides the info icon when the site admin role belongs to another site', async () => {
+    state.superAdmin = false;
+    state.userData = ref({ roles: [{ role: 'site_admin', siteId: 'other-site' }] });
+    state.orgs = [{ id: 'site-2', name: 'North' }];
+    state.statusData = ref(statusOf('site', { 'site-2': 'not-started' }));
+
+    const wrapper = await mountPage();
+    const actions = wrapper.getComponent({ name: 'RoarDataTable' }).props('data')[0].actions;
+
+    expect(actions.map((action) => action.name)).not.toContain('information');
   });
 
   it('does not show an information icon on the classes tab', async () => {

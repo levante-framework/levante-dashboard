@@ -262,8 +262,8 @@ describe('HomeAdministrator', () => {
     expect(text).toContain('There are no cohorts yet');
   });
 
-  const asRole = (authStore, role) => {
-    authStore.userData = { displayName: 'Ada Lovelace', roles: [{ role }] };
+  const asRole = (authStore, role, siteId = 'site-1') => {
+    authStore.userData = { displayName: 'Ada Lovelace', roles: [{ role, siteId }] };
   };
 
   it('shows the site banner with Get Started when site information has not been started', async () => {
@@ -324,6 +324,18 @@ describe('HomeAdministrator', () => {
     await flushPromises();
 
     expect(wrapper.text()).not.toContain('missing some information about the schools');
+  });
+
+  it('hides the banners when the site admin role belongs to another site', async () => {
+    orgStatus.districts = statusOf('site', { 'site-1': 'not-started' });
+    orgStatus.schools = statusOf('school', { 'school-a': 'not-started' });
+
+    const { wrapper, authStore } = mountPage();
+    asRole(authStore, 'site_admin', 'other-site');
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain('Get Started');
+    expect(wrapper.text()).not.toContain('Check Schools');
   });
 
   it.each(['admin', 'research_assistant'])('hides the banners from a %s, who cannot open the form', async (role) => {

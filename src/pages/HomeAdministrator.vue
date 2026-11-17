@@ -320,9 +320,11 @@ const authReady = computed(() => authStore.isFirekitInit());
 const isSiteSelected = computed(() => !!currentSite.value && currentSite.value !== 'any');
 const showSelectSitePrompt = computed(() => !!userData.value && !isSiteSelected.value);
 
-// The form route only opens for site admins and super admins, so only they see the banners.
+// Super admins manage every site. A site admin only manages the site on their role.
 const canManageOrgInformation = computed(() =>
-  (userData.value?.roles ?? []).some((role) => role.role === ROLES.SITE_ADMIN || role.role === ROLES.SUPER_ADMIN),
+  (userData.value?.roles ?? []).some(
+    (role) => role.role === ROLES.SUPER_ADMIN || (role.role === ROLES.SITE_ADMIN && role.siteId === currentSite.value),
+  ),
 );
 const { data: siteOverview, isLoading } = useGetSiteOverviewQuery(
   () => (isSiteSelected.value ? (currentSite.value as string) : ''),
