@@ -117,6 +117,7 @@ async function persist(
   if (!data.value) return false;
   const savedFormType = formType.value;
   const savedOrgId = orgId.value;
+  const savedSiteName = isSiteForm.value ? currentSiteName.value : null;
   const formVersion = data.value.versionId;
   const stillOnSavedOrg = () => formType.value === savedFormType && orgId.value === savedOrgId;
   isSaving.value = true;
@@ -136,15 +137,16 @@ async function persist(
     toast.add({
       severity: 'success',
       summary: 'Saved',
-      detail: 'Responses saved.',
+      detail: savedSiteName ? `Responses saved for ${savedSiteName}.` : 'Responses saved.',
       life: 3000,
     });
     return true;
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to save responses.';
     toast.add({
       severity: 'error',
       summary: 'Save failed',
-      detail: err instanceof Error ? err.message : 'Failed to save responses.',
+      detail: savedSiteName ? `${message} (${savedSiteName})` : message,
       life: 5000,
     });
     return false;

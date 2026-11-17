@@ -12,8 +12,9 @@ import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsReposi
 import { useAuthStore } from '@/store/auth';
 import SurveyFormPreview from './SurveyFormPreview.vue';
 
-const { loadFormDefinitions } = vi.hoisted(() => ({
+const { loadFormDefinitions, toastAdd } = vi.hoisted(() => ({
   loadFormDefinitions: vi.fn(),
+  toastAdd: vi.fn(),
 }));
 
 const mocks = vi.hoisted(() => ({
@@ -36,7 +37,7 @@ vi.mock('vue-router', async () => {
 });
 
 vi.mock('primevue/usetoast', () => ({
-  useToast: () => ({ add: vi.fn() }),
+  useToast: () => ({ add: toastAdd }),
 }));
 
 vi.mock('@/firebase/repositories/SurveyFormsRepository', () => ({
@@ -156,6 +157,7 @@ describe('SurveyFormPreview', () => {
     mocks.route.params.formType = 'site';
     mocks.route.query.orgId = 'district-1';
     vi.mocked(surveyFormsRepository.saveOrgInformation).mockReset();
+    toastAdd.mockClear();
   });
 
   it('passes savedResponses[0].responses to FormRenderer', () => {
@@ -392,6 +394,63 @@ describe('SurveyFormPreview', () => {
       expect(wrapper.text()).toContain('Select a site');
       expect(wrapper.find('.form-renderer-stub').exists()).toBe(false);
       expect(loadFormDefinitions).not.toHaveBeenCalled();
+    });
+
+    it('names the original site when its save finishes after a navbar change', async () => {
+      let finishSave: (value: unknown) => void = () => {};
+      vi.mocked(surveyFormsRepository.saveOrgInformation).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishSave = resolve;
+          }),
+      );
+
+      const { wrapper, authStore } = mountPage({ id: 'site-a', name: 'Alpha Site' }, { stubForm: true });
+      await flushPromises();
+
+      await wrapper.get('.save').trigger('click');
+      authStore.currentSite = 'site-b';
+      authStore.currentSiteName = 'Beta Site';
+      await flushPromises();
+
+      finishSave({});
+      await flushPromises();
+
+      expect(toastAdd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          detail: 'Responses saved for Alpha Site.',
+        }),
+      );
+    });
+
+    it('names the original site when its save fails after a navbar change', async () => {
+      let failSave: (reason: unknown) => void = () => {};
+      vi.mocked(surveyFormsRepository.saveOrgInformation).mockImplementation(
+        () =>
+          new Promise((_resolve, reject) => {
+            failSave = reject;
+          }),
+      );
+
+      const { wrapper, authStore } = mountPage({ id: 'site-a', name: 'Alpha Site' }, { stubForm: true });
+      await flushPromises();
+
+      await wrapper.get('.save').trigger('click');
+      authStore.currentSite = 'site-b';
+      authStore.currentSiteName = 'Beta Site';
+      await flushPromises();
+
+      failSave(new Error('Org not found'));
+      await flushPromises();
+
+      expect(toastAdd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'error',
+          summary: 'Save failed',
+          detail: 'Org not found (Alpha Site)',
+        }),
+      );
     });
 
     it('does not mark the new site complete if submit finishes after a navbar change', async () => {
