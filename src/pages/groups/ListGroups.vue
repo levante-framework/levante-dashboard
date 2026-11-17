@@ -306,13 +306,13 @@ const orgHeaders = computed(() => {
 });
 
 const activeIndex = ref(0);
+const initialTab = history.state?.tab;
+const initialTabIndex = Object.keys(orgHeaders.value).indexOf(initialTab);
+if (initialTabIndex !== -1) activeIndex.value = initialTabIndex;
 
 const activeOrgType = computed({
   get() {
-    const keys = Object.keys(orgHeaders.value);
-    const tab = history.state?.tab;
-    if (typeof tab === 'string' && keys.includes(tab)) return tab;
-    return keys[activeIndex.value];
+    return Object.keys(orgHeaders.value)[activeIndex.value];
   },
   set(value) {
     const keys = Object.keys(orgHeaders.value);
