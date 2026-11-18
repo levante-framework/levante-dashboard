@@ -88,9 +88,19 @@ const routes: Array<RouteRecordRaw> = [
     path: '/game/levante-swr',
     name: 'LevanteSWR',
     component: () => import('../components/tasks/TaskLevanteSWR.vue'),
-    props: { taskId: 'levante-swr' },
+    props: { taskId: 'levante-swr', taskName: 'swr' },
     meta: {
       pageTitle: 'SWR',
+      allowedRoles: ['participant'],
+    },
+  },
+  {
+    path: '/game/levante-sre',
+    name: 'LevanteSRE',
+    component: () => import('../components/tasks/TaskLevanteSWR.vue'),
+    props: { taskId: 'levante-sre', taskName: 'sre' },
+    meta: {
+      pageTitle: 'SRE',
       allowedRoles: ['participant'],
     },
   },

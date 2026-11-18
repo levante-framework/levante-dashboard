@@ -17,6 +17,7 @@ import packageLockJson from '../../../package-lock.json';
 
 const props = defineProps({
   taskId: { type: String, default: 'levante-swr' },
+  taskName: { type: String, default: 'swr' },
 });
 
 let RoarSWR;
@@ -134,7 +135,7 @@ async function startTask(selectedAdmin) {
       birthYear: _get(userData.value, 'birthYear'),
     };
 
-    const gameParams = { ...appKit._taskInfo.variantParams };
+    const gameParams = { ...appKit._taskInfo.variantParams, taskName: props.taskName };
 
     if (isUnmounted) return;
 
