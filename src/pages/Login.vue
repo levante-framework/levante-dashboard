@@ -423,7 +423,7 @@ const handleTroubleModalError = (e: unknown, fallbackCode: string, fallbackMessa
 
   const code = typeof e === 'object' && e !== null && 'code' in e ? String(e.code) : fallbackCode;
   const isEmailNotRegistered = code === 'levante/email-not-registered';
-  const isUnknownPasswordResetAccount = fallbackCode === 'sendResetPasswordEmail' && code === 'auth/user-not-found';
+  const isUnknownAccount = isEmailNotRegistered || code === 'auth/user-not-found';
 
   messages.value = [
     {
@@ -433,8 +433,8 @@ const handleTroubleModalError = (e: unknown, fallbackCode: string, fallbackMessa
     },
   ];
 
-  if (isUnknownPasswordResetAccount) {
-    logger.userMistake('password_reset_unknown_account', {
+  if (isUnknownAccount) {
+    logger.userMistake('trouble_login_unknown_account', {
       action: fallbackCode,
       component: 'Login',
       authCode: code,
@@ -442,11 +442,9 @@ const handleTroubleModalError = (e: unknown, fallbackCode: string, fallbackMessa
     return;
   }
 
-  if (!isEmailNotRegistered) {
-    logger.error(new Error('Trouble-logging-in modal action failed', { cause: e }), {
-      tags: { action: fallbackCode, component: 'Login' },
-    });
-  }
+  logger.error(new Error('Trouble-logging-in modal action failed', { cause: e }), {
+    tags: { action: fallbackCode, component: 'Login' },
+  });
 };
 
 const sendResetPasswordEmail = () => {

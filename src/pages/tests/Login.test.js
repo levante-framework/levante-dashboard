@@ -370,7 +370,7 @@ describe('Login.vue', () => {
     expect(captured.routerPushes).not.toContainEqual({ name: 'Home' });
   });
 
-  it('surfaces the server message and skips Sentry when the email link is for an unregistered address', async () => {
+  it('records an unregistered email link address as a user mistake and skips Sentry', async () => {
     const notRegistered = new Error('That email is not registered.');
     notRegistered.code = 'levante/email-not-registered';
     emailLinkState.rejectWith = notRegistered;
@@ -383,6 +383,16 @@ describe('Login.vue', () => {
     expect(captured.confirmRequests).toHaveLength(0);
     expect(wrapper.text()).toContain('That email is not registered.');
     expect(loggerErrors).toHaveLength(0);
+    expect(loggerUserMistakes).toEqual([
+      [
+        'trouble_login_unknown_account',
+        {
+          action: 'loginWithEmailLink',
+          component: 'Login',
+          authCode: 'levante/email-not-registered',
+        },
+      ],
+    ]);
   });
 
   it('shows a fallback message and reports to Sentry when the email link request fails unexpectedly', async () => {
@@ -415,7 +425,7 @@ describe('Login.vue', () => {
     expect(loggerErrors).toHaveLength(0);
     expect(loggerUserMistakes).toEqual([
       [
-        'password_reset_unknown_account',
+        'trouble_login_unknown_account',
         {
           action: 'sendResetPasswordEmail',
           component: 'Login',
