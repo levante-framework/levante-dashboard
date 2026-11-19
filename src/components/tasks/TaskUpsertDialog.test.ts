@@ -60,6 +60,11 @@ const fillRequiredFields = async (wrapper: VueWrapper) => {
   await wrapper.find('#task-image').setValue('https://example.com/img.png');
 };
 
+const selectUserTypes = async (wrapper: VueWrapper, types: string[]) => {
+  multiSelect(wrapper).vm.$emit('update:modelValue', types);
+  await nextTick();
+};
+
 const submit = async (wrapper: VueWrapper) => {
   await wrapper.find('form').trigger('submit.prevent');
   await nextTick();
@@ -97,14 +102,15 @@ describe('TaskUpsertDialog create flow', () => {
     wrapper.unmount();
   });
 
-  it('defaults registered/archived to false and validUserTypes to an empty array', async () => {
+  it('defaults registered and archived to false', async () => {
     const wrapper = mount(TaskUpsertDialog, { ...mountOptions, props: { visible: true, task: null } });
 
     await fillRequiredFields(wrapper);
+    await selectUserTypes(wrapper, ['child']);
     await submit(wrapper);
 
     expect(mutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ archived: false, registered: false, validUserTypes: [] }),
+      expect.objectContaining({ archived: false, registered: false, validUserTypes: ['child'] }),
     );
 
     wrapper.unmount();
@@ -116,6 +122,7 @@ describe('TaskUpsertDialog create flow', () => {
     await wrapper.find('#task-name').setValue('  Matrix Reasoning  ');
     await wrapper.find('#task-description').setValue('  A reasoning task  ');
     await wrapper.find('#task-image').setValue('  https://example.com/img.png  ');
+    await selectUserTypes(wrapper, ['child']);
     await submit(wrapper);
 
     expect(mutateAsync).toHaveBeenCalledWith(
@@ -153,6 +160,19 @@ describe('TaskUpsertDialog validation', () => {
     wrapper.unmount();
   });
 
+  it('blocks submit and shows an error when no valid user type is selected', async () => {
+    const wrapper = mount(TaskUpsertDialog, { ...mountOptions, props: { visible: true, task: null } });
+
+    await fillRequiredFields(wrapper);
+    // validUserTypes left empty
+    await submit(wrapper);
+
+    expect(mutateAsync).not.toHaveBeenCalled();
+    expect(errorText(wrapper)).toBe('Select at least one valid user type.');
+
+    wrapper.unmount();
+  });
+
   it('blocks submit when the name yields no derivable id on create', async () => {
     const wrapper = mount(TaskUpsertDialog, { ...mountOptions, props: { visible: true, task: null } });
 
@@ -160,6 +180,7 @@ describe('TaskUpsertDialog validation', () => {
     await wrapper.find('#task-name').setValue('***');
     await wrapper.find('#task-description').setValue('A reasoning task');
     await wrapper.find('#task-image').setValue('https://example.com/img.png');
+    await selectUserTypes(wrapper, ['child']);
     await submit(wrapper);
 
     expect(mutateAsync).not.toHaveBeenCalled();
@@ -249,6 +270,7 @@ describe('TaskUpsertDialog submit side-effects', () => {
     const wrapper = mount(TaskUpsertDialog, { ...mountOptions, props: { visible: true, task: null } });
 
     await fillRequiredFields(wrapper);
+    await selectUserTypes(wrapper, ['child']);
     await submit(wrapper);
 
     expect(errorText(wrapper)).toBe('You do not have permission to perform this action.');

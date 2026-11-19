@@ -186,6 +186,11 @@ async function handleSubmit(): Promise<void> {
     return;
   }
 
+  if (!form.validUserTypes.length) {
+    errorMessage.value = 'Select at least one valid user type.';
+    return;
+  }
+
   if (!isEdit.value && !derivedId.value) {
     errorMessage.value = 'Name must yield a non-empty id.';
     return;
