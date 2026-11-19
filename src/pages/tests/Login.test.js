@@ -31,11 +31,15 @@ const utilsMocks = vi.hoisted(() => ({
 const emailLinkState = vi.hoisted(() => ({ rejectWith: null }));
 
 const loggerErrors = vi.hoisted(() => []);
+const loggerUserMistakes = vi.hoisted(() => []);
 
 vi.mock('@/logger', () => ({
   logger: {
     error: (...args) => {
       loggerErrors.push(args);
+    },
+    userMistake: (...args) => {
+      loggerUserMistakes.push(args);
     },
   },
 }));
@@ -254,6 +258,7 @@ describe('Login.vue', () => {
     routeState.query = {};
     emailLinkState.rejectWith = null;
     loggerErrors.length = 0;
+    loggerUserMistakes.length = 0;
     authRefs.spinner.value = false;
     authRefs.routeToProfile.value = false;
     authRefs.ssoProvider.value = null;
@@ -365,7 +370,7 @@ describe('Login.vue', () => {
     expect(captured.routerPushes).not.toContainEqual({ name: 'Home' });
   });
 
-  it('surfaces the server message and skips Sentry when the email link is for an unregistered address', async () => {
+  it('records an unregistered email link address as a user mistake and skips Sentry', async () => {
     const notRegistered = new Error('That email is not registered.');
     notRegistered.code = 'levante/email-not-registered';
     emailLinkState.rejectWith = notRegistered;
@@ -378,6 +383,16 @@ describe('Login.vue', () => {
     expect(captured.confirmRequests).toHaveLength(0);
     expect(wrapper.text()).toContain('That email is not registered.');
     expect(loggerErrors).toHaveLength(0);
+    expect(loggerUserMistakes).toEqual([
+      [
+        'trouble_login_unknown_account',
+        {
+          action: 'loginWithEmailLink',
+          component: 'Login',
+          authCode: 'levante/email-not-registered',
+        },
+      ],
+    ]);
   });
 
   it('shows a fallback message and reports to Sentry when the email link request fails unexpectedly', async () => {
@@ -391,6 +406,33 @@ describe('Login.vue', () => {
     expect(captured.confirmRequests).toHaveLength(0);
     expect(wrapper.text()).toContain('There was a problem sending the login link. Please try again.');
     expect(loggerErrors).toHaveLength(1);
+  });
+
+  it('records an unknown password reset address as a user mistake', async () => {
+    const unknownAccount = new Error('Firebase: Error (auth/user-not-found).');
+    unknownAccount.code = 'auth/user-not-found';
+    wrapper = mountLogin();
+    authRefs.roarfirekit.value = {
+      sendPasswordResetEmail: () => Promise.reject(unknownAccount),
+    };
+    await switchToResearcherMode();
+    await openTroubleLoginModal();
+    await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('missing@mail.com');
+    await clickModalButton('Reset Password');
+    await flushPromises();
+    expect(captured.confirmRequests).toHaveLength(0);
+    expect(wrapper.text()).toContain('There was a problem sending the password reset email. Please try again.');
+    expect(loggerErrors).toHaveLength(0);
+    expect(loggerUserMistakes).toEqual([
+      [
+        'trouble_login_unknown_account',
+        {
+          action: 'sendResetPasswordEmail',
+          component: 'Login',
+          authCode: 'auth/user-not-found',
+        },
+      ],
+    ]);
   });
 
   it('shows a fallback message and reports to Sentry when the reset email request fails unexpectedly', async () => {
