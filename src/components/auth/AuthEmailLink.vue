@@ -2,9 +2,9 @@
   <LevanteSpinner v-if="!isError" fullscreen />
   <div v-else style="margin-top: 200px">
     <i class="pi pi-exclamation-circle text-6xl text-red-500 center"></i>
-    <p class="text-xl font-semibold text-center">There was a problem with the email sign-in link. Please try again.</p>
+    <p class="text-xl font-semibold text-center">There was a problem with the email login link. Please try again.</p>
     <div class="center">
-      <PvButton label="Back to sign in" @click="router.push({ name: 'Login' })" />
+      <PvButton label="Back to login" @click="router.push({ name: 'Login' })" />
     </div>
   </div>
 </template>
@@ -29,7 +29,7 @@ const loginFromEmailLink = async (email) => {
   unsubscribe();
   const emailLink = window.location.href;
   await authStore
-    .signInWithEmailLink({ email, emailLink })
+    .loginWithEmailLink({ email, emailLink })
     .then(async () => {
       if (getUserId()) {
         // Not sure why we need this since user data and claims are fetched in the HomeSelector.vue but otherwise won't load homepage.
@@ -44,7 +44,7 @@ const loginFromEmailLink = async (email) => {
     })
     .catch((error) => {
       isError.value = true;
-      logger.error(new Error('Failed to sign in with email link', { cause: error }), {
+      logger.error(new Error('Failed to log in with email link', { cause: error }), {
         tags: { component: 'AuthEmailLink', function: 'loginFromEmailLink' },
         email,
       });
@@ -52,9 +52,9 @@ const loginFromEmailLink = async (email) => {
 };
 
 // The user is on the email link authentication page (AuthEmailLink.vue), but:
-// The necessary email is missing from local storage (so the primary sign-in logic via loginFromEmailLink cannot proceed).
-// AND roarfirekit indicates it's expecting an email link sign-in process to be underway.
-// AND the current page's URL is not a valid email sign-in link (e.g., the token in the URL is missing, invalid, or expired, or the user navigated to the path without a token).
+// The necessary email is missing from local storage (so the primary login logic via loginFromEmailLink cannot proceed).
+// AND roarfirekit indicates it's expecting an email link login process to be underway.
+// AND the current page's URL is not a valid email login link (e.g., the token in the URL is missing, invalid, or expired, or the user navigated to the path without a token).
 const unsubscribe = authStore.$subscribe(async (_mutation, state) => {
   if (state.roarfirekit.isSignInWithEmailLink && state.roarfirekit.signInWithEmailLink) {
     if (!roarfirekit.value.isSignInWithEmailLink(window.location.href)) {
@@ -64,12 +64,12 @@ const unsubscribe = authStore.$subscribe(async (_mutation, state) => {
 });
 
 onMounted(async () => {
-  const email = window.localStorage.getItem('emailForSignIn');
+  const email = window.localStorage.getItem('emailForLogin') ?? window.localStorage.getItem('emailForSignIn');
   if (email) {
     try {
       await loginFromEmailLink(email);
     } catch (error) {
-      logger.error(new Error('Failed to sign in with email link', { cause: error }), {
+      logger.error(new Error('Failed to log in with email link', { cause: error }), {
         tags: { component: 'AuthEmailLink', function: 'onMounted' },
         email,
       });

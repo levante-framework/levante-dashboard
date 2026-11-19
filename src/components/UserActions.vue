@@ -16,7 +16,7 @@
           </div>
         </div>
 
-        <PvButton data-cy="button-sign-out" @click="() => signOut()">
+        <PvButton data-cy="button-logout" @click="() => logout()">
           <i class="pi pi-sign-out"></i> {{ $t('navBar.signOut') }}
         </PvButton>
       </div>
@@ -79,7 +79,7 @@ import PvSelect from 'primevue/select';
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
+import useLogoutMutation from '@/composables/mutations/useLogoutMutation';
 import { APP_ROUTES } from '@/constants/routes';
 import { useAuthStore } from '@/store/auth';
 import { useLevanteStore } from '@/store/levante.js';
@@ -107,7 +107,7 @@ const levanteStore = useLevanteStore();
 const { wizardSteps } = storeToRefs(levanteStore);
 const i18n = useI18n();
 const router = useRouter();
-const { mutate: signOut } = useSignOutMutation();
+const { mutate: logout } = useLogoutMutation();
 const feedbackButton = ref<HTMLButtonElement | null>(null);
 
 const shouldDisplayWizardBtn = computed(
@@ -132,7 +132,7 @@ const helpOptions: DropdownOption[] = [
 
 const profileOptions: DropdownOption[] = [
   { label: 'Settings', value: 'settings' },
-  { label: i18n.t('navBar.signOut'), value: 'signout' },
+  { label: i18n.t('navBar.signOut'), value: 'logout' },
 ];
 
 const handleHelpChange = (e: DropdownChangeEvent): void => {
@@ -146,8 +146,8 @@ const handleHelpChange = (e: DropdownChangeEvent): void => {
 const handleProfileChange = (e: DropdownChangeEvent): void => {
   if (e.value === 'settings') {
     router.push({ path: APP_ROUTES.ACCOUNT_PROFILE });
-  } else if (e.value === 'signout') {
-    signOut();
+  } else if (e.value === 'logout') {
+    logout();
   }
 };
 

@@ -130,7 +130,7 @@ fi
 echo "Running Cypress spec: ${E2E_SPEC:-cypress/e2e/locales-emulator.cy.ts}"
 SPEC_PATH="${E2E_SPEC:-cypress/e2e/locales-emulator.cy.ts}"
 E2E_USE_ENV=TRUE \
-E2E_BASE_URL="http://localhost:${PORT}/signin" \
+E2E_BASE_URL="http://localhost:${PORT}/login" \
 E2E_TEST_EMAIL=student@levante.test \
 E2E_TEST_PASSWORD=student123 \
 ./node_modules/.bin/cypress run --e2e --spec "$SPEC_PATH" --config baseUrl="http://localhost:${PORT}"

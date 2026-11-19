@@ -1,6 +1,6 @@
 // Covers the auth store's setUserData, setUserClaims, isUserAdmin, and $reset.
 // @TODO: Much of the store is still untested (e.g. isUserSuperAdmin, the Firekit
-// auth-state listeners, and the various sign-in actions).
+// auth-state listeners, and the various login actions).
 
 import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
