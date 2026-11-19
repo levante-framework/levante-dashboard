@@ -55,7 +55,7 @@
           </div>
           <div class="flex flex-wrap align-items-center gap-2 text-sm">
             <span class="font-bold">Valid user types: </span>
-            <template v-if="task.validUserTypes.length">
+            <template v-if="task.validUserTypes?.length">
               <PvTag v-for="userType in task.validUserTypes" :key="userType" :value="_upperFirst(userType)" severity="info" />
             </template>
             <span v-else class="text-gray-500">—</span>

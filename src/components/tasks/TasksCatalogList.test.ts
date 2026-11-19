@@ -158,6 +158,17 @@ describe('TasksCatalogList rendering', () => {
 
     wrapper.unmount();
   });
+
+  it('shows a dash without crashing when validUserTypes is missing (un-backfilled task)', () => {
+    // Legacy tasks may lack the field entirely; the card must not throw on it.
+    queryState.data = [createTask({ validUserTypes: undefined as unknown as SerializedTask['validUserTypes'] })];
+    const wrapper = mount(TasksCatalogList, mountOptions);
+
+    expect(wrapper.text()).toContain('—');
+    expect(tagValues(wrapper)).not.toContain('Child');
+
+    wrapper.unmount();
+  });
 });
 
 describe('TasksCatalogList dialog wiring', () => {
