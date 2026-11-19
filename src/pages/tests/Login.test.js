@@ -406,7 +406,7 @@ describe('Login.vue', () => {
       sendPasswordResetEmail: () => Promise.reject(unknownAccount),
     };
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('missing@mail.com');
     await clickModalButton('Reset Password');
     await flushPromises();
