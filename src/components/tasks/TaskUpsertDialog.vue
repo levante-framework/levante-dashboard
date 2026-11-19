@@ -55,6 +55,26 @@
         </div>
       </div>
 
+      <div class="flex flex-column gap-1">
+        <label for="task-user-types" class="text-sm font-medium text-gray-600">Valid user types</label>
+        <PvMultiSelect
+          id="task-user-types"
+          v-model="form.validUserTypes"
+          class="w-full"
+          display="chip"
+          option-label="label"
+          option-value="value"
+          placeholder="Select who can be assigned this task"
+          :show-toggle-all="false"
+          :options="USER_TYPE_OPTIONS"
+        />
+      </div>
+
+      <div class="flex align-items-center gap-2">
+        <PvCheckbox v-model="form.registered" input-id="task-registered" :binary="true" />
+        <label for="task-registered" class="text-sm">Registered</label>
+      </div>
+
       <div class="flex align-items-center gap-2">
         <PvCheckbox v-model="form.archived" input-id="task-archived" :binary="true" />
         <label for="task-archived" class="text-sm">Archived</label>
@@ -75,12 +95,21 @@ import PvButton from 'primevue/button';
 import PvCheckbox from 'primevue/checkbox';
 import PvDialog from 'primevue/dialog';
 import PvInputText from 'primevue/inputtext';
+import PvMultiSelect from 'primevue/multiselect';
 import PvTextarea from 'primevue/textarea';
 import { useToast } from 'primevue/usetoast';
 import { computed, reactive, ref, watch } from 'vue';
 import useUpsertTaskMutation from '@/composables/mutations/useUpsertTaskMutation';
 import { getCallableErrorMessage, semanticIdFromName } from '@/helpers/taskCatalog';
-import type { SerializedTask } from '@/types/taskCatalog';
+import type { SerializedTask, UpsertTaskParams } from '@/types/taskCatalog';
+
+type ValidUserType = UpsertTaskParams['validUserTypes'][number];
+
+const USER_TYPE_OPTIONS: { label: string; value: ValidUserType }[] = [
+  { label: 'Child', value: 'child' },
+  { label: 'Caregiver', value: 'caregiver' },
+  { label: 'Teacher', value: 'teacher' },
+];
 
 interface Props {
   visible: boolean;
@@ -105,6 +134,8 @@ const form = reactive({
   description: '',
   image: '',
   archived: false,
+  registered: false,
+  validUserTypes: [] as ValidUserType[],
 });
 
 const isEdit = computed(() => Boolean(form.id));
@@ -121,6 +152,8 @@ watch(
       form.description = task.description ?? '';
       form.image = task.image ?? '';
       form.archived = task.archived === true;
+      form.registered = task.registered === true;
+      form.validUserTypes = [...(task.validUserTypes ?? [])];
       return;
     }
     form.id = undefined;
@@ -128,6 +161,8 @@ watch(
     form.description = '';
     form.image = '';
     form.archived = false;
+    form.registered = false;
+    form.validUserTypes = [];
   },
   { immediate: true },
 );
@@ -163,6 +198,8 @@ async function handleSubmit(): Promise<void> {
       description,
       image,
       archived: form.archived,
+      registered: form.registered,
+      validUserTypes: form.validUserTypes,
     });
     toast.add({
       group: 'manage-tasks',
