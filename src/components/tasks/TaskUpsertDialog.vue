@@ -56,7 +56,9 @@
       </div>
 
       <div class="flex flex-column gap-1">
-        <label for="task-user-types" class="text-sm font-medium text-gray-600">Valid user types</label>
+        <label for="task-user-types" class="text-sm font-medium text-gray-600"
+          >Valid user types <span class="text-red-500">*</span></label
+        >
         <PvMultiSelect
           id="task-user-types"
           v-model="form.validUserTypes"
