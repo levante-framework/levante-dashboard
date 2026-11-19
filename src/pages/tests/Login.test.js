@@ -97,11 +97,11 @@ vi.mock('@/store/auth', () => ({
       if (emailLinkState.rejectWith) return Promise.reject(emailLinkState.rejectWith);
       return Promise.resolve();
     },
-    signInWithGooglePopup: () => {
+    loginWithGooglePopup: () => {
       captured.googlePopupCalls += 1;
       return Promise.resolve();
     },
-    signInWithGoogleRedirect: () => {
+    loginWithGoogleRedirect: () => {
       captured.googleRedirectCalls += 1;
       return Promise.resolve();
     },
@@ -219,7 +219,7 @@ describe('Login.vue', () => {
     await nextTick();
   };
 
-  const openTroubleOnSignInModal = async () => {
+  const openTroubleLoginModal = async () => {
     await wrapper
       .findAll('small')
       .find((s) => s.text().includes('Trouble logging in?'))
@@ -312,8 +312,8 @@ describe('Login.vue', () => {
       .trigger('click');
     await nextTick();
     expect(wrapper.text()).toContain('Trouble logging in?');
-    expect(wrapper.text()).toContain('Read sign in docs');
-    expect(wrapper.text()).toContain('Stanford DCC Sign in');
+    expect(wrapper.text()).toContain('Read login docs');
+    expect(wrapper.text()).toContain('Stanford DCC Login');
   });
 
   it('calls logInWithEmailAndPassword with normalized email when a username is submitted', async () => {
@@ -354,12 +354,13 @@ describe('Login.vue', () => {
   it('initiates email link login from the trouble logging in modal', async () => {
     wrapper = mountLogin();
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('researcher@test.com');
     await clickModalButton('Login Link');
     await flushPromises();
     expect(captured.initiateLoginWithEmailLink).toEqual([{ email: 'researcher@test.com' }]);
     expect(captured.confirmRequests).toHaveLength(1);
+    expect(captured.confirmRequests[0].message).toContain('An email to log in with a link');
     expect(captured.confirmRequests[0].accept).toBeUndefined();
     expect(captured.routerPushes).not.toContainEqual({ name: 'Home' });
   });
@@ -370,7 +371,7 @@ describe('Login.vue', () => {
     emailLinkState.rejectWith = notRegistered;
     wrapper = mountLogin();
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('unknown@test.com');
     await clickModalButton('Login Link');
     await flushPromises();
@@ -383,12 +384,12 @@ describe('Login.vue', () => {
     emailLinkState.rejectWith = new Error('network down');
     wrapper = mountLogin();
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('researcher@test.com');
     await clickModalButton('Login Link');
     await flushPromises();
     expect(captured.confirmRequests).toHaveLength(0);
-    expect(wrapper.text()).toContain('There was a problem sending the sign-in link. Please try again.');
+    expect(wrapper.text()).toContain('There was a problem sending the login link. Please try again.');
     expect(loggerErrors).toHaveLength(1);
   });
 
@@ -398,7 +399,7 @@ describe('Login.vue', () => {
       sendPasswordResetEmail: () => Promise.reject(new Error('network down')),
     };
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('valid@mail.com');
     await clickModalButton('Reset Password');
     await flushPromises();
@@ -407,7 +408,7 @@ describe('Login.vue', () => {
     expect(loggerErrors).toHaveLength(1);
   });
 
-  it('uses Google popup on desktop when Stanford DCC Sign in is clicked', async () => {
+  it('uses Google popup on desktop when Stanford DCC Login is clicked', async () => {
     wrapper = mountLogin();
     await wrapper
       .findAllComponents(PvButtonStub)
@@ -418,14 +419,14 @@ describe('Login.vue', () => {
     await wrapper
       .find('.login-card')
       .findAll('span')
-      .find((s) => s.text().includes('Stanford DCC Sign in'))
+      .find((s) => s.text().includes('Stanford DCC Login'))
       .trigger('click');
     await flushPromises();
     expect(captured.googlePopupCalls).toBe(1);
     expect(captured.googleRedirectCalls).toBe(0);
   });
 
-  it('uses Google redirect on mobile when Stanford DCC Sign in is clicked', async () => {
+  it('uses Google redirect on mobile when Stanford DCC Login is clicked', async () => {
     wrapper = mountLogin();
     await wrapper
       .findAllComponents(PvButtonStub)
@@ -436,7 +437,7 @@ describe('Login.vue', () => {
     await wrapper
       .find('.login-card')
       .findAll('span')
-      .find((s) => s.text().includes('Stanford DCC Sign in'))
+      .find((s) => s.text().includes('Stanford DCC Login'))
       .trigger('click');
     await flushPromises();
     expect(captured.googleRedirectCalls).toBe(1);
@@ -452,11 +453,11 @@ describe('Login.vue', () => {
     await wrapper
       .find('.login-card')
       .findAll('span')
-      .find((s) => s.text().includes('Stanford DCC Sign in'))
+      .find((s) => s.text().includes('Stanford DCC Login'))
       .trigger('click');
     await flushPromises();
     expect(wrapper.text()).toContain(
-      'No account exists for this sign-in. Contact your administrator if you need access.',
+      'No account exists for this login. Contact your administrator if you need access.',
     );
     // Must not redirect into the app.
     expect(captured.routerReplaces).not.toContainEqual({ path: '/' });
@@ -472,17 +473,17 @@ describe('Login.vue', () => {
     await wrapper
       .find('.login-card')
       .findAll('span')
-      .find((s) => s.text().includes('Stanford DCC Sign in'))
+      .find((s) => s.text().includes('Stanford DCC Login'))
       .trigger('click');
     await flushPromises();
-    expect(wrapper.text()).not.toContain('No account exists for this sign-in.');
+    expect(wrapper.text()).not.toContain('No account exists for this login.');
     expect(captured.routerReplaces).toContainEqual({ path: '/' });
   });
 
   it('opens the trouble logging in modal and sends reset email for valid email', async () => {
     wrapper = mountLogin();
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     expect(wrapper.find('.roar-modal-stub').exists()).toBe(true);
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('valid@mail.com');
     await clickModalButton('Reset Password');
@@ -493,7 +494,7 @@ describe('Login.vue', () => {
   it('does not send reset email when forgot-password email is invalid', async () => {
     wrapper = mountLogin();
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('not-an-email');
     await clickModalButton('Reset Password');
     await flushPromises();

@@ -107,12 +107,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: APP_ROUTES.SIGN_IN,
-    name: 'SignIn',
-    component: () => import('@/pages/SignIn.vue'),
-    meta: {
-      pageTitle: { translationKey: 'signIn' },
-      allowedRoles: ['*'],
-    },
+    redirect: (to) => ({ name: 'Login', query: to.query, hash: to.hash }),
   },
   {
     path: APP_ROUTES.LOGIN,
@@ -371,7 +366,7 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
     return next({ name: 'Home' });
   }
 
-  // Check if user is signed in. If not, go to login
+  // Check if user is logged in. If not, go to login
   if (!to.path.includes('__/auth/handler') && !isAuthenticated() && !allowedUnauthenticatedRoutes.includes(to.name)) {
     return next({ name: 'Login' });
   }

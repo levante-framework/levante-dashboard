@@ -16,7 +16,7 @@
             :label="$t('navBar.signOut')"
             class="no-underline bg-primary border-none border-round p-2 text-white hover:bg-red-900"
             icon="pi pi-sign-out"
-            @click="signOut"
+            @click="logout"
           />
         </div>
       </div>
@@ -106,7 +106,7 @@ import GameTabs from '@/components/GameTabs.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import ParticipantSidebar from '@/components/ParticipantSidebar.vue';
 import SideBar from '@/components/SideBar.vue';
-import useSignOutMutation from '@/composables/mutations/useSignOutMutation';
+import useLogoutMutation from '@/composables/mutations/useLogoutMutation';
 import useUpdateConsentMutation from '@/composables/mutations/useUpdateConsentMutation';
 import useSurveyResponsesQuery from '@/composables/queries/useSurveyResponsesQuery';
 import useTasksQuery from '@/composables/queries/useTasksQuery';
@@ -143,7 +143,7 @@ const queryClient = useQueryClient();
 const surveyStore = useSurveyStore();
 
 const { mutateAsync: updateConsentStatus } = useUpdateConsentMutation();
-const { mutate: signOut } = useSignOutMutation();
+const { mutate: logout } = useLogoutMutation();
 
 let unsubscribe;
 const initialized = ref(false);

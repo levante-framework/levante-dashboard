@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/auth';
 /**
  * User claims data query.
  *
- * Reads the signed-in user's custom claims from their Firebase Auth ID token
+ * Reads the logged-in user's custom claims from their Firebase Auth ID token
  * (the deprecated Firestore `userClaims` collection is no longer used).
  *
  * @param {QueryOptions|undefined} queryOptions – Optional TanStack query options.

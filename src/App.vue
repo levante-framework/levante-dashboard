@@ -79,7 +79,7 @@ const router = useRouter();
 
 const shouldShowFooter = computed(() => !FOOTER_BLACKLIST.includes(route.name));
 const footerVariant = computed(() => {
-  const alternativeStylePages = ['Login', 'SignIn'];
+  const alternativeStylePages = ['Login'];
   if (alternativeStylePages.includes(route.name)) return 'secondary';
   return 'primary';
 });
@@ -90,10 +90,10 @@ async function recoverFromProfileFetchFailure(error) {
   });
   try {
     if (authStore.isFirekitInit()) {
-      await authStore.signOut();
+      await authStore.logout();
     }
-  } catch (signOutError) {
-    logger.error(new Error('Failed to sign out after profile fetch failure', { cause: signOutError }), {
+  } catch (logoutError) {
+    logger.error(new Error('Failed to log out after profile fetch failure', { cause: logoutError }), {
       tags: { component: 'App', function: 'recoverFromProfileFetchFailure' },
     });
   }

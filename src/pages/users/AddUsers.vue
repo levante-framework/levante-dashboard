@@ -589,7 +589,7 @@ const handleCreateUsersFailure = async (failure: FirebaseFailure<CreateUsersErro
     } else if (error.code === 'functions/permission-denied') {
       message = 'Failed to add users due to insufficient permissions. Please contact support.';
     } else if (error.code === 'functions/unauthenticated') {
-      message = 'Failed to add users due to an expired session. Please sign in again and retry.';
+      message = 'Failed to add users due to an expired session. Please log in again and retry.';
       shouldLog = false;
     } else {
       // The remaining app-error cases are unexpected due to preflight validation above.
@@ -599,7 +599,7 @@ const handleCreateUsersFailure = async (failure: FirebaseFailure<CreateUsersErro
       message = 'Failed to add users due to an unexpected error. Please contact support.';
     }
   } else if (failure.code === 'functions-error' && failure.error.code === 'functions/unauthenticated') {
-    message = 'Failed to add users due to an expired session. Please sign in again and retry.';
+    message = 'Failed to add users due to an expired session. Please log in again and retry.';
     shouldLog = false;
   }
 
