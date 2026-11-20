@@ -225,7 +225,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
     status.value = {
       message: fileIssue
         ? fileIssue.code === 'too_big'
-          ? `The uploaded file contains too many users. Please upload a file with ${fileIssue.maximum.toLocaleString()} or fewer users and try again.`
+          ? `The uploaded file contains too many users. Please upload a file with ${fileIssue.maximum.toLocaleString('en-US')} or fewer users and try again.`
           : fileIssue.message
         : 'The uploaded file is invalid. See table for details.',
       severity: 'error',
