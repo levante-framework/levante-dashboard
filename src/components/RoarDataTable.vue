@@ -189,7 +189,7 @@
                     v-tooltip.right="getTooltip(colData.tooltip)"
                     severity="secondary"
                     text
-                    class="border border-round surface-200 p-2 hover:surface-500"
+                    class="border border-round surface-200 p-2 hover:surface-300"
                     :label="colData.routeParams.buttonLabel"
                     :aria-label="col.routeTooltip"
                     :icon="col.routeIcon"
@@ -210,7 +210,7 @@
                   <PvButton
                     severity="secondary"
                     text
-                    class="column-button border border-round surface-200 text-primary p-2 hover:surface-500 hover:text-white"
+                    class="column-button border border-round surface-200 text-primary p-2 hover:surface-300 hover:text-white"
                     :label="col.buttonLabel"
                     :aria-label="col.buttonTooltip"
                     :icon="col.buttonIcon"
@@ -249,14 +249,19 @@
               <div v-else-if="col.field === 'actions'" class="actions">
                 <PvButton
                   v-for="action in _get(colData, col.field)"
-                  :key="action['name']"
-                  v-tooltip.top="getTooltip(action['tooltip'])"
-                  :class="`action action--${action['name']}`"
+                  :class="[
+                    { 'action--pulse': action['pulse'] },
+                    { 'action--error': action['status'] === 'error' },
+                    { 'action--success': action['status'] === 'success' },
+                  ]"
                   :icon="action['icon']"
-                  variant="link"
+                  :key="action['name']"
                   @click="action['callback']"
-                >
-                </PvButton>
+                  class="action"
+                  link
+                  v-tooltip.top="getTooltip(action['tooltip'])"
+                  variant="outlined"
+                />
               </div>
 
               <div v-else>
@@ -938,8 +943,45 @@ defineExpose({ onColumnToggle, selectedColumns });
     align-items: center;
     gap: 1rem;
 
-    .action--edit {
+    .action {
       color: inherit;
+
+      &.action--success {
+        cursor: default !important;
+        color: var(--bright-green);
+      }
+
+      &.action--error {
+        color: var(--bright-red);
+      }
+
+      &.action--pulse {
+        position: relative;
+        overflow: visible !important;
+
+        &::before,
+        &::after {
+          content: "";
+          display: block;
+          width: 8px;
+          height: 8px;
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          border-radius: 100%;
+          pointer-events: none;
+        }
+
+        &::before {
+          background-color: var(--bright-red);
+        }
+
+        &::after {
+          visibility: visible;
+          border: 2px solid var(--bright-red);
+          animation: pulse 1.5s ease-out infinite;
+        }
+      }
     }
   }
 
@@ -949,6 +991,18 @@ defineExpose({ onColumnToggle, selectedColumns });
 
   .p-datatable .p-datatable-tbody > tr.current-user-row > td:first-child {
     border-left: 3px solid var(--primary-color) !important;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
   }
 }
 </style>

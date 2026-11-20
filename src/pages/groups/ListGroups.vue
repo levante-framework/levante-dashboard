@@ -22,6 +22,7 @@
             for guidance on creating and naming groups.
           </div>
         </div>
+
         <div class="flex flex-column align-items-start mb-2 md:flex-row w-full justify-content-between">
           <div class="flex align-items-center gap-3 mb-4 md:mb-0">
             <PermissionGuard :requiredRole="ROLES.SITE_ADMIN">
@@ -229,6 +230,7 @@ import PvTabPanels from 'primevue/tabpanels';
 import PvTabs from 'primevue/tabs';
 import { useToast } from 'primevue/usetoast';
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
+import { useRouter } from 'vue-router';
 import DocsButton from '@/components/DocsButton.vue';
 import EditOrgsForm from '@/components/EditOrgsForm.vue';
 import AddGroupModal from '@/components/modals/AddGroupModal.vue';
@@ -239,6 +241,7 @@ import RoarDataTable from '@/components/RoarDataTable.vue';
 import _useDistrictsQuery from '@/composables/queries/_useDistrictsQuery';
 import _useSchoolsQuery from '@/composables/queries/_useSchoolsQuery';
 import { useFullAdministrationsListQuery } from '@/composables/queries/useAdministrationsListQuery';
+import { useGetOrgInformationStatusQuery } from '@/composables/queries/useGetOrgInformationStatusQuery';
 import useOrgsTableQuery from '@/composables/queries/useOrgsTableQuery';
 import { CSV_EXPORT_MAX_RECORD_COUNT } from '@/constants/csv';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
@@ -246,6 +249,7 @@ import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import { ROLES } from '@/constants/roles';
 import { TOAST_DEFAULT_LIFE_DURATION, TOAST_SEVERITIES } from '@/constants/toasts';
 import { normalizeToLowercase } from '@/helpers';
+import { orgInformationAction, orgInformationLoadingAction } from '@/helpers/orgInformationAction';
 import { getAdministrationsByOrg } from '@/helpers/query/administrations';
 import { countUsersByOrg, fetchUsersByOrg } from '@/helpers/query/users';
 import { exportCsv, fetchDocById, orderByDefault } from '@/helpers/query/utils';
@@ -284,9 +288,10 @@ const isAssignmentsModalVisible = ref(false);
 const selectedOrgId = ref('');
 const selectedOrgName = ref('');
 
+const router = useRouter();
 const authStore = useAuthStore();
-const { currentSite, roarfirekit, shouldUsePermissions, userClaims } = storeToRefs(authStore);
-const { isUserSuperAdmin } = authStore;
+const { currentSite, roarfirekit, shouldUsePermissions, userClaims, userData } = storeToRefs(authStore);
+const { isUserSuperAdmin, setCurrentSite } = authStore;
 
 const claimsLoaded = computed(() => !!userClaims.value);
 const selectedSite = computed(() => (shouldUsePermissions.value ? currentSite.value : selectedDistrict.value));
@@ -301,13 +306,13 @@ const orgHeaders = computed(() => {
 });
 
 const activeIndex = ref(0);
+const initialTab = history.state?.tab;
+const initialTabIndex = Object.keys(orgHeaders.value).indexOf(initialTab);
+if (initialTabIndex !== -1) activeIndex.value = initialTabIndex;
 
 const activeOrgType = computed({
   get() {
-    const keys = Object.keys(orgHeaders.value);
-    const tab = history.state?.tab;
-    if (typeof tab === 'string' && keys.includes(tab)) return tab;
-    return keys[activeIndex.value];
+    return Object.keys(orgHeaders.value)[activeIndex.value];
   },
   set(value) {
     const keys = Object.keys(orgHeaders.value);
@@ -368,6 +373,34 @@ const {
   data: orgData,
 } = useOrgsTableQuery(activeOrgType, selectedSite, selectedSchoolId, orderBy, {
   enabled: claimsLoaded,
+});
+
+const showsOrgInformation = computed(
+  () => activeOrgType.value === ORG_TYPES.DISTRICTS || activeOrgType.value === ORG_TYPES.SCHOOLS,
+);
+
+const canManageOrgInformation = computed(() =>
+  (userData.value?.roles ?? []).some(
+    (role) => role.role === ROLES.SUPER_ADMIN || (role.role === ROLES.SITE_ADMIN && role.siteId === currentSite.value),
+  ),
+);
+
+const orgInformationIds = computed(() => {
+  if (!showsOrgInformation.value || !canManageOrgInformation.value) return [];
+  return (orgData.value ?? []).map((org) => org.id);
+});
+
+const { data: orgInformationStatus, isLoading: isLoadingOrgInformation } = useGetOrgInformationStatusQuery(
+  activeOrgType,
+  orgInformationIds,
+);
+
+const orgInformationProgress = computed(() => {
+  const progress = new Map();
+  for (const result of orgInformationStatus.value?.results ?? []) {
+    if ('progress' in result) progress.set(result.orgId, result.progress);
+  }
+  return progress;
 });
 
 // Fetch all administrations for the assignments modal
@@ -524,12 +557,11 @@ const tableColumns = computed(() => {
     sort: false,
   });
 
-  if (isUserSuperAdmin()) {
+  if (isUserSuperAdmin() || (showsOrgInformation.value && canManageOrgInformation.value)) {
     columns.push({
-      header: 'Edit',
-      button: true,
-      eventName: 'edit-button',
-      buttonIcon: 'pi pi-pencil',
+      field: 'actions',
+      header: 'Actions',
+      dataType: 'string',
       sort: false,
     });
   }
@@ -606,6 +638,43 @@ const showCode = async (selectedOrg) => {
     activationCode.value = orgInfo.currentActivationCode;
     isDialogVisible.value = true;
   }
+};
+
+const openOrgInformation = (org) => {
+  const isSchool = activeOrgType.value === ORG_TYPES.SCHOOLS;
+  // The site form follows the navbar site, so select the clicked site before opening it.
+  if (!isSchool) setCurrentSite(org.id, org.name ?? null);
+  router.push({
+    name: 'SurveyFormPreview',
+    params: { formType: isSchool ? 'school' : 'site' },
+    query: { orgId: org.id },
+  });
+};
+
+const groupActions = (org) => {
+  const actions = [];
+
+  if (showsOrgInformation.value && canManageOrgInformation.value) {
+    const information = isLoadingOrgInformation.value
+      ? orgInformationLoadingAction()
+      : orgInformationAction(
+          orgInformationProgress.value.get(org.id),
+          activeOrgType.value === ORG_TYPES.SCHOOLS ? 'school' : 'site',
+          () => openOrgInformation(org),
+        );
+    if (information) actions.push(information);
+  }
+
+  if (isUserSuperAdmin()) {
+    actions.push({
+      name: 'edit',
+      tooltip: 'Edit',
+      icon: 'pi pi-pencil',
+      callback: () => onEditButtonClick(org),
+    });
+  }
+
+  return actions;
 };
 
 const onEditButtonClick = (event) => {
@@ -704,31 +773,35 @@ watch([selectedSite, selectedSchoolId], () => {
   tableKey.value += 1;
 });
 
+const withActions = (rows) => (rows ?? []).map((org) => ({ ...org, actions: groupActions(org) }));
+
 const filteredTableData = computed(() => {
   if (searchQuery.value?.trim()?.length > 0) {
     const normalizedSearchQuery = normalizeToLowercase(searchQuery.value);
 
-    return tableData.value?.filter((item) => {
-      const normalizedItemName = normalizeToLowercase(item?.name || '');
+    return withActions(
+      tableData.value?.filter((item) => {
+        const normalizedItemName = normalizeToLowercase(item?.name || '');
 
-      // Filter by name
-      if (normalizedItemName?.includes(normalizedSearchQuery)) {
-        return true;
-      }
+        // Filter by name
+        if (normalizedItemName?.includes(normalizedSearchQuery)) {
+          return true;
+        }
 
-      // Filter by tags if they exist
-      if (item.tags && Array.isArray(item.tags)) {
-        return item.tags.some((tag) => {
-          const normalizedTag = normalizeToLowercase(tag || '');
-          return normalizedTag.includes(normalizedSearchQuery);
-        });
-      }
+        // Filter by tags if they exist
+        if (item.tags && Array.isArray(item.tags)) {
+          return item.tags.some((tag) => {
+            const normalizedTag = normalizeToLowercase(tag || '');
+            return normalizedTag.includes(normalizedSearchQuery);
+          });
+        }
 
-      return false;
-    });
+        return false;
+      }),
+    );
   }
 
-  return tableData.value || [];
+  return withActions(tableData.value);
 });
 </script>
 

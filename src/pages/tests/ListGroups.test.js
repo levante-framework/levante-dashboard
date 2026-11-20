@@ -38,6 +38,7 @@ vi.mock('@/store/auth', () => ({
       restConfig: true,
     }),
     isUserSuperAdmin: vi.fn(() => true),
+    userData: ref({ roles: [{ role: 'super_admin' }] }),
     currentSite: ref('test-site'),
     shouldUsePermissions: ref(false),
     userClaims: ref({

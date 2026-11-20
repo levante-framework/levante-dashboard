@@ -5,13 +5,19 @@ import PrimeVue from 'primevue/config';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import useAdministrationsListQuery from '@/composables/queries/useAdministrationsListQuery';
+import { useGetOrgInformationStatusQuery } from '@/composables/queries/useGetOrgInformationStatusQuery';
 import { useGetSiteOverviewQuery } from '@/composables/queries/useGetSiteOverviewQuery';
+import { ORG_TYPES } from '@/constants/orgTypes';
 import HomeAdministrator from '@/pages/HomeAdministrator.vue';
 import ViewAssignments from '@/pages/ViewAssignments.vue';
 import { useAuthStore } from '@/store/auth';
 
 vi.mock('@/composables/queries/useGetSiteOverviewQuery', () => ({
   useGetSiteOverviewQuery: vi.fn(),
+}));
+
+vi.mock('@/composables/queries/useGetOrgInformationStatusQuery', () => ({
+  useGetOrgInformationStatusQuery: vi.fn(),
 }));
 
 vi.mock('@/composables/queries/useAdministrationsListQuery', () => ({
@@ -57,6 +63,27 @@ const buildOverview = (overrides = {}) => ({
   ...overrides,
 });
 
+// Progress returned by the mocked status query, keyed by the dashboard org type.
+const orgStatus = { districts: undefined, schools: undefined };
+
+const mockOrgStatusQuery = () => {
+  vi.mocked(useGetOrgInformationStatusQuery).mockImplementation((orgType) => ({
+    data: ref(orgType === ORG_TYPES.DISTRICTS ? orgStatus.districts : orgStatus.schools),
+    isLoading: ref(false),
+    isError: ref(false),
+    error: ref(null),
+    isSuccess: ref(true),
+  }));
+};
+
+const statusOf = (orgType, progressByOrgId) => ({
+  orgType,
+  results: Object.entries(progressByOrgId).map(([orgId, progress]) => ({ orgId, progress })),
+});
+
+const linkTargets = (wrapper) =>
+  wrapper.findAll('[data-cy="router-link"]').map((el) => JSON.parse(el.attributes('data-test-to')));
+
 const mockOverviewQuery = ({ data = undefined, isLoading = false } = {}) => {
   vi.mocked(useGetSiteOverviewQuery).mockReturnValue({
     data: ref(data),
@@ -94,7 +121,10 @@ const mountPage = () => {
 
 describe('HomeAdministrator', () => {
   beforeEach(() => {
+    orgStatus.districts = undefined;
+    orgStatus.schools = undefined;
     mockOverviewQuery({ data: buildOverview() });
+    mockOrgStatusQuery();
   });
 
   afterEach(() => {
@@ -230,6 +260,104 @@ describe('HomeAdministrator', () => {
     expect(text).toContain('There are no schools yet');
     expect(text).toContain('There are no classes yet');
     expect(text).toContain('There are no cohorts yet');
+  });
+
+  const asRole = (authStore, role, siteId = 'site-1') => {
+    authStore.userData = { displayName: 'Ada Lovelace', roles: [{ role, siteId }] };
+  };
+
+  it('shows the site banner with Get Started when site information has not been started', async () => {
+    orgStatus.districts = statusOf('site', { 'site-1': 'not-started' });
+
+    const { wrapper, authStore } = mountPage();
+    asRole(authStore, 'site_admin');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("We're missing some key information about your site");
+    expect(wrapper.text()).toContain('Get Started');
+    expect(linkTargets(wrapper)).toContainEqual({
+      name: 'SurveyFormPreview',
+      params: { formType: 'site' },
+      query: { orgId: 'site-1' },
+    });
+  });
+
+  it('shows the site banner with Resume when site information is incomplete', async () => {
+    orgStatus.districts = statusOf('site', { 'site-1': 'incomplete' });
+
+    const { wrapper, authStore } = mountPage();
+    asRole(authStore, 'site_admin');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('We have incomplete information about your site');
+    expect(wrapper.text()).toContain('Resume');
+    expect(wrapper.text()).not.toContain('Get Started');
+  });
+
+  it('hides the site banner when site information is complete', async () => {
+    orgStatus.districts = statusOf('site', { 'site-1': 'complete' });
+
+    const { wrapper, authStore } = mountPage();
+    asRole(authStore, 'super_admin');
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain('information about your site');
+  });
+
+  it('shows the school banner when any school is missing information', async () => {
+    orgStatus.schools = statusOf('school', { 'school-a': 'complete', 'school-b': 'not-started' });
+
+    const { wrapper, authStore } = mountPage();
+    asRole(authStore, 'site_admin');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('missing some information about the schools');
+    expect(wrapper.text()).toContain('Check Schools');
+    expect(linkTargets(wrapper)).toContainEqual({ name: 'ListGroups', state: { tab: 'schools' } });
+  });
+
+  it('hides the school banner when every school is complete', async () => {
+    orgStatus.schools = statusOf('school', { 'school-a': 'complete', 'school-b': 'complete' });
+
+    const { wrapper, authStore } = mountPage();
+    asRole(authStore, 'site_admin');
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain('missing some information about the schools');
+  });
+
+  it('hides the banners when the site admin role belongs to another site', async () => {
+    orgStatus.districts = statusOf('site', { 'site-1': 'not-started' });
+    orgStatus.schools = statusOf('school', { 'school-a': 'not-started' });
+
+    const { wrapper, authStore } = mountPage();
+    asRole(authStore, 'site_admin', 'other-site');
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain('Get Started');
+    expect(wrapper.text()).not.toContain('Check Schools');
+  });
+
+  it.each(['admin', 'research_assistant'])('hides the banners from a %s, who cannot open the form', async (role) => {
+    orgStatus.districts = statusOf('site', { 'site-1': 'not-started' });
+    orgStatus.schools = statusOf('school', { 'school-a': 'not-started' });
+
+    const { wrapper, authStore } = mountPage();
+    asRole(authStore, role);
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain('Get Started');
+    expect(wrapper.text()).not.toContain('Check Schools');
+  });
+
+  it('hides the school banner when a school only comes back as an error', async () => {
+    orgStatus.schools = { orgType: 'school', results: [{ orgId: 'school-a', error: { code: 'org' } }] };
+
+    const { wrapper, authStore } = mountPage();
+    asRole(authStore, 'site_admin');
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain('missing some information about the schools');
   });
 
   it('replaces the "View X" CTA with "Create" when a bucket is empty', async () => {

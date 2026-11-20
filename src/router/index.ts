@@ -330,7 +330,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/pages/SurveyFormPreview.vue'),
     meta: {
       pageTitle: 'Survey Form Preview',
-      allowedRoles: [ROLES.SUPER_ADMIN],
+      allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN],
     },
   },
 ];

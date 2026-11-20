@@ -51,7 +51,7 @@ import { useRoute, useRouter } from 'vue-router';
 import FormRenderer from '@/components/FormRenderer.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { type SurveyFormType, useSurveyFormDefinitionQuery } from '@/composables/queries/useSurveyFormDefinitionQuery';
-import { SURVEY_FORM_DEFINITION_QUERY_KEY } from '@/constants/queryKeys';
+import { ORG_INFORMATION_STATUS_QUERY_KEY, SURVEY_FORM_DEFINITION_QUERY_KEY } from '@/constants/queryKeys';
 import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsRepository';
 import { useAuthStore } from '@/store/auth';
 
@@ -109,10 +109,22 @@ watch([formType, orgId], () => {
   isSaving.value = false;
 });
 
+function refreshSavedForm(savedFormType: SurveyFormType, savedOrgId: string) {
+  return Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: [SURVEY_FORM_DEFINITION_QUERY_KEY, savedFormType, savedOrgId],
+    }),
+    queryClient.invalidateQueries({
+      queryKey: [ORG_INFORMATION_STATUS_QUERY_KEY],
+      refetchType: 'all',
+    }),
+  ]).catch(() => undefined);
+}
+
 async function persist(
   responses: Record<string, unknown>,
   status: 'draft' | 'complete',
-  options?: { silent?: boolean },
+  options?: { silent?: boolean; awaitRefresh?: boolean },
 ): Promise<boolean> {
   if (!data.value) return false;
   const savedFormType = formType.value;
@@ -130,9 +142,8 @@ async function persist(
       status,
     });
     if (stillOnSavedOrg()) persistedStatus.value = status;
-    await queryClient.invalidateQueries({
-      queryKey: [SURVEY_FORM_DEFINITION_QUERY_KEY, savedFormType, savedOrgId],
-    });
+    const refresh = refreshSavedForm(savedFormType, savedOrgId);
+    if (options?.awaitRefresh) await refresh;
     if (options?.silent) return true;
     toast.add({
       severity: 'success',
@@ -164,7 +175,7 @@ function onSave(values: Record<string, unknown>, options?: { silent?: boolean })
 async function onSubmit(values: Record<string, unknown>) {
   const submittedFormType = formType.value;
   const submittedOrgId = orgId.value;
-  const ok = await persist(values, 'complete', { silent: true });
+  const ok = await persist(values, 'complete', { silent: true, awaitRefresh: true });
   if (ok && formType.value === submittedFormType && orgId.value === submittedOrgId) {
     isComplete.value = true;
   }
