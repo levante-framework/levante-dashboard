@@ -15,6 +15,26 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Avoid persisting the default GITHUB_TOKEN as a git credential header for github.com;
+          # it would override our app-token URL rewrite used for private deps like levante-swr.
+          persist-credentials: false
+
+      - name: Generate token
+        id: generate_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.LEVANTE_BOT_APP_ID }}
+          private-key: ${{ secrets.LEVANTE_BOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      # Private git dependencies (e.g. levante-swr) are locked to SSH URLs; runners have no SSH key.
+      - name: Authenticate Git for private dependencies
+        env:
+          GH_APP_TOKEN: ${{ steps.generate_token.outputs.token }}
+        run: |
+          git config --global url."https://x-access-token:${GH_APP_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global --add url."https://x-access-token:${GH_APP_TOKEN}@github.com/".insteadOf "git@github.com:"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
