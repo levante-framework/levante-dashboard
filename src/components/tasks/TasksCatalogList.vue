@@ -40,12 +40,25 @@
         </div>
         <div class="flex flex-column gap-2 flex-grow-1">
           <div class="flex flex-wrap align-items-center justify-content-between gap-2">
-            <div class="font-semibold text-lg">{{ task.name || task.id }}</div>
+            <div class="flex flex-wrap align-items-center gap-2">
+              <span class="font-semibold text-lg">{{ task.name || task.id }}</span>
+              <PvTag
+                :value="task.registered ? 'Registered' : 'Unregistered'"
+                :severity="task.registered ? 'success' : 'secondary'"
+              />
+            </div>
             <PvButton label="Edit" icon="pi pi-pencil" severity="secondary" variant="outlined" size="small" @click="openEdit(task)" />
           </div>
           <div class="text-sm">
             <span class="font-bold">Task ID: </span>
             {{ task.id }}
+          </div>
+          <div class="flex flex-wrap align-items-center gap-2 text-sm">
+            <span class="font-bold">Valid user types: </span>
+            <template v-if="task.validUserTypes?.length">
+              <PvTag v-for="userType in task.validUserTypes" :key="userType" :value="_upperFirst(userType)" severity="info" />
+            </template>
+            <span v-else class="text-gray-500">—</span>
           </div>
           <div class="flex flex-wrap gap-4 text-sm">
             <span>
@@ -67,7 +80,9 @@
 </template>
 
 <script setup lang="ts">
+import _upperFirst from 'lodash/upperFirst';
 import PvButton from 'primevue/button';
+import PvTag from 'primevue/tag';
 import { computed, ref } from 'vue';
 import TaskUpsertDialog from '@/components/tasks/TaskUpsertDialog.vue';
 import useTasksCatalogQuery from '@/composables/queries/useTasksCatalogQuery';
