@@ -293,6 +293,26 @@ describe('LinkUsers Page', () => {
       expect(vm.validationErrors.rows).toEqual([{ message: 'uid: Required', rowNums: [2] }]);
     });
 
+    it('surfaces a file-level too-many-rows error in the status banner, not the table', async () => {
+      const vm = mountLinkUsers().vm as any;
+
+      // LinkUsersCsvSchema caps uploads at 2000 rows. 2001 field-valid rows
+      // trip the file-level `too_big` issue (empty path), which
+      // combineUserCsvIssues drops — so it must surface in the status banner
+      // rather than the (empty) errors table.
+      const header = 'id,userType,caregiverId,teacherId,uid';
+      const rows = Array.from({ length: 2001 }, (_, i) => `child-${i},child,care-1,,uid-${i}`);
+      await vm.onFileUpload(mockFileUploadEvent([header, ...rows].join('\n')));
+
+      expect(vm.status).toEqual({
+        message:
+          'The uploaded file contains too many users. Please upload a file with 2,000 or fewer users and try again.',
+        severity: 'error',
+      });
+      expect(vm.validatedData).toBeNull();
+      expect(vm.validationErrors).toBeNull();
+    });
+
     it('flags adult rows that carry links', async () => {
       const vm = mountLinkUsers().vm as any;
 

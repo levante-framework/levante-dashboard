@@ -213,16 +213,31 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
 
   // Validate w/ zod schema
   const validated = LinkUsersCsvSchema.safeParse(parsed);
-  const issues = combineUsersCsvIssues([...(validated.error?.issues ?? []), ...siteIssues]);
-  if (issues.length > 0 || !validated.success) {
-    // Validation failed
-    status.value = { message: 'The uploaded file is invalid. See table for details.', severity: 'error' };
-    validationErrors.value = {
-      headers: ['Validation Errors', 'Affected Rows'],
-      keys: ['message', 'rowNums'],
-      rows: issues,
-      showDownloadButton: true,
+  const allIssues = [...(validated.error?.issues ?? []), ...siteIssues];
+  // A file-level issue (e.g. too many rows) has an empty path, so `combineUsersCsvIssues`
+  // drops it. Surface it in the status banner; row-scoped issues go in the table.
+  const fileIssue = allIssues.find((issue) => issue.path.length === 0);
+  const rowIssues = combineUsersCsvIssues(allIssues);
+  if (fileIssue || rowIssues.length > 0 || !validated.success) {
+    // Validation failed. A file-level issue (e.g. too many rows) goes in the status
+    // banner since it describes the whole file; row-scoped issues go in the table.
+    status.value = {
+      message: fileIssue
+        ? fileIssue.code === 'too_big'
+          ? `The uploaded file contains too many users. Please upload a file with ${fileIssue.maximum.toLocaleString()} or fewer users and try again.`
+          : fileIssue.message
+        : 'The uploaded file is invalid. See table for details.',
+      severity: 'error',
     };
+    validationErrors.value =
+      rowIssues.length > 0
+        ? {
+            headers: ['Validation Errors', 'Affected Rows'],
+            keys: ['message', 'rowNums'],
+            rows: rowIssues,
+            showDownloadButton: true,
+          }
+        : null;
     return;
   }
 

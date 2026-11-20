@@ -494,6 +494,26 @@ describe('AddUsers Page', () => {
       expect(vm.validationErrors.rows).toEqual([{ message: 'id: Required', rowNums: [2, 4] }]);
     });
 
+    it('surfaces a file-level too-many-rows error in the status banner, not the table', async () => {
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
+
+      // AddUsersCsvSchema caps uploads at 1000 rows. 1001 otherwise-valid rows
+      // trip the file-level `too_big` issue (empty path), which
+      // combineUserCsvIssues drops — so it must surface in the status banner
+      // rather than the (empty) errors table.
+      const header = 'id,userType,month,year,caregiverId,teacherId,school,class,cohort';
+      const rows = Array.from({ length: 1001 }, (_, i) => `${i + 1},child,5,2018,,,"Test School","Class A",`);
+      await vm.onFileUpload(mockFileUploadEvent([header, ...rows].join('\n')));
+
+      expect(vm.status).toEqual({
+        message:
+          'The uploaded file contains too many users. Please upload a file with 1,000 or fewer users and try again.',
+        severity: 'error',
+      });
+      expect(vm.validatedData).toBeNull();
+      expect(vm.validationErrors).toBeNull();
+    });
+
     it('handles validation errors when the file is malformed', async () => {
       const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
