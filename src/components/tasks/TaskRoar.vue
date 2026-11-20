@@ -1,6 +1,5 @@
 <template>
   <LevanteSpinner v-if="!gameStarted" fullscreen />
-  <div id="jspsych-target" class="game-target" translate="no" />
 </template>
 
 <script setup>
@@ -197,16 +196,4 @@ async function startTask(selectedAdmin) {
 </script>
 <style>
 @import 'levante-swr/lib/resources/roar-swr.css';
-
-.game-target {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.game-target:focus {
-  outline: none;
-}
 </style>
