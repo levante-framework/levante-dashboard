@@ -11,6 +11,7 @@ import { useRouter } from 'vue-router';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import useCompleteAssessmentMutation from '@/composables/mutations/useCompleteAssessmentMutation';
 import useUserChildDataQuery from '@/composables/queries/useUserChildDataQuery';
+import { assignmentIncludesTask, isUnassignedTaskError } from '@/helpers/assignedTask';
 import { startAssessmentWithRetry } from '@/helpers/startAssessmentWithRetry';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
@@ -113,6 +114,15 @@ function goHome() {
 }
 
 async function startTask(selectedAdmin) {
+  if (!assignmentIncludesTask(selectedAdmin.value, props.taskId)) {
+    logger.capture('Task not on assignment', {
+      administrationId: selectedAdmin.value?.id,
+      taskId: props.taskId,
+    });
+    goHome();
+    return;
+  }
+
   let startAssessmentSucceeded = false;
 
   try {
@@ -155,6 +165,15 @@ async function startTask(selectedAdmin) {
     });
   } catch (error) {
     if (isUnmounted) return;
+
+    if (!startAssessmentSucceeded && isUnassignedTaskError(error)) {
+      logger.capture('Task not on assignment', {
+        administrationId: selectedAdmin.value?.id,
+        taskId: props.taskId,
+      });
+      goHome();
+      return;
+    }
 
     // Only unlatch when the callable never succeeded. A later failure means the
     // assessment is already started server-side, so the watcher must not relaunch it.
