@@ -343,7 +343,7 @@ describe('AddUsers Page', () => {
       // When the CSV includes a 'site' column, each non-empty value must match
       // the currently selected site ('site-id-123' per the auth store mock).
       // The mismatch produces a custom Zod issue at path [0, 'site'] which
-      // combineUserCsvIssues formats as:
+      // combineUsersCsvIssues formats as:
       //   'site: Must match the selected site'
       const CSV_WRONG_SITE = [
         'id,userType,month,year,caregiverId,teacherId,school,class,cohort,site',
@@ -450,7 +450,7 @@ describe('AddUsers Page', () => {
       const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
       // Empty id fails NonEmptyString() in UserCsvRowBase → Zod issue at
-      // path [0, 'id']. combineUserCsvIssues formats this as 'id: Required'
+      // path [0, 'id']. combineUsersCsvIssues formats this as 'id: Required'
       // and offsets the row index by 2 (header row + 1-indexing).
       const CSV_EMPTY_ID = [
         'id,userType,month,year,caregiverId,teacherId,school,class,cohort',
@@ -478,7 +478,7 @@ describe('AddUsers Page', () => {
 
       // Rows 1 and 3 (CSV rows 2 and 4) both have an empty id.
       // Row 2 (CSV row 3) is valid and must not appear in rowNums.
-      // combineUserCsvIssues groups identical errors and applies a +2 offset
+      // combineUsersCsvIssues groups identical errors and applies a +2 offset
       // (header row + 1-indexing), so rowNums should be [2, 4].
       const csv = [
         'id,userType,month,year,caregiverId,teacherId,school,class,cohort',
@@ -492,6 +492,48 @@ describe('AddUsers Page', () => {
       expect(vm.validatedData).toBeNull();
       expect(vm.validationErrors).not.toBeNull();
       expect(vm.validationErrors.rows).toEqual([{ message: 'id: Required', rowNums: [2, 4] }]);
+    });
+
+    it('surfaces a file-level too-many-rows error in the status banner, not the table', async () => {
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
+
+      // AddUsersCsvSchema caps uploads at 1000 rows. 1001 otherwise-valid rows
+      // trip the file-level `too_big` issue (empty path), which
+      // combineUsersCsvIssues drops — so it must surface in the status banner
+      // rather than the (empty) errors table.
+      const header = 'id,userType,month,year,caregiverId,teacherId,school,class,cohort';
+      const rows = Array.from({ length: 1001 }, (_, i) => `${i + 1},child,5,2018,,,"Test School","Class A",`);
+      await vm.onFileUpload(mockFileUploadEvent([header, ...rows].join('\n')));
+
+      expect(vm.status).toEqual({
+        message:
+          'The uploaded file contains too many users. Please upload a file with 1,000 or fewer users and try again.',
+        severity: 'error',
+      });
+      expect(vm.validatedData).toBeNull();
+      expect(vm.validationErrors).toBeNull();
+    });
+
+    it('hides the errors table when the file is too big even if some rows are also invalid', async () => {
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
+
+      // A too-big file can also contain row-level errors. The file-level issue
+      // describes the whole file, so the banner wins and the table stays hidden
+      // rather than showing a partial, misleading list of row errors.
+      const header = 'id,userType,month,year,caregiverId,teacherId,school,class,cohort';
+      const rows = Array.from({ length: 1001 }, (_, i) =>
+        // Every tenth row has an empty id, which would otherwise be a row-level error.
+        i % 10 === 0 ? `,child,5,2018,,,"Test School","Class A",` : `${i + 1},child,5,2018,,,"Test School","Class A",`,
+      );
+      await vm.onFileUpload(mockFileUploadEvent([header, ...rows].join('\n')));
+
+      expect(vm.status).toEqual({
+        message:
+          'The uploaded file contains too many users. Please upload a file with 1,000 or fewer users and try again.',
+        severity: 'error',
+      });
+      expect(vm.validatedData).toBeNull();
+      expect(vm.validationErrors).toBeNull();
     });
 
     it('handles validation errors when the file is malformed', async () => {

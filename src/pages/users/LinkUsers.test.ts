@@ -1,5 +1,3 @@
-// biome-ignore-all lint/suspicious/noExplicitAny: tests access component internals via `.vm as any`
-
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { mount } from '@vue/test-utils';
 import * as Papa from 'papaparse';
@@ -62,11 +60,12 @@ vi.mock('@/composables/mutations/useLinkUsersMutation', () => ({
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
-const createAuthStoreMock = (overrides: Record<string, unknown> = {}) => ({
-  currentSite: ref('site-id-123'),
-  currentSiteName: ref('site-id-123'),
-  ...overrides,
-});
+const createAuthStoreMock = (overrides: Record<string, unknown> = {}) =>
+  ({
+    currentSite: ref('site-id-123'),
+    currentSiteName: ref('site-id-123'),
+    ...overrides,
+  }) as unknown as ReturnType<typeof useAuthStore>;
 
 const createMockFile = (content: string, filename = 'test.csv', type = 'text/csv') => {
   return new File([content], filename, { type });
@@ -97,6 +96,25 @@ const mountLinkUsers = () =>
     },
   });
 
+// The component exposes these members on its instance for the tests to drive
+// and assert against. Typed here so tests avoid `any` on `wrapper.vm`.
+interface LinkUsersVm {
+  onFileUpload: (event: unknown) => Promise<void>;
+  submitUsers: () => Promise<void>;
+  downloadErrors: () => void;
+  isAllSitesSelected: boolean;
+  isSubmitting: boolean;
+  status: { message: string; severity: string } | null;
+  uploadedFile: File | null;
+  validatedData: Array<Record<string, unknown>> | null;
+  validationErrors: {
+    headers: string[];
+    keys: string[];
+    rows: Array<{ message: string; rowNums: number[] }>;
+    showDownloadButton: boolean;
+  } | null;
+}
+
 // ─── Shared CSV fixtures ──────────────────────────────────────────────────────
 
 // A child linked to one caregiver and one teacher, both present in the file.
@@ -118,12 +136,12 @@ describe('LinkUsers Page', () => {
     setShouldUserConfirmMock.mockReset();
     linkUsersMock.mockReset();
     vi.mocked(useAuthStore).mockReset();
-    vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock() as any);
+    vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock());
   });
 
   describe('onFileUpload', () => {
     it('handles a valid CSV upload', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       await vm.onFileUpload(mockFileUploadEvent(VALID_CSV));
 
@@ -152,7 +170,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('resets component state at the start of each upload', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       await vm.onFileUpload(mockFileUploadEvent(VALID_CSV));
       expect(vm.validatedData).not.toBeNull();
@@ -173,7 +191,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('handles validation errors when no file is provided', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       await vm.onFileUpload({ files: [] });
 
@@ -183,7 +201,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('handles validation errors when the file is empty', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       const HEADER_ONLY_CSV = 'id,userType,caregiverId,teacherId,uid';
       await vm.onFileUpload(mockFileUploadEvent(HEADER_ONLY_CSV));
@@ -197,7 +215,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('handles validation errors when the file is malformed', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       // An unterminated quoted field makes Papa emit parse errors, so
       // parseCsvFile resolves to null and onFileUpload bails out.
@@ -214,7 +232,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('handles validation errors when required headers are missing', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       await vm.onFileUpload(mockFileUploadEvent(MISSING_HEADERS_CSV));
 
@@ -237,7 +255,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('handles site validation errors', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       // When the CSV includes a 'site' column, each non-empty value must match
       // the currently selected site ('site-id-123' per the auth store mock).
@@ -259,7 +277,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('accepts rows whose site column matches or is empty', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       const csv = [
         'id,userType,caregiverId,teacherId,uid,site',
@@ -273,7 +291,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('reports a row-level zod error with a downloadable CSV', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       // Empty uid fails nonEmptyString() → Zod issue at path [0, 'uid'].
       const CSV_EMPTY_UID = [
@@ -293,8 +311,50 @@ describe('LinkUsers Page', () => {
       expect(vm.validationErrors.rows).toEqual([{ message: 'uid: Required', rowNums: [2] }]);
     });
 
+    it('surfaces a file-level too-many-rows error in the status banner, not the table', async () => {
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
+
+      // LinkUsersCsvSchema caps uploads at 2000 rows. 2001 field-valid rows
+      // trip the file-level `too_big` issue (empty path), which
+      // combineUsersCsvIssues drops — so it must surface in the status banner
+      // rather than the (empty) errors table.
+      const header = 'id,userType,caregiverId,teacherId,uid';
+      const rows = Array.from({ length: 2001 }, (_, i) => `child-${i},child,care-1,,uid-${i}`);
+      await vm.onFileUpload(mockFileUploadEvent([header, ...rows].join('\n')));
+
+      expect(vm.status).toEqual({
+        message:
+          'The uploaded file contains too many users. Please upload a file with 2,000 or fewer users and try again.',
+        severity: 'error',
+      });
+      expect(vm.validatedData).toBeNull();
+      expect(vm.validationErrors).toBeNull();
+    });
+
+    it('hides the errors table when the file is too big even if some rows are also invalid', async () => {
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
+
+      // A too-big file can also contain row-level errors. The file-level issue
+      // describes the whole file, so the banner wins and the table stays hidden
+      // rather than showing a partial, misleading list of row errors.
+      const header = 'id,userType,caregiverId,teacherId,uid';
+      const rows = Array.from({ length: 2001 }, (_, i) =>
+        // Every tenth row has an empty uid, which would otherwise be a row-level error.
+        i % 10 === 0 ? `child-${i},child,care-1,,` : `child-${i},child,care-1,,uid-${i}`,
+      );
+      await vm.onFileUpload(mockFileUploadEvent([header, ...rows].join('\n')));
+
+      expect(vm.status).toEqual({
+        message:
+          'The uploaded file contains too many users. Please upload a file with 2,000 or fewer users and try again.',
+        severity: 'error',
+      });
+      expect(vm.validatedData).toBeNull();
+      expect(vm.validationErrors).toBeNull();
+    });
+
     it('flags adult rows that carry links', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       // A caregiver row must not have a caregiverId/teacherId.
       const csv = [
@@ -311,7 +371,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('filters out children missing both caregiverId and teacherId', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       // child-2 has no links → dropped. care-1 is only referenced by child-1,
       // teach-1 by child-1 → both retained. All three remaining rows survive.
@@ -330,7 +390,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('drops adults not linked to any retained child', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       // teach-1 is referenced by no child row → dropped from validatedData.
       const csv = [
@@ -346,7 +406,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('errors when no child row provides a caregiverId or teacherId', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       // The only child has no links, so after filtering nothing remains.
       const csv = ['id,userType,caregiverId,teacherId,uid', 'child-1,child,,,uid-child-1'].join('\n');
@@ -360,7 +420,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('strips the errors column before validating', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       const csv = [
         'id,userType,caregiverId,teacherId,uid,errors',
@@ -378,7 +438,7 @@ describe('LinkUsers Page', () => {
       const wasCalledWithTrue = () => setShouldUserConfirmMock.mock.calls.some(([value]) => value === true);
 
       it('is called with true after a successful upload', async () => {
-        const vm = mountLinkUsers().vm as any;
+        const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
         await vm.onFileUpload(mockFileUploadEvent(VALID_CSV));
 
@@ -387,7 +447,7 @@ describe('LinkUsers Page', () => {
       });
 
       it('is not called with true when validation fails', async () => {
-        const vm = mountLinkUsers().vm as any;
+        const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
         await vm.onFileUpload(mockFileUploadEvent(MISSING_HEADERS_CSV));
 
@@ -400,7 +460,7 @@ describe('LinkUsers Page', () => {
     it('does nothing when parsedData or validationErrors are absent', async () => {
       const createObjectURL = vi.spyOn(URL, 'createObjectURL');
 
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       // Fresh mount — both refs null.
       vm.downloadErrors();
@@ -416,7 +476,7 @@ describe('LinkUsers Page', () => {
     });
 
     it('creates a CSV blob annotated with per-row errors and triggers download', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       // Row 2 (idx 0): empty uid → one error. Row 3 (idx 1): valid adult.
       const csv = [
@@ -477,7 +537,7 @@ describe('LinkUsers Page', () => {
     // Drives onFileUpload(VALID_CSV) then submitUsers, so validatedData is
     // populated before submission. Returns the component vm.
     const uploadValidAndSubmit = async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
       await vm.onFileUpload(mockFileUploadEvent(VALID_CSV));
       expect(vm.validatedData).not.toBeNull();
       await vm.submitUsers();
@@ -485,7 +545,7 @@ describe('LinkUsers Page', () => {
     };
 
     it('returns early when there is no validated data to submit', async () => {
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
 
       await vm.submitUsers();
 
@@ -499,10 +559,10 @@ describe('LinkUsers Page', () => {
 
     it('returns early when no specific site is selected', async () => {
       vi.mocked(useAuthStore).mockReturnValue(
-        createAuthStoreMock({ currentSite: ref('any'), currentSiteName: ref('Test Site') }) as any,
+        createAuthStoreMock({ currentSite: ref('any'), currentSiteName: ref('Test Site') }),
       );
 
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
       await vm.onFileUpload(mockFileUploadEvent(VALID_CSV));
       expect(vm.validatedData).not.toBeNull();
 
@@ -716,9 +776,9 @@ describe('LinkUsers Page', () => {
   describe('watchers', () => {
     it('resets progress when the selected site changes', async () => {
       const currentSite = ref('site-id-123');
-      vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock({ currentSite }) as any);
+      vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock({ currentSite }));
 
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
       await vm.onFileUpload(mockFileUploadEvent(VALID_CSV));
       expect(vm.validatedData).not.toBeNull();
       expect(vm.uploadedFile).not.toBeNull();
@@ -733,9 +793,9 @@ describe('LinkUsers Page', () => {
 
     it('does not reset progress when the site changes during submission', async () => {
       const currentSite = ref('site-id-123');
-      vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock({ currentSite }) as any);
+      vi.mocked(useAuthStore).mockReturnValue(createAuthStoreMock({ currentSite }));
 
-      const vm = mountLinkUsers().vm as any;
+      const vm = mountLinkUsers().vm as unknown as LinkUsersVm;
       await vm.onFileUpload(mockFileUploadEvent(VALID_CSV));
       expect(vm.validatedData).not.toBeNull();
 
@@ -750,11 +810,11 @@ describe('LinkUsers Page', () => {
   describe('UI', () => {
     it('disables the CSV uploader when all sites are selected', () => {
       vi.mocked(useAuthStore).mockReturnValue(
-        createAuthStoreMock({ currentSite: ref('any'), currentSiteName: ref('') }) as any,
+        createAuthStoreMock({ currentSite: ref('any'), currentSiteName: ref('') }),
       );
 
       const wrapper = mountLinkUsers();
-      const vm = wrapper.vm as any;
+      const vm = wrapper.vm as unknown as LinkUsersVm;
 
       expect(vm.isAllSitesSelected).toBe(true);
 
@@ -765,7 +825,7 @@ describe('LinkUsers Page', () => {
 
     it('passes the validated rows to the rows datatable', async () => {
       const wrapper = mountLinkUsers();
-      const vm = wrapper.vm as any;
+      const vm = wrapper.vm as unknown as LinkUsersVm;
 
       await vm.onFileUpload(mockFileUploadEvent(VALID_CSV));
       await nextTick();
