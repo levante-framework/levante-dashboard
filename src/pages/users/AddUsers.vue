@@ -295,8 +295,9 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
   const fileIssue = allIssues.find((issue) => issue.path.length === 0);
   const rowIssues = combineUsersCsvIssues(allIssues);
   if (fileIssue || rowIssues.length > 0 || !validated.success) {
-    // Validation failed. A file-level issue (e.g. too many rows) goes in the status
-    // banner since it describes the whole file; row-scoped issues go in the table.
+    // Validation failed. A file-level issue (e.g. too many rows) describes the whole
+    // file, so show it in the status banner and skip the table entirely; otherwise
+    // row-scoped issues go in the table.
     status.value = {
       message: fileIssue
         ? fileIssue.code === 'too_big'
@@ -306,7 +307,7 @@ const onFileUpload = async (event: FileUploadUploaderEvent) => {
       severity: 'error',
     };
     validationErrors.value =
-      rowIssues.length > 0
+      !fileIssue && rowIssues.length > 0
         ? {
             headers: ['Validation Errors', 'Affected Rows'],
             keys: ['message', 'rowNums'],

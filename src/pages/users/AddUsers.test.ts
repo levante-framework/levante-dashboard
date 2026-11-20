@@ -514,6 +514,28 @@ describe('AddUsers Page', () => {
       expect(vm.validationErrors).toBeNull();
     });
 
+    it('hides the errors table when the file is too big even if some rows are also invalid', async () => {
+      const vm = mountAddUsers().vm as unknown as AddUsersVm;
+
+      // A too-big file can also contain row-level errors. The file-level issue
+      // describes the whole file, so the banner wins and the table stays hidden
+      // rather than showing a partial, misleading list of row errors.
+      const header = 'id,userType,month,year,caregiverId,teacherId,school,class,cohort';
+      const rows = Array.from({ length: 1001 }, (_, i) =>
+        // Every tenth row has an empty id, which would otherwise be a row-level error.
+        i % 10 === 0 ? `,child,5,2018,,,"Test School","Class A",` : `${i + 1},child,5,2018,,,"Test School","Class A",`,
+      );
+      await vm.onFileUpload(mockFileUploadEvent([header, ...rows].join('\n')));
+
+      expect(vm.status).toEqual({
+        message:
+          'The uploaded file contains too many users. Please upload a file with 1,000 or fewer users and try again.',
+        severity: 'error',
+      });
+      expect(vm.validatedData).toBeNull();
+      expect(vm.validationErrors).toBeNull();
+    });
+
     it('handles validation errors when the file is malformed', async () => {
       const vm = mountAddUsers().vm as unknown as AddUsersVm;
 
