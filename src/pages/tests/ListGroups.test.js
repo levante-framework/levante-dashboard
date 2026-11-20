@@ -38,18 +38,12 @@ vi.mock('@/store/auth', () => ({
       restConfig: true,
     }),
     isUserSuperAdmin: vi.fn(() => true),
+    userData: ref({ roles: [{ role: 'super_admin' }] }),
     currentSite: ref('test-site'),
     shouldUsePermissions: ref(false),
     userClaims: ref({
-      claims: {
-        adminOrgs: {
-          districts: [],
-          schools: [],
-          classes: [],
-          groups: [],
-          families: [],
-        },
-      },
+      useNewPermissions: false,
+      siteRoles: {},
     }),
   })),
 }));
@@ -57,15 +51,8 @@ vi.mock('@/store/auth', () => ({
 vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
   default: () => ({
     data: ref({
-      claims: {
-        adminOrgs: {
-          districts: [],
-          schools: [],
-          classes: [],
-          groups: [],
-          families: [],
-        },
-      },
+      useNewPermissions: false,
+      siteRoles: {},
     }),
   }),
 }));
@@ -85,20 +72,6 @@ vi.mock('@/composables/queries/_useSchoolsQuery', () => ({
 }));
 
 // Mock query composables
-vi.mock('@/composables/queries/useDistrictsListQuery', () => ({
-  default: () => ({
-    isLoading: ref(false),
-    data: ref([]),
-  }),
-}));
-
-vi.mock('@/composables/queries/useDistrictSchoolsQuery', () => ({
-  default: () => ({
-    isLoading: ref(false),
-    data: ref([]),
-  }),
-}));
-
 vi.mock('@/composables/queries/useOrgsTableQuery', () => ({
   default: () => ({
     isLoading: ref(false),

@@ -454,7 +454,7 @@ const submitUsers = async () => {
         } else if (failure.error.code === 'functions/permission-denied') {
           message = 'Failed to link users due to insufficient permissions. Please contact support.';
         } else if (failure.error.code === 'functions/unauthenticated') {
-          message = 'Failed to link users due to an expired session. Please sign in again and retry.';
+          message = 'Failed to link users due to an expired session. Please log in again and retry.';
           shouldLog = false;
         }
       }

@@ -136,32 +136,11 @@ describe('ViewAssignments', () => {
     vi.mock('@/composables/queries/useUserClaimsQuery', () => ({
       default: vi.fn(() => ({
         data: ref({
-          id: 'zbTRSOS70cNGWyu2Ecc4T2aOU2y2',
-          collectionValue: 'userClaims',
-          lastUpdated: 1741677423988,
-          testData: false,
-          claims: {
-            // will evenutally want to mock both
-            // super_admin view and admin view
-            super_admin: true,
-            minimalAdminOrgs: {
-              groups: [],
-              schools: [],
-              districts: [],
-              families: [],
-              classes: [],
-            },
-            adminOrgs: {
-              groups: [],
-              schools: [],
-              families: [],
-              districts: [],
-              classes: [],
-            },
-            roarUid: 'zbTRSOS70cNGWyu2Ecc4T2aOU2y2',
-            admin: true,
-            adminUid: 'zbTRSOS70cNGWyu2Ecc4T2aOU2y2',
-          },
+          // will eventually want to mock both super_admin view and admin view
+          super_admin: true,
+          useNewPermissions: true,
+          rolesSet: ['super_admin'],
+          siteRoles: { any: ['super_admin'] },
         }),
       })),
     }));

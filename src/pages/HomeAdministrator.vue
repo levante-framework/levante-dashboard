@@ -25,10 +25,49 @@
       </div>
     </div>
 
-    <div v-if="showSelectSitePrompt" class="w-full px-5 mb-5 -mt-4">
-      <div class="info info--site-not-selected">
+    <div v-if="showSelectSitePrompt" class="w-full px-5 mb-5 -mt-3">
+      <div class="info info--warning">
         <i class="pi pi-exclamation-circle" />
         <div class="font-medium">Select a site to see stats</div>
+      </div>
+    </div>
+
+    <div v-if="canManageOrgInformation && siteProgress === 'not-started'" class="w-full px-5 mb-5 -mt-3">
+      <div class="info info--danger">
+        <i class="pi pi-exclamation-circle" />
+        <div class="font-medium">
+          We're missing some key information about your <span class="font-bold">site</span>. Entering it should only
+          take 10-15 minutes.
+        </div>
+        <RouterLink v-slot="{ navigate }" :to="siteFormLink" custom>
+          <PvButton class="ml-auto" @click="navigate">Get Started</PvButton>
+        </RouterLink>
+      </div>
+    </div>
+
+    <div v-else-if="canManageOrgInformation && siteProgress === 'incomplete'" class="w-full px-5 mb-5 -mt-3">
+      <div class="info info--danger">
+        <i class="pi pi-exclamation-circle" />
+        <div class="font-medium">
+          We have incomplete information about your <span class="font-bold">site</span>. Please finish entering your
+          site information.
+        </div>
+        <RouterLink v-slot="{ navigate }" :to="siteFormLink" custom>
+          <PvButton class="ml-auto" @click="navigate">Resume</PvButton>
+        </RouterLink>
+      </div>
+    </div>
+
+    <div v-if="canManageOrgInformation && hasSchoolMissingInformation" class="w-full px-5 mb-5 -mt-3">
+      <div class="info info--danger">
+        <i class="pi pi-exclamation-circle" />
+        <div class="font-medium">
+          We are missing some information about the <span class="font-bold">schools</span> in your site. Check your
+          schools to complete this information.
+        </div>
+        <RouterLink v-slot="{ navigate }" :to="schoolsLink" custom>
+          <PvButton class="ml-auto" @click="navigate">Check Schools</PvButton>
+        </RouterLink>
       </div>
     </div>
 
@@ -261,11 +300,15 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import PvBadge from 'primevue/badge';
+import PvButton from 'primevue/button';
 import { computed, nextTick, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import DocsButton from '@/components/DocsButton.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
+import { useGetOrgInformationStatusQuery } from '@/composables/queries/useGetOrgInformationStatusQuery';
 import { useGetSiteOverviewQuery } from '@/composables/queries/useGetSiteOverviewQuery';
+import { ORG_TYPES } from '@/constants/orgTypes';
+import { ROLES } from '@/constants/roles';
 import { useAuthStore } from '@/store/auth';
 import { runWizard } from '@/wizard';
 
@@ -276,10 +319,46 @@ const { isUserSuperAdmin } = authStore;
 const authReady = computed(() => authStore.isFirekitInit());
 const isSiteSelected = computed(() => !!currentSite.value && currentSite.value !== 'any');
 const showSelectSitePrompt = computed(() => !!userData.value && !isSiteSelected.value);
+
+// Super admins manage every site. A site admin only manages the site on their role.
+const canManageOrgInformation = computed(() =>
+  (userData.value?.roles ?? []).some(
+    (role) => role.role === ROLES.SUPER_ADMIN || (role.role === ROLES.SITE_ADMIN && role.siteId === currentSite.value),
+  ),
+);
 const { data: siteOverview, isLoading } = useGetSiteOverviewQuery(
   () => (isSiteSelected.value ? (currentSite.value as string) : ''),
   () => authReady.value,
 );
+
+const { data: siteStatus } = useGetOrgInformationStatusQuery(
+  ORG_TYPES.DISTRICTS,
+  () => (isSiteSelected.value ? [currentSite.value as string] : []),
+  () => authReady.value && canManageOrgInformation.value,
+);
+
+const siteProgress = computed(() => {
+  const result = siteStatus.value?.results[0];
+  return result && 'progress' in result ? result.progress : undefined;
+});
+
+const siteFormLink = computed(() => ({
+  name: 'SurveyFormPreview',
+  params: { formType: 'site' },
+  query: { orgId: currentSite.value },
+}));
+
+const { data: schoolStatuses } = useGetOrgInformationStatusQuery(
+  ORG_TYPES.SCHOOLS,
+  () => (siteOverview.value?.schools ?? []).map((school) => school.id),
+  () => authReady.value && canManageOrgInformation.value,
+);
+
+const hasSchoolMissingInformation = computed(() =>
+  (schoolStatuses.value?.results ?? []).some((result) => 'progress' in result && result.progress !== 'complete'),
+);
+
+const schoolsLink = { name: 'ListGroups', state: { tab: ORG_TYPES.SCHOOLS } };
 
 const userName = computed(() => {
   const displayName = userData.value?.displayName;
@@ -351,7 +430,12 @@ watch(
   border-radius: 12px;
   color: var(--gray-500);
 
-  &.info--site-not-selected {
+  &.info--danger {
+    background: rgba(var(--bright-red-rgb), 0.1);
+    color: var(--bright-red);
+  }
+
+  &.info--warning {
     background: rgba(var(--bright-yellow-rgb), 0.1);
     color: var(--bright-yellow);
   }

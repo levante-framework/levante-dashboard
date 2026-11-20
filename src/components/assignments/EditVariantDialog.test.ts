@@ -409,6 +409,37 @@ describe('validUserTypes default conditions', () => {
     wrapper.unmount();
   });
 
+  it('ignores a malformed string validUserTypes and falls back to the task-id default', async () => {
+    const updateVariant = vi.fn();
+    // teacher-survey defaults to teacher; a string must not be read as student.
+    const assessment = createAssessment({}, 'teacher-survey');
+    assessment.task.validUserTypes = 'student' as unknown as RoarUserType[];
+
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment,
+        updateVariant,
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    const labels = selectLabels(wrapper);
+    expect(labels).toContain('Teacher');
+    expect(labels).not.toContain('Child');
+
+    await wrapper.find('[data-cy="button-save-conditions"]').trigger('click');
+    await nextTick();
+
+    expect(updateVariant).toHaveBeenCalledWith('test-variant-1', {
+      assigned: { op: 'AND', conditions: [{ field: 'userType', op: 'EQUAL', value: 'teacher' }] },
+    });
+
+    wrapper.unmount();
+  });
+
   it('round-trips multiple stored userType conditions back out with op OR', async () => {
     const updateVariant = vi.fn();
     const wrapper = mount(EditVariantDialog, {
@@ -519,6 +550,29 @@ describe('read-only userType conditions', () => {
     const selects = wrapper.findAllComponents(PvSelect);
     expect(selects.length).toBeGreaterThan(0);
     expect(selects.every((select) => select.props('disabled') === true)).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it('does not lock userType rows when validUserTypes is a malformed string', async () => {
+    // A string is not a single-element array, so the seeded userType row stays editable.
+    const assessment = createAssessment({}, 'test-task');
+    assessment.task.validUserTypes = 'student' as unknown as RoarUserType[];
+
+    const wrapper = mount(EditVariantDialog, {
+      ...mountOptions,
+      props: {
+        assessment,
+        updateVariant: vi.fn(),
+        preExistingAssessmentInfo: [],
+      },
+    });
+
+    await openDialog(wrapper);
+
+    const selects = wrapper.findAllComponents(PvSelect);
+    expect(selects.length).toBeGreaterThan(0);
+    expect(selects.every((select) => select.props('disabled') !== true)).toBe(true);
 
     wrapper.unmount();
   });

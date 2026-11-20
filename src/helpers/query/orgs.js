@@ -1,9 +1,6 @@
 import _flattenDeep from 'lodash/flattenDeep';
-import _intersection from 'lodash/intersection';
 import _isEmpty from 'lodash/isEmpty';
-import _uniqBy from 'lodash/uniqBy';
 import _without from 'lodash/without';
-import { toValue } from 'vue';
 import { FIRESTORE_COLLECTIONS } from '@/constants/firebase';
 import { ORG_TYPES, SINGULAR_ORG_TYPES } from '@/constants/orgTypes';
 import {
@@ -147,85 +144,6 @@ export const fetchOrgByName = async (orgType, orgNormalizedName, selectedDistric
   });
 
   return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
-};
-
-export const orgFetcher = async (orgType, selectedDistrict, isSuperAdmin, adminOrgs, select = ['name', 'id']) => {
-  const districtId = toValue(selectedDistrict) === 'any' ? null : toValue(selectedDistrict);
-
-  if (isSuperAdmin.value) {
-    const axiosInstance = getAxiosInstance();
-    const requestBody = getOrgsRequestBody({
-      orgType: orgType,
-      parentDistrict: orgType === 'schools' ? districtId : null,
-      aggregationQuery: false,
-      paginate: false,
-      select: select,
-    });
-
-    return axiosInstance.post(`${getBaseDocumentPath()}:runQuery`, requestBody).then(({ data }) => mapFields(data));
-  } else {
-    if (orgType === 'groups') {
-      const promises = (adminOrgs.value[orgType] ?? []).map((orgId) => {
-        return fetchDocById(orgType, orgId, select);
-      });
-      const districts = await Promise.all(promises);
-      return _uniqBy(districts.filter(Boolean), (district) => district.id);
-    } else if (orgType === 'districts') {
-      // First grab all the districts in adminOrgs
-      const promises = (adminOrgs.value[orgType] ?? []).map((orgId) => {
-        return fetchDocById(orgType, orgId, select);
-      });
-
-      // Then add all of the district IDs listed in the docs for each school and class in adminOrgs.
-      const schoolPromises = (adminOrgs.value.schools ?? []).map((schoolId) => {
-        return fetchDocById('schools', schoolId, ['districtId']);
-      });
-
-      const classPromises = (adminOrgs.value.classes ?? []).map((classId) => {
-        return fetchDocById('classes', classId, ['districtId']);
-      });
-
-      const schools = await Promise.all(schoolPromises);
-      const classes = await Promise.all(classPromises);
-      const districtIds = schools.map((school) => school.districtId);
-      districtIds.push(...classes.map((class_) => class_.districtId));
-
-      for (const districtId of districtIds) {
-        promises.push(fetchDocById(orgType, districtId, select));
-      }
-
-      return Promise.all(promises);
-    } else if (orgType === 'schools') {
-      const districtDoc = await fetchDocById('districts', districtId, ['schools']);
-      if ((adminOrgs.value.districts ?? []).includes(districtId)) {
-        const promises = (districtDoc.schools ?? []).map((schoolId) => {
-          return fetchDocById('schools', schoolId, select);
-        });
-        return Promise.all(promises);
-      } else if ((adminOrgs.value.schools ?? []).length > 0) {
-        const schoolIds = _intersection(adminOrgs.value.schools, districtDoc.schools);
-        const promises = (schoolIds ?? []).map((schoolId) => {
-          return fetchDocById('schools', schoolId, select);
-        });
-        return Promise.all(promises);
-      } else if ((adminOrgs.value.classes ?? []).length > 0) {
-        const classPromises = (adminOrgs.value.classes ?? []).map((classId) => {
-          return fetchDocById('classes', classId, ['schoolId']);
-        });
-        const classes = await Promise.all(classPromises);
-        const schoolIds = _intersection(
-          districtDoc.schools,
-          classes.map((class_) => class_.schoolId),
-        );
-        const promises = (schoolIds ?? []).map((schoolId) => {
-          return fetchDocById('schools', schoolId, select);
-        });
-        return Promise.all(promises);
-      }
-
-      return Promise.resolve([]);
-    }
-  }
 };
 
 export const orgFetchAll = async (

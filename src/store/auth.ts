@@ -4,6 +4,7 @@ import { type Auth, onAuthStateChanged, type Unsubscribe, type User } from 'fire
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { markRaw, type Ref, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { isAdminForSite } from '@/helpers/claims';
 import { identitySiteName, usernameFromIdentity } from '@/helpers/sentryPrivacy';
 import { logger } from '@/logger';
 import posthogInstance from '@/plugins/posthog';
@@ -15,13 +16,11 @@ interface FirebaseUser {
 }
 
 export interface UserClaims {
-  claims: {
-    roarUid?: string;
-    super_admin?: boolean;
-    admin?: boolean;
-    useNewPermissions?: boolean;
-    [key: string]: unknown;
-  };
+  super_admin?: boolean;
+  useNewPermissions?: boolean;
+  rolesSet?: string[];
+  siteRoles?: Record<string, string[]>;
+  siteNames?: Record<string, string>;
   [key: string]: unknown;
 }
 
@@ -59,7 +58,6 @@ export const useAuthStore = defineStore(
   () => {
     // State
     const adminAuthStateListener: Ref<Unsubscribe | null> = ref(null);
-    const adminOrgs: Ref<unknown | null> = ref(null);
     const currentSite: Ref<string | null> = ref(null);
     const currentSiteName: Ref<string | null> = ref(null);
     const firebaseUser: Ref<FirebaseUser> = ref({ adminFirebaseUser: null });
@@ -77,7 +75,6 @@ export const useAuthStore = defineStore(
     function $reset(): void {
       adminAuthStateListener.value?.();
       adminAuthStateListener.value = null;
-      adminOrgs.value = null;
       currentSite.value = null;
       currentSiteName.value = null;
       firebaseUser.value = { adminFirebaseUser: null };
@@ -101,10 +98,6 @@ export const useAuthStore = defineStore(
       return firebaseUser.value.adminFirebaseUser?.email ?? undefined;
     }
 
-    function getRoarUid(): string | undefined {
-      return userClaims.value?.claims?.roarUid;
-    }
-
     function getUid(): string | undefined {
       return firebaseUser.value.adminFirebaseUser?.uid;
     }
@@ -126,7 +119,7 @@ export const useAuthStore = defineStore(
     }
 
     function isUserAdmin(): boolean {
-      return Boolean(userClaims.value?.claims?.super_admin || userClaims.value?.claims?.admin);
+      return isAdminForSite(userClaims.value, currentSite.value);
     }
 
     function isUserSuperAdmin(): boolean {
@@ -182,7 +175,7 @@ export const useAuthStore = defineStore(
           ?.logInWithEmailAndPassword({ email, password })
           .then(() => {})
           .catch((error) => {
-            console.error(`Error signing in: ${error}`);
+            console.error(`Error logging in: ${error}`);
             throw error;
           });
       }
@@ -191,13 +184,13 @@ export const useAuthStore = defineStore(
     async function initiateLoginWithEmailLink({ email }: Pick<LoginCredentials, 'email'>): Promise<void> {
       if (isFirekitInit()) {
         const trimmedEmail = email.trim();
-        logger.capture('Email link sign-in requested', { email: trimmedEmail });
+        logger.capture('Email link login requested', { email: trimmedEmail });
 
         const isEmailAvailable = await roarfirekit.value?.isEmailAvailable(trimmedEmail);
         if (isEmailAvailable) {
-          logger.capture('Email link sign-in blocked, address not registered', { email: trimmedEmail });
+          logger.capture('Email link login blocked, address not registered', { email: trimmedEmail });
           const notRegisteredError = new Error(
-            'This email is not in our records. We did not send a sign-in link. Ask your site administrator to add this address before using email-link sign-in.',
+            'This email is not in our records. We did not send a login link. Ask your site administrator to add this address before using an email login link.',
           ) as Error & { code: string };
           notRegisteredError.code = 'levante/email-not-registered';
           throw notRegisteredError;
@@ -206,27 +199,28 @@ export const useAuthStore = defineStore(
         const redirectUrl = `${window.location.origin}/auth-email-link`;
 
         return roarfirekit.value?.initiateLoginWithEmailLink({ email: trimmedEmail, redirectUrl }).then(() => {
-          window.localStorage.setItem('emailForSignIn', trimmedEmail);
-          logger.capture('Email link sign-in sent', { email: trimmedEmail });
+          window.localStorage.setItem('emailForLogin', trimmedEmail);
+          logger.capture('Email link login sent', { email: trimmedEmail });
         });
       }
     }
 
-    async function signInWithEmailLink({ email, emailLink }: EmailLinkCredentials): Promise<void> {
+    async function loginWithEmailLink({ email, emailLink }: EmailLinkCredentials): Promise<void> {
       if (isFirekitInit()) {
         return roarfirekit.value?.signInWithEmailLink({ email, emailLink }).then(() => {
+          window.localStorage.removeItem('emailForLogin');
           window.localStorage.removeItem('emailForSignIn');
         });
       }
     }
 
-    async function signInWithGooglePopup(): Promise<unknown> {
+    async function loginWithGooglePopup(): Promise<unknown> {
       if (isFirekitInit()) {
         return roarfirekit.value?.signInWithPopup(AUTH_SSO_PROVIDERS.GOOGLE as any);
       }
     }
 
-    async function signInWithGoogleRedirect(): Promise<void> {
+    async function loginWithGoogleRedirect(): Promise<void> {
       return roarfirekit.value?.initiateRedirect(AUTH_SSO_PROVIDERS.GOOGLE as any);
     }
 
@@ -246,6 +240,15 @@ export const useAuthStore = defineStore(
       }
     }
 
+    /**
+     * Force a refresh of the logged-in user's Firebase Auth ID token.
+     *
+     * Auth claims are read from the ID token, not a live Firestore listener,
+     * so a server-side claim change does not reach an active session until the
+     * token is refreshed (otherwise only on the ~1h auto-refresh). Call this
+     * after any operation that changes the current user's custom claims so the
+     * store re-reads fresh claims on the next `getIdTokenClaims()`.
+     */
     async function forceIdTokenRefresh(): Promise<void> {
       await roarfirekit.value?.forceIdTokenRefresh();
     }
@@ -260,8 +263,8 @@ export const useAuthStore = defineStore(
       return false;
     }
 
-    async function signOut(): Promise<void> {
-      console.log('PostHog Reset (explicit signOut)');
+    async function logout(): Promise<void> {
+      console.log('PostHog Reset (explicit logout)');
       posthogInstance.reset();
 
       if (isFirekitInit()) {
@@ -311,13 +314,12 @@ export const useAuthStore = defineStore(
 
     function setUserClaims(claims: UserClaims | null): void {
       userClaims.value = claims;
-      shouldUsePermissions.value = Boolean(claims?.claims?.useNewPermissions);
+      shouldUsePermissions.value = Boolean(claims?.useNewPermissions);
     }
 
     return {
       // State
       adminAuthStateListener,
-      adminOrgs,
       currentSite,
       currentSiteName,
       firebaseUser,
@@ -333,7 +335,6 @@ export const useAuthStore = defineStore(
 
       // Getters
       getEmail,
-      getRoarUid,
       getUid,
       getUserEmail,
       getUserId,
@@ -357,10 +358,10 @@ export const useAuthStore = defineStore(
       setCurrentSite,
       setUserClaims,
       setUserData,
-      signInWithEmailLink,
-      signInWithGooglePopup,
-      signInWithGoogleRedirect,
-      signOut,
+      loginWithEmailLink,
+      loginWithGooglePopup,
+      loginWithGoogleRedirect,
+      logout,
     };
   },
   {

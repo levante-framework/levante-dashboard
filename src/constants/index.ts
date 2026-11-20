@@ -14,7 +14,6 @@ export const NAVBAR_BLACKLIST = [
   'PA',
   'PlayApp',
   'Register',
-  'SignIn',
   'SRE',
   'SurveyManager',
   'SWR',

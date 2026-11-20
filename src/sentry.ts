@@ -119,7 +119,7 @@ export function initSentry(app: App) {
       }
 
       // Drop benign Firestore permission-denied errors raised while unauthenticated
-      // (auth-transition / signout race). Genuine denials for signed-in users are kept.
+      // (auth-transition / logout race). Genuine denials for logged-in users are kept.
       const isPermissionDenied = (event.exception?.values ?? []).some(
         (value) => typeof value.value === 'string' && /Missing or insufficient permissions/i.test(value.value),
       );
@@ -128,6 +128,12 @@ export function initSentry(app: App) {
       }
 
       return event;
+    },
+    beforeSendLog(log) {
+      if (log.attributes) {
+        log.attributes = omitSensitiveSentryFields(log.attributes);
+      }
+      return log;
     },
   });
 

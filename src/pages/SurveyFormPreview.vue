@@ -14,7 +14,11 @@
       </h1>
     </header>
 
-    <PvMessage v-if="isError && !data" severity="error" :closable="false">
+    <PvMessage v-if="isSiteForm && !isSiteSelected" severity="info" :closable="false">
+      Select a site
+    </PvMessage>
+
+    <PvMessage v-else-if="isError && !data" severity="error" :closable="false">
       {{ (error as Error)?.message ?? 'Failed to load survey definition.' }}
     </PvMessage>
 
@@ -39,6 +43,7 @@
 
 <script setup lang="ts">
 import { useQueryClient } from '@tanstack/vue-query';
+import { storeToRefs } from 'pinia';
 import PvMessage from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref, watch } from 'vue';
@@ -46,28 +51,39 @@ import { useRoute, useRouter } from 'vue-router';
 import FormRenderer from '@/components/FormRenderer.vue';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import { type SurveyFormType, useSurveyFormDefinitionQuery } from '@/composables/queries/useSurveyFormDefinitionQuery';
-import { SURVEY_FORM_DEFINITION_QUERY_KEY } from '@/constants/queryKeys';
+import { ORG_INFORMATION_STATUS_QUERY_KEY, SURVEY_FORM_DEFINITION_QUERY_KEY } from '@/constants/queryKeys';
 import { surveyFormsRepository } from '@/firebase/repositories/SurveyFormsRepository';
+import { useAuthStore } from '@/store/auth';
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const queryClient = useQueryClient();
+const authStore = useAuthStore();
+const { currentSite, currentSiteName } = storeToRefs(authStore);
 
 const formType = computed<SurveyFormType>(() =>
   (route.params.formType as SurveyFormType) === 'site' ? 'site' : 'school',
 );
 
+const isSiteForm = computed(() => formType.value === 'site');
+const isSiteSelected = computed(() => !!currentSite.value && currentSite.value !== 'any');
+const canLoad = computed(() => !isSiteForm.value || isSiteSelected.value);
+
 const orgId = computed(() => {
+  if (isSiteForm.value) return isSiteSelected.value ? (currentSite.value as string) : '';
+
   const value = route.query.orgId;
   return typeof value === 'string' && value.trim() ? value.trim() : 'preview';
 });
 
-const title = computed(() =>
-  formType.value === 'site' ? 'Additional Site Information' : 'Additional School Information',
-);
+const title = computed(() => {
+  if (!isSiteForm.value) return 'Additional School Information';
+  if (!isSiteSelected.value) return 'Site Information';
+  return `Site Information: ${currentSiteName.value ?? ''}`;
+});
 
-const { data, isLoading, isError, error } = useSurveyFormDefinitionQuery(formType, orgId);
+const { data, isLoading, isError, error } = useSurveyFormDefinitionQuery(formType, orgId, canLoad);
 
 const savedResponse = computed(() => {
   return data.value?.savedResponses?.[0] as
@@ -93,43 +109,60 @@ watch([formType, orgId], () => {
   isSaving.value = false;
 });
 
+function refreshSavedForm(savedFormType: SurveyFormType, savedOrgId: string) {
+  return Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: [SURVEY_FORM_DEFINITION_QUERY_KEY, savedFormType, savedOrgId],
+    }),
+    queryClient.invalidateQueries({
+      queryKey: [ORG_INFORMATION_STATUS_QUERY_KEY],
+      refetchType: 'all',
+    }),
+  ]).catch(() => undefined);
+}
+
 async function persist(
   responses: Record<string, unknown>,
   status: 'draft' | 'complete',
-  options?: { silent?: boolean },
+  options?: { silent?: boolean; awaitRefresh?: boolean },
 ): Promise<boolean> {
   if (!data.value) return false;
+  const savedFormType = formType.value;
+  const savedOrgId = orgId.value;
+  const savedSiteName = isSiteForm.value ? currentSiteName.value : null;
+  const formVersion = data.value.versionId;
+  const stillOnSavedOrg = () => formType.value === savedFormType && orgId.value === savedOrgId;
   isSaving.value = true;
   try {
     await surveyFormsRepository.saveOrgInformation({
-      orgType: formType.value,
-      orgId: orgId.value,
-      formVersion: data.value.versionId,
+      orgType: savedFormType,
+      orgId: savedOrgId,
+      formVersion,
       responses,
       status,
     });
-    persistedStatus.value = status;
-    await queryClient.invalidateQueries({
-      queryKey: [SURVEY_FORM_DEFINITION_QUERY_KEY, formType.value, orgId.value],
-    });
+    if (stillOnSavedOrg()) persistedStatus.value = status;
+    const refresh = refreshSavedForm(savedFormType, savedOrgId);
+    if (options?.awaitRefresh) await refresh;
     if (options?.silent) return true;
     toast.add({
       severity: 'success',
       summary: 'Saved',
-      detail: 'Responses saved.',
+      detail: savedSiteName ? `Responses saved for ${savedSiteName}.` : 'Responses saved.',
       life: 3000,
     });
     return true;
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to save responses.';
     toast.add({
       severity: 'error',
       summary: 'Save failed',
-      detail: err instanceof Error ? err.message : 'Failed to save responses.',
+      detail: savedSiteName ? `${message} (${savedSiteName})` : message,
       life: 5000,
     });
     return false;
   } finally {
-    isSaving.value = false;
+    if (stillOnSavedOrg()) isSaving.value = false;
   }
 }
 
@@ -140,7 +173,12 @@ function onSave(values: Record<string, unknown>, options?: { silent?: boolean })
 }
 
 async function onSubmit(values: Record<string, unknown>) {
-  isComplete.value = await persist(values, 'complete', { silent: true });
+  const submittedFormType = formType.value;
+  const submittedOrgId = orgId.value;
+  const ok = await persist(values, 'complete', { silent: true, awaitRefresh: true });
+  if (ok && formType.value === submittedFormType && orgId.value === submittedOrgId) {
+    isComplete.value = true;
+  }
 }
 
 function onClose() {

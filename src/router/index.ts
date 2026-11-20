@@ -127,12 +127,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: APP_ROUTES.SIGN_IN,
-    name: 'SignIn',
-    component: () => import('@/pages/SignIn.vue'),
-    meta: {
-      pageTitle: { translationKey: 'signIn' },
-      allowedRoles: ['*'],
-    },
+    redirect: (to) => ({ name: 'Login', query: to.query, hash: to.hash }),
   },
   {
     path: APP_ROUTES.LOGIN,
@@ -254,14 +249,6 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/pages/AdminProfile.vue'),
     children: [
       {
-        path: 'accounts',
-        name: 'ProfileAccounts',
-        component: () => import('../components/adminSettings/LinkAccountsView.vue'),
-        meta: {
-          allowedRoles: [ROLES.ADMIN, ROLES.SITE_ADMIN, ROLES.SUPER_ADMIN, ROLES.RESEARCH_ASSISTANT],
-        },
-      },
-      {
         path: 'settings',
         name: 'ProfileSettings',
         component: () => import('../components/adminSettings/Settings.vue'),
@@ -363,7 +350,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/pages/SurveyFormPreview.vue'),
     meta: {
       pageTitle: 'Survey Form Preview',
-      allowedRoles: [ROLES.SUPER_ADMIN],
+      allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN],
     },
   },
 ];
@@ -399,7 +386,7 @@ router.beforeEach(async (to: RouteLocationNormalized, _from: RouteLocationNormal
     return next({ name: 'Home' });
   }
 
-  // Check if user is signed in. If not, go to login
+  // Check if user is logged in. If not, go to login
   if (!to.path.includes('__/auth/handler') && !isAuthenticated() && !allowedUnauthenticatedRoutes.includes(to.name)) {
     return next({ name: 'Login' });
   }

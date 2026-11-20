@@ -21,14 +21,25 @@ const routeState = vi.hoisted(() => ({ query: {} }));
 
 const mobileState = vi.hoisted(() => ({ isMobile: false }));
 
+const authState = vi.hoisted(() => ({ userId: null }));
+
+const utilsMocks = vi.hoisted(() => ({
+  fetchDocById: vi.fn(),
+  getIdTokenClaims: vi.fn(),
+}));
+
 const emailLinkState = vi.hoisted(() => ({ rejectWith: null }));
 
 const loggerErrors = vi.hoisted(() => []);
+const loggerUserMistakes = vi.hoisted(() => []);
 
 vi.mock('@/logger', () => ({
   logger: {
     error: (...args) => {
       loggerErrors.push(args);
+    },
+    userMistake: (...args) => {
+      loggerUserMistakes.push(args);
     },
   },
 }));
@@ -78,7 +89,7 @@ vi.mock('@/store/auth', () => ({
     $subscribe: vi.fn(),
     setUserClaims: vi.fn(),
     setUserData: vi.fn(),
-    getUserId: () => null,
+    getUserId: () => authState.userId,
     isUserAdmin: () => false,
     isUserSuperAdmin: () => false,
     logInWithEmailAndPassword: (args) => {
@@ -90,11 +101,11 @@ vi.mock('@/store/auth', () => ({
       if (emailLinkState.rejectWith) return Promise.reject(emailLinkState.rejectWith);
       return Promise.resolve();
     },
-    signInWithGooglePopup: () => {
+    loginWithGooglePopup: () => {
       captured.googlePopupCalls += 1;
       return Promise.resolve();
     },
-    signInWithGoogleRedirect: () => {
+    loginWithGoogleRedirect: () => {
       captured.googleRedirectCalls += 1;
       return Promise.resolve();
     },
@@ -141,7 +152,8 @@ vi.mock('@/helpers/query/assignments', () => ({
 }));
 
 vi.mock('@/helpers/query/utils', () => ({
-  fetchDocById: vi.fn().mockResolvedValue({}),
+  fetchDocById: utilsMocks.fetchDocById,
+  getIdTokenClaims: utilsMocks.getIdTokenClaims,
 }));
 
 vi.mock('@/components/LanguageSelector.vue', () => ({
@@ -211,7 +223,7 @@ describe('Login.vue', () => {
     await nextTick();
   };
 
-  const openTroubleOnSignInModal = async () => {
+  const openTroubleLoginModal = async () => {
     await wrapper
       .findAll('small')
       .find((s) => s.text().includes('Trouble logging in?'))
@@ -231,6 +243,9 @@ describe('Login.vue', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mobileState.isMobile = false;
+    authState.userId = null;
+    utilsMocks.fetchDocById.mockReset().mockResolvedValue({});
+    utilsMocks.getIdTokenClaims.mockReset().mockResolvedValue({});
     captured.logInWithEmailAndPassword.length = 0;
     captured.initiateLoginWithEmailLink.length = 0;
     captured.googlePopupCalls = 0;
@@ -243,6 +258,7 @@ describe('Login.vue', () => {
     routeState.query = {};
     emailLinkState.rejectWith = null;
     loggerErrors.length = 0;
+    loggerUserMistakes.length = 0;
     authRefs.spinner.value = false;
     authRefs.routeToProfile.value = false;
     authRefs.ssoProvider.value = null;
@@ -301,8 +317,8 @@ describe('Login.vue', () => {
       .trigger('click');
     await nextTick();
     expect(wrapper.text()).toContain('Trouble logging in?');
-    expect(wrapper.text()).toContain('Read sign in docs');
-    expect(wrapper.text()).toContain('Stanford DCC Sign in');
+    expect(wrapper.text()).toContain('Read login docs');
+    expect(wrapper.text()).toContain('Stanford DCC Login');
   });
 
   it('calls logInWithEmailAndPassword with normalized email when a username is submitted', async () => {
@@ -343,42 +359,80 @@ describe('Login.vue', () => {
   it('initiates email link login from the trouble logging in modal', async () => {
     wrapper = mountLogin();
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('researcher@test.com');
     await clickModalButton('Login Link');
     await flushPromises();
     expect(captured.initiateLoginWithEmailLink).toEqual([{ email: 'researcher@test.com' }]);
     expect(captured.confirmRequests).toHaveLength(1);
+    expect(captured.confirmRequests[0].message).toContain('An email to log in with a link');
     expect(captured.confirmRequests[0].accept).toBeUndefined();
     expect(captured.routerPushes).not.toContainEqual({ name: 'Home' });
   });
 
-  it('surfaces the server message and skips Sentry when the email link is for an unregistered address', async () => {
+  it('records an unregistered email link address as a user mistake and skips Sentry', async () => {
     const notRegistered = new Error('That email is not registered.');
     notRegistered.code = 'levante/email-not-registered';
     emailLinkState.rejectWith = notRegistered;
     wrapper = mountLogin();
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('unknown@test.com');
     await clickModalButton('Login Link');
     await flushPromises();
     expect(captured.confirmRequests).toHaveLength(0);
     expect(wrapper.text()).toContain('That email is not registered.');
     expect(loggerErrors).toHaveLength(0);
+    expect(loggerUserMistakes).toEqual([
+      [
+        'trouble_login_unknown_account',
+        {
+          action: 'loginWithEmailLink',
+          component: 'Login',
+          authCode: 'levante/email-not-registered',
+        },
+      ],
+    ]);
   });
 
   it('shows a fallback message and reports to Sentry when the email link request fails unexpectedly', async () => {
     emailLinkState.rejectWith = new Error('network down');
     wrapper = mountLogin();
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('researcher@test.com');
     await clickModalButton('Login Link');
     await flushPromises();
     expect(captured.confirmRequests).toHaveLength(0);
-    expect(wrapper.text()).toContain('There was a problem sending the sign-in link. Please try again.');
+    expect(wrapper.text()).toContain('There was a problem sending the login link. Please try again.');
     expect(loggerErrors).toHaveLength(1);
+  });
+
+  it('records an unknown password reset address as a user mistake', async () => {
+    const unknownAccount = new Error('Firebase: Error (auth/user-not-found).');
+    unknownAccount.code = 'auth/user-not-found';
+    wrapper = mountLogin();
+    authRefs.roarfirekit.value = {
+      sendPasswordResetEmail: () => Promise.reject(unknownAccount),
+    };
+    await switchToResearcherMode();
+    await openTroubleLoginModal();
+    await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('missing@mail.com');
+    await clickModalButton('Reset Password');
+    await flushPromises();
+    expect(captured.confirmRequests).toHaveLength(0);
+    expect(wrapper.text()).toContain('There was a problem sending the password reset email. Please try again.');
+    expect(loggerErrors).toHaveLength(0);
+    expect(loggerUserMistakes).toEqual([
+      [
+        'trouble_login_unknown_account',
+        {
+          action: 'sendResetPasswordEmail',
+          component: 'Login',
+          authCode: 'auth/user-not-found',
+        },
+      ],
+    ]);
   });
 
   it('shows a fallback message and reports to Sentry when the reset email request fails unexpectedly', async () => {
@@ -387,7 +441,7 @@ describe('Login.vue', () => {
       sendPasswordResetEmail: () => Promise.reject(new Error('network down')),
     };
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('valid@mail.com');
     await clickModalButton('Reset Password');
     await flushPromises();
@@ -396,7 +450,7 @@ describe('Login.vue', () => {
     expect(loggerErrors).toHaveLength(1);
   });
 
-  it('uses Google popup on desktop when Stanford DCC Sign in is clicked', async () => {
+  it('uses Google popup on desktop when Stanford DCC Login is clicked', async () => {
     wrapper = mountLogin();
     await wrapper
       .findAllComponents(PvButtonStub)
@@ -407,14 +461,14 @@ describe('Login.vue', () => {
     await wrapper
       .find('.login-card')
       .findAll('span')
-      .find((s) => s.text().includes('Stanford DCC Sign in'))
+      .find((s) => s.text().includes('Stanford DCC Login'))
       .trigger('click');
     await flushPromises();
     expect(captured.googlePopupCalls).toBe(1);
     expect(captured.googleRedirectCalls).toBe(0);
   });
 
-  it('uses Google redirect on mobile when Stanford DCC Sign in is clicked', async () => {
+  it('uses Google redirect on mobile when Stanford DCC Login is clicked', async () => {
     wrapper = mountLogin();
     await wrapper
       .findAllComponents(PvButtonStub)
@@ -425,17 +479,53 @@ describe('Login.vue', () => {
     await wrapper
       .find('.login-card')
       .findAll('span')
-      .find((s) => s.text().includes('Stanford DCC Sign in'))
+      .find((s) => s.text().includes('Stanford DCC Login'))
       .trigger('click');
     await flushPromises();
     expect(captured.googleRedirectCalls).toBe(1);
     expect(captured.googlePopupCalls).toBe(0);
   });
 
+  it('shows "user not found" when a Google account has no Levante user document', async () => {
+    // An unregistered Google account authenticates but has no `users` doc, so the fetch 404s.
+    utilsMocks.fetchDocById.mockRejectedValueOnce({ response: { status: 404 } });
+    wrapper = mountLogin();
+    await switchToResearcherMode();
+    mobileState.isMobile = false;
+    await wrapper
+      .find('.login-card')
+      .findAll('span')
+      .find((s) => s.text().includes('Stanford DCC Login'))
+      .trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain(
+      'No account exists for this login. Contact your administrator if you need access.',
+    );
+    // Must not redirect into the app.
+    expect(captured.routerReplaces).not.toContainEqual({ path: '/' });
+  });
+
+  it('redirects home for a registered Google user (even on legacy permissions)', async () => {
+    authState.userId = 'uid-1';
+    utilsMocks.fetchDocById.mockResolvedValueOnce({ id: 'uid-1', roles: [] });
+    utilsMocks.getIdTokenClaims.mockResolvedValueOnce({ super_admin: false, useNewPermissions: false });
+    wrapper = mountLogin();
+    await switchToResearcherMode();
+    mobileState.isMobile = false;
+    await wrapper
+      .find('.login-card')
+      .findAll('span')
+      .find((s) => s.text().includes('Stanford DCC Login'))
+      .trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).not.toContain('No account exists for this login.');
+    expect(captured.routerReplaces).toContainEqual({ path: '/' });
+  });
+
   it('opens the trouble logging in modal and sends reset email for valid email', async () => {
     wrapper = mountLogin();
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     expect(wrapper.find('.roar-modal-stub').exists()).toBe(true);
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('valid@mail.com');
     await clickModalButton('Reset Password');
@@ -446,7 +536,7 @@ describe('Login.vue', () => {
   it('does not send reset email when forgot-password email is invalid', async () => {
     wrapper = mountLogin();
     await switchToResearcherMode();
-    await openTroubleOnSignInModal();
+    await openTroubleLoginModal();
     await wrapper.find('.roar-modal-stub').findAll('input')[0].setValue('not-an-email');
     await clickModalButton('Reset Password');
     await flushPromises();
@@ -473,5 +563,22 @@ describe('Login.vue', () => {
     wrapper = mountLogin();
     expect(captured.toasts).toHaveLength(0);
     expect(captured.routerReplaces).toHaveLength(0);
+  });
+
+  it('ignores a non-keyboard event when checking caps lock', () => {
+    wrapper = mountLogin();
+    const input = wrapper.get('[data-cy="input-password"]').element;
+    expect(() => input.dispatchEvent(new Event('keydown', { bubbles: true }))).not.toThrow();
+    expect(wrapper.text()).not.toContain('capsLockIsOn');
+  });
+
+  it('shows the caps lock warning for a keyboard event', async () => {
+    wrapper = mountLogin();
+    const input = wrapper.get('[data-cy="input-password"]').element;
+    const event = new KeyboardEvent('keydown', { bubbles: true });
+    Object.defineProperty(event, 'getModifierState', { value: () => true });
+    input.dispatchEvent(event);
+    await nextTick();
+    expect(wrapper.text()).toContain('capsLockIsOn');
   });
 });

@@ -53,7 +53,7 @@ import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import NavBar from '@/components/NavBar.vue';
 import { usePageEventTracking } from '@/composables/usePageEventTracking';
 import { allowedUnauthenticatedRoutes } from '@/constants/auth';
-import { fetchDocById } from '@/helpers/query/utils';
+import { fetchDocById, getIdTokenClaims } from '@/helpers/query/utils';
 import { logger } from '@/logger';
 import { useAuthStore } from '@/store/auth';
 import { getLanguages, getTranslations, i18n } from '@/translations/i18n';
@@ -79,7 +79,7 @@ const router = useRouter();
 
 const shouldShowFooter = computed(() => !FOOTER_BLACKLIST.includes(route.name));
 const footerVariant = computed(() => {
-  const alternativeStylePages = ['Login', 'SignIn'];
+  const alternativeStylePages = ['Login'];
   if (alternativeStylePages.includes(route.name)) return 'secondary';
   return 'primary';
 });
@@ -90,10 +90,10 @@ async function recoverFromProfileFetchFailure(error) {
   });
   try {
     if (authStore.isFirekitInit()) {
-      await authStore.signOut();
+      await authStore.logout();
     }
-  } catch (signOutError) {
-    logger.error(new Error('Failed to sign out after profile fetch failure', { cause: signOutError }), {
+  } catch (logoutError) {
+    logger.error(new Error('Failed to log out after profile fetch failure', { cause: logoutError }), {
       tags: { component: 'App', function: 'recoverFromProfileFetchFailure' },
     });
   }
@@ -161,7 +161,7 @@ onBeforeMount(async () => {
         return;
       }
       try {
-        const [userClaims, userData] = await Promise.all([fetchDocById('userClaims', uid), fetchDocById('users', uid)]);
+        const [userClaims, userData] = await Promise.all([getIdTokenClaims(), fetchDocById('users', uid)]);
         authStore.setUserClaims(userClaims);
         authStore.setUserData(userData);
       } catch (error) {
