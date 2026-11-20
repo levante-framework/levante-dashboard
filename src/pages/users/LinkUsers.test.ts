@@ -316,7 +316,7 @@ describe('LinkUsers Page', () => {
 
       // LinkUsersCsvSchema caps uploads at 2000 rows. 2001 field-valid rows
       // trip the file-level `too_big` issue (empty path), which
-      // combineUserCsvIssues drops — so it must surface in the status banner
+      // combineUsersCsvIssues drops — so it must surface in the status banner
       // rather than the (empty) errors table.
       const header = 'id,userType,caregiverId,teacherId,uid';
       const rows = Array.from({ length: 2001 }, (_, i) => `child-${i},child,care-1,,uid-${i}`);
