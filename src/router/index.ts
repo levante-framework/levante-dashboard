@@ -333,6 +333,15 @@ const routes: Array<RouteRecordRaw> = [
       allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN],
     },
   },
+  {
+    path: '/org-information/:formType?',
+    name: 'OrgInformationView',
+    component: () => import('@/pages/OrgInformationView.vue'),
+    meta: {
+      pageTitle: 'Site and school information',
+      allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SITE_ADMIN],
+    },
+  },
 ];
 
 const scrollBehavior: RouterScrollBehavior = (to, _from, savedPosition) => {

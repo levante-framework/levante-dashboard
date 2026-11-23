@@ -17,14 +17,15 @@ export function orgInformationAction(
   progress: OrgInformationProgress | undefined,
   orgKind: 'site' | 'school',
   openForm: () => void,
+  openView: () => void,
 ): OrgInformationAction | null {
   if (progress === 'complete') {
     return {
       name: 'information',
-      icon: 'pi pi-check',
+      icon: 'pi pi-eye',
       status: 'success',
       tooltip: `Information for this ${orgKind} is complete`,
-      callback: null,
+      callback: openView,
     };
   }
 

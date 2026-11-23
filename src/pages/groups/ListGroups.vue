@@ -651,6 +651,17 @@ const openOrgInformation = (org) => {
   });
 };
 
+const openOrgInformationView = (org) => {
+  const isSchool = activeOrgType.value === ORG_TYPES.SCHOOLS;
+  // The site view follows the navbar site, so select the clicked site before opening it.
+  if (!isSchool) setCurrentSite(org.id, org.name ?? null);
+  router.push({
+    name: 'OrgInformationView',
+    params: { formType: isSchool ? 'school' : 'site' },
+    query: { orgId: org.id },
+  });
+};
+
 const groupActions = (org) => {
   const actions = [];
 
@@ -661,6 +672,7 @@ const groupActions = (org) => {
           orgInformationProgress.value.get(org.id),
           activeOrgType.value === ORG_TYPES.SCHOOLS ? 'school' : 'site',
           () => openOrgInformation(org),
+          () => openOrgInformationView(org),
         );
     if (information) actions.push(information);
   }

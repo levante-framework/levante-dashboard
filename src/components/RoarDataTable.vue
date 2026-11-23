@@ -947,7 +947,6 @@ defineExpose({ onColumnToggle, selectedColumns });
       color: inherit;
 
       &.action--success {
-        cursor: default !important;
         color: var(--bright-green);
       }
 
