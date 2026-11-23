@@ -81,6 +81,14 @@ const FIELDS: InformationFormField[] = [
     sectionId: 'recruitment',
     questionText: 'Spoken languages',
   },
+  {
+    itemId: 'site_05',
+    variableName: 'recruitment',
+    kind: 'text',
+    required: false,
+    sectionId: 'recruitment',
+    questionText: '<p>How were they recruited?</p><ul><li>Phone</li></ul>',
+  },
 ];
 
 function mockQuery(responses: Record<string, unknown>) {
@@ -141,6 +149,10 @@ describe('OrgInformationView', () => {
     expect(answerFor(wrapper, 'Where was data collected?')).toBe('School, Home');
     expect(answerFor(wrapper, 'Notes')).toBe('');
     expect(answerFor(wrapper, 'Spoken languages')).toBe('English, Other (Describe), Klingon');
+    const recruitment = wrapper
+      .findAll('.org-information-view__question')
+      .find((node) => node.text().includes('Phone'));
+    expect(recruitment?.find('ul').exists()).toBe(true);
     expect(wrapper.text()).not.toContain('convenience');
     expect(wrapper.text()).not.toContain('please explain');
     expect(wrapper.text()).not.toContain('Next');

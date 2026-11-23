@@ -653,12 +653,13 @@ const openOrgInformation = (org) => {
 
 const openOrgInformationView = (org) => {
   const isSchool = activeOrgType.value === ORG_TYPES.SCHOOLS;
-  // The site view follows the navbar site, so select the clicked site before opening it.
+  // The site view reads the navbar site and ignores a query orgId, so select
+  // the clicked site and leave that id out of the URL.
   if (!isSchool) setCurrentSite(org.id, org.name ?? null);
   router.push({
     name: 'OrgInformationView',
     params: { formType: isSchool ? 'school' : 'site' },
-    query: { orgId: org.id },
+    ...(isSchool ? { query: { orgId: org.id } } : {}),
   });
 };
 

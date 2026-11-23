@@ -183,7 +183,6 @@ describe('ListGroups org information actions', () => {
     expect(state.routerPush).toHaveBeenCalledWith({
       name: 'OrgInformationView',
       params: { formType: 'site' },
-      query: { orgId: 'site-2' },
     });
   });
 

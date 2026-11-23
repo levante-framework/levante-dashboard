@@ -25,9 +25,9 @@
     <div v-else-if="data" class="org-information-view__body">
       <h1 class="org-information-view__title">{{ title }}</h1>
       <div v-for="row in rows" :key="row.itemId" class="org-information-view__field">
-        <!-- Form questions can contain HTML, same as FormRenderer. -->
+        <!-- questionText may include block HTML, so this cannot be a <p>. -->
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <p class="org-information-view__question" v-html="row.questionHtml"></p>
+        <div class="org-information-view__question" v-html="row.questionHtml"></div>
         <p class="org-information-view__answer">{{ row.answer }}</p>
       </div>
     </div>
@@ -196,6 +196,10 @@ function openTicket() {
 .org-information-view__question {
   margin: 0;
   font-weight: 600;
+}
+
+.org-information-view__question :deep(p) {
+  margin: 0;
 }
 
 .org-information-view__answer {
