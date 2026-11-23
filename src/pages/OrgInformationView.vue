@@ -146,7 +146,7 @@ function openTicket() {
   position: sticky;
   z-index: 10;
   margin: 0 -1.5rem;
-  padding: 1rem 1.5rem 0.75rem;
+  padding: 0.5rem 1.5rem 0.75rem;
   background: var(--surface-a, #ffffff);
 }
 
