@@ -131,7 +131,6 @@ function answerFor(wrapper: VueWrapper, question: string): string {
 describe('OrgInformationView', () => {
   beforeEach(() => {
     mocks.route.params.formType = 'site';
-    vi.spyOn(window, 'open').mockImplementation(() => null);
   });
 
   it('shows question text and readable answers, and opens a Freshdesk ticket', async () => {
@@ -158,8 +157,10 @@ describe('OrgInformationView', () => {
     expect(wrapper.text()).not.toContain('Next');
     expect(wrapper.text()).not.toContain('Submit');
 
-    await wrapper.get('button').trigger('click');
-    expect(window.open).toHaveBeenCalledWith('https://levante-support.freshdesk.com/support/tickets/new', '_blank');
+    const ticket = wrapper.get('a');
+    expect(ticket.text()).toBe('Open a Ticket');
+    expect(ticket.attributes('href')).toBe('https://levante-support.freshdesk.com/support/tickets/new');
+    expect(ticket.attributes('target')).toBe('_blank');
   });
 
   it('shows the Other explanation when Other was selected', async () => {

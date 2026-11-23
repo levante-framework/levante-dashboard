@@ -4,13 +4,16 @@
       <div class="org-information-view__notice">
         <i class="pi pi-question-circle org-information-view__notice-icon" aria-hidden="true" />
         <p class="org-information-view__notice-text">Something doesn't look right?</p>
-        <PvButton
-          label="Open a Ticket"
-          severity="secondary"
-          variant="outlined"
-          size="small"
-          @click="openTicket"
-        />
+        <div class="org-information-view__ticket">
+          <a
+            class="org-information-view__ticket-link"
+            :href="FRESHDESK_TICKET_URL"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open a Ticket
+          </a>
+        </div>
       </div>
     </div>
 
@@ -37,7 +40,6 @@
 <script setup lang="ts">
 import DOMPurify from 'dompurify';
 import { storeToRefs } from 'pinia';
-import PvButton from 'primevue/button';
 import PvMessage from 'primevue/message';
 import { computed, inject, ref } from 'vue';
 import { useRoute } from 'vue-router';
@@ -129,10 +131,6 @@ function answerText(field: InformationFormField, responses: Record<string, unkno
   if (typeof value === 'string') return value.trim() === '' ? '' : value;
   return '';
 }
-
-function openTicket() {
-  window.open(FRESHDESK_TICKET_URL, '_blank');
-}
 </script>
 
 <style scoped>
@@ -168,6 +166,35 @@ function openTicket() {
 .org-information-view__notice-text {
   flex: 1;
   margin: 0;
+}
+
+.org-information-view__ticket {
+  flex-shrink: 0;
+  border: 4px solid var(--info-blue-hover);
+  border-radius: 10px;
+}
+
+.org-information-view__ticket-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  background-color: white;
+  color: var(--info-blue);
+  border: 1px solid var(--info-blue-border);
+}
+
+.org-information-view__ticket-link:hover {
+  background-color: var(--info-blue-hover);
+  border-color: var(--info-blue-border);
+  color: var(--info-blue);
+}
+
+.org-information-view__ticket-link:focus-visible {
+  outline: 1px solid var(--info-blue-border);
+  outline-offset: 2px;
 }
 
 @media (max-width: 768px) {
