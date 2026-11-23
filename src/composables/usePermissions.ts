@@ -47,7 +47,7 @@ export const resetPermissionsState = () => {
 export const usePermissions = () => {
   const authStore = useAuthStore();
   const { isAuthenticated } = authStore;
-  const { firebaseUser, userData, shouldUsePermissions, currentSite } = storeToRefs(authStore);
+  const { firebaseUser, userData, shouldUsePermissions, currentSite, userClaims } = storeToRefs(authStore);
   const assignmentsStore = useAssignmentsStore();
   const { requireRefresh } = storeToRefs(assignmentsStore);
 
@@ -91,9 +91,9 @@ export const usePermissions = () => {
   };
 
   watch(
-    [shouldUsePermissions, () => isAuthenticated()],
-    ([usePermissions, authed]) => {
-      if (permissionsLoaded.value || !authed || requireRefresh.value) return;
+    [shouldUsePermissions, () => isAuthenticated(), () => Boolean(userClaims.value)],
+    ([usePermissions, authed, claimsLoaded]) => {
+      if (permissionsLoaded.value || !authed || !claimsLoaded || requireRefresh.value) return;
 
       if (usePermissions) {
         loadPermissions();

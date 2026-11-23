@@ -138,6 +138,7 @@ describe('usePermissions', () => {
             } as User,
           };
           authStore.userData = { roles: [] };
+          authStore.userClaims = { useNewPermissions: false };
           authStore.currentSite = 'test-site';
 
           const { can, canGlobal, hasRole, permissions, permissionsLoaded, isLoadingPermissions } = usePermissions();
@@ -170,6 +171,7 @@ describe('usePermissions', () => {
         userData: {
           roles: [{ siteId: 'test-site', role: 'admin', siteName: 'Test Site' }],
         },
+        userClaims: { useNewPermissions: true },
         currentSite: 'test-site',
       };
     });
@@ -437,6 +439,49 @@ describe('usePermissions', () => {
     });
   });
 
+  describe('when authentication completes before claims load', () => {
+    it('should not mark permissions loaded until claims arrive, then load them', async () => {
+      await withSetup(
+        async () => {
+          const authStore = useAuthStore(piniaInstance);
+          authStore.isAuthenticated = vi.fn(() => true);
+          authStore.shouldUsePermissions = false;
+          authStore.firebaseUser = {
+            adminFirebaseUser: {
+              uid: 'test-uid',
+              email: 'test@example.com',
+            } as User,
+          };
+          authStore.userData = { roles: [{ siteId: 'test-site', role: 'admin', siteName: 'Test Site' }] };
+          authStore.userClaims = null;
+          authStore.currentSite = 'test-site';
+
+          const { permissionsLoaded } = usePermissions();
+
+          // Authenticated but claims not yet loaded: must stay unloaded so the
+          // real permission fetch still happens once claims arrive.
+          await nextTick();
+          await flushPromises();
+          expect(permissionsLoaded.value).toBe(false);
+          expect(mockPermissionService.loadPermissions).not.toHaveBeenCalled();
+
+          // Claims arrive (new permissions enabled) -> permissions get fetched.
+          authStore.userClaims = { useNewPermissions: true };
+          authStore.shouldUsePermissions = true;
+          await nextTick();
+          await flushPromises();
+          await nextTick();
+
+          expect(mockPermissionService.loadPermissions).toHaveBeenCalled();
+          expect(permissionsLoaded.value).toBe(true);
+        },
+        {
+          plugins: [[piniaInstance]],
+        },
+      );
+    });
+  });
+
   describe('when currentSite is missing', () => {
     it('should return false for site-specific permission checks', async () => {
       await withSetup(
@@ -451,6 +496,7 @@ describe('usePermissions', () => {
             } as User,
           };
           authStore.userData = { roles: [] };
+          authStore.userClaims = { useNewPermissions: true };
           authStore.currentSite = null;
 
           const { can, hasRole } = usePermissions();
@@ -486,6 +532,7 @@ describe('usePermissions', () => {
             } as User,
           };
           authStore.userData = { roles: [] };
+          authStore.userClaims = { useNewPermissions: true };
           authStore.currentSite = null;
 
           const { canGlobal } = usePermissions();
@@ -522,6 +569,7 @@ describe('usePermissions', () => {
             } as User,
           };
           authStore.userData = null;
+          authStore.userClaims = { useNewPermissions: true };
           authStore.currentSite = 'test-site';
 
           const { can, canGlobal, hasRole } = usePermissions();
@@ -555,6 +603,7 @@ describe('usePermissions', () => {
         },
       },
       userData: { roles: [] },
+      userClaims: { useNewPermissions: true },
       currentSite: 'test-site',
     };
 

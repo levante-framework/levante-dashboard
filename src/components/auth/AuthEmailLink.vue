@@ -32,8 +32,9 @@ const loginFromEmailLink = async (email) => {
     .loginWithEmailLink({ email, emailLink })
     .then(async () => {
       if (getUserId()) {
-        // Not sure why we need this since user data and claims are fetched in the HomeSelector.vue but otherwise won't load homepage.
-        // TODO: Remove once we figure out why the homepage doesn't load without this.
+        // App.vue's init-time claim/data loader runs before the user is signed
+        // in on this route (uid is still undefined there), so we fetch and set
+        // them here once sign-in completes.
         const userData = await fetchDocById('users', getUserId());
         const userClaims = await getIdTokenClaims();
 
