@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignmentIncludesTask, isUnassignedTaskError } from './assignedTask';
+import { assignedTaskCompleted, assignmentIncludesTask, isUnassignedTaskError } from './assignedTask';
 
 describe('assignmentIncludesTask', () => {
   it('is true when the assignment assessments include the task id', () => {
@@ -14,6 +14,20 @@ describe('assignmentIncludesTask', () => {
     expect(assignmentIncludesTask({}, 'swr')).toBe(false);
     expect(assignmentIncludesTask(null, 'swr')).toBe(false);
     expect(assignmentIncludesTask({ assessments: [{ taskId: 'swr' }] }, '')).toBe(false);
+  });
+});
+
+describe('assignedTaskCompleted', () => {
+  it('is true only when that task has completedOn', () => {
+    const assignment = {
+      assessments: [{ taskId: 'pa', completedOn: '2026-11-23T16:12:20Z' }, { taskId: 'egma-math' }],
+    };
+
+    expect(assignedTaskCompleted(assignment, 'pa')).toBe(true);
+    expect(assignedTaskCompleted(assignment, 'egma-math')).toBe(false);
+    expect(assignedTaskCompleted(assignment, 'swr')).toBe(false);
+    expect(assignedTaskCompleted(null, 'pa')).toBe(false);
+    expect(assignedTaskCompleted(assignment, '')).toBe(false);
   });
 });
 

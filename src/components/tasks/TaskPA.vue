@@ -10,7 +10,7 @@ import { useRouter } from 'vue-router';
 import LevanteSpinner from '@/components/LevanteSpinner.vue';
 import useCompleteAssessmentMutation from '@/composables/mutations/useCompleteAssessmentMutation';
 import useUserChildDataQuery from '@/composables/queries/useUserChildDataQuery';
-import { assignmentIncludesTask, isUnassignedTaskError } from '@/helpers/assignedTask';
+import { assignedTaskCompleted, assignmentIncludesTask, isUnassignedTaskError } from '@/helpers/assignedTask';
 import { startAssessmentWithRetry } from '@/helpers/startAssessmentWithRetry';
 import { logger } from '@/logger';
 import { useAssignmentsStore } from '@/store/assignments';
@@ -104,6 +104,16 @@ watch(
 async function startTask(selectedAdmin) {
   if (!assignmentIncludesTask(selectedAdmin.value, props.taskId)) {
     logger.capture('Task not on assignment', {
+      administrationId: selectedAdmin.value?.id,
+      taskId: props.taskId,
+    });
+    assignmentsStore.setHomeRefresh();
+    router.push({ name: 'Home' });
+    return;
+  }
+
+  if (assignedTaskCompleted(selectedAdmin.value, props.taskId)) {
+    logger.capture('Task already complete', {
       administrationId: selectedAdmin.value?.id,
       taskId: props.taskId,
     });

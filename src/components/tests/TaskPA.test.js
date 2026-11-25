@@ -28,9 +28,11 @@ const mockAuthStore = reactive({
   isFirekitInit: vi.fn(() => true),
 });
 
+const routerPush = vi.fn();
+
 vi.mock('vue-router', () => ({
   useRouter: () => ({
-    push: vi.fn(),
+    push: routerPush,
     go: vi.fn(),
   }),
 }));
@@ -154,6 +156,25 @@ describe('TaskPA.vue', () => {
           taskId: 'pa',
         }),
       );
+      wrapper.unmount();
+    });
+
+    it('returns home without starting when this task is already complete', async () => {
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'pa', completedOn: '2026-11-23T16:12:20.904Z' }],
+      };
+
+      const wrapper = await mountTaskPA();
+
+      expect(startAssessment).not.toHaveBeenCalled();
+      expect(routerPush).toHaveBeenCalledWith({ name: 'Home' });
+      expect(mockAssignmentsStore.setHomeRefresh).toHaveBeenCalled();
+      expect(logger.capture).toHaveBeenCalledWith('Task already complete', {
+        administrationId: 'assignment-1',
+        taskId: 'pa',
+      });
+      expect(logger.error).not.toHaveBeenCalled();
       wrapper.unmount();
     });
 
