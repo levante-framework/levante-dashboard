@@ -174,6 +174,25 @@ describe('TaskSWR.vue', () => {
       wrapper.unmount();
     });
 
+    it('returns home without starting when this task is already complete', async () => {
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'swr', completedOn: '2026-11-23T16:12:20.904Z' }],
+      };
+
+      const wrapper = await mountTaskSWR();
+
+      expect(startAssessment).not.toHaveBeenCalled();
+      expect(routerPush).toHaveBeenCalledWith({ name: 'Home' });
+      expect(mockAssignmentsStore.setHomeRefresh).toHaveBeenCalled();
+      expect(logger.capture).toHaveBeenCalledWith('Task already complete', {
+        administrationId: 'assignment-1',
+        taskId: 'swr',
+      });
+      expect(logger.error).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
     it('returns home without starting when the task is not on the assignment', async () => {
       selectedAssignmentRef.value = {
         id: 'assignment-1',

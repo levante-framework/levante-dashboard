@@ -1,5 +1,6 @@
 interface AssignedAssessment {
   taskId?: string;
+  completedOn?: unknown;
 }
 
 interface AssignmentWithAssessments {
@@ -12,6 +13,15 @@ export function assignmentIncludesTask(
 ): boolean {
   if (!taskId) return false;
   return (assignment?.assessments ?? []).some((assessment) => assessment?.taskId === taskId);
+}
+
+export function assignedTaskCompleted(
+  assignment: AssignmentWithAssessments | null | undefined,
+  taskId: string,
+): boolean {
+  if (!taskId) return false;
+  const assessment = (assignment?.assessments ?? []).find((item) => item?.taskId === taskId);
+  return Boolean(assessment?.completedOn);
 }
 
 export function isUnassignedTaskError(error: unknown): boolean {

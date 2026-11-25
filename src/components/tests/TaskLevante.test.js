@@ -330,6 +330,26 @@ describe('TaskLevante.vue', () => {
       wrapper.unmount();
     });
 
+    it('returns home without starting when this task is already complete', async () => {
+      selectedAssignmentRef.value = {
+        id: 'assignment-1',
+        assessments: [{ taskId: 'egma-math', completedOn: '2026-11-23T16:12:20.904Z' }, { taskId: 'adult-reasoning' }],
+      };
+
+      const wrapper = await mountTaskLevante();
+
+      expect(startAssessment).not.toHaveBeenCalled();
+      expect(window.alert).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
+      expect(routerPush).toHaveBeenCalledWith({ name: 'Home' });
+      expect(mockAssignmentsStore.setHomeRefresh).toHaveBeenCalled();
+      expect(logger.capture).toHaveBeenCalledWith('Task already complete', {
+        administrationId: 'assignment-1',
+        taskId: 'egma-math',
+      });
+      wrapper.unmount();
+    });
+
     it('returns home without the refresh alert when the task is not on the assignment', async () => {
       selectedAssignmentRef.value = {
         id: 'assignment-1',
