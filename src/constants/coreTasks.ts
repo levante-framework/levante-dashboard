@@ -8,7 +8,6 @@ export const LEVANTE_TASK_IDS = [
   'mefs',
   'memoryGame',
   'mentalRotation',
-  'roarInference',
   'sameDifferentSelection',
   'survey',
   'theoryOfMind',
