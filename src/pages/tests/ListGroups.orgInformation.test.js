@@ -165,17 +165,44 @@ describe('ListGroups org information actions', () => {
     });
   });
 
-  it('shows a green checkmark when the site information is complete', async () => {
+  it('shows an eye when the site information is complete, and opens the read-only view', async () => {
     state.orgs = [{ id: 'site-2', name: 'North' }];
     state.statusData = ref(statusOf('site', { 'site-2': 'complete' }));
 
     const wrapper = await mountPage();
+    const action = informationAction(wrapper);
 
-    expect(informationAction(wrapper)).toMatchObject({
-      icon: 'pi pi-check',
+    expect(action).toMatchObject({
+      icon: 'pi pi-eye',
       status: 'success',
       tooltip: 'Information for this site is complete',
-      callback: null,
+    });
+    action.callback();
+
+    expect(state.setCurrentSite).toHaveBeenCalledWith('site-2', 'North');
+    expect(state.routerPush).toHaveBeenCalledWith({
+      name: 'OrgInformationView',
+      params: { formType: 'site' },
+    });
+  });
+
+  it('opens a complete school view without changing the navbar site', async () => {
+    state.orgs = [{ id: 'school-1', name: 'Alpha' }];
+    state.statusData = ref(statusOf('school', { 'school-1': 'complete' }));
+
+    const wrapper = await mountPage();
+    await wrapper.findAll('.p-tab')[1].trigger('click');
+    await flushPromises();
+
+    const action = informationAction(wrapper);
+    expect(action).toMatchObject({ icon: 'pi pi-eye', tooltip: 'Information for this school is complete' });
+    action.callback();
+
+    expect(state.setCurrentSite).not.toHaveBeenCalled();
+    expect(state.routerPush).toHaveBeenCalledWith({
+      name: 'OrgInformationView',
+      params: { formType: 'school' },
+      query: { orgId: 'school-1' },
     });
   });
 

@@ -137,12 +137,20 @@ watch(
   { immediate: true },
 );
 
-watchEffect(
-  () => {
-    navbarHeight.value = navbarRef.value?.getNavbarHeight() ?? 0;
-  },
-  { immediate: true },
-);
+watchEffect((onCleanup) => {
+  const navbar = navbarRef.value?.$el;
+  if (!(navbar instanceof Element)) {
+    navbarHeight.value = 0;
+    return;
+  }
+  const updateNavbarHeight = () => {
+    navbarHeight.value = navbar.getBoundingClientRect().height;
+  };
+  updateNavbarHeight();
+  const observer = new ResizeObserver(updateNavbarHeight);
+  observer.observe(navbar);
+  onCleanup(() => observer.disconnect());
+});
 
 onBeforeMount(async () => {
   await getLanguages();

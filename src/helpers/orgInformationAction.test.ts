@@ -2,24 +2,29 @@ import { describe, expect, it, vi } from 'vitest';
 import { orgInformationAction, orgInformationLoadingAction } from './orgInformationAction';
 
 describe('orgInformationAction', () => {
-  it('shows a green checkmark when the information is complete', () => {
-    expect(orgInformationAction('complete', 'school', vi.fn())).toEqual({
+  it('shows an eye that opens the read-only view when the information is complete', () => {
+    const openForm = vi.fn();
+    const openView = vi.fn();
+
+    expect(orgInformationAction('complete', 'school', openForm, openView)).toEqual({
       name: 'information',
-      icon: 'pi pi-check',
+      icon: 'pi pi-eye',
       status: 'success',
       tooltip: 'Information for this school is complete',
-      callback: null,
+      callback: openView,
     });
   });
 
   it('names the site in the complete tooltip', () => {
-    expect(orgInformationAction('complete', 'site', vi.fn())?.tooltip).toBe('Information for this site is complete');
+    expect(orgInformationAction('complete', 'site', vi.fn(), vi.fn())?.tooltip).toBe(
+      'Information for this site is complete',
+    );
   });
 
   it.each(['not-started', 'incomplete'] as const)('shows a red pulsing icon when the status is %s', (progress) => {
     const openForm = vi.fn();
 
-    expect(orgInformationAction(progress, 'site', openForm)).toEqual({
+    expect(orgInformationAction(progress, 'site', openForm, vi.fn())).toEqual({
       name: 'information',
       icon: 'pi pi-info-circle',
       status: 'error',
@@ -30,7 +35,7 @@ describe('orgInformationAction', () => {
   });
 
   it('shows nothing when the status is missing or failed', () => {
-    expect(orgInformationAction(undefined, 'school', vi.fn())).toBeNull();
+    expect(orgInformationAction(undefined, 'school', vi.fn(), vi.fn())).toBeNull();
   });
 });
 
