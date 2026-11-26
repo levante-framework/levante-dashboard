@@ -372,7 +372,7 @@ xdg-open coverage/index.html  # Linux
 
 #### Translation Tests
 
-- **Missing Keys**: Ensure all translation files are generated
+- **Missing Keys**: Ensure the translation bucket serves the expected keys for the locale
 - **Locale Format**: Use proper locale format (e.g., 'en-US' vs 'en')
 - **Dynamic Loading**: Wait for translations to load in tests
 
