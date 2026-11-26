@@ -7,6 +7,8 @@ export const ASSIGNMENT_STATUSES = {
 };
 
 export const NAVBAR_BLACKLIST = [
+  'LevanteSRE',
+  'LevanteSWR',
   'Login',
   'Maintenance',
   'PA',
@@ -18,7 +20,7 @@ export const NAVBAR_BLACKLIST = [
   'Translations',
 ] as const;
 
-export const FOOTER_BLACKLIST = ['Maintenance', 'PA', 'PlayApp', 'SRE', 'SWR'] as const;
+export const FOOTER_BLACKLIST = ['LevanteSRE', 'LevanteSWR', 'Maintenance', 'PA', 'PlayApp', 'SRE', 'SWR'] as const;
 
 export const isLevante: boolean = ((import.meta.env.VITE_LEVANTE as string) ?? '').toUpperCase() === 'TRUE';
 
