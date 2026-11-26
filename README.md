@@ -21,28 +21,9 @@ See the legacy [ROAR/ROAD Data Flow Diagram here](https://miro.com/app/board/uXj
 
 ---
 
-## Localization and Crowdin integration
+## Localization
 
-The dashboard’s translations are managed via multilingual CSVs synced with Crowdin (project `levantetranslations`). Locally, CSVs are transformed at build-time into per-locale JSON files that the app consumes.
-
-Key docs and tools:
-
-- [`src/translations/README_CROWDIN.md`](./src/translations/README_CROWDIN.md) — full guide to the workflow
-- [`src/translations/crowdin/crowdin.yml`](./src/translations/crowdin/crowdin.yml) — Crowdin configuration
-- [`src/translations/consolidated/`](./src/translations/consolidated/) — consolidated CSV sources (main + components)
-- Tools under [`src/translations/tools/`](./src/translations/tools/):
-  - [`csv-to-json.js`](./src/translations/tools/csv-to-json.js) — CSV → per-locale JSON (runs during dev/build)
-  - [`validate-csvs.js`](./src/translations/tools/validate-csvs.js) — validates headers, duplicates, coverage
-  - [`add-locale-column.js`](./src/translations/tools/add-locale-column.js) — adds a new locale column (optionally seeded)
-
-Common commands:
-
-- Generate per-locale JSON: `npm run i18n:csv-to-json`
-- Validate CSVs: `npm run i18n:validate`
-- Add a new locale column: `I18N_NEW_LOCALE=<locale> [I18N_SEED_FROM=<base>] npm run i18n:add-locale`
-- Full sync (local → Crowdin → local): `npm run i18n:sync`
-
-Crowdin download during `npm run dev` and `npm run build` only occurs when `CROWDIN_API_TOKEN` is set; CSV→JSON always runs to ensure the app has messages available.
+Translations are served from a remote bucket (see `LEVANTE_TRANSLATIONS` in [`src/constants/bucket.ts`](./src/constants/bucket.ts)) and loaded at runtime by [`src/translations/i18n.ts`](./src/translations/i18n.ts). The dashboard does not bundle local translation files.
 
 ## Survey PDF generation
 
