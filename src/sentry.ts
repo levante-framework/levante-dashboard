@@ -91,7 +91,12 @@ export function initSentry(app: App) {
     tracePropagationTargets,
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 0,
-    ignoreErrors: [/Failed to read a named property '__v_isRef' from 'Window'/],
+    ignoreErrors: [
+      /Failed to read a named property '__v_isRef' from 'Window'/,
+      // Safari rejects AudioContext.resume() while clips preload, before any tap.
+      // A speaker that fails on Continue is reported as "Audio context did not start".
+      /Failed to start the audio device/,
+    ],
     beforeSend(event) {
       if (isCrossOriginVueRefSecurityError(event)) {
         return null;
