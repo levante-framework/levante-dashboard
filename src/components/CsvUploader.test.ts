@@ -1,8 +1,20 @@
 import { mount } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
 import PvFileUpload from 'primevue/fileupload';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CsvUploader from './CsvUploader.vue';
+
+const { routeName } = vi.hoisted(() => ({
+  routeName: { current: undefined as string | undefined },
+}));
+
+vi.mock('vue-router', () => ({
+  useRoute: () => ({
+    get name() {
+      return routeName.current;
+    },
+  }),
+}));
 
 // ─── Mount helper ─────────────────────────────────────────────────────────────
 
@@ -29,6 +41,10 @@ const makeFile = (name = 'users.csv') => new File(['name,age\nAlice,30'], name, 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('CsvUploader', () => {
+  beforeEach(() => {
+    routeName.current = undefined;
+  });
+
   describe('choose button label', () => {
     it('shows "Choose CSV File" when no file has been uploaded', () => {
       const wrapper = mountCsvUploader({ ...DEFAULT_PROPS, uploadedFile: null });
@@ -89,6 +105,26 @@ describe('CsvUploader', () => {
       const input = wrapper.find('input[type="file"]');
       expect(input.exists()).toBe(true);
       expect(input.attributes('disabled')).toBeUndefined();
+    });
+  });
+
+  describe('data-wizard', () => {
+    it('uses the add-users target on the Add Users page', () => {
+      routeName.current = 'Add Users';
+      const wrapper = mountCsvUploader(DEFAULT_PROPS);
+      expect(wrapper.attributes('data-wizard')).toBe('upload-add-users');
+    });
+
+    it('uses the link-users target on the Link Users page', () => {
+      routeName.current = '  Link Users  ';
+      const wrapper = mountCsvUploader(DEFAULT_PROPS);
+      expect(wrapper.attributes('data-wizard')).toBe('upload-link-users');
+    });
+
+    it('omits the attribute on other pages', () => {
+      routeName.current = 'List Groups';
+      const wrapper = mountCsvUploader(DEFAULT_PROPS);
+      expect(wrapper.attributes('data-wizard')).toBeUndefined();
     });
   });
 

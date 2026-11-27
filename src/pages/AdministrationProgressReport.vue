@@ -44,7 +44,7 @@
           </div>
 
           <div v-else>
-            <div class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card">
+            <div class="flex flex-column align-items-around flex-wrap gap-3 rounded bg-gray-100 p-2 details-card" data-wizard="overall-progress">
               <div class="flex flex-column gap-1 mx-5 mb-5">
                 <div class="text-sm uppercase text-gray-500">Progress by Task</div>
                 <div
@@ -112,6 +112,7 @@
               :page-limit="pageLimit"
               data-key="user.userId"
               data-cy="roar-data-table"
+              data-wizard="progress-table"
               :allow-filtering="!isLevante"
               :reset-filters="resetFilters"
               :allow-export="true"
